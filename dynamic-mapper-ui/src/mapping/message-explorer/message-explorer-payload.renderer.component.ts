@@ -24,11 +24,21 @@ import { JsonEditorComponent } from '../../shared/component/json-editor/json-edi
 
 @Component({
   selector: 'd11r-msg-explorer-date-renderer',
-  template: `{{ context.value | c8yDate: 'MMM d, y, h:mm:ss a' }}`,
+  template: `<span class="text-nowrap" [title]="context.value | c8yDate: 'medium'">{{ context.value | c8yDate: 'MMM d, HH:mm:ss.SSS' }}</span>`,
   standalone: true,
   imports: [CoreModule]
 })
 export class MessageExplorerDateRendererComponent {
+  constructor(public readonly context: CellRendererContext) {}
+}
+
+@Component({
+  selector: 'd11r-msg-explorer-truncate-renderer',
+  template: `<span class="d-block text-truncate" [title]="context.value ?? ''">{{ context.value }}</span>`,
+  standalone: true,
+  imports: [CoreModule]
+})
+export class MessageExplorerTruncateRendererComponent {
   constructor(public readonly context: CellRendererContext) {}
 }
 

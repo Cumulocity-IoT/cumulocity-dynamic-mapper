@@ -60,6 +60,7 @@ import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.
 import { ALERT_INFO_TIMEOUT, Direction, MappingType } from '../../shared';
 import {
   MessageExplorerDateRendererComponent,
+  MessageExplorerTruncateRendererComponent,
   MessageExplorerPayloadRendererComponent
 } from './message-explorer-payload.renderer.component';
 
@@ -110,7 +111,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '60px'
+      gridTrackSize: '5%'
     },
     {
       name: 'receivedAt',
@@ -120,7 +121,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sortable: true,
       filterable: false,
       cellRendererComponent: MessageExplorerDateRendererComponent,
-      gridTrackSize: '200px'
+      gridTrackSize: '12%'
     },
     {
       name: 'clientId',
@@ -129,7 +130,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '140px'
+      cellRendererComponent: MessageExplorerTruncateRendererComponent,
+      gridTrackSize: '12%'
     },
     {
       name: 'key',
@@ -138,7 +140,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '140px'
+      cellRendererComponent: MessageExplorerTruncateRendererComponent,
+      gridTrackSize: '14%'
     },
     {
       name: 'topic',
@@ -147,7 +150,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: true,
-      gridTrackSize: '220px'
+      gridTrackSize: '12%'
     },
     {
       name: 'payload',
