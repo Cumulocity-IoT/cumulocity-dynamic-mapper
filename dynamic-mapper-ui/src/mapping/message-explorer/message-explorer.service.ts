@@ -31,6 +31,8 @@ export interface ExplorerMessage {
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;
+  payloadType?: string;
+  binaryFormat?: string | null;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;    // C8Y managed object ID (device or group, outbound only)
 }

@@ -25,7 +25,6 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
@@ -38,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -572,20 +570,11 @@ public class ExplorerService {
                 }
             }
 
-            String payload;
-            boolean binary = false;
-            if (message.getPayload() == null) {
-                payload = "";
-            } else {
-                // Try UTF-8 first; fall back to Base64 if it contains non-printable bytes
-                byte[] bytes = message.getPayload();
-                if (isPrintableUtf8(bytes)) {
-                    payload = new String(bytes, StandardCharsets.UTF_8);
-                } else {
-                    payload = Base64.getEncoder().encodeToString(bytes);
-                    binary = true;
-                }
-            }
+            // Text payloads are passed as UTF-8 strings, anything else as Base64 (binary = true)
+            PayloadClassifier.Result classified = PayloadClassifier.classify(message.getPayload());
+            String payload = classified.isBinary()
+                    ? Base64.getEncoder().encodeToString(message.getPayload())
+                    : classified.text();
 
             ExplorerMessage msg = ExplorerMessage.builder()
                     .topic(message.getTopic())
@@ -596,7 +585,9 @@ public class ExplorerService {
                     .direction(session.getDirection())
                     .receivedAt(System.currentTimeMillis())
                     .payload(payload)
-                    .binary(binary)
+                    .binary(classified.isBinary())
+                    .payloadType(classified.type().name())
+                    .binaryFormat(classified.binaryFormat())
                     .sourceId(message.getSourceId())
                     .build();
 
@@ -627,18 +618,5 @@ public class ExplorerService {
             if (!"+".equals(filterParts[i]) && !filterParts[i].equals(topicParts[i])) return false;
         }
         return filterParts.length == topicParts.length;
-    }
-
-    /** Returns {@code true} if the bytes can be decoded as printable UTF-8 text. */
-    private static boolean isPrintableUtf8(byte[] bytes) {
-        try {
-            String s = new String(bytes, StandardCharsets.UTF_8);
-            for (char c : s.toCharArray()) {
-                if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') return false;
-            }
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

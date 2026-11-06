@@ -55,7 +55,7 @@ export class MessageExplorerTruncateRendererComponent {
     @if (isBinary) {
       <div>
         <div class="binary-summary" (click)="toggle()">
-          <span class="label label-warning text-nowrap" translate>binary</span>
+          <span class="label label-warning text-nowrap">{{ binaryFormat ? (binaryFormat) : ("binary" | translate) }}</span>
           <span class="text-muted text-12 text-nowrap">{{ byteLength }} B</span>
           @if (!expanded) {
             <span class="preview text-monospace text-12">{{ textPreview }}</span>
@@ -126,6 +126,11 @@ export class MessageExplorerPayloadRendererComponent {
 
   get isBinary(): boolean {
     return !!this.context.item['binary'] && this.bytes !== null;
+  }
+
+  /** Well-known format of the binary payload (e.g. GZIP) detected by the backend, if any. */
+  get binaryFormat(): string | null {
+    return (this.context.item['binaryFormat'] as string) || null;
   }
 
   get isLong(): boolean {

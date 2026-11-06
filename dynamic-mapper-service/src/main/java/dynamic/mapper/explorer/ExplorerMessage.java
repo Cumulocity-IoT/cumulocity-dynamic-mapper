@@ -57,6 +57,12 @@ public class ExplorerMessage {
     @Schema(description = "true if the original payload was binary and has been Base64-encoded", example = "false")
     private boolean binary;
 
+    @Schema(description = "Detected payload type: EMPTY, JSON, XML, TEXT or BINARY", example = "JSON")
+    private String payloadType;
+
+    @Schema(description = "Well-known format of a binary payload recognized by its magic bytes (e.g. GZIP, ZIP, AVRO); null if unknown or not binary", example = "GZIP")
+    private String binaryFormat;
+
     @Schema(description = "C8Y source device ID (outbound only)", example = "12345")
     private String sourceId;
 }
