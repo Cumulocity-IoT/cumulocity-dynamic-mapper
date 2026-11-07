@@ -584,6 +584,17 @@ describe('MappingStepperService', () => {
       expect(mockAlertService.danger).not.toHaveBeenCalled();
     });
 
+    it('sends an empty description when the user left it blank (the backend rejects a missing one)', async () => {
+      mockSharedService.createCodeTemplate.and.resolveTo({ status: 201 } as any);
+      mockSharedService.getCodeTemplates.and.resolveTo({} as CodeTemplateMap);
+
+      await service.createCodeTemplateAndRefresh(
+        'My template', undefined as unknown as string, 'code', Direction.INBOUND, TransformationType.SMART_FUNCTION
+      );
+
+      expect(mockSharedService.createCodeTemplate.calls.mostRecent().args[0].description).toBe('');
+    });
+
     it('shows a danger alert when creation fails', async () => {
       mockSharedService.createCodeTemplate.and.resolveTo({ status: 500 } as any);
       mockSharedService.getCodeTemplates.and.resolveTo({} as CodeTemplateMap);

@@ -345,7 +345,8 @@ export class MappingStepperService {
         return await this.sharedService.createCodeTemplate({
             id,
             name,
-            description,
+            // The dialog leaves the description optional, but the backend requires the field.
+            description: description ?? '',
             templateType,
             code: encodedCode,
             internal: false,
