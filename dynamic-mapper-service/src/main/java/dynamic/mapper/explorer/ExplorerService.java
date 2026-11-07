@@ -25,7 +25,6 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
@@ -33,16 +32,18 @@ import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.service.DeviceDiscoveryService;
+import dynamic.mapper.processor.util.PayloadClassifier;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
+import org.springframework.context.event.EventListener;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 
 /**
  * Manages Message Explorer sessions.
@@ -147,7 +148,7 @@ public class ExplorerService {
         String dir = (direction != null && direction.equalsIgnoreCase("OUTBOUND")) ? "OUTBOUND" : "INBOUND";
         long sessionTTLMs = (sessionTTLMinutes != null && sessionTTLMinutes > 0)
                 ? sessionTTLMinutes * 60_000L
-                : resolveSessionTtlMs(tenant);
+                : SESSION_TTL_MS;
 
         String sessionId = UUID.randomUUID().toString();
 
@@ -280,6 +281,7 @@ public class ExplorerService {
                     .userId(userId)
                     .connectorIdentifier(connectorIdentifier)
                     .connectorName(client.getConnectorName())
+                    .connectorType(client.getConnectorType() == null ? null : client.getConnectorType().name())
                     .topic(topic)
                     .tenant(tenant)
                     .maxMessages(cappedMax)
@@ -408,12 +410,11 @@ public class ExplorerService {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, ConcurrentHashMap<String, ExplorerSession>> tenantEntry : sessions.entrySet()) {
             String tenant = tenantEntry.getKey();
-            long tenantDefaultTTLMs = resolveSessionTtlMs(tenant);
             Iterator<Map.Entry<String, ExplorerSession>> it = tenantEntry.getValue().entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, ExplorerSession> entry = it.next();
                 ExplorerSession session = entry.getValue();
-                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : tenantDefaultTTLMs;
+                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : SESSION_TTL_MS;
                 if (now - session.getLastPolledAt() > sessionTTLMs) {
                     it.remove();
                     unregisterListener(tenant, session.getSessionId(), session);
@@ -431,15 +432,27 @@ public class ExplorerService {
         inboundDedupCache.entrySet().removeIf(e -> now - e.getValue() > INBOUND_DEDUP_WINDOW_MS);
     }
 
+    /** Stops all explorer sessions of a tenant that unsubscribed, so no listeners or buffers outlive it. */
+    @EventListener
+    public void onTenantUnsubscribed(
+            MicroserviceSubscriptionRemovedEvent event) {
+        String tenant = event.getTenant();
+        ConcurrentHashMap<String, ExplorerSession> tenantSessions = sessions.remove(tenant);
+        if (tenantSessions != null) {
+            tenantSessions.values().forEach(session -> {
+                try {
+                    unregisterListener(tenant, session.getSessionId(), session);
+                } catch (Exception e) {
+                    log.warn("{} - Error stopping explorer session {}: {}", tenant, session.getSessionId(),
+                            e.getMessage());
+                }
+            });
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
-
-    private long resolveSessionTtlMs(String tenant) {
-        ServiceConfiguration config = serviceRegistry.getServiceConfiguration(tenant);
-        Integer minutes = config != null ? config.getExplorerSessionTTLMinutes() : null;
-        return (minutes != null && minutes > 0) ? minutes * 60_000L : SESSION_TTL_MS;
-    }
 
     private ExplorerSession findSession(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);
@@ -559,31 +572,27 @@ public class ExplorerService {
                 }
             }
 
-            String payload;
-            boolean binary = false;
-            if (message.getPayload() == null) {
-                payload = "";
-            } else {
-                // Try UTF-8 first; fall back to Base64 if it contains non-printable bytes
-                byte[] bytes = message.getPayload();
-                if (isPrintableUtf8(bytes)) {
-                    payload = new String(bytes, StandardCharsets.UTF_8);
-                } else {
-                    payload = Base64.getEncoder().encodeToString(bytes);
-                    binary = true;
-                }
-            }
+            // Text payloads are passed as UTF-8 strings, anything else as Base64 (binary = true)
+            PayloadClassifier.Result classified = PayloadClassifier.classify(message.getPayload());
+            String payload = classified.isBinary()
+                    ? Base64.getEncoder().encodeToString(message.getPayload())
+                    : classified.text();
 
             ExplorerMessage msg = ExplorerMessage.builder()
                     .topic(message.getTopic())
                     .connectorIdentifier(session.getConnectorIdentifier())
                     .connectorName(session.getConnectorName())
+                    .connectorType(session.getConnectorType())
                     .clientId(message.getClientId())
                     .key(message.getKey())
+                    .metadata(message.getMetadata())
                     .direction(session.getDirection())
                     .receivedAt(System.currentTimeMillis())
                     .payload(payload)
-                    .binary(binary)
+                    .binary(classified.isBinary())
+                    .payloadType(classified.type().name())
+                    .payloadSize(message.getPayload() == null ? 0 : message.getPayload().length)
+                    .binaryFormat(classified.binaryFormat())
                     .sourceId(message.getSourceId())
                     .build();
 
@@ -614,18 +623,5 @@ public class ExplorerService {
             if (!"+".equals(filterParts[i]) && !filterParts[i].equals(topicParts[i])) return false;
         }
         return filterParts.length == topicParts.length;
-    }
-
-    /** Returns {@code true} if the bytes can be decoded as printable UTF-8 text. */
-    private static boolean isPrintableUtf8(byte[] bytes) {
-        try {
-            String s = new String(bytes, StandardCharsets.UTF_8);
-            for (char c : s.toCharArray()) {
-                if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') return false;
-            }
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

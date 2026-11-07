@@ -21,9 +21,12 @@
 
 package dynamic.mapper.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import dynamic.mapper.core.ExtensionManager;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.model.Mapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -59,12 +62,14 @@ public class ExtensionController {
 
     private final ContextService<UserCredentials> contextService;
     private final ExtensionManager extensionManager;
+    private final MappingService mappingService;
 
     @Operation(summary = "Get all processor extensions", description = "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Extensions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of extension names to their configurations"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
         String tenant = contextService.getContext().getTenant();
@@ -80,6 +85,7 @@ public class ExtensionController {
             @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(
             @PathVariable @NotBlank String extensionName) {
@@ -101,13 +107,33 @@ public class ExtensionController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Extension deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Extension.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions to delete extensions", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Built-in extensions cannot be deleted", content = @Content),
             @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
+            @ApiResponse(responseCode = "409", description = "Extension is still used by mappings; the response message lists them", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
+        Extension registered = extensionManager.getProcessorExtension(tenant, extensionName);
+        if (registered == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Extension with id " + extensionName + " could not be found.");
+        if (!registered.isExternal())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Built-in extension " + extensionName + " cannot be deleted.");
+
+        List<String> usedBy = mappingService.getMappings(tenant, null).stream()
+                .filter(m -> m.getExtension() != null && extensionName.equals(m.getExtension().getExtensionName()))
+                .map(Mapping::getName)
+                .sorted()
+                .toList();
+        if (!usedBy.isEmpty())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Extension " + extensionName + " is used by mapping(s): " + String.join(", ", usedBy)
+                            + ". Change or delete these mappings first.");
+
         Extension result = extensionManager.deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,

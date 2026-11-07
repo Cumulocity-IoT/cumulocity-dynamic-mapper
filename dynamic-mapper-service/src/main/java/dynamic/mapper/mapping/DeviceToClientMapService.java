@@ -24,15 +24,15 @@ package dynamic.mapper.mapping;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages device-to-client mapping persistence
@@ -43,33 +43,71 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DeviceToClientMapService {
 
     private final InventoryFacade inventoryApi;
-    private final ServiceRegistry serviceRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
     /**
-     * Sends the device-to-client map to inventory
+     * Persists the relation changes made on this instance to the inventory managed object that the
+     * Cumulocity MQTT Service reads to decide which client receives outbound messages.
+     * <p>
+     * The inventory merges nested fragments on update, so a removed relation is sent as {@code null}.
+     * Only changes made here are sent: the map this instance loaded at startup, and keys it merely does
+     * not know, may belong to other instances, whose maps this one does not refresh. Replaying them
+     * would write deleted or reassigned relations back. Nothing is written when every pending change
+     * already matches the stored map.
      */
     public void sendToInventory(String tenant) {
-        Map<String, String> clientToDeviceMap = serviceRegistry.getAllClientRelations(tenant);
-        
-        if (clientToDeviceMap == null) {
-            log.debug("{} - No device-to-client map to send", tenant);
+        String deviceToClientMapId = deviceToClientRegistry.getDeviceToClientMapId(tenant);
+        if (deviceToClientMapId == null) {
+            log.warn("{} - Device-to-client map managed object is not initialized, skipping sync", tenant);
+            return;
+        }
+        // One snapshot of the changes: it is consistent with the relation map, and only these are
+        // acknowledged afterwards, so a change made while syncing stays pending.
+        Map<String, String> pending = deviceToClientRegistry.getPendingClientChanges(tenant);
+        if (pending.isEmpty()) {
+            log.debug("{} - No device-to-client changes pending, not sending", tenant);
             return;
         }
 
         subscriptionsService.runForTenant(tenant, () -> {
-            String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
+            Map<String, Object> persisted = readPersistedMap(inventoryApi.get(GId.asGId(deviceToClientMapId), false));
 
-            log.debug("{} - Sending device-to-client map with {} entries", tenant, clientToDeviceMap.size());
+            Map<String, Object> changes = new HashMap<>();
+            pending.forEach((deviceId, clientId) -> {
+                boolean differs = clientId == null ? persisted.containsKey(deviceId)
+                        : !clientId.equals(persisted.get(deviceId));
+                if (differs) {
+                    changes.put(deviceId, clientId);
+                }
+            });
+            if (changes.isEmpty()) {
+                log.debug("{} - Device-to-client changes already persisted ({} pending), not sending", tenant,
+                        pending.size());
+                deviceToClientRegistry.acknowledgeClientChanges(tenant, pending);
+                return;
+            }
 
-            Map<String, Object> fragment = new ConcurrentHashMap<>();
-            fragment.put(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, clientToDeviceMap);
+            log.debug("{} - Sending {} device-to-client changes ({} pending)", tenant, changes.size(),
+                    pending.size());
 
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
             updateMor.setId(GId.asGId(deviceToClientMapId));
-            updateMor.setAttrs(fragment);
+            updateMor.setAttrs(Map.of(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, changes));
 
             inventoryApi.update(updateMor, false);
+            deviceToClientRegistry.acknowledgeClientChanges(tenant, pending);
         });
+    }
+
+    private Map<String, Object> readPersistedMap(ManagedObjectRepresentation stored) {
+        Object fragment = stored == null || stored.getAttrs() == null ? null
+                : stored.getAttrs().get(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT);
+        if (fragment instanceof Map<?, ?> map) {
+            Map<String, Object> result = new HashMap<>();
+            map.forEach((k, v) -> result.put(String.valueOf(k), v));
+            return result;
+        }
+        return new HashMap<>();
     }
 }

@@ -47,7 +47,10 @@ written into the tenant — and, when wanted, seeing the real object being creat
   device is created: the identity is mocked, and the external ID in the topic carries the prefix
   `d11r_liveTest_`, so the message cannot reach a real device.
 - The result says what was created, for which device, and whether the test device was created or reused.
-- A test device that was deleted by hand is handled without user action (see *Deleted test devices* below).
+- A test device that was deleted by hand is normally handled without user action (see *Deleted test devices* below);
+  if some requests of the test had already succeeded, the test is not repeated and the user is told to run it again.
+- An object that already owns the test external ID but is not a test device is never reused: the Live Test stops
+  with an error instead of writing to it.
 
 **What a test does not change**
 - Neither test changes the mapping's runtime state: message and error counters, the processing statistics, the
@@ -147,7 +150,9 @@ For `send=true` and an `INBOUND` mapping, `testMapping()` first finds the extern
 It then calls `C8YAgent.ensureTestDevice()` with `d11r_liveTest_` + that ID. `ensureTestDevice` first evicts the ID
 from the inbound external-ID cache and the implicit-device-creation cache
 (`C8YAgent.evictExternalIdFromCaches()`) so it never trusts a cached answer, looks the device up, and creates it
-(type and fragment `d11r_testDevice`) if missing. The live message is then processed with
+(type and fragment `d11r_testDevice`) if missing. An existing object is reused only if it carries the
+`d11r_testDevice` type or fragment; any other object owning the external ID makes `ensureTestDevice` return `null`,
+and the Live Test stops with "could not be created or found". The live message is then processed with
 `ConnectorMessage.testExternalIdPrefix` set, which becomes `ProcessingContext.testExternalIdPrefix`;
 `ProcessingContext.liveTestId()` applies it where the mapping's external ID enters the pipeline:
 `SubstitutionResultInboundProcessor` (JSONata), `FlowResultInboundProcessor` / `ExtensibleResultInboundProcessor` via
@@ -163,7 +168,10 @@ A mapping that names its device by Cumulocity ID is refused in the pipeline
 
 A deleted test device is not subscribed for inventory updates, so nothing evicts it from the caches. Two layers:
 `ensureTestDevice` never trusts the cache (above); and if the send still fails with `404 No managedObject for id`,
-the controller evicts the ID, re-ensures the device and retries **once**. Only that specific error triggers the retry:
+the controller evicts the ID, re-ensures the device and retries **once**, but only if no request of the first attempt
+succeeded (`anyRequestSucceeded()`): the pipeline continues after a failed request, and a retry would duplicate the
+siblings that were created. In that case the cache is evicted, the test is not retried, and the error tells the user to
+run the Live Test again. Only that specific error triggers the retry:
 any other `404` (a group, an attachment) is not mistaken for a deleted test device, because resending would repeat
 requests that already succeeded. If that fails too, the result carries an
 error telling the user to clear the *Inbound ID cache* (*Monitoring → Cache statistic*, mapping admins only).
@@ -198,9 +206,10 @@ A test calls the same dispatcher entry points as live traffic, with a `testMappi
 Because tests run the real processor chain, a result reflects the actual pipeline — filters (`filterMapping`,
 `filterInventory`), identity resolution and the transformation — not an approximation.
 
-`TestController` takes only the first resulting `ProcessingContext` for `requests`, `warnings`, `logs` and `key`
-(a mapping that fans out to several devices logs a warning), but it merges the **errors of every context**, so a
-failure in a later one cannot make the test look green.
+`TestController` merges **every** resulting `ProcessingContext`: all requests and logs in order, warnings and errors
+de-duplicated, and the first non-null `key`. A failure in a later context therefore cannot make the test look green.
+If a filter is configured and no request or warning came back, the controller adds a "Payload will be ignored due to
+filter" warning. If no context was produced, the result carries a generic "The test produced no result" error.
 
 ### Frontend
 

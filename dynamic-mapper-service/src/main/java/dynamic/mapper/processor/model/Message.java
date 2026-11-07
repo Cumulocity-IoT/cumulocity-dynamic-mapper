@@ -90,9 +90,7 @@ public class Message<O> {
         // Mirrors what Smart Functions receive as InputMessage.transportFields, so an extension
         // reading message.getTransportFields().get("key") sees the same broker message key
         // (e.g. the Kafka record key) that a Smart Function does.
-        Map<String, String> transportFields = context.getKey() != null
-                ? Map.of(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey())
-                : Collections.emptyMap();
+        Map<String, String> transportFields = context.buildTransportFields();
         return new Message<>(
             context.getPayload(),
             context.getTopic(),

@@ -9,9 +9,11 @@
 | **type** | **String** |  | [default to null] |
 | **readonly** | **Boolean** |  | [default to null] |
 | **hidden** | **Boolean** |  | [default to null] |
-| **defaultValue** | [**Object**](.md) |  | [optional] [default to null] |
+| **defaultValue** | [**oas_any_type_not_mapped**](.md) |  | [optional] [default to null] |
 | **options** | **Map** |  | [optional] [default to null] |
 | **condition** | [**ConnectorPropertyCondition**](ConnectorPropertyCondition.md) |  | [optional] [default to null] |
+| **label** | **String** |  | [optional] [default to null] |
+| **group** | **String** |  | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

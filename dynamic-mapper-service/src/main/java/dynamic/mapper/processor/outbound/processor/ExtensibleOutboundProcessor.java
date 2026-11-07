@@ -30,6 +30,7 @@ import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
@@ -54,10 +55,14 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Object> {
 
+    private final FlowStateStore flowStateStore;
+
     public ExtensibleOutboundProcessor(
             MappingService mappingService,
-            ExtensionInboundRegistry extensionInboundRegistry) {
+            ExtensionInboundRegistry extensionInboundRegistry,
+            FlowStateStore flowStateStore) {
         super(mappingService, extensionInboundRegistry);
+        this.flowStateStore = flowStateStore;
     }
 
     @Override
@@ -108,13 +113,20 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
 
             // 2. Create JavaExtensionContext
             // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
-            JavaExtensionContext prepContext = new JavaExtensionContextImpl(
+            // A test run neither reads nor overwrites the state production traffic keeps for this mapping.
+            boolean isolateState = !context.affectsMappingStatus();
+            java.util.Map<String, Object> initialState = isolateState
+                    ? new java.util.HashMap<String, Object>()
+                    : flowStateStore.loadState(tenant, context.getMapping().getIdentifier());
+            JavaExtensionContextImpl prepContext = new JavaExtensionContextImpl(
                 context.getFlowContext(),
                 null, // c8yAgent not typically needed for outbound
                 tenant,
                 context.isTesting(),
                 context.getMapping(),
-                context
+                context,
+                isolateState ? null : flowStateStore,
+                initialState
             );
 
             // 3. Call new pattern method
@@ -124,13 +136,18 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
             if (results != null && results.length > 0) {
                 log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
                 context.setExtensionResult(results);
+                // Returning normally does not mean the publish succeeded: commit the state after
+                // sending, so a redelivery after a failure is not treated as a duplicate.
+                context.setDeferredStateCommit(prepContext::persistNativeState);
             } else {
                 String errorMsg = String.format(
-                    "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - no data to publish",
+                    "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to publish, ignoring",
                     tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
-                log.warn(errorMsg);
+                log.info(errorMsg);
+                // An empty result means "nothing to do" (e.g. deduplication), as for Smart Functions; not a failure.
+                // Nothing is published, so deduplication extensions record what they saw right away.
+                prepContext.persistNativeState();
                 context.setIgnoreFurtherProcessing(true);
-                throw new ProcessingException(errorMsg);
             }
 
         } catch (ProcessingException e) {
@@ -144,6 +161,12 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
                 tenant,
                 extensionEntry.getEventName(),
                 extensionEntry.getFqnClassName());
+            log.error(message, e);
+            throw new ProcessingException(message, e);
+        } catch (LinkageError e) {
+            // e.g. NoClassDefFoundError when the extension jar was replaced or deleted while processing
+            String message = String.format("%s - Extension '%s' (class: %s) failed with a class loading error: %s",
+                tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName(), e);
             log.error(message, e);
             throw new ProcessingException(message, e);
         } catch (Exception e) {

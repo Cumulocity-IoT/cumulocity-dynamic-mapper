@@ -1,6 +1,6 @@
 # ConfigurationManagementApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -15,6 +15,7 @@ All URIs are relative to *http://localhost:8080*
 | [**getConnectorSpecifications**](ConfigurationManagementApi.md#getConnectorSpecifications) | **GET** /configuration/connector/specifications | Get connector specifications |
 | [**getFeatures**](ConfigurationManagementApi.md#getFeatures) | **GET** /configuration/feature | Get feature flags |
 | [**getServiceConfiguration**](ConfigurationManagementApi.md#getServiceConfiguration) | **GET** /configuration/service | Get service configuration |
+| [**testConnectionConfiguration**](ConfigurationManagementApi.md#testConnectionConfiguration) | **POST** /configuration/connector/test | Test connector configuration |
 | [**updateCodeTemplate**](ConfigurationManagementApi.md#updateCodeTemplate) | **PUT** /configuration/code/{id} | Update code template |
 | [**updateConnectionConfiguration**](ConfigurationManagementApi.md#updateConnectionConfiguration) | **PUT** /configuration/connector/instance/{identifier} | Update connector configuration |
 | [**updateServiceConfiguration**](ConfigurationManagementApi.md#updateServiceConfiguration) | **PUT** /configuration/service | Update service configuration |
@@ -263,7 +264,7 @@ This endpoint does not need any parameter.
 
 Get feature flags
 
-    Returns feature flags indicating which functionality is available for the current tenant and user. This is useful for UI applications to conditionally enable/disable features.  **Feature Flags:** - &#x60;outputMappingEnabled&#x60;: Whether outbound mapping is available - &#x60;externalExtensionsEnabled&#x60;: Whether external processor extensions are supported - &#x60;userHasMappingCreateRole&#x60;: Whether user can create/modify mappings - &#x60;userHasMappingAdminRole&#x60;: Whether user has administrative privileges - &#x60;pulsarAvailable&#x60;: Whether pulsar is available - &#x60;deviceIsolationMQTTServiceEnabled&#x60;: Whether device siolation for Cumulocity MQTT Service is enabled 
+    Returns feature flags indicating which functionality is available for the current tenant and user. This is useful for UI applications to conditionally enable/disable features.  **Feature Flags:** - &#x60;outputMappingEnabled&#x60;: Whether outbound mapping is available - &#x60;externalExtensionsEnabled&#x60;: Whether external processor extensions are supported - &#x60;userHasMappingCreateRole&#x60;: Whether user can create/modify mappings - &#x60;userHasMappingAdminRole&#x60;: Whether user has administrative privileges - &#x60;pulsarAvailable&#x60;: Whether pulsar is available - &#x60;deviceIsolationMQTTServiceEnabled&#x60;: Whether device isolation for Cumulocity MQTT Service is enabled 
 
 ### Parameters
 This endpoint does not need any parameter.
@@ -305,13 +306,40 @@ This endpoint does not need any parameter.
 - **Content-Type**: Not defined
 - **Accept**: application/json
 
+<a name="testConnectionConfiguration"></a>
+# **testConnectionConfiguration**
+> ConnectionTestResult testConnectionConfiguration(ConnectorConfiguration)
+
+Test connector configuration
+
+    Verifies connectivity and authentication for the given (possibly unsaved) connector configuration using a throwaway client; nothing is saved, registered or subscribed.  Sensitive properties sent as \&quot;****\&quot; are resolved from the stored configuration with the same identifier.  **Security:** Requires &#x60;ROLE_DYNAMIC_MAPPER_ADMIN&#x60; 
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **ConnectorConfiguration** | [**ConnectorConfiguration**](../Models/ConnectorConfiguration.md)|  | |
+
+### Return type
+
+[**ConnectionTestResult**](../Models/ConnectionTestResult.md)
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
 <a name="updateCodeTemplate"></a>
 # **updateCodeTemplate**
 > updateCodeTemplate(id, CodeTemplate)
 
 Update code template
 
-    Updates the code template for the given ID with new JavaScript code.  **Security:** Requires &#x60;ROLE_DYNAMIC_MAPPER_ADMIN&#x60; 
+    Updates the code template for the given ID with new JavaScript code. Creates it when no template is stored under that ID.  **Note:** Read-only templates (e.g. &#x60;SYSTEM&#x60;) cannot be modified. &#x60;SYSTEM&#x60; is framework-owned and re-loaded from the shipped version on every startup.  **Security:** Requires &#x60;ROLE_DYNAMIC_MAPPER_ADMIN&#x60; 
 
 ### Parameters
 
@@ -373,7 +401,7 @@ Update service configuration
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **request\_body** | [**Map**](../Models/object.md)|  | |
+| **request\_body** | [**Map**](../Models/AnyType.md)|  | |
 
 ### Return type
 

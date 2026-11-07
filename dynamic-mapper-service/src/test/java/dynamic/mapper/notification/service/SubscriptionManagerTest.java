@@ -51,6 +51,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.lang.reflect.Field;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -812,5 +814,21 @@ class SubscriptionManagerTest {
         NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
         when(col.get()).thenReturn(paged);
         return col;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void removeTenantDropsOnlyThatTenantsBookkeeping() throws Exception {
+        for (String name : List.of("shadowedStatic", "resyncsInFlight", "processingDevices")) {
+            Field f = SubscriptionManager.class.getDeclaredField(name);
+            f.setAccessible(true);
+            Set<String> set = (Set<String>) f.get(subscriptionManager);
+            set.add("t1:x");
+            set.add("t2:x");
+
+            subscriptionManager.removeTenant("t1");
+
+            assertEquals(Set.of("t2:x"), set, name);
+        }
     }
 }

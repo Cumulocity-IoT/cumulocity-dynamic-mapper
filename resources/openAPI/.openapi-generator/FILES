@@ -1,3 +1,4 @@
+Apis/AgentDefinitionControllerApi.md
 Apis/CacheControllerApi.md
 Apis/ClientRelationControllerApi.md
 Apis/ConfigurationManagementApi.md
@@ -9,8 +10,10 @@ Apis/MappingControllerApi.md
 Apis/MessageExplorerControllerApi.md
 Apis/MonitoringControllerApi.md
 Apis/OperationControllerApi.md
+Apis/ServiceLogsControllerApi.md
 Apis/TestControllerApi.md
 Models/CodeTemplate.md
+Models/ConnectionTestResult.md
 Models/ConnectorConfiguration.md
 Models/ConnectorProperty.md
 Models/ConnectorPropertyCondition.md
@@ -18,9 +21,6 @@ Models/ConnectorSpecification.md
 Models/ConnectorStatusEvent.md
 Models/Device.md
 Models/DynamicMapperRequest.md
-Models/DynamicMapperRequest_error.md
-Models/DynamicMapperRequest_error_cause.md
-Models/DynamicMapperRequest_error_cause_stackTrace_inner.md
 Models/ExplorerMessage.md
 Models/Extension.md
 Models/ExtensionEntry.md
@@ -34,9 +34,13 @@ Models/NotificationSubscriptionRequest.md
 Models/NotificationSubscriptionResponse.md
 Models/Paging.md
 Models/ServiceConfiguration.md
+Models/ServiceLogPage.md
+Models/ServiceLogsConfiguration.md
 Models/ServiceOperation.md
 Models/StartSessionRequest.md
 Models/Substitution.md
 Models/TestContext.md
 Models/TestResult.md
+Models/ValidationErrorResponse.md
+Models/ValidationIssue.md
 README.md

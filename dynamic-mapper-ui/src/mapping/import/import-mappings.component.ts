@@ -26,7 +26,6 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import {
-  AlertService,
   CoreModule,
   DropAreaComponent,
   ModalLabels
@@ -49,13 +48,14 @@ export class ImportMappingsComponent implements OnDestroy {
   isLoading: boolean = false;
   isAppCreated: boolean = false;
   errorMessage: string;
-  successText: string = 'Imported mappings';
+  resultType: 'success' | 'warning' | 'error' = 'success';
+  resultText: string = '';
+  failedMappings: string[] = [];
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService,
     private ngZone: NgZone,
     private appRef: ApplicationRef
   ) { }
@@ -67,7 +67,9 @@ export class ImportMappingsComponent implements OnDestroy {
         await this.onFile(file);
       }
     } catch (error) {
-      this.alertService.warning(`Import failed. Verify the format of the import file!`);
+      this.errorMessage = `Import failed. Verify the format of the import file!`;
+      this.isLoading = false;
+      this.progress$.next(null);
     }
   }
 
@@ -75,6 +77,7 @@ export class ImportMappingsComponent implements OnDestroy {
     this.isLoading = true;
     this.errorMessage = null;
     this.isAppCreated = false;
+    this.failedMappings = [];
     this.progress$.next(0);
 
     const ms = await file.text();
@@ -93,17 +96,20 @@ export class ImportMappingsComponent implements OnDestroy {
         successCount++;
         this.progress$.next((100 * (i + 1)) / countMappings);
       } catch (ex) {
-        const errorMsg = `Failed to import mapping ${m.name}`;
-        errors.push(errorMsg);
+        errors.push(m.name);
       }
     }
 
+    this.failedMappings = errors;
     if (errors.length === 0) {
-      this.alertService.success(`Imported ${successCount} mapping(s) successfully.`);
+      this.resultType = 'success';
+      this.resultText = `Imported ${successCount} mapping(s) successfully.`;
     } else if (successCount === 0) {
-      this.errorMessage = `Failed to import mappings. ${errors.length} error(s) occurred.`;
+      this.resultType = 'error';
+      this.resultText = `Failed to import mappings. ${errors.length} error(s) occurred.`;
     } else {
-      this.alertService.warning(`Import completed: ${successCount} succeeded, ${errors.length} failed.`);
+      this.resultType = 'warning';
+      this.resultText = `Import completed: ${successCount} succeeded, ${errors.length} failed.`;
     }
 
     // Use NgZone.run to ensure the view updates run inside Angular's zone

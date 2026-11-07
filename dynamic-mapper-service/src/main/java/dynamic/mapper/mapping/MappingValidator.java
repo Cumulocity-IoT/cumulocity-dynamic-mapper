@@ -228,6 +228,17 @@ public class MappingValidator {
                 continue;
             }
 
+            // An outbound mapping always produces exactly one broker message, so there is no
+            // fan-out for the elements to go into; the UI locks the option for that direction.
+            if (mapping.getDirection() == Direction.OUTBOUND && Boolean.TRUE.equals(substitution.getExpandArray())) {
+                issues.add(new ValidationIssue(
+                        ValidationError.Substitution_Expand_Array_Not_Supported_For_Outbound,
+                        substitutionField(i, "expandArray"),
+                        i,
+                        pathSource,
+                        "Expand as array is not supported for outbound mappings"));
+            }
+
             try {
                 jsonata(pathSource);
             } catch (Exception e) {

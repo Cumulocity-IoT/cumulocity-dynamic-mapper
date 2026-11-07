@@ -63,6 +63,33 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
   selector: 'd11r-mapping-template-step',
   templateUrl: './mapping-template-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
+  styles: [`
+    /* Both columns stretch to the taller one, so an empty panel fills the height of the editor
+       next to it, and shrinks to a compact block when neither side has an editor. */
+    .tpl-col { display: flex; flex-direction: column; min-width: 0; }
+    .tpl-empty {
+      flex: 1 1 auto;
+      min-height: 120px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 16px; text-align: center;
+      border: 1px dashed var(--c8y-root-component-border-color, #cfd4d9);
+      border-radius: 4px;
+      color: var(--c8y-root-component-text-color-muted, #6c757d);
+    }
+    .tpl-empty .tpl-empty-title { font-weight: 500; color: var(--c8y-root-component-color-default, inherit); }
+    .tpl-empty .tpl-empty-text { font-size: 12px; max-width: 420px; }
+    .tpl-transport {
+      margin-top: 16px; padding: 8px 12px;
+      border: 1px solid var(--c8y-root-component-border-color, #cfd4d9);
+      border-left: 3px solid var(--c8y-brand-primary, #1776bf);
+      border-radius: 4px;
+    }
+    .tpl-transport-title { font-weight: 500; }
+    .tpl-transport-hint { font-size: 12px; color: var(--c8y-root-component-text-color-muted, #6c757d); }
+    .tpl-transport-list { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 8px 0 0; }
+    .tpl-transport-list dd { margin: 0; word-break: break-all; }
+    .tpl-transport-list dt { font-weight: normal; }
+  `],
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })
@@ -118,7 +145,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * payload, so — unlike `_CONTEXT_DATA_` for JSONata — they never appear in the source template
    * and would otherwise be invisible to the author.
    */
-  sampleTransportFields: { name: string; value: string }[] = [];
+  sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -143,14 +170,19 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
 
-  private computeSampleTransportFields(): { name: string; value: string }[] {
+  private computeSampleTransportFields(): { name: string; value: string; accessor: string }[] {
     const fields = this.stepperConfiguration?.sampleTransportFields;
     if (!fields || !isCodeOrExtensionTransformation(this.mapping?.transformationType)) {
       return [];
     }
     return Object.entries(fields)
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, value]) => ({
+        name,
+        value,
+        // names such as "header.tenant" are not valid property names, so they need bracket access
+        accessor: /^[A-Za-z_$][\w$]*$/.test(name) ? `msg.transportFields.${name}` : `msg.transportFields["${name}"]`
+      }));
   }
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────

@@ -90,10 +90,6 @@ export class ExtensionPropertiesComponent implements OnInit {
       { label: 'Event Implementation', key: 'fqnClassName' }
     ];
 
-    if (entry.description) {
-      properties.push({ label: 'Description', key: 'description' });
-    }
-
     if (entry.version) {
       properties.push({ label: 'Version', key: 'version' });
     }

@@ -25,7 +25,7 @@ class MappingCacheManagerTest {
     @BeforeEach
     void setUp() {
         cache = new MappingCacheManager();
-        cache.createTenantCache(T);
+        cache.initializeTenant(T);
     }
 
     @Test
@@ -60,7 +60,7 @@ class MappingCacheManagerTest {
 
     @Test
     void removedTenantIsNotResurrected() throws ResolveException {
-        cache.removeTenantCache(T);
+        cache.removeTenant(T);
         cache.addMapping(T, in("1", "a", "x/y"));
 
         assertTrue(cache.getAllInboundMappings(T).isEmpty());

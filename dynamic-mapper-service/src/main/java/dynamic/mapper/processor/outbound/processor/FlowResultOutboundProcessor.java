@@ -25,7 +25,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,11 +43,10 @@ import dynamic.mapper.processor.model.ExternalIdInfo;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
+import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Processes the result of a Smart Function (JavaScript) outbound mapping.
@@ -332,33 +330,12 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
             // If publishTopic is null or empty, keep the resolved topic from mapping (set at line 121)
 
-            // set key for Kafka messages; only when actually present, so transport fields that
-            // carry other entries do not overwrite an already-resolved key with null
-            if (deviceMessage.getTransportFields() != null) {
-                String transportKey = deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME);
-                if (transportKey != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(transportKey)) {
-                    context.setKey(transportKey);
-                }
-            }
-
-            // Derive API: prioritize cumulocityType from DeviceMessage, fallback to deriving from topic
-            API derivedAPI = null;
-            if (deviceMessage.getCumulocityType() != null) {
-                // Use explicitly specified cumulocityType from DeviceMessage
-                derivedAPI = APITopicUtil.deriveAPIFromTopic(deviceMessage.getCumulocityType().toString());
-                if (derivedAPI != null) {
-                    request.setApi(derivedAPI);
-                    log.debug("{} - Using API {} from DeviceMessage.cumulocityType for DeviceMessage",
-                            tenant, derivedAPI.name);
-                }
-            } else if (context.getResolvedPublishTopic() != null && !context.getResolvedPublishTopic().isEmpty()) {
-                // Fallback: derive API from resolved publishTopic
-                derivedAPI = APITopicUtil.deriveAPIFromTopic(context.getResolvedPublishTopic());
-                if (derivedAPI != null) {
-                    request.setApi(derivedAPI);
-                    log.debug("{} - Derived API {} from resolved topic '{}' for DeviceMessage",
-                            tenant, derivedAPI.name, context.getResolvedPublishTopic());
-                }
+            // Derive API: cumulocityType from the DeviceMessage first, then the resolved publish topic.
+            // Without a match the request keeps the API it was created with (the mapping's target API).
+            API derivedAPI = OutboundRequestFinalizer.deriveApi(deviceMessage.getCumulocityType(),
+                    context.getResolvedPublishTopic());
+            if (derivedAPI != null) {
+                request.setApi(derivedAPI);
             }
 
             // Set publishTopic on request from resolved topic
@@ -366,9 +343,16 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // internalSourceId → source.id in the C8Y payload (must be the numeric managed object ID).
             // brokerRoutingId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
-            finalizeRequest(request, internalSourceId, payloadJson, tenant);
+            // Only for an internal Cumulocity destination: with no API derived the request keeps the
+            // mapping's API, and finalizing it would rewrite the method or reject the payload of an
+            // external webhook request.
+            if (derivedAPI != null) {
+                OutboundRequestFinalizer.finalizeRequest(request, internalSourceId, payloadJson, tenant, objectMapper);
+                OutboundRequestFinalizer.throwIfRejected(request);
+            }
 
-            context.setRetain(Boolean.TRUE.equals(deviceMessage.getRetain()));
+            // Broker message key and retain flag
+            OutboundRequestFinalizer.applyTransportFields(context, deviceMessage);
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
                     tenant, brokerRoutingId != null ? brokerRoutingId : "unresolved",
@@ -379,52 +363,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         }
     }
 
-    /**
-     * Sets source.id in the Cumulocity payload and adjusts the REST path for
-     * PUT/PATCH/DELETE operations. Called by both processDeviceMessage and
-     * processCumulocityObject so the logic lives in one place.
-     *
-     * @param internalId  internal C8Y managed object ID — what Cumulocity REST API expects
-     *                    in source.id / id (never an external EUI or serial number)
-     * @param payloadJson raw JSON string before source-identifier injection
-     */
-    private void finalizeRequest(DynamicMapperRequest request, String internalId,
-            String payloadJson, String tenant) {
-        request.setSourceId(internalId);
-
-        if (request.getApi() != null && internalId != null && !internalId.isEmpty()) {
-            log.debug("{} - Populating source identifier: id={}, api.identifier={}",
-                    tenant, internalId, request.getApi().identifier);
-            request.setRequestCumulocity(populateSourceIdentifier(payloadJson, request, tenant));
-        } else {
-            log.warn("{} - Skipping populateSourceIdentifier: api={}, id={}",
-                    tenant, request.getApi(), internalId);
-        }
-
-        // Measurements are immutable time-series — PUT/PATCH must become POST
-        if (request.getApi() == API.MEASUREMENT &&
-                (request.getMethod() == RequestMethod.PUT || request.getMethod() == RequestMethod.PATCH)) {
-            log.warn("{} - Measurements don't support PUT/PATCH, converting to POST. Use action='create' to avoid this warning.", tenant);
-            request.setMethod(RequestMethod.POST);
-            request.setPathCumulocity(request.getApi().path);
-        } else if (request.getApi() != null && internalId != null &&
-                (request.getMethod() == RequestMethod.PUT ||
-                 request.getMethod() == RequestMethod.PATCH ||
-                 request.getMethod() == RequestMethod.DELETE)) {
-            // ID goes in the URL path; remove it from the body
-            String pathWithId = request.getApi().path + "/" + internalId;
-            request.setPathCumulocity(pathWithId);
-            if (request.getRequestCumulocity() != null) {
-                request.setRequestCumulocity(
-                        removeIdentifierFromPayload(request.getRequestCumulocity(), request.getApi().identifier, tenant));
-            }
-            log.debug("{} - Set pathCumulocity for {}: {}", tenant, request.getMethod(), pathWithId);
-        } else if (request.getMethod() == RequestMethod.POST && request.getApi() != null) {
-            // POST uses the base API path — never append an ID
-            request.setPathCumulocity(request.getApi().path);
-            log.debug("{} - Using base API path for POST: {}", tenant, request.getApi().path);
-        }
-    }
 
     private void processCumulocityObject(
             CumulocityObject cumulocityMessage,
@@ -524,7 +462,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 c8yRequest.setPublishTopic(context.getResolvedPublishTopic());
             }
 
-            finalizeRequest(c8yRequest, resolvedDeviceId, payloadJson, tenant);
+            OutboundRequestFinalizer.finalizeRequest(c8yRequest, resolvedDeviceId, payloadJson, tenant, objectMapper);
+            OutboundRequestFinalizer.throwIfRejected(c8yRequest);
 
             context.setRetain(Boolean.TRUE.equals(c8yRequest.getRetain()));
 
@@ -601,132 +540,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Remove TOKEN_CONTEXT_DATA from payload
             payload.remove(Mapping.TOKEN_CONTEXT_DATA);
-        }
-    }
-
-    /**
-     * Populate source identifier in the payload for Cumulocity API requests.
-     * Uses API.identifier field to determine which field name to populate (e.g., "source.id", "id", "deviceId")
-     * and sets it to the value from request.getSourceId().
-     *
-     * @param payload The JSON payload as a string
-     * @param request The DynamicMapperRequest containing API and sourceId information
-     * @param tenant The tenant identifier for logging
-     * @return The modified payload with source identifier populated, or original payload on error
-     */
-    private String populateSourceIdentifier(String payload, DynamicMapperRequest request, String tenant) {
-        // Only populate if we have both API info and sourceId
-        if (request.getApi() == null || request.getSourceId() == null || request.getSourceId().isEmpty()) {
-            return payload;
-        }
-
-        String identifier = request.getApi().identifier;
-        String sourceId = request.getSourceId();
-
-        try {
-            // Parse the JSON payload
-            JsonNode jsonNode = objectMapper.readTree(payload);
-
-            if (!(jsonNode instanceof ObjectNode)) {
-                log.warn("{} - Payload is not a JSON object, cannot populate source identifier",
-                        tenant);
-                return payload;
-            }
-
-            ObjectNode objectNode = (ObjectNode) jsonNode;
-
-            // Handle hierarchical identifiers like "source.id"
-            if (identifier.contains(".")) {
-                String[] parts = identifier.split("\\.");
-                ObjectNode currentNode = objectNode;
-
-                // Navigate/create nested structure
-                for (int i = 0; i < parts.length - 1; i++) {
-                    String part = parts[i];
-                    if (!currentNode.has(part) || !currentNode.get(part).isObject()) {
-                        currentNode.set(part, objectMapper.createObjectNode());
-                    }
-                    currentNode = (ObjectNode) currentNode.get(part);
-                }
-
-                // Set the final value
-                String lastPart = parts[parts.length - 1];
-                currentNode.put(lastPart, sourceId);
-            } else {
-                // Simple identifier - set directly
-                objectNode.put(identifier, sourceId);
-            }
-
-            String modifiedPayload = objectMapper.writeValueAsString(objectNode);
-
-            log.debug("{} - Populated {} with value {}",
-                    tenant, identifier, sourceId);
-
-            return modifiedPayload;
-
-        } catch (Exception e) {
-            log.warn("{} - Failed to populate source identifier in payload: {}",
-                    tenant, e.getMessage());
-            return payload; // Return original payload on error
-        }
-    }
-
-    /**
-     * Remove identifier field from the payload for PUT/PATCH/DELETE operations.
-     * For these methods, the ID is in the URL path and should not be in the body.
-     *
-     * @param payload The JSON payload as a string
-     * @param identifier The identifier field to remove (e.g., "id", "source.id")
-     * @param tenant The tenant identifier for logging
-     * @return The modified payload with identifier removed, or original payload on error
-     */
-    private String removeIdentifierFromPayload(String payload, String identifier, String tenant) {
-        try {
-            // Parse the JSON payload
-            JsonNode jsonNode = objectMapper.readTree(payload);
-
-            if (!(jsonNode instanceof ObjectNode)) {
-                log.warn("{} - Payload is not a JSON object, cannot remove identifier",
-                        tenant);
-                return payload;
-            }
-
-            ObjectNode objectNode = (ObjectNode) jsonNode;
-
-            // Handle hierarchical identifiers like "source.id"
-            if (identifier.contains(".")) {
-                String[] parts = identifier.split("\\.");
-                ObjectNode currentNode = objectNode;
-
-                // Navigate to the parent node
-                for (int i = 0; i < parts.length - 1; i++) {
-                    String part = parts[i];
-                    if (!currentNode.has(part) || !currentNode.get(part).isObject()) {
-                        // Path doesn't exist, nothing to remove
-                        return payload;
-                    }
-                    currentNode = (ObjectNode) currentNode.get(part);
-                }
-
-                // Remove the final field
-                String lastPart = parts[parts.length - 1];
-                currentNode.remove(lastPart);
-            } else {
-                // Simple identifier - remove directly
-                objectNode.remove(identifier);
-            }
-
-            String modifiedPayload = objectMapper.writeValueAsString(objectNode);
-
-            log.debug("{} - Removed {} from payload for PUT/PATCH/DELETE request",
-                    tenant, identifier);
-
-            return modifiedPayload;
-
-        } catch (Exception e) {
-            log.warn("{} - Failed to remove identifier from payload: {}",
-                    tenant, e.getMessage());
-            return payload; // Return original payload on error
         }
     }
 

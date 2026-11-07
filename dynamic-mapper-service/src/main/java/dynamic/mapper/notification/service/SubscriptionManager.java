@@ -1040,4 +1040,12 @@ public class SubscriptionManager {
     private Boolean isValid(ManagedObjectRepresentation mor) {
         return mor != null && mor.getId() != null;
     }
+
+    /** Drops tenant-scoped bookkeeping on tenant removal. */
+    public void removeTenant(String tenant) {
+        String prefix = tenant + ":";
+        shadowedStatic.removeIf(k -> k.startsWith(prefix));
+        resyncsInFlight.removeIf(k -> k.startsWith(prefix));
+        processingDevices.removeIf(k -> k.startsWith(prefix));
+    }
 }

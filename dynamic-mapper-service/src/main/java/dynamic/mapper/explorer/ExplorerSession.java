@@ -42,6 +42,8 @@ public class ExplorerSession {
     private String userId;
     private String connectorIdentifier;
     private String connectorName;
+    /** Connector type name (e.g. KAFKA, PULSAR, MQTT); null for OUTBOUND sessions, which span all connectors. */
+    private String connectorType;
     private String topic;
     private String tenant;
 

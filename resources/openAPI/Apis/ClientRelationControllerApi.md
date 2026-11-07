@@ -1,6 +1,6 @@
 # ClientRelationControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -29,7 +29,7 @@ Update client relation for client
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 
@@ -51,7 +51,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 
@@ -73,7 +73,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 
@@ -95,7 +95,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 
@@ -145,7 +145,7 @@ Get all devices mapped to a specific client
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 
@@ -170,7 +170,7 @@ Remove all device mappings for a specific client
 
 ### Return type
 
-**Map**
+[**Map**](../Models/AnyType.md)
 
 ### Authorization
 

@@ -27,6 +27,7 @@ import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.core.ExtensionInboundRegistry;
@@ -86,26 +87,16 @@ public abstract class AbstractExtensibleProcessor<T> extends CommonProcessor {
      *
      * @param tenant The tenant identifier
      * @param extension The extension entry configuration
-     * @return The extension inbound implementation
+     * @return The extension inbound implementation, never null
      */
     protected ProcessorExtensionInbound<?> getProcessorExtensionInbound(String tenant, ExtensionEntry extension)
             throws ProcessingException {
-        String extensionName = extension.getExtensionName();
-        String eventName = extension.getEventName();
-
-        Extension registeredExtension = extensionInboundRegistry.getExtension(tenant, extensionName);
-        if (registeredExtension == null) {
-            throwExtensionNotFoundException(tenant, extension);
-            return null; // unreachable, throwExtensionNotFoundException always throws
+        ExtensionEntry registeredEntry = getLoadedEntry(tenant, extension);
+        ProcessorExtensionInbound<?> impl = registeredEntry.getExtensionImplInbound();
+        if (impl == null) {
+            throwWrongImplementation(tenant, extension, "ProcessorExtensionInbound", registeredEntry);
         }
-
-        ExtensionEntry registeredEntry = registeredExtension.getExtensionEntries().get(eventName);
-        if (registeredEntry == null) {
-            throwExtensionEventNotFoundException(tenant, extension);
-            return null; // unreachable, throwExtensionEventNotFoundException always throws
-        }
-
-        return registeredEntry.getExtensionImplInbound();
+        return impl;
     }
 
     /**
@@ -113,26 +104,48 @@ public abstract class AbstractExtensibleProcessor<T> extends CommonProcessor {
      *
      * @param tenant The tenant identifier
      * @param extension The extension entry configuration
-     * @return The extension outbound implementation
+     * @return The extension outbound implementation, never null
      */
-    protected dynamic.mapper.processor.extension.ProcessorExtensionOutbound<?> getProcessorExtensionOutbound(String tenant, ExtensionEntry extension)
+    protected ProcessorExtensionOutbound<?> getProcessorExtensionOutbound(String tenant, ExtensionEntry extension)
             throws ProcessingException {
-        String extensionName = extension.getExtensionName();
-        String eventName = extension.getEventName();
+        ExtensionEntry registeredEntry = getLoadedEntry(tenant, extension);
+        ProcessorExtensionOutbound<?> impl = registeredEntry.getExtensionImplOutbound();
+        if (impl == null) {
+            throwWrongImplementation(tenant, extension, "ProcessorExtensionOutbound", registeredEntry);
+        }
+        return impl;
+    }
 
-        Extension registeredExtension = extensionInboundRegistry.getExtension(tenant, extensionName);
+    /**
+     * Look up the entry in the registry (not the copy stored with the mapping, which may be stale)
+     * and make sure it was loaded successfully.
+     */
+    private ExtensionEntry getLoadedEntry(String tenant, ExtensionEntry extension) throws ProcessingException {
+        Extension registeredExtension = extensionInboundRegistry.getExtension(tenant, extension.getExtensionName());
         if (registeredExtension == null) {
             throwExtensionNotFoundException(tenant, extension);
-            return null; // unreachable, throwExtensionNotFoundException always throws
         }
 
-        ExtensionEntry registeredEntry = registeredExtension.getExtensionEntries().get(eventName);
+        ExtensionEntry registeredEntry = registeredExtension.getExtensionEntries().get(extension.getEventName());
         if (registeredEntry == null) {
             throwExtensionEventNotFoundException(tenant, extension);
-            return null; // unreachable, throwExtensionEventNotFoundException always throws
         }
 
-        return registeredEntry.getExtensionImplOutbound();
+        if (!Boolean.TRUE.equals(registeredEntry.getLoaded())) {
+            String message = String.format("Tenant %s - Extension %s:%s is not loaded: %s", tenant,
+                    extension.getExtensionName(), extension.getEventName(), registeredEntry.getMessage());
+            log.warn(message);
+            throw new ProcessingException(message);
+        }
+        return registeredEntry;
+    }
+
+    private void throwWrongImplementation(String tenant, ExtensionEntry extension, String expected,
+            ExtensionEntry registeredEntry) throws ProcessingException {
+        String message = String.format("Tenant %s - Extension %s:%s does not implement %s (it is %s)", tenant,
+                extension.getExtensionName(), extension.getEventName(), expected, registeredEntry.getDirection());
+        log.warn(message);
+        throw new ProcessingException(message);
     }
 
     /**

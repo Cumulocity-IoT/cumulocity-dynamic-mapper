@@ -62,6 +62,7 @@
       </h5>
     </div>
     <div class="card-block flex-grow overflow-auto fit-w">
+    @if (stepperViewModel) {
       <d11r-mapping-template-step #templateStep
         [mapping]="mapping"
         [stepperConfiguration]="stepperConfiguration"
@@ -96,6 +97,7 @@
         </ng-container>
         }
       </d11r-mapping-template-step>
+    }
     </div>
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-templates" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
       (onNext)="onNextStep($event)" (onBack)="onBackStep($event)"
@@ -165,10 +167,7 @@
       <div class="flex-grow col-lg-2 p-t-4">
         <button type="button" name="generateSubstitution" data-cy="dm-mapping-stepper-generate-ai" class="btn btn-ai btn-sm"
           (click)="openGenerateSubstitutionDrawer()"
-          title="{{ 'Generate with AI' | translate }}" [disabled]="
-                            !stepperViewModel?.config.showEditorSource ||
-                              stepperViewModel?.config.readOnly || !aiAgentDeployed
-                        ">
+          title="{{ 'Generate with AI' | translate }}" [disabled]="aiGenerationDisabled">
           <span id="updateButton">{{ 'Generate with AI' | translate }}</span>
         </button>
         @if (!aiAgentDeployed) {

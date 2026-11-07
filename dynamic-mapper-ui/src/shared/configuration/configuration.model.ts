@@ -42,6 +42,7 @@ export interface ServiceConfiguration {
   codeTemplates?: any;
   maxCPUTimeMS: number;
   pipelineTimeoutMS?: number;
+  maxProcessingAttempts?: number;
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;
@@ -50,7 +51,6 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
-  explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
   contextPoolSize?: number;
   serviceLogs?: ServiceLogsConfiguration;

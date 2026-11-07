@@ -22,6 +22,9 @@
 package dynamic.mapper.core;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -29,10 +32,16 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.BinariesApi;
 
 import dynamic.mapper.configuration.ExtensionConfiguration;
 import dynamic.mapper.model.Direction;
@@ -40,6 +49,7 @@ import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.extension.ExtensionStatus;
 import dynamic.mapper.model.extension.ExtensionType;
+import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.JavaExtensionContext;
@@ -138,6 +148,127 @@ class ExtensionManagerClassLoadingTest {
 
         assertTrue(exception.getMessage().contains("Registration file"),
                 "Exception should indicate missing registration resource");
+    }
+
+    @Test
+    void registerExtensionInProcessor_marksClassWithoutProcessorInterfaceAsNotLoaded() throws Exception {
+        extensionConfiguration.setExternalExtensionsAllowedPackage("dynamic.mapper");
+
+        String yaml = """
+                extensions:
+                  - eventName: plainEvent
+                    className: '%s'
+                """.formatted(String.class.getName());
+        // String is outside the allowed package, so use a class of this test that implements nothing
+        yaml = yaml.replace(String.class.getName(), NotAnExtension.class.getName());
+
+        invokeRegisterExtensionInProcessor("ext-4", "plain-extension",
+                new YamlBackedClassLoader("extension-external.yaml", yaml,
+                        ExtensionManagerClassLoadingTest.class.getClassLoader()),
+                true);
+
+        ExtensionEntry entry = extensionInboundRegistry.getExtension(TENANT, "plain-extension")
+                .getExtensionEntries().get("plainEvent");
+        assertFalse(entry.getLoaded());
+        assertTrue(entry.getMessage().contains("must implement"), entry.getMessage());
+        assertNull(entry.getExtensionImplInbound());
+        assertNull(entry.getExtensionImplOutbound());
+    }
+
+    @Test
+    void registerExtensionInProcessor_recordsFailingStaticInitializerOnEntryAndContinues() throws Exception {
+        extensionConfiguration.setExternalExtensionsAllowedPackage("dynamic.mapper");
+
+        String yaml = """
+                extensions:
+                  - eventName: broken
+                    className: '%s'
+                  - eventName: good
+                    className: '%s'
+                """.formatted(BrokenStaticInit.class.getName(), ValidInboundExtension.class.getName());
+
+        invokeRegisterExtensionInProcessor("ext-5", "mixed-extension",
+                new YamlBackedClassLoader("extension-external.yaml", yaml,
+                        ExtensionManagerClassLoadingTest.class.getClassLoader()),
+                true);
+
+        Extension extension = extensionInboundRegistry.getExtension(TENANT, "mixed-extension");
+        assertEquals(ExtensionStatus.PARTIALLY, extension.getLoaded());
+        assertFalse(extension.getExtensionEntries().get("broken").getLoaded());
+        assertTrue(extension.getExtensionEntries().get("good").getLoaded());
+    }
+
+    @Test
+    void loadProcessorExtensions_skipsMalformedAndFailedExtensionsButLoadsTheRest() throws Exception {
+        BinariesApi binariesApi = mock(BinariesApi.class);
+        when(binariesApi.downloadFile(any(GId.class))).thenThrow(new IllegalStateException("download failed"));
+        ExtensionsComponent extensionsComponent = mock(ExtensionsComponent.class);
+        when(extensionsComponent.get()).thenReturn(List.of(
+                managedObject("1", Map.of()), // fragment without name
+                managedObject("2", Map.of("name", "broken-jar", "external", true)),
+                managedObject("3", Map.of("name", "dynamic-mapper-extension-internal", "external", false))));
+        ExtensionManager manager = new ExtensionManager(binariesApi, extensionsComponent, extensionInboundRegistry,
+                extensionConfiguration);
+
+        manager.loadProcessorExtensions(TENANT);
+
+        Extension broken = extensionInboundRegistry.getExtension(TENANT, "broken-jar");
+        assertNotNull(broken, "A jar that cannot be downloaded stays visible so the UI can show why");
+        assertEquals(ExtensionStatus.NOT_LOADED, broken.getLoaded());
+        assertTrue(broken.getMessage().contains("download failed"), broken.getMessage());
+        assertTrue(broken.isExternal());
+
+        Extension internal = extensionInboundRegistry.getExtension(TENANT, "dynamic-mapper-extension-internal");
+        assertNotNull(internal, "A malformed managed object must not stop the other extensions from loading");
+        assertEquals(2, extensionInboundRegistry.getExtensions(TENANT).size());
+    }
+
+    @Test
+    void loadProcessorExtensions_keepsPreviousExtensionsUntilSwap() throws Exception {
+        extensionInboundRegistry.addExtension(TENANT, new Extension("old", "old-extension", true));
+        ExtensionsComponent extensionsComponent = mock(ExtensionsComponent.class);
+        // While the new set is being built the registry must still serve the old extension
+        when(extensionsComponent.get()).thenAnswer(invocation -> {
+            assertNotNull(extensionInboundRegistry.getExtension(TENANT, "old-extension"));
+            return List.of();
+        });
+        ExtensionManager manager = new ExtensionManager(mock(BinariesApi.class), extensionsComponent,
+                extensionInboundRegistry, extensionConfiguration);
+
+        manager.reloadExtensions(TENANT);
+
+        assertNull(extensionInboundRegistry.getExtension(TENANT, "old-extension"));
+    }
+
+    @Test
+    void deleteProcessorExtension_refusesBuiltInExtension() {
+        extensionInboundRegistry.addExtension(TENANT, new Extension("1", "builtin", false));
+
+        assertThrows(IllegalArgumentException.class, () -> extensionManager.deleteProcessorExtension(TENANT, "builtin"));
+        assertNotNull(extensionInboundRegistry.getExtension(TENANT, "builtin"));
+    }
+
+    private static ManagedObjectRepresentation managedObject(String id, Map<String, Object> fragment) {
+        ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
+        mo.setId(GId.asGId(id));
+        mo.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE, fragment);
+        return mo;
+    }
+
+    public static class NotAnExtension {
+    }
+
+    public static class BrokenStaticInit implements ProcessorExtensionInbound<Object> {
+        static {
+            if (true) {
+                throw new IllegalStateException("static init failed");
+            }
+        }
+
+        @Override
+        public CumulocityObject[] onMessage(Message<Object> message, JavaExtensionContext context) {
+            return new CumulocityObject[0];
+        }
     }
 
     private void invokeRegisterExtensionInProcessor(String id, String extensionName, ClassLoader dynamicLoader,

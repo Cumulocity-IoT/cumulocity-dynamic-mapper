@@ -25,9 +25,12 @@ import dynamic.mapper.util.TenantLogContext;
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.TransportMetadata;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -46,16 +49,25 @@ public class AMQPCallback extends DefaultConsumer {
     private final String connectorName;
     private final ServiceConfiguration serviceConfiguration;
     private final ExecutorService virtualThreadPool;
+    private final boolean autoAck;
+    private final MessageFailureTracker failureTracker;
 
     /**
      * Constructor
+     *
+     * @param channel the channel the queue is consumed on, used to ack and nack
+     * @param autoAck whether the consumer was registered with autoAck (broker acknowledges on delivery)
      */
-    public AMQPCallback(String tenant,
+    public AMQPCallback(Channel channel,
+            boolean autoAck,
+            String tenant,
             ServiceRegistry serviceRegistry,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName) {
-        super(null); // Channel will be set when basicConsume is called
+        super(channel);
+        this.autoAck = autoAck;
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
@@ -85,6 +97,7 @@ public class AMQPCallback extends DefaultConsumer {
                         .sendPayload(true)
                         .connectorIdentifier(connectorIdentifier)
                         .payload(body)
+                        .metadata(amqpMetadata(envelope, properties))
                         .build();
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -100,10 +113,21 @@ public class AMQPCallback extends DefaultConsumer {
                             tenant, routingKey, connectorIdentifier);
                 }
 
-                // Acknowledge message if not auto-ack
-                // Note: If autoAck is true in basicConsume, this won't be needed
-                if (this.getChannel() != null && !envelope.isRedeliver()) {
-                    this.getChannel().basicAck(deliveryTag, false);
+                // Acknowledge only after the pipeline succeeded; nack with requeue otherwise, until the
+                // message failed maxProcessingAttempts times: then it is dropped (acked).
+                // With autoAck=true the broker already considers the message delivered, so nothing to do.
+                if (this.getChannel() != null && !autoAck) {
+                    String failureKey = failureKey(properties, routingKey, body);
+                    if (ProcessingResultHelper.awaitAckable(processedResults, tenant, topic, log)) {
+                        failureTracker.clear(failureKey);
+                        this.getChannel().basicAck(deliveryTag, false);
+                    } else if (failureTracker.recordFailureReachedLimit(failureKey)) {
+                        log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], connector: {}",
+                                tenant, failureTracker.limit(), routingKey, connectorIdentifier);
+                        this.getChannel().basicAck(deliveryTag, false);
+                    } else {
+                        this.getChannel().basicNack(deliveryTag, false, true);
+                    }
                 }
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -117,7 +141,7 @@ public class AMQPCallback extends DefaultConsumer {
 
                 // Reject message and requeue
                 try {
-                    if (this.getChannel() != null) {
+                    if (this.getChannel() != null && !autoAck) {
                         this.getChannel().basicNack(deliveryTag, false, true);
                     }
                 } catch (IOException ex) {
@@ -125,6 +149,17 @@ public class AMQPCallback extends DefaultConsumer {
                 }
             }
         }
+    }
+
+    /**
+     * Identifies a message across redeliveries: the delivery tag changes on every redelivery, so use the
+     * AMQP message id when the publisher set one, and otherwise the routing key and a hash of the body.
+     */
+    private static String failureKey(AMQP.BasicProperties properties, String routingKey, byte[] body) {
+        if (properties != null && properties.getMessageId() != null) {
+            return "id:" + properties.getMessageId();
+        }
+        return routingKey + "#" + java.util.Arrays.hashCode(body);
     }
 
     @Override
@@ -149,5 +184,26 @@ public class AMQPCallback extends DefaultConsumer {
         } else {
             log.warn("{} - Consumer shutdown: {}, reason: {}", tenant, consumerTag, sig.getReason());
         }
+    }
+
+    /**
+     * The topic is the routing key with dots replaced by slashes, so the original routing key and
+     * the exchange are kept here, together with the message headers and standard properties.
+     */
+    static java.util.Map<String, String> amqpMetadata(Envelope envelope, AMQP.BasicProperties properties) {
+        TransportMetadata metadata = new TransportMetadata()
+                .put("", "routingKey", envelope.getRoutingKey())
+                .put("", "exchange", envelope.getExchange());
+        if (properties != null) {
+            metadata.put("", "contentType", properties.getContentType())
+                    .put("", "correlationId", properties.getCorrelationId())
+                    .put("", "messageId", properties.getMessageId())
+                    .put("", "type", properties.getType())
+                    .put("", "appId", properties.getAppId());
+            if (properties.getHeaders() != null) {
+                properties.getHeaders().forEach((name, value) -> metadata.put(TransportMetadata.HEADER, name, (Object) value));
+            }
+        }
+        return metadata.build();
     }
 }

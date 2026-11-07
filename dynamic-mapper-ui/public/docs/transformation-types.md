@@ -6,11 +6,20 @@ title: Transformation types
 
 The Dynamic Mapper offers three ways to transform your data between external formats and Cumulocity IoT.
 Each transformation type provides different levels of control and flexibility, allowing you to choose the
-approach that best fits your use case:
+approach that best fits your use case.
 
+A new mapping uses a **Smart Function** unless you change it. With **Expert Mode** switched off, the **Add mapping**
+dialog does not show the **Transformation Type** selector. Enable Expert Mode to select JSONata or a Java Extension
+instead.
 
-A new mapping uses a **Smart Function** unless you change it: with **Expert Mode** switched off the creation
-dialog does not offer the choice at all. Enable Expert Mode to select JSONata or a Java Extension instead.
+Which types you can select depends on the payload type and the direction:
+
+| Payload type | Inbound | Outbound |
+|---|---|---|
+| JSON | Smart Function, JSONata | Smart Function, JSONata, Java Extension |
+| Flat File, Hexadecimal | Smart Function, JSONata | Not available |
+| Any Payload | Smart Function, Java Extension | Not available |
+| SparkPlug B | Smart Function | Smart Function |
 
 **Quick-reference decision guide:**
 
@@ -26,7 +35,7 @@ dialog does not offer the choice at all. Enable Expert Mode to select JSONata or
 
 #### Defining a substitution using JSONata {#jsonata-substitution}
 
-JSONata is a powerful query and transformation language for JSON that supports path expressions, predicates,
+JSONata is a query and transformation language for JSON that supports path expressions, predicates,
 functions, and aggregations. Use JSONata when you need declarative, expression-based transformations for
 straightforward field mappings without requiring programming knowledge.
 
@@ -62,9 +71,9 @@ Migrate to **Smart Function (JavaScript)**:
 
 #### Defining the payload transformation using Java Extensions {#java-extension}
 
-Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom
-transformation logic in Java. This approach offers type safety, superior performance, and full access to the Java
-ecosystem including third-party libraries and Cumulocity Java SDK. Use Java Extensions when you need to handle
+Java Extensions let you write custom
+transformation logic in Java. This approach offers type safety, compiled JVM performance, and full access to
+third-party Java libraries and the Cumulocity Java SDK. Use Java Extensions when you need to handle
 complex data transformations, implement sophisticated business logic, require strong type checking, or need to
 integrate with existing Java-based systems.
 

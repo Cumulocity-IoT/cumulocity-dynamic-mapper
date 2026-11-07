@@ -165,14 +165,18 @@
 
   <!-- ---- Message list ------------------------------------------------------ -->
   @if (messages.length > 0) {
+    <p class="text-muted small m-b-8" translate>
+      Select 2 to {{ maxSamples }} messages of the same type, for example only JSON or only binary, to generate one Smart Function with AI from all of them.
+    </p>
     <c8y-data-grid
       [title]="'Messages' | translate"
       [columns]="columns"
       [rows]="messages"
       [pagination]="pagination"
       [actionControls]="actionControls"
+      [bulkActionControls]="bulkActionControls"
       [configureColumnsEnabled]="false"
-      [selectable]="false">
+      [selectable]="true">
     </c8y-data-grid>
   }
 

@@ -8,7 +8,9 @@
 | **fqnClassName** | **String** |  | [default to null] |
 | **description** | **String** |  | [optional] [default to null] |
 | **version** | **String** |  | [optional] [default to null] |
-| **parameter** | **Map** |  | [optional] [default to null] |
+| **parameter** | [**Map**](AnyType.md) |  | [optional] [default to null] |
+| **loaded** | **Boolean** |  | [optional] [default to null] |
+| **message** | **String** |  | [optional] [default to null] |
 | **extensionType** | **String** |  | [default to null] |
 | **direction** | **String** |  | [default to null] |
 

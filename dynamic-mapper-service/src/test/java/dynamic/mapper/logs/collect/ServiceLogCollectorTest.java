@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -303,6 +302,19 @@ class ServiceLogCollectorTest {
         int restored = buffer.pending.get("tenantA").size();
         assertEquals(30, storedLines + restored, "nothing lost and nothing stored twice");
         assertTrue(storedLines > 0 && restored > 0);
+    }
+
+    @Test
+    void aTenantWhoseChunkingFailsGetsItsRecordsBackAndOthersAreStillStored() {
+        // A record without a time makes sorting throw: the chunking of tenantA fails after the buffer was drained.
+        buffer.add(new ServiceLogRecord(null, "WARN", "t", "tenantA", "d.m.core.Foo", "no time"))
+                .add(rec("tenantA", "WARN", 1, "a"))
+                .add(rec("tenantB", "WARN", 2, "b"));
+
+        collector(Set.of("tenantA", "tenantB")).collect();
+
+        assertEquals(2, buffer.pending.get("tenantA").size(), "tenantA's records are back, not lost");
+        assertTrue(sink.logsOf("tenantB").contains("b"), "tenantB is not held up");
     }
 
     @Test

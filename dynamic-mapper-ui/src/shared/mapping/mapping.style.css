@@ -231,9 +231,13 @@ d11r-mapping-mapping-grid c8y-data-grid .table-data-grid .cdk-row > .cdk-cell:no
   display: flex;
   align-items: center;
 }
-/* The standard .btn-dot is top-aligned with a negative margin, which pushes the actions
-   menu above the row's centre line. */
-d11r-mapping-mapping-grid c8y-data-grid .cdk-column-actions .btn-dot {
+/* The standard .btn-dot has align-self: flex-start and margin: -10px 0, which pins the edit
+   (pencil) and actions (menu) buttons to the top of the cell, above the row's centre line.
+   Centre them. Keep both -10px margins: they cancel when centred, so the button sits exactly
+   on the centre line. Resetting only one of them shifts the button.
+   The selector needs .table.table-data-grid: the theme's
+   `.table.table-data-grid .cdk-column-actions .btn-dot` (0,4,0) would otherwise win over
+   a selector with two classes and two element names (0,2,2). */
+d11r-mapping-mapping-grid .table.table-data-grid .cdk-column-actions .btn-dot {
   align-self: center;
-  margin-top: 0;
 }

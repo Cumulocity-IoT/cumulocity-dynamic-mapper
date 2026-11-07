@@ -717,8 +717,24 @@ export function getTypeOf(object) {
 // ─── Base64 / encoding utilities ──────────────────────────────────────────────
 
 export function base64ToString(base64) {
-  const binString = atob(base64);
-  return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
+  try {
+    const binString = atob(base64);
+    return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
+  } catch (error) {
+    // Corrupt or truncated base64 (e.g. a damaged import) must not break the editor.
+    console.warn('base64ToString: invalid base64 input, returning empty string', error);
+    return '';
+  }
+}
+
+/**
+ * Serializes mappings for a JSON export file.
+ * `id` (managed object id of this tenant) and `identifier` are left out: the import assigns
+ * new values for both, so the exported values would never be used.
+ */
+export function serializeMappingsForExport(mappings: Mapping[]): string {
+  const exported = mappings.map(({ id, identifier, ...rest }) => rest);
+  return JSON.stringify(exported, undefined, 2);
 }
 
 export function stringToBase64(code2Encode) {

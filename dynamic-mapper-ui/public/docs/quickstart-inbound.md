@@ -15,7 +15,7 @@ else the mapper can do is covered in the guides, once you have this working.
 role (to create mappings). If you are missing either, the Home page warns you when it loads. See
 [Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
 
-#### Step 1 — Create the connector
+#### Step 1: Create the connector
 
 The Cumulocity MQTT Service is a broker that already runs in your tenant, so there is nothing to install and no
 credentials to look up: the connector fills its connection settings in from the microservice automatically.
@@ -26,34 +26,35 @@ credentials to look up: the connector fills its connection settings in from the 
 3. Give it a name, for example `quickstart`, and save.
 
 The connector appears in the table and turns **connected** after a few seconds. If it does not, open its
-connection logs from the same table — they name the underlying error. See the
+connection logs from the same table, they name the underlying error. See the
 [Connector reference](/c8y-pkg-dynamic-mapper/introduction/connectors) for the details of every field.
 
-#### Step 2 — Start a mapping
+#### Step 2: Start a mapping
 
 :::info
 Already have devices publishing? There is a shorter route: capture one of their messages and let the mapper fill
 in the topic and the payload for you. See
-[Variation — start from a live message](#variation-message-explorer) below, which replaces Steps 2 to 4.
+[Variation, start from a live message](#variation-message-explorer) below, which replaces Steps 2 to 4.
 :::
 
-Go to [**Mapping → Inbound**](/c8y-pkg-dynamic-mapper/node1/mappings/inbound) and click **Add Mapping**.
+Go to [**Mapping → Inbound**](/c8y-pkg-dynamic-mapper/node1/mappings/inbound) and click **Add mapping**.
 
-Leave **Expert Mode** switched off. The dialog then gives you the defaults — payload format **JSON** and a
-**Smart Function**, which is a small JavaScript function that turns each message into Cumulocity objects. There is
-nothing to choose here, so continue.
+Leave **Expert Mode** switched off. The dialog then uses the defaults: payload format **JSON Payload** and a
+**Smart Function**, which is a small JavaScript function that turns each message into Cumulocity objects. If the
+dialog shows **Smart Function Source** (it does when an AI agent is deployed), select **Choose Code Template** so
+that the editor in Step 5 starts with a code template. Click **Continue**.
 
 :::important
 The payload format and the transformation type cannot be changed once the mapping exists. Changing your mind means
 deleting the mapping and creating a new one.
 :::
 
-#### Step 3 — Point it at a connector and a topic
+#### Step 3: Point it at a connector and a topic
 
 The wizard has five steps. The first two are configuration:
 
-1. **Connector** — select the `quickstart` connector you just created.
-2. **General settings** — fill in:
+1. **Connector**: select the `quickstart` connector you just created.
+2. **General settings**: fill in:
    - **Mapping Name**: `Quickstart temperature`
    - **Target API**: `Measurement`
    - **Mapping Topic**: `quickstart/+`
@@ -64,7 +65,7 @@ The wizard has five steps. The first two are configuration:
 The `+` in the mapping topic is a single-level wildcard, so this one mapping serves every device publishing under
 `quickstart/`. The *sample* topic is the concrete example the later steps run against.
 
-#### Step 4 — Give it a source payload
+#### Step 4: Give it a source payload
 
 In the **Select templates** step, enter the payload your device sends as the source template:
 
@@ -75,18 +76,18 @@ In the **Select templates** step, enter the payload your device sends as the sou
 }
 ```
 
-This is what your Smart Function receives as `msg.payload`, and what the **Test** step in Step 6 runs against.
+This is what your Smart Function receives as `msg.payload`, and what the **Test mapping** step in Step 6 runs against.
 
-#### Step 5 — Write the Smart Function {#step-5}
+#### Step 5: Write the Smart Function {#step-5}
 
-The **Transformation** step opens a JavaScript editor already filled with the default code template. Replace its
+The **Transformation** step opens a JavaScript editor with the code template you selected. Replace its
 body with the function below:
 
 ```javascript
 function onMessage(msg, context) {
     var payload = msg.payload;
 
-    // Topic is "quickstart/device_01" — the second segment identifies the device.
+    // Topic is "quickstart/device_01", the second segment identifies the device.
     var externalId = context.getConfig().topic.split("/")[1];
     console.log("External device id:" + externalId);
 
@@ -116,23 +117,23 @@ export { onMessage };
 Four things are worth noticing, because most inbound Smart Functions do them:
 
 - It **returns an array**. One message can produce several Cumulocity objects; here it produces one.
-- `cumulocityType` and `action` say *what* to create — a measurement, in this case.
+- `cumulocityType` and `action` say *what* to create: a measurement, in this case.
 - `externalSource` says *which device* the data belongs to. Without it the mapper cannot route the measurement.
 - `contextData.deviceName` and `contextData.deviceType` describe the **device to create**. This is where the
   **Create device** switch from Step 3 pays off: the first message from an unknown external ID
-  creates the device, and without these it would appear in Device Management under its external ID with no type at
+  creates the device. Without these it would appear in Device Management under its external ID with no type at
   all. Here it is created as `Temperature-Sensor-01` of type `c8y_TemperatureSensor`.
 
 :::info
-Both apply **only at creation**. Once the device exists, later messages neither rename it nor change its type —
-edit it in Device Management instead.
+Both apply **only at creation**. Once the device exists, later messages neither rename it nor change its type.
+Edit it in Device Management instead.
 
 The **type** is worth setting deliberately: it is what device lists, smart rules and dashboards filter on, so
 devices created without one are awkward to work with later. A type is a free-form string; the `c8y_` prefix is
 only a convention.
 
 Note also that the example hard-codes one name while the mapping topic `quickstart/+` serves *every* device under
-`quickstart/`. That is fine for a single test device, but in practice derive the name from the message — for
+`quickstart/`. That is fine for a single test device, but in practice derive the name from the message, for
 example `"deviceName": "Sensor " + externalId`. The type is usually the same for every device a mapping creates,
 so a constant is normally right there.
 
@@ -140,39 +141,39 @@ so a constant is normally right there.
 [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction) for the full list.
 :::
 
-#### Step 6 — Test, save, activate
+#### Step 6: Test, save, activate
 
-The last step runs your function against the source template from Step 4 and shows the Cumulocity object it
-produces. Expand **Console output** underneath to see anything your function printed with `console.log()` — add a
+The **Test mapping** step runs your function against the source template from Step 4 when you click **Dry Run**,
+and shows the Cumulocity object it produces. Expand **Console output** underneath to see anything your function printed with `console.log()`, add a
 line like `console.log("payload:", payload)` if the result is not what you expected. See
 [Testing a Smart Function](/c8y-pkg-dynamic-mapper/introduction/define-mapping#testing-smart-function).
 
-Check that the measurement looks right, then **save** the mapping and **activate** it from the mapping table — a
-mapping that is not activated is never executed.
+Check that the measurement looks right, then **save** the mapping and switch it on in the **Activate** column of the
+mapping table. A mapping that is not activated is never executed.
 
-#### Step 7 — Send a message
+#### Step 7: Send a message
 
-Publish to `quickstart/device_01` through the Cumulocity MQTT Service:
+Publish to `quickstart/device_01` with an MQTT client connected to the Cumulocity MQTT Service of your tenant:
 
 ```json
 { "temperature": 23.7, "unit": "C" }
 ```
 
-In **Device Management** a device named **Temperature-Sensor-01**, of type `c8y_TemperatureSensor`, now exists —
-carrying a temperature measurement. It was created by the first message, with the name and type coming from
-`contextData`, and the external ID `device_01` — taken from the topic — recorded under its **Identity** tab. That
+In **Device Management** a device named **Temperature-Sensor-01**, of type `c8y_TemperatureSensor`, now exists and
+carries a temperature measurement. The first message created it, with the name and type coming from
+`contextData`, and the external ID `device_01`, taken from the topic, is recorded under its **Identity** tab. That
 external ID, not the name, is what links every later message to this device.
 
 :::info
-Nothing arrived? Open [Monitoring](/c8y-pkg-dynamic-mapper/introduction/monitoring) — it counts the messages each
-mapping received and the errors it raised, which tells you immediately whether the message reached the mapping or
+Nothing arrived? Open [Monitoring](/c8y-pkg-dynamic-mapper/introduction/monitoring). It counts the messages each
+mapping received and the errors it raised, which shows whether the message reached the mapping or
 failed inside it. [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting) covers the usual causes.
 :::
 
-#### Variation — start from a live message {#variation-message-explorer}
+#### Variation: start from a live message {#variation-message-explorer}
 
-Steps 2 to 4 assume you already know the topic and the payload. When you do not — which is the normal case with
-real devices — turn it around: capture a message first and build the mapping from it. Nothing is typed, so nothing
+Steps 2 to 4 assume you already know the topic and the payload. When you do not, which is the normal case with
+real devices, capture a message first and build the mapping from it. Nothing is typed, so nothing
 is guessed wrong.
 
 This replaces **Steps 2, 3 and 4**. Step 1 (the connector) and Steps 5 onwards are unchanged.
@@ -180,13 +181,14 @@ This replaces **Steps 2, 3 and 4**. Step 1 (the connector) and Steps 5 onwards a
 **2a. Start a capture session.** Go to
 [**Mapping → Message Explorer**](/c8y-pkg-dynamic-mapper/node1/mappings/messageExplorer) and click
 **Start exploring messages…**. Set **Direction** to `Inbound`, **Connector** to `quickstart`, and **Topic** to
-`quickstart/+`. Leave the other two fields at their defaults, then **Start**.
+`quickstart/+`. Leave the other two fields (**Max messages to buffer** and **Session TTL (minutes)**) at their
+defaults, then click **Start**.
 
 ![Start exploring messages](../../../resources/image/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png "The Start exploring messages dialog filled in for this quickstart: direction Inbound, connector quickstart and topic quickstart/+.")
 
-Only **connected** connectors can be selected, so if `quickstart` is missing from the dropdown, go back to Step 1
+Only **connected** connectors can be selected, so if `quickstart` is missing from the list, go back to Step 1
 and check that it reached the *connected* state. If your device publishes only every few minutes, raise
-**Session TTL** — the session is closed automatically once it has been idle that long.
+**Session TTL**. The session closes automatically once it has been idle that long.
 
 **2b. Send a message.** Publish to `quickstart/device_01`, exactly as in Step 7:
 
@@ -194,11 +196,11 @@ and check that it reached the *connected* state. If your device publishes only e
 { "temperature": 23.7, "unit": "C" }
 ```
 
-It appears in the list within a few seconds. This already tells you something the main path cannot: that your
-connector is subscribed and the message really is reaching the mapper. If nothing arrives, the problem is the
-connector or the topic — and you have found that out before writing any mapping.
+It appears in the list within a few seconds. This shows that your connector is subscribed and that the message
+reaches the mapper. If nothing arrives, the problem is the connector or the topic, and you have found that out before
+writing any mapping.
 
-**2c. Create the mapping from it.** Click **Create mapping** on the captured row. The **Add Mapping** dialog opens
+**2c. Create the mapping from it.** Click **Create mapping** on the captured row. The mapping dialog opens
 with the **source template** pre-filled from the captured payload and the **mapping topic** pre-filled from the
 topic the message arrived on.
 
@@ -212,19 +214,19 @@ Then continue at [Step 5](#step-5) and write the Smart Function exactly as descr
 
 :::info
 The captured payload arrives as the device really sends it, including fields the main path's tidy example leaves
-out. If a message carries a broker **key** — a Kafka record key or a Pulsar message key, for instance — that is carried across too. See
+out. If a message carries a broker **key**, a Kafka record key or a Pulsar message key, for instance, that is carried across too. See
 [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) for the details, and for capturing
 **outbound** Cumulocity objects the same way.
 :::
 
 #### What to read next
 
-- [Quickstart outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) — the other direction: send a
+- [Quickstart outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound): the other direction: send a
   command from Cumulocity back to the device, reusing the connector and device you just created.
-- [Core concepts](/c8y-pkg-dynamic-mapper/introduction/concepts) — the vocabulary behind what you just built.
-- [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction) — the full API: device lookups, state,
+- [Core concepts](/c8y-pkg-dynamic-mapper/introduction/concepts): the vocabulary behind what you just built.
+- [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction): the full API: device lookups, state,
   multiple outputs, binary payloads.
-- [Code templates](/c8y-pkg-dynamic-mapper/introduction/code-templates) — ready-made starting points instead of
+- [Code templates](/c8y-pkg-dynamic-mapper/introduction/code-templates): ready-made starting points instead of
   writing from scratch.
-- [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) — the tool behind the
+- [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer): the tool behind the
   [variation above](#variation-message-explorer), including capturing outbound Cumulocity objects.

@@ -76,6 +76,19 @@ public class NotificationHelper {
         }
     }
 
+    /**
+     * Source id from the channel header line ({@code /<tenant>/<api>/<sourceId>}), the fallback for
+     * notifications that carry no body (a DELETE has none). Returns null when the header has no
+     * fourth segment.
+     */
+    public static String extractSourceIdFromHeaders(List<String> notificationHeaders) {
+        if (notificationHeaders == null || notificationHeaders.isEmpty()) {
+            return null;
+        }
+        String[] parts = notificationHeaders.get(0).split("/");
+        return parts.length > 3 && !parts[3].isBlank() ? parts[3] : null;
+    }
+
     public static C8YMessage createC8YMessage(Notification notification, String tenant) {
         C8YMessage message = new C8YMessage();
         Map<String, Object> parsedPayload = parsePayload(notification.getMessage());

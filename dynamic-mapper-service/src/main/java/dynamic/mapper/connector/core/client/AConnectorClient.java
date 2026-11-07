@@ -37,18 +37,15 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.status.ConnectorStatus;
-import dynamic.mapper.model.status.ConnectorStatusEvent;
 import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
-import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -57,12 +54,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
@@ -70,9 +64,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.joda.time.DateTime;
 
-import com.cumulocity.model.idtype.GId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -87,9 +79,6 @@ public abstract class AConnectorClient {
     protected static final int WAIT_PERIOD_MS = 10000;
     protected static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
-    private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS = 10L;
-    private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS = 300L;
-    private static final long RECONCILE_RETRY_DELAY_SECONDS = 5L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -141,6 +130,15 @@ public abstract class AConnectorClient {
     @Getter
     @Setter
     protected ServiceConfiguration serviceConfiguration;
+
+    /**
+     * The tenant's current configuration. Updating it replaces the registry entry, so long-lived
+     * consumers resolve it here instead of keeping {@link #serviceConfiguration}.
+     */
+    protected ServiceConfiguration currentServiceConfiguration() {
+        ServiceConfiguration current = serviceRegistry == null ? null : serviceRegistry.getServiceConfiguration(tenant);
+        return current != null ? current : serviceConfiguration;
+    }
     @Getter
     @Setter
     protected Certificate cert;
@@ -284,13 +282,27 @@ public abstract class AConnectorClient {
     // disconnect() call — including blocking network I/O — and `synchronized` would pin the
     // virtual thread's carrier thread for that entire duration.
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
-    // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
-    private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
-    // Guards against scheduling overlapping retry chains for reconcileSubscriptions()
-    private final AtomicBoolean reconcileRetryScheduled = new AtomicBoolean(false);
-    // When the current subscription-init retry chain started, so the success log can report
-    // how long the connector spent in RETRYING before recovering.
-    private volatile long subscriptionInitRetryStartedAtMs;
+    // Retries subscription work that failed for a transient reason; created together with the housekeeping executor
+    private SubscriptionRetryScheduler retryScheduler;
+    // Reports the connection lifecycle and the subscriptions to Cumulocity as events. Created on first use:
+    // subclasses report subscription events without necessarily having gone through initializeManagers().
+    private volatile ConnectorEventPublisher eventPublisher;
+
+    private ConnectorEventPublisher eventPublisher() {
+        ConnectorEventPublisher publisher = eventPublisher;
+        if (publisher == null) {
+            synchronized (this) {
+                publisher = eventPublisher;
+                if (publisher == null) {
+                    publisher = new ConnectorEventPublisher(tenant, connectorName, connectorIdentifier,
+                            () -> c8yAgent, () -> serviceRegistry.getConnectorStatusEventService(),
+                            () -> serviceConfiguration);
+                    eventPublisher = publisher;
+                }
+            }
+        }
+        return publisher;
+    }
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -584,6 +596,11 @@ public abstract class AConnectorClient {
         }
     }
 
+    /** True while a probe client is being constructed on this thread. */
+    static boolean isProbeConstruction() {
+        return PROBE_CONSTRUCTION.get();
+    }
+
     /** Releases what construction allocated, for a client that was only used to test a connection. */
     public void discardProbe() {
         if (housekeepingExecutor != null) {
@@ -618,7 +635,11 @@ public abstract class AConnectorClient {
                 tenant,
                 connectorName,
                 connectorIdentifier,
+                () -> this.connectorType,
                 this::sendConnectorLifecycle, connectorRegistry);
+        if (isProbeConstruction()) {
+            connectionStateManager.markAsProbe();
+        }
 
         // This is a fresh client instance — either a genuine microservice restart, or simply this
         // connector being disabled and re-enabled (ConnectorClientFactory always creates a new
@@ -628,7 +649,8 @@ public abstract class AConnectorClient {
         // forever. Best-effort: failures are logged and swallowed inside the call itself, must
         // never block/fail connector startup.
         if (serviceConfiguration.getSendConnectorLifecycle() && !PROBE_CONSTRUCTION.get()) {
-            c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
+            serviceRegistry.getConnectorStatusEventService().closeOrphanedConnectorSession(tenant, connectorName,
+                    connectorIdentifier);
         }
 
         this.housekeepingExecutor = new TenantScheduledThreadPoolExecutor(tenant, 1, r -> {
@@ -636,6 +658,9 @@ public abstract class AConnectorClient {
             t.setDaemon(true);
             return t;
         });
+        this.retryScheduler = new SubscriptionRetryScheduler(tenant, connectorName, connectionStateManager,
+                () -> housekeepingExecutor, this::isConnected, this::doInitializeSubscriptionsAfterConnect,
+                this::reconcileSubscriptions);
     }
 
     /**
@@ -759,7 +784,12 @@ public abstract class AConnectorClient {
         try {
             performHousekeeping();
         } catch (Exception e) {
-            log.error("{} - Error during housekeeping: {}", tenant, e.getMessage(), e);
+            if (housekeepingExecutor.isShutdown()) {
+                // Connector is being torn down (e.g. tenant unsubscribed): its resources may already be gone.
+                log.debug("{} - Housekeeping aborted during shutdown: {}", tenant, e.toString());
+            } else {
+                log.error("{} - Error during housekeeping: {}", tenant, e, e);
+            }
         }
     }
 
@@ -799,10 +829,11 @@ public abstract class AConnectorClient {
         try {
             doInitializeSubscriptionsAfterConnect();
         } catch (Exception e) {
-            if (isRetryableConnectorError(e)) {
+            if (SubscriptionRetryScheduler.isRetryable(e)) {
                 log.warn("{} - Transient error initializing subscriptions for connector {}, will retry in {}s: {}",
-                        tenant, connectorName, SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e.getMessage());
-                scheduleSubscriptionInitRetry(SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e);
+                        tenant, connectorName, SubscriptionRetryScheduler.INIT_RETRY_INITIAL_DELAY_SECONDS,
+                        e.getMessage());
+                retryScheduler.scheduleInitRetry(SubscriptionRetryScheduler.INIT_RETRY_INITIAL_DELAY_SECONDS, e);
             } else {
                 throw e;
             }
@@ -823,71 +854,6 @@ public abstract class AConnectorClient {
 
         log.info("{} - Initialized {} inbound and {} outbound mappings",
                 tenant, inboundMappings.size(), outboundMappings.size());
-    }
-
-    /**
-     * True if the exception (or one of its causes) is a platform-side error known to be
-     * transient (e.g. a 502/503/504 during a platform rollout), rather than a permanent
-     * configuration/permission problem that retrying won't fix.
-     */
-    private boolean isRetryableConnectorError(Throwable t) {
-        return CumulocityErrors.isTransientPlatformError(t);
-    }
-
-    /**
-     * Schedules a retry of {@link #doInitializeSubscriptionsAfterConnect()} on the housekeeping
-     * executor after {@code delaySeconds}, marking the connector as {@link ConnectorStatus#RETRYING}.
-     * The retry chain doubles its delay (capped at {@link #SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS})
-     * on each further failure and keeps going until it succeeds or a non-retryable error occurs.
-     * Pending retries are cancelled automatically when the connector disconnects, since they run
-     * on {@code housekeepingExecutor}, which is shut down in {@link #stopHousekeepingAndClose()}.
-     */
-    private void scheduleSubscriptionInitRetry(long delaySeconds, Exception lastError) {
-        if (!subscriptionInitRetryScheduled.compareAndSet(false, true)) {
-            // A retry chain is already in flight for this connector; let it continue.
-            return;
-        }
-        subscriptionInitRetryStartedAtMs = System.currentTimeMillis();
-        connectionStateManager.updateStatusRetrying(lastError, delaySeconds);
-        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-            subscriptionInitRetryScheduled.set(false);
-            return;
-        }
-        housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(delaySeconds), delaySeconds, TimeUnit.SECONDS);
-    }
-
-    private void runSubscriptionInitRetry(long previousDelaySeconds) {
-        if (!isConnected()) {
-            log.debug("{} - Connector {} no longer connected, abandoning subscription-init retry",
-                    tenant, connectorName);
-            subscriptionInitRetryScheduled.set(false);
-            return;
-        }
-        try {
-            doInitializeSubscriptionsAfterConnect();
-            long elapsedSeconds = (System.currentTimeMillis() - subscriptionInitRetryStartedAtMs) / 1000;
-            log.info("{} - Subscription initialization succeeded after retry for connector {} (after {}s)",
-                    tenant, connectorName, elapsedSeconds);
-            subscriptionInitRetryScheduled.set(false);
-            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-        } catch (Exception e) {
-            if (!isRetryableConnectorError(e)) {
-                log.error("{} - Non-retryable error re-initializing subscriptions for connector {}: {}",
-                        tenant, connectorName, e.getMessage(), e);
-                subscriptionInitRetryScheduled.set(false);
-                connectionStateManager.updateStatusWithError(e);
-                return;
-            }
-            long nextDelaySeconds = Math.min(previousDelaySeconds * 2, SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS);
-            log.warn("{} - Retry of subscription initialization failed for connector {}, next attempt in {}s: {}",
-                    tenant, connectorName, nextDelaySeconds, e.getMessage());
-            connectionStateManager.updateStatusRetrying(e, nextDelaySeconds);
-            if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-                subscriptionInitRetryScheduled.set(false);
-                return;
-            }
-            housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(nextDelaySeconds), nextDelaySeconds, TimeUnit.SECONDS);
-        }
     }
 
     /**
@@ -965,8 +931,8 @@ public abstract class AConnectorClient {
     public void reconcileSubscriptions() {
         if (!isConnected() && !isPassiveReceiver()) {
             log.info("{} - Not connected yet, deferring subscription reconcile for connector: {} (retry in {}s)",
-                    tenant, connectorName, RECONCILE_RETRY_DELAY_SECONDS);
-            scheduleReconcileRetry();
+                    tenant, connectorName, SubscriptionRetryScheduler.RECONCILE_RETRY_DELAY_SECONDS);
+            retryScheduler.scheduleReconcileRetry();
             return;
         }
 
@@ -979,27 +945,6 @@ public abstract class AConnectorClient {
         initializeSubscriptionsOutbound(outboundMappings);
 
         log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
-    }
-
-    /**
-     * Schedules a single retry of {@link #reconcileSubscriptions()} on the housekeeping
-     * executor. At most one retry is in flight at a time; a reconcile call that arrives while
-     * one is already scheduled just relies on that pending retry re-checking current state.
-     * Cancelled automatically on disconnect, since it runs on {@code housekeepingExecutor},
-     * which is shut down in {@link #stopHousekeepingAndClose()}.
-     */
-    private void scheduleReconcileRetry() {
-        if (!reconcileRetryScheduled.compareAndSet(false, true)) {
-            return;
-        }
-        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-            reconcileRetryScheduled.set(false);
-            return;
-        }
-        housekeepingExecutor.schedule(() -> {
-            reconcileRetryScheduled.set(false);
-            reconcileSubscriptions();
-        }, RECONCILE_RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -1070,6 +1015,21 @@ public abstract class AConnectorClient {
         } else {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
+    }
+
+    /**
+     * Applies the subscription change of a mapping in the direction the mapping has: inbound
+     * mappings (un)subscribe their topic, outbound mappings join or leave the applied set.
+     *
+     * @return {@code false} if an inbound subscription could not be updated; outbound changes
+     *         cannot fail and always return {@code true}
+     */
+    public boolean applyMappingSubscription(Mapping mapping, boolean create, boolean activationChanged) {
+        if (Direction.OUTBOUND.equals(mapping.getDirection())) {
+            updateSubscriptionForOutbound(mapping, create, activationChanged);
+            return true;
+        }
+        return updateSubscriptionForInbound(mapping, create, activationChanged);
     }
 
     /**
@@ -1150,6 +1110,15 @@ public abstract class AConnectorClient {
         return cacheMappings.values().stream()
                 .filter(m -> m.getId().equals(mapping.getId()))
                 .findFirst();
+    }
+
+    /**
+     * Whether the mapping is assigned to this connector in the deployment, regardless of the mapping's
+     * active flag. Unlike {@link #isMappingOutboundDeployed(String)}, which only knows the active
+     * mappings, this also answers for an inactive mapping (needed by an outbound Live Test).
+     */
+    public boolean isMappingAssignedToConnector(Mapping mapping) {
+        return isDeployedInConnector(mapping);
     }
 
     /**
@@ -1246,46 +1215,15 @@ public abstract class AConnectorClient {
     }
 
     /**
-     * Determine maximum QoS for inbound mappings on a specific topic
+     * The single QoS the transport has to honour for the message that triggered these mappings: the
+     * strongest level the active mappings request ({@link Qos#strongestActive}), clamped to what this
+     * connector supports. Inbound and outbound mappings are treated alike.
      */
-    public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
-        return determineMaxQos(mappings, m -> m.getMappingTopic().equals(topic) && m.getActive());
-    }
-
-    /**
-     * Determine maximum QoS for all inbound mappings
-     */
-    public Qos determineMaxQosInbound(List<Mapping> mappings) {
-        return determineMaxQos(mappings, Mapping::getActive);
-    }
-
-    /**
-     * Determine maximum QoS for all outbound mappings
-     */
-    public Qos determineMaxQosOutbound(List<Mapping> mappings) {
-        return determineMaxQos(mappings, Mapping::getActive);
-    }
-
-    /**
-     * Consolidates the QoS of a set of mappings into the single level the transport has to
-     * honour for the message that triggered them: the strongest requested level, clamped to
-     * what this connector supports.
-     *
-     * <p>Null-safe on both the list (an unresolved topic yields no mappings at all) and on the
-     * individual {@code qos} field (mappings created through the API before {@code qos} became
-     * a defaulted field may carry {@code null}).
-     */
-    private Qos determineMaxQos(List<Mapping> mappings, java.util.function.Predicate<Mapping> filter) {
+    public Qos determineMaxQos(List<Mapping> mappings) {
         if (mappings == null || mappings.isEmpty()) {
             return Qos.AT_MOST_ONCE;
         }
-        Qos maxQos = mappings.stream()
-                .filter(Objects::nonNull)
-                .filter(filter)
-                .map(m -> Qos.orDefault(m.getQos()))
-                .reduce(Qos::max)
-                .orElse(Qos.AT_MOST_ONCE);
-        return adjustQos(maxQos);
+        return adjustQos(Qos.strongestActive(mappings));
     }
 
     /**
@@ -1494,51 +1432,12 @@ public abstract class AConnectorClient {
         return isConfigValid(connectorConfiguration) && connectorConfiguration.getEnabled();
     }
 
-    // Id of the Cumulocity Event backing the currently open connection-lifecycle session (see
-    // ConnectionStateManager.updateSession), so subsequent transitions of the same session are
-    // appended (PUT) to it instead of creating an independent Event per status change.
-    private final AtomicReference<GId> activeConnectorStatusEventId = new AtomicReference<>();
-
     /**
-     * Send connector lifecycle event.
-     * <p>
-     * Bundles all transitions of one connection-lifecycle session (e.g. CONNECTING -> CONNECTED,
-     * possibly with RETRYING in between) into a single Cumulocity Event: the first transition of
-     * a session creates the Event, further transitions update it in place — mirroring how a
-     * Cumulocity Operation accumulates its "history of changes" under one record.
+     * Send connector lifecycle event: bundles all transitions of one connection-lifecycle session into a
+     * single Cumulocity Event, see {@link ConnectorEventPublisher}.
      */
     public void sendConnectorLifecycle(ConnectorStatusHistory session, boolean isNewSession) {
-        if (!serviceConfiguration.getSendConnectorLifecycle()) {
-            return;
-        }
-        Map<String, String> statusMap = createStatusMap(session);
-        String message = statusMap.get("message");
-        String severity = session.getCurrentStatus().toSeverity();
-
-        // Defensive fallback: also (re-)create if no event id is on record even though the
-        // session isn't new (e.g. the id was lost across a microservice restart mid-session).
-        GId eventId = isNewSession ? null : activeConnectorStatusEventId.get();
-        if (eventId == null) {
-            eventId = c8yAgent.createConnectorStatusEvent(message, severity, DateTime.now(), tenant, statusMap, session);
-            activeConnectorStatusEventId.set(eventId);
-        } else {
-            c8yAgent.updateConnectorStatusEvent(eventId, message, severity, DateTime.now(), tenant, statusMap, session);
-        }
-    }
-
-    private Map<String, String> createStatusMap(ConnectorStatusHistory session) {
-        List<ConnectorStatusEvent> history = session.getHistory();
-        ConnectorStatusEvent latest = history.get(history.size() - 1);
-        String message = latest.getMessage();
-        if (message == null || "".equals(message)) {
-            message = String.format("Connector status: %s", session.getCurrentStatus());
-        }
-
-        return Map.ofEntries(
-                entry("status", session.getCurrentStatus().name()),
-                entry("message", message),
-                entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()));
+        eventPublisher().sendConnectorLifecycle(session, isNewSession);
     }
 
     /**
@@ -1587,8 +1486,29 @@ public abstract class AConnectorClient {
         if (housekeepingExecutor != null && !housekeepingExecutor.isShutdown()) {
             List<Runnable> stoppedTasks = housekeepingExecutor.shutdownNow();
             log.info("{} - Stopped {} housekeeping tasks", tenant, stoppedTasks.size());
+            // shutdownNow() only interrupts: a housekeeping run that is already executing keeps
+            // going. Wait for it, so callers (e.g. tenant unsubscribe) can safely remove the
+            // tenant's shared resources right after this returns.
+            try {
+                if (!housekeepingExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    log.warn("{} - Housekeeping still running after 5s for connector: {}", tenant, connectorName);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (connectionStateManager != null) {
+            connectionStateManager.close();
         }
         close();
+    }
+
+    /**
+     * Deletes broker-side resources that outlive a disconnect, such as a durable subscription. Called
+     * only when the connector is deleted, before it is disconnected. The default does nothing;
+     * connectors that create such resources override it.
+     */
+    public void deleteResources() {
     }
 
     /**
@@ -1602,30 +1522,13 @@ public abstract class AConnectorClient {
         // housekeepingExecutor is shut down above, cancelling any pending retry task —
         // reset the guard so a future reuse of this instance wouldn't be wedged with the
         // flag permanently stuck at true.
-        subscriptionInitRetryScheduled.set(false);
+        if (retryScheduler != null) {
+            retryScheduler.reset();
+        }
     }
 
     public void sendSubscriptionEvents(String topic, String action) {
-        if (!serviceConfiguration.getSendSubscriptionEvents()) {
-            return;
-        }
-
-        String message = String.format("%s topic: %s", action, topic);
-        Map<String, String> eventMap = createSubscriptionEventMap(message);
-
-        c8yAgent.createLoggingEvent(
-                message,
-                LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                eventMap);
-    }
-
-    private Map<String, String> createSubscriptionEventMap(String message) {
-        return Map.ofEntries(
-                entry("message", message),
-                entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()));
+        eventPublisher().sendSubscriptionEvent(topic, action);
     }
 
     /**

@@ -34,8 +34,19 @@ export interface StepperConfigurationContext {
 
 export interface StepperConfigurationOverride {
   condition: (ctx: StepperConfigurationContext) => boolean;
-  properties: Partial<StepperConfiguration>;
+  /** Static properties, or a function when the value depends on the context. */
+  properties: Partial<StepperConfiguration> | ((ctx: StepperConfigurationContext) => Partial<StepperConfiguration>);
 }
+
+/** Properties common to Java extension mappings in both directions. */
+const JAVA_EXTENSION_PROPERTIES: Partial<StepperConfiguration> = {
+  showEditorTarget: false,
+  allowTestSending: true,
+  allowTestTransformation: true,
+  allowDefiningSubstitutions: false,
+  allowNoDefinedIdentifier: true,
+  advanceFromStepToEndStep: 2
+};
 
 /**
  * Ordered list of configuration overrides.
@@ -44,16 +55,10 @@ export interface StepperConfigurationOverride {
  */
 const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
   {
+    // Test sending publishes to a broker, so outbound needs a deployed connector. Later rules
+    // (substitutions as code, Smart Function, Java) enable it regardless.
     condition: (ctx) => ctx.direction === Direction.OUTBOUND,
-    properties: {
-      allowTestSending: false
-    }
-  },
-  {
-    condition: (ctx) => ctx.direction === Direction.OUTBOUND && ctx.hasDeployedConnector === true,
-    properties: {
-      allowTestSending: true
-    }
+    properties: (ctx) => ({ allowTestSending: ctx.hasDeployedConnector === true })
   },
   {
     condition: (ctx) => ctx.substitutionsAsCode,
@@ -74,69 +79,28 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
+    condition: (ctx) => ctx.transformationType === TransformationType.EXTENSION_JAVA,
+    properties: JAVA_EXTENSION_PROPERTIES
+  },
+  {
     condition: (ctx) =>
       ctx.transformationType === TransformationType.EXTENSION_JAVA &&
       ctx.direction === Direction.OUTBOUND,
-    properties: {
-      showProcessorExtensionsTarget: true,
-      showEditorTarget: false,
-      allowTestSending: true,
-      allowTestTransformation: true,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      advanceFromStepToEndStep: 2
-    }
+    properties: { showProcessorExtensionsTarget: true }
   },
   {
     condition: (ctx) =>
       ctx.transformationType === TransformationType.EXTENSION_JAVA &&
       ctx.direction === Direction.INBOUND,
-    properties: {
-      showProcessorExtensionsSource: true,
-      showEditorTarget: false,
-      showFilterExpression: false,
-      allowTestSending: true,
-      allowTestTransformation: true,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      advanceFromStepToEndStep: 2
-    }
+    properties: { showProcessorExtensionsSource: true, showFilterExpression: false }
   },
   {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    condition: (ctx) => ctx.transformationType === TransformationType.DEFAULT,
-    properties: {
-      allowTemplateExpansion: false
-    }
-  },
-  {
-    condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
-    properties: {
-      allowTemplateExpansion: true
-    }
-  },
-  {
-    condition: (ctx) => ctx.transformationType === TransformationType.JSONATA,
-    properties: {
-      allowTemplateExpansion: true  // Allow expansion to show payload structure for easier substitution definition
-    }
-  },
-  {
-    condition: (ctx) => ctx.transformationType === TransformationType.EXTENSION_JAVA,
-    properties: {
-      allowTemplateExpansion: true
-    }
-  },
-  {
-    // ANY_PAYLOAD + SMART_FUNCTION: the broker message is binary, so the source editor is
-    // meaningless. Testing stays enabled (the SMART_FUNCTION override above): the test tab takes
-    // the message as a base64 string in `payload`, which is what the Smart Function receives live.
+    // Expansion shows the payload structure, which eases defining substitutions and code.
     condition: (ctx) =>
-      ctx.mappingType === MappingType.ANY_PAYLOAD &&
-      ctx.transformationType === TransformationType.SMART_FUNCTION,
-    properties: {
-      showEditorSource: false
-    }
+      ctx.transformationType === TransformationType.SMART_FUNCTION ||
+      ctx.transformationType === TransformationType.JSONATA ||
+      ctx.transformationType === TransformationType.EXTENSION_JAVA,
+    properties: { allowTemplateExpansion: true }
   }
 ];
 
@@ -169,7 +133,8 @@ export class StepperConfigurationResolver {
     // Apply each override that matches its condition
     for (const override of CONFIGURATION_OVERRIDES) {
       if (override.condition(context)) {
-        config = { ...config, ...override.properties };
+        const props = typeof override.properties === 'function' ? override.properties(context) : override.properties;
+        config = { ...config, ...props };
       }
     }
 
@@ -209,7 +174,9 @@ export class StepperConfigurationResolver {
 
     for (const index of indices) {
       const override = CONFIGURATION_OVERRIDES[index];
-      const props = Object.keys(override.properties).join(', ');
+      const props = Object.keys(
+        typeof override.properties === 'function' ? override.properties(context) : override.properties
+      ).join(', ');
       descriptions.push(`Override ${index}: sets ${props}`);
     }
 

@@ -20,6 +20,8 @@
 
 package dynamic.mapper.logs.read;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,8 +78,17 @@ public class ServiceLogReader {
      * @param more  whether more chunks exist beyond this page in the direction that was asked for
      * @param empty no collected log exists at all for this tenant (as opposed to an empty page)
      */
-    public record Page(Instant dateFrom, Instant dateTo, Instant before, int chunks, int lines, int omitted, boolean more, boolean empty,
-            String logs) {
+    @Schema(name = "ServiceLogPage", description = "A window of the calling tenant's collected service log")
+    public record Page(
+            @Schema(description = "Start time of the first chunk in this page") Instant dateFrom,
+            @Schema(description = "End time of the last chunk in this page") Instant dateTo,
+            @Schema(description = "Cursor for the page before this one: the end time of this page's first chunk") Instant before,
+            @Schema(description = "Number of chunks in this page") int chunks,
+            @Schema(description = "Number of log lines in this page") int lines,
+            @Schema(description = "Number of lines left out of this page") int omitted,
+            @Schema(description = "Whether more chunks exist beyond this page in the requested direction") boolean more,
+            @Schema(description = "True when no collected log exists at all for this tenant, as opposed to an empty page") boolean empty,
+            @Schema(description = "The log lines, one per line") String logs) {
     }
 
     static final int PAGE_SIZE = 50;

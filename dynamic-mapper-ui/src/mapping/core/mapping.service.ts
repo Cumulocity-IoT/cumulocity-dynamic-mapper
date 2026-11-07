@@ -37,7 +37,10 @@ import {
   distinctUntilChanged,
   debounceTime,
   merge,
-  of
+  of,
+  skip,
+  timeout,
+  firstValueFrom
 } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
 import {
@@ -509,6 +512,27 @@ export class MappingService {
     } else {
       this.reloadOutbound$.next();
     }
+  }
+
+  /**
+   * Like {@link refreshMappings}, but resolves once the reloaded list has arrived. Callers that
+   * navigate to the grid right after changing a mapping await it so the grid never renders the
+   * previous, cached state (an outdated version or "draft" badge) before the reload lands.
+   * Gives up after a few seconds: the grid reloads on its own, so a slow backend must not hold up
+   * navigation.
+   */
+  async reloadMappings(direction: Direction): Promise<void> {
+    // The stream replays its cached value first, then emits the reload; skip(1) waits for the latter.
+    const fresh = firstValueFrom(
+      this.getMappingsObservable(direction).pipe(
+        skip(1),
+        take(1),
+        timeout({ first: 5000, with: () => of(null) })
+      ),
+      { defaultValue: null }
+    );
+    this.refreshMappings(direction);
+    await fresh;
   }
 
   getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {

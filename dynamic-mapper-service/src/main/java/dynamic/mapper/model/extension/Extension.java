@@ -87,6 +87,12 @@ public class Extension implements Serializable {
     public boolean external;
 
     @Schema(
+        description = "Reason why the extension could not be loaded at all, e.g. a missing or invalid registration file. Empty if the jar could be read; see the entries for per-entry failures.",
+        example = "Registration file: extension-external.yaml missing"
+    )
+    public String message;
+
+    @Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
         description = "Map of available extension entry points and their configurations"
     )

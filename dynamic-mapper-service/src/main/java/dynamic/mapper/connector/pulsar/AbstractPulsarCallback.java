@@ -21,10 +21,7 @@
 
 package dynamic.mapper.connector.pulsar;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
@@ -33,6 +30,7 @@ import org.apache.pulsar.client.api.PulsarClientException;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -47,18 +45,11 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>{@link #cancelAndDrain(ProcessingResultWrapper)} — cancel a processing future and wait
  *       up to 2 seconds for it to drain before releasing the Pulsar ack slot</li>
  *   <li>{@link #handleFailureOrPoisonPill(Consumer, Message, String, String)} — per-message
- *       failure counting with poison-pill detection after {@link #MAX_CONSECUTIVE_FAILURES}
- *       consecutive errors</li>
+ *       failure counting with poison-pill detection after {@code maxProcessingAttempts} failures</li>
  * </ul>
  */
 @Slf4j
 public abstract class AbstractPulsarCallback implements MessageListener<byte[]> {
-
-    /**
-     * Maximum consecutive failures per message before it is treated as a poison pill,
-     * ACKed (discarded), and a hard error is logged to break an infinite redelivery loop.
-     */
-    protected static final int MAX_CONSECUTIVE_FAILURES = 5;
 
     /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
     protected static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
@@ -70,8 +61,12 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
     protected final ServiceConfiguration serviceConfiguration;
     protected final ExecutorService virtualThreadPool;
 
-    /** Per-message consecutive failure counter (message ID as key). */
-    protected final Map<String, AtomicInteger> failureCountPerMessage = new ConcurrentHashMap<>();
+    /**
+     * Per-message failure counter (message ID as key). After {@code maxProcessingAttempts} failures the
+     * message is treated as a poison pill, ACKed (discarded), and a hard error is logged to break an
+     * infinite redelivery loop.
+     */
+    protected final MessageFailureTracker failureTracker;
 
     protected AbstractPulsarCallback(
             String tenant,
@@ -85,6 +80,7 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
         this.connectorName = connectorName;
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
     }
 
     /**
@@ -108,7 +104,7 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
 
     /**
      * Handles a per-message failure by either negative-ACKing for redelivery or,
-     * once {@link #MAX_CONSECUTIVE_FAILURES} consecutive failures have occurred,
+     * once {@code maxProcessingAttempts} failures have occurred,
      * treating the message as a poison pill and positive-ACKing it (discarding it)
      * to break an infinite redelivery loop.
      *
@@ -119,16 +115,11 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
      */
     protected void handleFailureOrPoisonPill(Consumer<byte[]> consumer, Message<byte[]> message,
             String messageId, String topic) {
-        int failureCount = failureCountPerMessage
-                .computeIfAbsent(messageId, k -> new AtomicInteger(0))
-                .incrementAndGet();
-
-        if (failureCount >= MAX_CONSECUTIVE_FAILURES) {
+        if (failureTracker.recordFailureReachedLimit(messageId)) {
             log.error(
-                    "{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
+                    "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
                             + "infinite redelivery loop. Message is discarded. messageId: {}, topic: [{}], connector: {}",
-                    tenant, failureCount, messageId, topic, connectorIdentifier);
-            failureCountPerMessage.remove(messageId);
+                    tenant, failureTracker.limit(), messageId, topic, connectorIdentifier);
             try {
                 consumer.acknowledge(message);
             } catch (PulsarClientException e) {
@@ -139,10 +130,8 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
             return;
         }
 
-        if (failureCount > 1) {
-            log.warn("{} - Redelivery attempt {} for message: {}, topic: [{}], connector: {}",
-                    tenant, failureCount, messageId, topic, connectorIdentifier);
-        }
+        log.warn("{} - Negative ack for Pulsar redelivery: message: {}, topic: [{}], connector: {}",
+                tenant, messageId, topic, connectorIdentifier);
 
         consumer.negativeAcknowledge(message);
     }

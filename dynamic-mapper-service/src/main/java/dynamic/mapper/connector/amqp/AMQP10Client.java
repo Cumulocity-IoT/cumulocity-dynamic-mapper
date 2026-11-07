@@ -23,7 +23,6 @@ package dynamic.mapper.connector.amqp;
 
 import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
@@ -371,7 +370,8 @@ public class AMQP10Client extends AConnectorClient {
                     connectorIdentifier,
                     connectorName,
                     topic,
-                    qos);
+                    qos,
+                    session);
 
             MessageConsumer consumer = session.createConsumer(destination);
             consumer.setMessageListener(callback);

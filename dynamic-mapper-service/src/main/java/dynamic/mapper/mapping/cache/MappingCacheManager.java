@@ -25,7 +25,10 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingTreeNode;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.model.validation.ResolveException;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Metrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -38,12 +41,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Per tenant, the inbound side (mappings by id, by stable identifier, and the topic resolver
  * tree) lives in one {@link InboundState} that a rebuild swaps in a single volatile write, so a
  * reader never sees the map and the tree out of sync. Incremental changes are serialized per
- * tenant. Getters never create tenant state; only {@link #createTenantCache} and the rebuilds do,
- * so a late call after {@link #removeTenantCache} cannot resurrect (and leak) a removed tenant.
+ * tenant. Getters never create tenant state; only {@link #initializeTenant} and the rebuilds do,
+ * so a late call after {@link #removeTenant} cannot resurrect (and leak) a removed tenant.
+ *
+ * <p>{@link #initializeTenant} also registers a {@code dynmapper_mapping_count} gauge per
+ * (direction, transformation type) combination, tagged with the tenant. Each gauge's value
+ * function re-reads the live cache on every scrape, so no mutation method needs to touch a
+ * counter; {@code this} (a Spring singleton, so never garbage-collected for the life of the
+ * process) is the gauge's held state object, per Micrometer's weak-reference gotcha.
  */
 @Slf4j
 @Component
 public class MappingCacheManager {
+
+    private static final Direction[] CACHE_DIRECTIONS = { Direction.INBOUND, Direction.OUTBOUND };
+
+    // Structure: <Tenant, registered mapping-count gauges for that tenant>
+    private final Map<String, List<Gauge>> mappingCountGauges = new ConcurrentHashMap<>();
 
     private static final class InboundState {
         final Map<String, Mapping> byId = new ConcurrentHashMap<>();
@@ -77,17 +91,60 @@ public class MappingCacheManager {
     /**
      * Initializes cache structures for a tenant (idempotent)
      */
-    public void createTenantCache(String tenant) {
+    public void initializeTenant(String tenant) {
         tenants.computeIfAbsent(tenant, TenantCache::new);
+        registerMappingCountGauges(tenant);
         log.debug("{} - Cache structures created", tenant);
     }
 
     /**
      * Removes all cache data for a tenant
      */
-    public void removeTenantCache(String tenant) {
+    public void removeTenant(String tenant) {
         tenants.remove(tenant);
+        List<Gauge> gauges = mappingCountGauges.remove(tenant);
+        if (gauges != null) {
+            gauges.forEach(Metrics.globalRegistry::remove);
+        }
         log.debug("{} - Cache structures removed", tenant);
+    }
+
+    /**
+     * Registers the {@code dynmapper_mapping_count} gauges for a tenant, one per (direction,
+     * transformation type) combination. Idempotent, mirroring {@link #initializeTenant}.
+     */
+    private void registerMappingCountGauges(String tenant) {
+        if (mappingCountGauges.containsKey(tenant)) {
+            return;
+        }
+        List<Gauge> gauges = new ArrayList<>();
+        for (Direction direction : CACHE_DIRECTIONS) {
+            for (TransformationType type : TransformationType.values()) {
+                Gauge gauge = Gauge
+                        .builder("dynmapper_mapping_count", this,
+                                self -> self.countMappings(tenant, direction, type))
+                        .tag("tenant", tenant)
+                        .tag("direction", direction.name())
+                        .tag("transformationType", type.name())
+                        .description("Number of mappings currently cached, by direction and transformation type")
+                        .register(Metrics.globalRegistry);
+                gauges.add(gauge);
+            }
+        }
+        mappingCountGauges.put(tenant, gauges);
+    }
+
+    private double countMappings(String tenant, Direction direction, TransformationType type) {
+        Map<String, Mapping> byId = Direction.OUTBOUND.equals(direction)
+                ? outbound(tenant).map(s -> s.byId).orElse(Collections.emptyMap())
+                : inbound(tenant).map(s -> s.byId).orElse(Collections.emptyMap());
+        long count = 0;
+        for (Mapping mapping : byId.values()) {
+            if (type.equals(mapping.getTransformationType())) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**

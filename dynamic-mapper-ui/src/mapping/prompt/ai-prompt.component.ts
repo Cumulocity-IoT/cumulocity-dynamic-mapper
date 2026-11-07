@@ -45,7 +45,7 @@ import { MappingService } from '../core/mapping.service';
 import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
-import { base64ToBytes } from '../../shared/mapping/util';
+import { base64ToString } from '../../shared/mapping/util';
 
 
 /** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
@@ -172,6 +172,9 @@ export class AiPromptComponent implements OnInit {
     language: 'javascript',
     readOnly: true,
     minimap: { enabled: false },
+    // Monaco's default ('selection') draws a dot for every space inside a selection; the other
+    // editors in this app already turn it off.
+    renderWhitespace: 'none',
     automaticLayout: true
   };
 
@@ -444,6 +447,18 @@ export class AiPromptComponent implements OnInit {
     delete m.substitutions;
     m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
     m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    // Further samples of the same payload type (Message Explorer multi-select), so the agent can
+    // generalize instead of fitting a single message. Payloads are parsed like sourceTemplate;
+    // raw text that is not JSON stays a string.
+    if (Array.isArray(m.additionalSamples) && m.additionalSamples.length > 0) {
+      m.additionalSamples = m.additionalSamples.map((sample: any) => {
+        let payload = sample.payload;
+        try { payload = JSON.parse(sample.payload); } catch { /* keep as string */ }
+        return { ...sample, payload };
+      });
+    } else {
+      delete m.additionalSamples;
+    }
     // Tell the AI whether ESM exports are required in the generated code
     m.supportESM = this.serviceConfiguration?.supportESM ?? false;
     return m;
@@ -453,9 +468,7 @@ export class AiPromptComponent implements OnInit {
     if (!mapping.code) {
       return '';
     }
-    const enc = new TextDecoder("utf-8");
-    const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
-    return mappingCodeTemplateDecoded;
+    return base64ToString(mapping.code);
   }
 
   async sendMessage(): Promise<void> {

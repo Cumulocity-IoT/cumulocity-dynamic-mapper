@@ -50,13 +50,18 @@ Built via `ConnectorSpecificationBuilder.create("AMQP Connector", ConnectorType.
 | `automaticRecovery` | boolean | no | `true` | |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean | no | `true` / `false` | |
 
+Only `password` is sensitive. `automaticRecovery` enables the RabbitMQ client's own recovery
+(network recovery interval 5 s).
+
 #### Topic/exchange/queue model
 
 Mapping topic strings map to AMQP routing keys by replacing `/` with `.` (both ways).
 If an exchange is configured, it's declared durable via `exchangeDeclare(...)`; a
-durable queue is declared via `queueDeclare(...)` (respecting `autoDeleteQueue`) and
-bound to the exchange with the routing key. If no exchange is configured, the consumer
-reads directly from the named queue.
+durable queue named `<queuePrefix>.<topic with / as .>` is declared via `queueDeclare(...)`
+(respecting `autoDeleteQueue`) and bound to the exchange with the routing key. Topic wildcards
+are passed through unchanged as part of the routing key, so MQTT-style `+` is not translated to
+AMQP's `*`. Without an exchange, the connector still declares the
+queue (with the generated name above) and consumes from it.
 
 #### Subscribe / publish
 
@@ -67,9 +72,12 @@ reads directly from the named queue.
 
 #### QoS / ack
 
-`supportedQOS = [AT_MOST_ONCE, AT_LEAST_ONCE]`. Auto-ack if `AT_MOST_ONCE`; otherwise
-manual `basicAck` after successful processing, and `basicNack(deliveryTag, false, true)`
-(always requeues) on exception.
+`supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE]`. Auto-ack if `AT_MOST_ONCE`; otherwise the
+callback waits for the pipeline result (`ProcessingResultHelper.awaitAckable`) and calls
+`basicAck` on success or `basicNack(deliveryTag, false, true)` (always requeues) on a
+failure, a timeout, a server-side (5xx) error, or an exception. Client errors (4xx) count as
+success, as in the MQTT and Pulsar callbacks. The consumer thread blocks while it waits, so
+messages on one channel are settled in order.
 
 #### TLS / auth
 
@@ -80,19 +88,28 @@ cert, or default SSL otherwise. No SASL mechanism selection — the RabbitMQ cli
 #### Reconnection
 
 `connectorSpecificHousekeeping()` only logs a warning on a closed connection; actual
-reconnection happens in `monitorSubscriptions()`, which submits a delayed (5s)
-`connect()` on the virtual-thread pool — the same pattern used by the MQTT and Pulsar
-connectors.
+reconnection happens in `monitorSubscriptions()`, which submits `submitConnect()` on the
+virtual-thread pool with a linear backoff (`attempt * 10 s`, capped at 5 minutes), gated by
+`nextReconnectTimeMs`, like the MQTT connectors. The RabbitMQ client's `automaticRecovery`
+runs in parallel.
+
+#### Message metadata
+
+The topic is the routing key with dots replaced by slashes, so the original `routingKey` and the `exchange` are kept as transport fields, together with `contentType`, `correlationId`, `messageId`, `type`, `appId` and `header.<name>` per message header. AMQP 1.0 captures none yet. See [message metadata](message-explorer.md#message-metadata).
 
 #### Gotchas
 
-- **Nack always requeues** (`basicNack(..., requeue=true)`) with no backoff or attempt
-  limit — a permanently-failing message can loop forever, unlike Pulsar's poison-pill
-  cutoff.
-- **Ack is skipped on redelivery**: the callback only calls `basicAck` when
-  `envelope.isRedeliver()` is `false` — meaning a redelivered message that succeeds on
-  retry is never acknowledged, which likely causes it to be redelivered again
-  indefinitely. Worth flagging to anyone debugging repeated AMQP 0-9-1 redelivery.
+- **Nack requeues** (`basicNack(..., requeue=true)`) with no backoff, but only until the message failed
+  `maxProcessingAttempts` times (default 5); then it is acked and dropped. The message is identified by its
+  AMQP `messageId` property, or by routing key and body hash when the publisher set none, because the
+  delivery tag changes on every redelivery. **AMQP 1.0 has no such limit:** an unacknowledged message is
+  redelivered only when the session restarts. Also, the JMS specification says `acknowledge()` in
+  client-acknowledge mode acknowledges every message the session has consumed so far, so a later success may
+  acknowledge an earlier failed message. Not verified against the Qpid JMS client here.
+- **The callback needs the channel.** `AMQPCallback` receives the channel and the `autoAck` flag
+  in its constructor. Earlier it was built with a `null` channel, so it never sent an ack for
+  `AT_LEAST_ONCE` subscriptions, and it skipped the ack for redelivered messages. Both are fixed;
+  no ack or nack is sent for `autoAck=true` consumers.
 
 ### AMQP 1.0 (`AMQP10Client`, `ConnectorType.AMQP_10`)
 
@@ -119,10 +136,14 @@ Built via `ConnectorSpecificationBuilder.create("AMQP 1.0 Connector", ConnectorT
 | `automaticRecovery` | boolean | no | `true` | see failover transport, below |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean | no | `false` / `false` | no wildcard support either direction |
 
+Only `password` is sensitive.
+
 #### Session / delivery model
 
 A single JMS `Session` per connection, `Session.CLIENT_ACKNOWLEDGE` mode. `subscribe()`
-creates a `MessageConsumer` with a `MessageListener`; `publishMEAO()` looks up or
+creates a `MessageConsumer` with an `AMQP10Callback` listener (`AT_MOST_ONCE` acknowledges
+before dispatch, higher levels acknowledge once the pipeline result reports success; unsupported message
+types are acknowledged and dropped); `publishMEAO()` looks up or
 creates a cached `MessageProducer` per resolved destination, builds a `TextMessage`
 (optionally setting `JMS_AMQP_ContentType` from the `contentType` property), sets
 `deliveryMode` `PERSISTENT` for `AT_LEAST_ONCE` / `NON_PERSISTENT` otherwise, and calls
@@ -135,18 +156,21 @@ Connection URI is built as `protocol://host:port`; for `amqps://` it appends
 `transport.trustAll=true&transport.verifyHost=false` only if a self-signed cert is
 configured, else relies on the JVM default trust store. If `automaticRecovery=true`,
 the URI is wrapped in Qpid's own `failover:(...)` transport with unlimited reconnect
-attempts and exponential backoff — this runs **independently of** the connector
-framework's own `monitorSubscriptions()`-driven reconnect (same 5s-delayed
-`submitConnect()` pattern as AMQP 0-9-1), which is a documented double-reconnect/race
-risk the code explicitly guards against in a few places.
+attempts and exponential backoff (initial 1 s, base 5 s, max 30 s) — this runs
+**independently of** the connector framework's own `monitorSubscriptions()`-driven
+reconnect (same linear 10 s step backoff, capped at 5 minutes, as AMQP 0-9-1), which is a
+double-reconnect/race risk the code explicitly guards against in a few places.
+
+**Security note:** with `amqps://` and `trustCustomCertificate=true` the URI gets
+`transport.trustAll=true&transport.verifyHost=false`. The configured certificate is not used
+and server verification is disabled entirely.
 
 #### Gotchas
 
-- **No visible manual acknowledgement**: despite the session being opened in
-  `CLIENT_ACKNOWLEDGE` mode, the message listener callback never calls
-  `message.acknowledge()`. This looks like a genuine gap — messages may not be properly
-  acknowledged at the JMS level, relying instead on provider/session defaults. Worth
-  verifying against a live broker before relying on AMQP 1.0 delivery guarantees.
+- **Acknowledgement waits for the pipeline**: `AMQP10Callback` calls `message.acknowledge()`
+  only after `awaitAckable` reports success. A failed or timed-out mapping leaves the message
+  unacknowledged, but the callback never calls `session.recover()`, so redelivery happens only
+  on the next session or consumer restart.
 - `sanitizeUri()` is a no-op stub (comment claims the password never appears in the
   URI) — leftover/defensive code with a misleading name; it does not actually redact
   anything.

@@ -24,7 +24,6 @@ package dynamic.mapper.connector.amqp;
 import dynamic.mapper.util.TenantLogContext;
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
@@ -318,16 +317,17 @@ public class AMQPClient extends AConnectorClient {
                         tenant, queueName, exchangeName, routingKey);
             }
 
-            // Create callback
+            // Start consuming
+            boolean autoAck = qos == Qos.AT_MOST_ONCE;
             AMQPCallback callback = new AMQPCallback(
+                    channel,
+                    autoAck,
                     tenant,
                     serviceRegistry,
                     dispatcher,
                     connectorIdentifier,
                     connectorName);
 
-            // Start consuming
-            boolean autoAck = qos == Qos.AT_MOST_ONCE;
             String consumerTag = channel.basicConsume(queueName, autoAck, callback);
             consumerTags.put(topic, consumerTag);
 

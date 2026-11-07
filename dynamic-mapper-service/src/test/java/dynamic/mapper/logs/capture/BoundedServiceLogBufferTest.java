@@ -157,4 +157,20 @@ class BoundedServiceLogBufferTest {
 
         assertEquals(1, buffer.drain(java.util.List.of("tenantB")).get("tenantB").size());
     }
+
+    @Test
+    void whenTheSharedLimitIsReachedTheBiggestHolderPaysNotTheTenantThatAddsALine() {
+        BoundedServiceLogBuffer buffer = new BoundedServiceLogBuffer();
+        String big = "x".repeat(60_000); // ~120 KB each
+        // Ten tenants at their own limit together exceed the shared one.
+        for (int t = 0; t < 10; t++) {
+            for (int i = 0; i < 140; i++) {
+                buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH.plusMillis(i), "INFO", "t", "big" + t, "l", big),
+                        10_000);
+            }
+        }
+        buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH, "INFO", "t", "small", "l", "small"), 10_000);
+
+        assertEquals(1, buffer.drain(java.util.List.of("small")).get("small").size());
+    }
 }

@@ -26,13 +26,32 @@ export interface ExplorerMessage {
   topic: string;
   connectorIdentifier: string;
   connectorName: string;
+  connectorType?: string; // connector type (MQTT, KAFKA, PULSAR, ...); inbound only
   clientId?: string;    // broker client identifier that sent the message
+  metadata?: Record<string, string>; // broker metadata: header.<name> (Kafka), property.<name> (Pulsar, MQTT 5), routingKey (AMQP), ...
   key?: string;         // message key, if the broker protocol has one (e.g. Kafka record key)
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;
+  payloadType?: 'EMPTY' | 'JSON' | 'XML' | 'TEXT' | 'BINARY';
+  payloadSize?: number;  // bytes of the original payload
+  binaryFormat?: string | null;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;    // C8Y managed object ID (device or group, outbound only)
+}
+
+/** True when the payload cannot be parsed as JSON (binary, XML or plain text), so only the raw-byte
+ *  mapping types (Any Payload) can read it. Falls back to the binary flag for older backends. */
+export function isRawPayload(msg: Pick<ExplorerMessage, 'binary' | 'payloadType'>): boolean {
+  return msg.binary || msg.payloadType === 'XML' || msg.payloadType === 'TEXT';
+}
+
+/** Maximum number of messages that can be selected together to generate a Smart Function. */
+export const MAX_EXPLORER_SAMPLES = 5;
+
+/** Selection key: messages can only be combined when they share it (JSON with JSON, binary with binary, ...). */
+export function samplePayloadKind(msg: Pick<ExplorerMessage, 'binary' | 'payloadType'>): string {
+  return msg.payloadType ?? (msg.binary ? 'BINARY' : 'JSON');
 }
 
 export class SessionExpiredError extends Error {

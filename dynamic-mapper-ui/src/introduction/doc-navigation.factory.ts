@@ -119,6 +119,102 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 792,
       preventDuplicates: true
     }),
+    mqttConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('MQTT connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-mqtt',
+      priority: 791.95,
+      preventDuplicates: true
+    }),
+    amqpConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('AMQP 0-9-1 connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-amqp',
+      priority: 791.93,
+      preventDuplicates: true
+    }),
+    amqp10ConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('AMQP 1.0 connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-amqp10',
+      priority: 791.92,
+      preventDuplicates: true
+    }),
+    pubsubConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'cloud',
+      label: gettext('Google Cloud Pub/Sub connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-pubsub',
+      priority: 791.91,
+      preventDuplicates: true
+    }),
+    c8yMqttServiceConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'plug',
+      label: gettext('Cumulocity MQTT Service connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-c8y-mqtt-service',
+      priority: 791.85,
+      preventDuplicates: true
+    }),
+    c8yApiConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'globe',
+      label: gettext('Cumulocity API connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-cumulocity-api',
+      priority: 791.84,
+      preventDuplicates: true
+    }),
+    httpConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'globe',
+      label: gettext('HTTP connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-http',
+      priority: 791.9,
+      preventDuplicates: true
+    }),
+    webhookConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'share-alt',
+      label: gettext('Webhook connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-webhook',
+      priority: 791.8,
+      preventDuplicates: true
+    }),
+    restPollingConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'refresh',
+      label: gettext('REST Polling connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-rest-polling',
+      priority: 791.7,
+      preventDuplicates: true
+    }),
+    kafkaConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('Kafka connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-kafka',
+      priority: 791.6,
+      preventDuplicates: true
+    }),
+    pulsarConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'plug',
+      label: gettext('Pulsar connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-pulsar',
+      priority: 791.5,
+      preventDuplicates: true
+    }),
+    brokerConceptsNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'table',
+      label: gettext('Pulsar, Kafka, and MQTT compared'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/how-to-pulsar-kafka-mqtt',
+      priority: 791.4,
+      preventDuplicates: true
+    }),
     definingMappingNode: new NavigatorNode({
       parent: gettext('Guides'),
       icon: 'exchange',

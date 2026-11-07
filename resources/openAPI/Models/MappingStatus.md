@@ -9,10 +9,22 @@
 | **direction** | **String** | Direction of data flow for this mapping | [default to null] |
 | **mappingTopic** | **String** | Topic pattern for incoming messages | [default to null] |
 | **publishTopic** | **String** | Topic pattern for outbound publishing | [default to null] |
-| **messagesReceived** | **Long** | Total number of messages processed by this mapping | [default to null] |
-| **errors** | **Long** | Total number of processing errors | [default to null] |
+| **messagesReceived** | **Long** | Total number of messages processed by this mapping. Counted per mapping, so one message matching several mappings increments each of them. | [default to null] |
+| **errors** | **Long** | Total number of processing errors over the lifetime of this mapping. Never reset by successful processing. | [default to null] |
 | **currentFailureCount** | **Long** | Current consecutive failure count | [default to null] |
-| **loadingError** | **String** | Error message if mapping failed to load | [default to null] |
+| **loadingError** | **String** | Error message if the mapping failed to load; empty otherwise | [optional] [default to null] |
+| **cursor** | **String** | Incremental-fetch cursor for connectors that support it (e.g. REST Polling); null if unused | [optional] [default to null] |
+| **messagesProcessed** | **Long** | Messages that completed processing without error and were not filtered out | [optional] [default to null] |
+| **messagesFiltered** | **Long** | Messages dropped on purpose (filter did not match, or the mapping chose to ignore them); not an error | [optional] [default to null] |
+| **lastMessageAt** | **Long** | Epoch milliseconds of the last message this mapping finished processing (any outcome); 0 if none | [optional] [default to null] |
+| **lastErrorAt** | **Long** | Epoch milliseconds of the last error; 0 if none | [optional] [default to null] |
+| **lastError** | **String** | Message of the most recent error, truncated; null if none | [optional] [default to null] |
+| **requestsCreated** | **Long** | Requests produced by this mapping (Cumulocity calls inbound, broker publishes outbound) | [optional] [default to null] |
+| **requestsFailed** | **Long** | Requests that failed | [optional] [default to null] |
+| **warnings** | **Long** | Warnings raised while processing | [optional] [default to null] |
+| **timedMessages** | **Long** | Number of messages the processing-time figures are based on | [optional] [default to null] |
+| **processingTimeTotalMs** | **Long** | Total processing time in milliseconds over timedMessages | [optional] [default to null] |
+| **processingTimeMaxMs** | **Long** | Slowest single message in milliseconds | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

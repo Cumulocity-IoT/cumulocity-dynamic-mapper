@@ -45,7 +45,10 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 import dynamic.mapper.ai.AIAgentService;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MappingTreeNodeSerializer;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import jakarta.annotation.PostConstruct;
 import lombok.SneakyThrows;
 import org.joda.time.DateTime;
 import dynamic.mapper.ai.MappingResultTools;
@@ -80,6 +83,23 @@ public class App {
     MeterRegistryCustomizer<MeterRegistry> configurer(
             @Value("${application.name}") String applicationName) {
         return (registry) -> registry.config().commonTags("application", applicationName);
+    }
+
+    @Value("${application.version}")
+    private String applicationVersion;
+
+    /**
+     * Exposes the deployed build version as a metric: the standard Prometheus "info" pattern
+     * (a gauge that is always 1, with the real value carried in a tag) since Micrometer has no
+     * first-class way to publish a plain string. {@code this} is used as the gauge's weakly-held
+     * state object purely so it is never garbage-collected (the App bean lives for the process).
+     */
+    @PostConstruct
+    public void registerBuildInfoMetric() {
+        Gauge.builder("dynmapper_build_info", this, app -> 1)
+                .tag("version", applicationVersion)
+                .description("Always 1; the deployed service version is carried in the 'version' tag")
+                .register(Metrics.globalRegistry);
     }
 
     @Bean("virtualThreadPool")

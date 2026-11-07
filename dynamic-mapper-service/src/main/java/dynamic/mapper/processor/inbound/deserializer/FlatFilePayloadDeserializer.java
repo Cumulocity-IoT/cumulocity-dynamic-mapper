@@ -15,7 +15,7 @@ public class FlatFilePayloadDeserializer implements PayloadDeserializer<Object> 
         try {
 
             String payloadMessage = (message.getPayload() != null
-                    ? new String(message.getPayload(), StandardCharsets.UTF_8)
+                    ? dynamic.mapper.processor.util.PayloadClassifier.stripBom(new String(message.getPayload(), StandardCharsets.UTF_8))
                     : "");
             
             // Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));

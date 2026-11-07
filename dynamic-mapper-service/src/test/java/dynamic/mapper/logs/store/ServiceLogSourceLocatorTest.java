@@ -113,7 +113,7 @@ class ServiceLogSourceLocatorTest {
 
         MicroserviceSubscriptionRemovedEvent event = mock(MicroserviceSubscriptionRemovedEvent.class);
         when(event.getTenant()).thenReturn("tenantA");
-        locator.onUnsubscribed(event);
+        locator.onTenantUnsubscribed(event);
         locator.find("tenantA");
         locator.find("tenantB");
 

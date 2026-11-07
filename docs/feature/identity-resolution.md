@@ -47,7 +47,7 @@ Identity resolution is the translation between the two, in both directions.
 | [`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java) | Routes identity calls to either the real `IdentityApi` (production) or [`MockIdentity`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockIdentity.java) (testing), based on a `testing` flag threaded through every call. |
 | [`IdentityResolutionService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/IdentityResolutionService.java) | Thread-safe create-or-lookup for **implicit** device creation: `getOrCreateDeviceThreadSafe()`. |
 | [`DeviceBootstrapService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/DeviceBootstrapService.java) | **Not** part of per-message identity resolution — see note below. |
-| [`TenantRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/TenantRegistry.java) | Holds the external-ID cache and per-external-ID creation locks used by `IdentityResolutionService`. |
+| [`TenantRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/TenantRegistry.java) | Holds the external-ID cache and the striped creation locks used by `IdentityResolutionService`. |
 
 ### Two independent caches
 
@@ -56,14 +56,19 @@ paths — this is a real structural detail, not an implementation accident:
 
 1. **`InboundExternalIdCache`** (per-tenant, inside `CacheManager`, read/written by
    `C8YAgent.resolveExternalId2GlobalId()`
-   ([`C8YAgent.java:212-241`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/C8YAgent.java#L212-L241))).
+   ([`C8YAgent.resolveExternalId2GlobalId`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/C8YAgent.java))).
    Every plain "does this external ID already resolve to a device?" lookup goes through this
-   cache first; on a miss it calls the real (or mock) Identity API and populates the cache
-   (skipped when `testing=true`, so synthetic test IDs never enter it).
-2. **`TenantRegistry`'s `externalIdCache`** (a flat `Map<String,String>` keyed by
-   `"tenant|type|value"`, with a companion `externalIdCacheReverse` and a
-   `ConcurrentHashMap<String,Object>` of per-key locks
-   ([`TenantRegistry.java:252-323`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/TenantRegistry.java#L252-L323))).
+   cache first; on a miss it calls the real (or mock) Identity API and populates the cache.
+   With `testing=true` the cache is neither read nor written, so synthetic test IDs never
+   enter it. Size and retention come from the service configuration
+   (`inboundExternalIdCacheSize`, `inboundExternalIdCacheRetention`; the default size is the
+   `APP.inboundExternalIdCacheSize` property, 100000). An external-ID type of `null` resolves as
+   `c8y_Serial`. Metrics: `dynmapper_inbound_identity_requests_total`,
+   `dynmapper_inbound_identity_cache_hits_total`, `dynmapper_inbound_identity_cache_size`.
+2. **`TenantRegistry`'s `externalIdCache`** (a flat access-ordered LRU `Map<String,String>` keyed by
+   `"tenant|type|value"`, bounded at 100000 entries across all tenants with no time-based expiry,
+   with a companion `externalIdCacheReverse` index (`"tenant|internalId"` to keys) and a fixed array of 256 striped lock monitors
+   ([`TenantRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/TenantRegistry.java))).
    This is read/written only by `IdentityResolutionService.getOrCreateDeviceThreadSafe()` —
    the **create-or-lookup** path used when a mapping has `createNonExistingDevice=true`.
 
@@ -74,10 +79,17 @@ the cached device was deleted from inventory), it evicts the entry from **both**
 a comment there points to `attic/fix/inconsistant-cache/ISSUE.md` documenting the bug that
 motivated evicting both.
 
+Other eviction paths: a Notification 2.0 `DELETE` of a managed object evicts the device from
+the inventory cache and from both external-ID caches
+(`C8YAgent.evictDeletedManagedObjectFromCaches`, called from `CacheInventoryUpdateClient`), and a
+fetch of a managed object that no longer exists drops the reverse-indexed `TenantRegistry`
+entries. Only devices that are in the inventory cache are subscribed for those notifications;
+for any other device the 422 path above is the only eviction trigger.
+
 ### Inbound resolution path
 
 Triggered from `SubstitutionResultInboundProcessor.prepareAndSubstituteInPayload()`
-([`SubstitutionResultInboundProcessor.java:182-247`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java#L182-L247))
+([`SubstitutionResultInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java))
 when a substitution's `pathTarget` is one of the two identity tokens:
 
 ```mermaid
@@ -113,13 +125,14 @@ flowchart TD
 
 #### `getOrCreateDeviceThreadSafe()` — double-checked locking
 
-([`IdentityResolutionService.java:64-123`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/IdentityResolutionService.java#L64-L123))
+([`IdentityResolutionService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/IdentityResolutionService.java))
 
 1. Fast path: check `TenantRegistry.getCachedExternalId(cacheKey)`. If present, return
    immediately (no lock).
-2. Otherwise obtain a lock scoped to `tenant|externalIdType|externalIdValue`
-   (`TenantRegistry.getOrCreateExternalIdLock`) — not a single global lock, so concurrent
-   creation of *different* devices doesn't serialize against each other.
+2. Otherwise obtain the lock for `tenant|externalIdType|externalIdValue`
+   (`TenantRegistry.getOrCreateExternalIdLock`). It is one of 256 striped monitors chosen by the
+   key's hash — not a single global lock, so creation of different devices rarely contends,
+   but two keys can share a stripe and wait on each other.
 3. Inside the lock: re-check the cache (another thread may have already created the device
    while this one was waiting for the lock), then call
    `C8YAgent.resolveExternalId2GlobalId()` again (the device may already exist in C8Y even
@@ -134,7 +147,7 @@ flowchart TD
 #### Implicit device creation
 
 `ProcessingResultHelper.createImplicitDevice()`
-([`ProcessingResultHelper.java:168-`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ProcessingResultHelper.java#L168))
+([`ProcessingResultHelper`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ProcessingResultHelper.java))
 builds a minimal managed object:
 
 - `name` — `context.getDeviceName()` if the mapping/context supplied one (via
@@ -143,10 +156,23 @@ builds a minimal managed object:
 - `type` — `context.getDeviceType()` if supplied, else `"c8y_GeneratedDeviceType"`.
 - Always includes `c8y_IsDevice` and `com_cumulocity_model_Agent` fragments.
 - Merges in any additional `context.getDeviceFragments()` (from `_CONTEXT_DATA_.deviceFragments`).
-- Submitted as a `DynamicMapperRequest` (method `POST` or `PATCH`, depending on
-  `mapping.getUpdateExistingDevice()`) through `C8YAgent.upsertDevice()`, which also binds the
-  external ID (`createWithExternalIdBinding`) unless `testing=true`, in which case a
-  predefined mock source ID is assigned instead of a server-generated one.
+- Submitted as a `DynamicMapperRequest` through `C8YAgent.upsertDevice()`. The request's method
+  label is `POST` if `mapping.getUpdateExistingDevice()` is true and `PATCH` otherwise, but
+  `upsertDevice` ignores the label: with no known source ID it creates the device, otherwise it
+  updates it.
+- `upsertDevice` also adds a `c8y_Agent` fragment (name, version, URL of the Dynamic Mapper),
+  and sets the owner to `device_<clientId>` when the message carries a client ID and that
+  user exists.
+- Binding the external ID (`createWithExternalIdBinding`), unless `testing=true` (a predefined
+  mock source ID is assigned instead of a server-generated one):
+  - with the service configuration option `externalIdBinding` on (default), the external ID is
+    sent in the managed-object creation body and bound atomically (platform release May 2026 or
+    later); a platform that rejects this (HTTP 422, for example Cumulocity Edge) produces an
+    error message that tells the operator to switch the option off;
+  - with the option off, the object is created first and the external ID bound by a second
+    call; if that call loses a race (HTTP 409), the unbound object is deleted again.
+  - In both modes an HTTP 409 means another creator bound the ID first: the caches are evicted
+    and the winning device is resolved and used instead of failing.
 
 ### Outbound resolution path
 
@@ -155,13 +181,20 @@ notification payload by `EnrichmentOutboundProcessor` — see
 [`mapping-processing-outbound.md`](mapping-processing-outbound.md)), find its external ID of
 a specific type. This uses `C8YAgent.resolveGlobalId2ExternalId(tenant, gid, externalIdType,
 testing)` → `IdentityFacade.resolveGlobalId2ExternalId()`
-([`IdentityFacade.java:78-100`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java#L78-L100)),
+([`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java)),
 which pages through the device's full external-ID collection and returns the first entry
-matching the requested type. There is no local cache on this path (each call queries the
-Identity API, or `MockIdentity.getExternalIdsOfGlobalId()` when testing) — if no external ID
+matching the requested type. A null type resolves as `c8y_Serial`. The result is cached per tenant in
+`OutboundExternalIdCache` keyed by source ID and type (size and retention from
+`outboundExternalIdCacheSize`/`outboundExternalIdCacheRetention`; metric
+`dynmapper_outbound_identity_cache_hits_total`); a miss queries the Identity API, or
+`MockIdentity.getExternalIdsOfGlobalId()` when testing, and a test run bypasses the cache. If no external ID
 of that type exists, the mapping is skipped for that device
 (`context.setIgnoreFurtherProcessing(true)`) rather than erroring, since a missing enrollment
 is a device-configuration gap rather than a mapping bug.
+
+Both resolution methods in `C8YAgent` catch every `SDKException` and return `null`, logging "not
+found". A server error or timeout on the identity lookup is therefore indistinguishable from a
+missing device; with `createNonExistingDevice` on, the mapper then tries to create the device.
 
 ### Testing: mocked identity resolution
 

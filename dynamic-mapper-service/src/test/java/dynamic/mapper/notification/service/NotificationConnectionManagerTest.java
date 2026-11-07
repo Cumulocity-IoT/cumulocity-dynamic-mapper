@@ -64,10 +64,11 @@ import org.mockito.quality.Strictness;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
+import java.util.concurrent.Semaphore;
 
 /**
  * Unit tests for {@link NotificationConnectionManager}.
@@ -100,7 +101,7 @@ class NotificationConnectionManagerTest {
     @Mock
     private MqttPushManager mqttPushManager;
     @Mock
-    private ConnectorRegistry connectorRegistry;
+    private OutboundDispatcherRegistry dispatcherRegistry;
     @Mock
     private SubscriptionQueryService queryService;
     @Mock
@@ -121,7 +122,7 @@ class NotificationConnectionManagerTest {
                 subscriptionsService,
                 tokenManager,
                 mqttPushManager,
-                connectorRegistry,
+                dispatcherRegistry,
                 queryService,
                 serviceRegistry);
     }
@@ -135,6 +136,20 @@ class NotificationConnectionManagerTest {
         if (exec != null) {
             exec.shutdownNow();
         }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void removeTenantResources_dropsStatusCodesAndInitLockOfThatTenantOnly() throws Exception {
+        ((Map<String, Integer>) getField("managementWSStatusCodes")).put(TENANT, 401);
+        ((Map<String, Integer>) getField("managementWSStatusCodes")).put("t2", 401);
+        ((Map<String, Object>) getField("managementInitLocks")).put(TENANT, new Semaphore(1));
+
+        manager.removeTenant(TENANT);
+
+        assertFalse(((Map<String, ?>) getField("managementWSStatusCodes")).containsKey(TENANT));
+        assertFalse(((Map<String, ?>) getField("managementInitLocks")).containsKey(TENANT));
+        assertTrue(((Map<String, ?>) getField("managementWSStatusCodes")).containsKey("t2"));
     }
 
     // ------------------------------------------------------------------

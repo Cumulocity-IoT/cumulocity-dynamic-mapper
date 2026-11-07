@@ -18,8 +18,17 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { MappingType, TransformationType } from '../../shared';
+import { MappingType, SamplePayloadType, TransformationType } from '../../shared';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
+
+/** A further message captured alongside the primary one (multi-select in Message Explorer). */
+export interface ExplorerSampleMessage {
+  topic: string;
+  payload: string;
+  binary?: boolean;
+  key?: string;
+  metadata?: Record<string, string>;
+}
 
 /** Data captured in the Message Explorer's "Create mapping" flow, to be applied to the fresh
  *  mapping once the user lands on the mapping grid. */
@@ -27,7 +36,20 @@ export interface ExplorerMappingHandoff {
   sessionTopic?: string;
   topic: string;
   payload: string;
+  /** True when the payload is base64 text of non-printable bytes (see ExplorerService). */
+  binary?: boolean;
   key?: string;
+  /** Broker metadata captured with the message (Kafka headers, Pulsar properties, ...). */
+  metadata?: Record<string, string>;
+  /** Detected by the backend (see PayloadClassifier). */
+  payloadType?: SamplePayloadType;
+  binaryFormat?: string | null;
+  payloadSize?: number;
+  clientId?: string;
+  /** Type of the connector the message was captured on (inbound only), e.g. KAFKA. */
+  connectorType?: string;
+  /** Additional messages of the same payload type, used for AI generation only. */
+  additionalMessages?: ExplorerSampleMessage[];
   mappingType: MappingType;
   transformationType: TransformationType;
   codeTemplate?: CodeTemplate;

@@ -1,6 +1,6 @@
 # DeviceSubscriptionControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -11,6 +11,7 @@ All URIs are relative to *http://localhost:8080*
 | [**getSubscriptions**](DeviceSubscriptionControllerApi.md#getSubscriptions) | **GET** /subscription | Get device notification subscriptions |
 | [**getTypeSubscriptions**](DeviceSubscriptionControllerApi.md#getTypeSubscriptions) | **GET** /subscription/type | Get device type notification subscriptions |
 | [**resyncTypeSubscription**](DeviceSubscriptionControllerApi.md#resyncTypeSubscription) | **POST** /subscription/type/resync/{type} | Resync existing devices into a type subscription |
+| [**resyncTypeSubscriptionByParam**](DeviceSubscriptionControllerApi.md#resyncTypeSubscriptionByParam) | **POST** /subscription/type/resync | Resync existing devices into a type subscription (type as query parameter) |
 | [**updateGroupSubscription**](DeviceSubscriptionControllerApi.md#updateGroupSubscription) | **PUT** /subscription/group | Update group notification subscription (desired state) |
 | [**updateSubscription**](DeviceSubscriptionControllerApi.md#updateSubscription) | **PUT** /subscription | Update device notification subscription |
 | [**updateTypeSubscription**](DeviceSubscriptionControllerApi.md#updateTypeSubscription) | **PUT** /subscription/type | Update device type notification subscription |
@@ -121,7 +122,7 @@ Get group notification subscriptions
 
 <a name="getSubscriptions"></a>
 # **getSubscriptions**
-> NotificationSubscriptionResponse getSubscriptions(subscription, currentPage, pageSize, withTotalPages)
+> NotificationSubscriptionResponse getSubscriptions(subscription, currentPage, pageSize, withTotalPages, search)
 
 Get device notification subscriptions
 
@@ -133,6 +134,7 @@ Get device notification subscriptions
 | **currentPage** | **Integer**|  | [optional] [default to null] |
 | **pageSize** | **Integer**|  | [optional] [default to null] |
 | **withTotalPages** | **Boolean**|  | [optional] [default to true] |
+| **search** | **String**| Restrict the result to devices whose id, name, type, or group matches this text (case-insensitive substring; * and ? act as wildcards) | [optional] [default to null] |
 
 ### Return type
 
@@ -175,7 +177,34 @@ This endpoint does not need any parameter.
 
 Resync existing devices into a type subscription
 
-    Notification 2.0&#39;s tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; watch the dynamic device subscription list to see it progress.
+    Notification 2.0&#39;s tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; progress and the result (including incomplete runs) are reported as Service Events.
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **type** | **String**|  | [default to null] |
+
+### Return type
+
+null (empty response body)
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+<a name="resyncTypeSubscriptionByParam"></a>
+# **resyncTypeSubscriptionByParam**
+> resyncTypeSubscriptionByParam(type)
+
+Resync existing devices into a type subscription (type as query parameter)
+
+    Same as the path variant, but takes the type as a query parameter so that types containing &#39;/&#39; (which servlet containers reject as an encoded path segment) can be resynced.
 
 ### Parameters
 

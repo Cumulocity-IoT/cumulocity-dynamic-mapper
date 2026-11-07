@@ -36,6 +36,13 @@ public class ConnectorMessage {
 
     private String[] headers;
 
+    /**
+     * Broker-specific message metadata (Kafka headers, Pulsar properties, AMQP headers, ...), see
+     * {@link TransportMetadata}. Delivered to Smart Functions and extensions as transport fields.
+     * Null if the connector has none.
+     */
+    private java.util.Map<String, String> metadata;
+
     @NotNull
     private String tenant;
 

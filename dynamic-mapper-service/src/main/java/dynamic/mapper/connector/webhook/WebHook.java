@@ -168,7 +168,7 @@ public class WebHook extends AConnectorClient {
             props.put("baseUrlHealthEndpoint",
                     new ConnectorProperty("Endpoint called with a GET request to test the connection.", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
-                            "http://cumulocity:8111/notification2", null, null));
+                            "/notification2", null, null));
         }
     }
 
@@ -424,6 +424,11 @@ public class WebHook extends AConnectorClient {
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
+            if (dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+                // unsubscribed: mappings can no longer be read, and nothing will use the caches
+                log.info("{} - WebHook connector disconnected (tenant unsubscribed)", tenant);
+                return;
+            }
             // Rebuild caches
             mappingService.rebuildMappingCaches(tenant, connectorId);
             List<Mapping> outboundMappings = new ArrayList<>(

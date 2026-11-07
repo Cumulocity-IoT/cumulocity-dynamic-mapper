@@ -22,8 +22,12 @@
 package dynamic.mapper.controller;
 
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
+
+import dynamic.mapper.core.ConnectorLifecycleService;
 
 public class Utils  {
     private static final String ROLE_DYNAMIC_MAPPER_ADMIN = "ROLE_DYNAMIC_MAPPER_ADMIN";
@@ -45,5 +49,18 @@ public class Utils  {
             hasUserRole = true;
         }
         return  userHasMappingAdminRole() || hasUserRole;
+    }
+
+    /** The HTTP status that answers a refused or failed connector operation. */
+    static HttpStatus statusOf(ConnectorLifecycleService.ConnectorOperationException ex) {
+        return switch (ex.getReason()) {
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case NOT_ALLOWED -> HttpStatus.BAD_REQUEST;
+            case FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+    }
+
+    static ResponseStatusException toStatusException(ConnectorLifecycleService.ConnectorOperationException ex) {
+        return new ResponseStatusException(statusOf(ex), ex.getMessage());
     }
 }

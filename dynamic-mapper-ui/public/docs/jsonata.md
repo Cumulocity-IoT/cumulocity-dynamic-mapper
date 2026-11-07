@@ -2,6 +2,11 @@
 title: Defining a substitution using JSONata
 ---
 
+:::note
+New mappings use **Smart Function** by default. The **Substitution as JSONata Expression** transformation type is only
+offered when **Expert Mode** is on in the Add Mapping dialog.
+:::
+
 A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
 target payload (Cumulocity JSON payload).
 When defining substitutions, templates for the source and target payloads are used.
@@ -12,7 +17,7 @@ At runtime, these rules are applied to the actual payload received from your bro
 3. Press **Add substitution**.
 4. The substitution is added to the table of existing substitutions.
 
-JSONata is a powerful query and transformation language for JSON. It supports path expressions, predicates,
+JSONata is a query and transformation language for JSON. It supports path expressions, predicates,
 functions, and aggregations. For simple mappings, you can use dot notation (e.g., `sensor.temperature`). For
 complex transformations, explore [JSONata documentation](https://jsonata.org/).
 
@@ -40,16 +45,16 @@ already exist in the target template, or the `pathSource` expression evaluates t
 
 | Strategy | Description |
 |---|---|
-| `DEFAULT` | Process the substitution as defined, without any special handling. Use this only when `pathTarget` already exists as a literal key in the target template — using `DEFAULT` for a path that isn't already there causes a "Path not found" error at runtime. |
+| `DEFAULT` | Process the substitution as defined, without any special handling. Use this only when `pathTarget` already exists as a literal key in the target template, using `DEFAULT` for a path that isn't already there causes a "Path not found" error at runtime. |
 | `CREATE_IF_MISSING` | Create the target node if it doesn't already exist. Use this whenever `pathTarget` is a dynamic or computed segment that isn't a literal path in the target template (e.g. a key derived from source data, or any node that needs to be created at runtime). This is also required for every `_CONTEXT_DATA_.*` target, since those are never literal keys in the target template. |
 | `REMOVE_IF_MISSING_OR_NULL` | Remove the target node entirely if the source evaluation returns undefined, null, or empty. Use this to omit a field from the output rather than writing a null/empty value into it. |
-| `IGNORE` | Skip this substitution entirely if the source path evaluation is missing or null — the target node is left completely untouched (whatever was already in the template, e.g. a default value, stays as-is). If the source value is present, the substitution behaves like `DEFAULT`. |
-| `USE_FIRST_VALUE_OF_ARRAY` | If the extracted source content is an array, use only its first element as the value. Only meaningful when **Expand as array** is switched off for this substitution — see below. |
-| `USE_LAST_VALUE_OF_ARRAY` | If the extracted source content is an array, use only its last element as the value. Only meaningful when **Expand as array** is switched off for this substitution — see below. |
+| `IGNORE` | Skip this substitution entirely if the source path evaluation is missing or null, the target node is left completely untouched (whatever was already in the template, e.g. a default value, stays as-is). If the source value is present, the substitution behaves like `DEFAULT`. |
+| `USE_FIRST_VALUE_OF_ARRAY` | If the extracted source content is an array, use only its first element as the value. Only meaningful when **Expand as array** is switched off for this substitution, see below. |
+| `USE_LAST_VALUE_OF_ARRAY` | If the extracted source content is an array, use only its last element as the value. Only meaningful when **Expand as array** is switched off for this substitution, see below. |
 
 **Expand as array** controls what happens when a substitution's `pathSource` extracts an array from the source payload:
 
-- **Switched on:** the array is expanded — the mapper generates one target document per array element, using the
+- **Switched on:** the array is expanded, the mapper generates one target document per array element, using the
   same target template for each. Use this for multi-value/multi-device messages, e.g. a single payload containing
   several measurements.
 - **Switched off (default):** the array is not expanded into multiple documents. By default the whole array is
@@ -69,15 +74,15 @@ Whether a source payload maps to one Cumulocity request or several depends on tw
    (**single-device-single-value**).
 2. If the device-identifying substitution extracts an array with **Expand as array** switched on, e.g.
    `["device_101023", "device_101024"]`, one request is generated per device
-   (**multi-device-single-value** — useful mainly for creating multiple devices from one payload).
+   (**multi-device-single-value**, useful mainly for creating multiple devices from one payload).
 3. If a *value* substitution (not the device identifier) extracts an array with **Expand as array** on, e.g.
    `[10.4, 20.9]`, one request is generated per array element, all for the same device
    (**single-device-multi-value**).
 4. If both the device identifier and a value substitution extract arrays with **Expand as array** on, the two
-   arrays are paired up element-by-element — element *i* of the device array with element *i* of the value array
+   arrays are paired up element-by-element, element *i* of the device array with element *i* of the value array
    (**multi-device-multi-value**).
 
-An object result (as opposed to a scalar or array) is not supported for a substitution.
+An object result is written to the target path as a JSON object, for example a complete measurement series such as `{"value": 435, "unit": "kWh"}`.
 
 ```mermaid
 flowchart TD
@@ -105,15 +110,22 @@ extracted the most values; a substitution that produced only a single value is r
 request, which is what makes single-device-multi-value and multi-device-single-value work without every
 substitution needing to produce the same number of values.
 
-If extracted arrays are of different lengths — for example one substitution returns 2 values and another returns
-3 — the arrays with fewer items are padded by repeating their first value, so every request still gets a value
+If extracted arrays are of different lengths, for example one substitution returns 2 values and another returns
+3, the arrays with fewer items are padded by repeating their first value, so every request still gets a value
 for every substitution.
+
+### Expression errors
+
+If an expression cannot be parsed, the whole message fails with an error that names the expression, the target path, and
+the position of the syntax error. If an expression fails on the data of one message, for example a failed number
+conversion, that substitution gets no value and a warning is added. The remaining substitutions still run. A path that
+is missing in the payload is not an error. The substitution gets no value and the repair strategy decides the result.
 
 ### JSONata expression tips {#jsonata-tips}
 
 - Escape a property name containing special characters with a backtick: the property `customer-1` becomes
   `` `customer-1` ``.
-- Function chaining with `~>` is not supported by the JSONata evaluator used here — use function notation instead.
+- Function chaining with `~>` is not supported by the JSONata evaluator used here, use function notation instead.
   The expression `Account.Product.(Price * Quantity) ~> $sum()` becomes
   `$sum(Account.Product.(Price * Quantity))`.
 - To convert a UNIX timestamp to ISO date format: `$fromMillis($number(deviceTimestamp))`.

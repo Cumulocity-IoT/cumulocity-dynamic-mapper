@@ -91,10 +91,21 @@ By default the microservice exports traces, metrics, and logs via OTLP/HTTP to a
 Grafana Alloy collector at `http://cumulocity-grafana-alloy:4318` (see
 `dynamic-mapper-service/src/main/resources/application-prod.properties`). Building and sending
 these happens on background threads after startup — an unreachable collector does not block or
-fail microservice startup, it only produces repeated export-failure warnings in the log.
+fail microservice startup.
 
-In an edge or air-gapped deployment where no OTLP collector is reachable, suppress that log noise
-by setting the `OTEL_SDK_DISABLED=true` environment variable on the microservice (Spring Boot
-environment variables take precedence over the packaged properties, and the OpenTelemetry SDK
-also honors it directly). To point at a different collector instead, set
-`OTEL_EXPORTER_OTLP_ENDPOINT`.
+Since deployers of this microservice don't control the environment variables it starts with, it
+can't rely on someone externally setting `OTEL_SDK_DISABLED` for edge/air-gapped installs. Instead,
+`OtlpCollectorReachabilityEnvironmentPostProcessor` probes the configured collector endpoint once at
+startup (a plain TCP connect, 1.5s timeout) before the OpenTelemetry SDK autoconfigures, and sets
+`otel.sdk.disabled=true` for that run if it's unreachable — so an absent collector no longer
+retries forever and spams the log with connection-failure stack traces
+(`io.opentelemetry.exporter...HttpExporter`, e.g. `SocketException: Socket closed`). This is a
+one-shot check: if the collector comes back later, export stays off until the process restarts. As
+a second line of defense, `logback-spring.xml` also mutes that exporter's own logger, in case
+export is left enabled and the collector drops mid-run.
+
+To point at a different collector, set `OTEL_EXPORTER_OTLP_ENDPOINT`. To force export on even
+though the probe can't reach it (e.g. while debugging the collector itself), set
+`OTEL_SDK_DISABLED=false` explicitly — Spring Boot environment variables take precedence over the
+packaged properties, but the post-processor only disables the SDK, it never re-enables one that's
+already explicitly disabled.

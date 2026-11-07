@@ -43,6 +43,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
 
     private final Timer inboundProcessingTimer;
     private final Counter inboundProcessingCounter;
+    private final Counter inboundErrorCounter;
 
 
     /**
@@ -56,13 +57,28 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         this.serviceRegistry = serviceRegistry;
         this.inboundMessageRouter = serviceRegistry.getInboundMessageRouter();
 
+        String connectorNameTag = connectorClient.getConnectorName() != null
+                ? connectorClient.getConnectorName() : "unknown";
+        String connectorTypeTag = connectorClient.getConnectorType() != null
+                ? connectorClient.getConnectorType().name() : "UNKNOWN";
         this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
-                .description("Processing time of inbound messages").register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Processing time of inbound messages")
+                .publishPercentileHistogram()
+                .register(Metrics.globalRegistry);
         this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
-                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .register(Metrics.globalRegistry);
+        this.inboundErrorCounter = Counter.builder("dynmapper_inbound_processing_errors_total")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Total number of inbound messages that failed processing")
+                .register(Metrics.globalRegistry);
     }
 
     @Override
@@ -102,7 +118,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         // Log incoming message if configured
         if (serviceConfiguration.getLogPayload()) {
             if (connectorMessage.getPayload() != null) {
-                String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                String payload = dynamic.mapper.processor.util.PayloadClassifier.describeForLog(connectorMessage.getPayload());
                 log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
@@ -145,7 +161,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
             } else {
                 log.info("{} - Resolved {} mapping(s) for topic {}", tenant, resolvedMappings.size(), topic);
             }
-            result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
+            result.setConsolidatedQos(connectorClient.determineMaxQos(resolvedMappings));
 
             // For code-based (Smart Function) mappings the JS execution itself is bounded
             // by serviceConfiguration.getMaxCPUTimeMS() via GraalVM context interruption.
@@ -174,6 +190,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
             if (mappingStatusUnspecified != null) {
                 mappingStatusUnspecified.incrementErrors();
             }
+            if (testMapping == null) {
+                inboundErrorCounter.increment();
+            }
             return result;
         }
 
@@ -194,11 +213,13 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                         connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
 
                 boolean resend = false;
+                boolean hasError = false;
                 if (contexts != null) {
                     for (ProcessingContext<?> context : contexts) {
                         if (context == null) continue;
                         int httpStatus = 0;
                         if (context.hasError()) {
+                            hasError = true;
                             for (Exception error : context.getErrors()) {
                                 if (error instanceof ProcessingException) {
                                     if (((ProcessingException) error)
@@ -230,7 +251,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 }
                 if(resend) {
                     if (serviceConfiguration.getLogPayload()) {
-                        String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                        String payload = dynamic.mapper.processor.util.PayloadClassifier.describeForLog(connectorMessage.getPayload());
                         log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, payload);
                     } else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
@@ -245,6 +266,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                         }
                     }
                 }
+                if (hasError && testMapping == null) {
+                    inboundErrorCounter.increment();
+                }
                 // Stop the timer
                 if (testMapping == null) {
                     timer.stop(inboundProcessingTimer);
@@ -252,6 +276,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
+                if (testMapping == null) {
+                    inboundErrorCounter.increment();
+                }
                 log.error("{} - Error processing inbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Inbound processing failed", e);
             } finally {

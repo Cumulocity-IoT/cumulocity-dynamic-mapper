@@ -91,6 +91,7 @@
       <c8y-list-group class="p-l-24 p-r-24">
         <form [formGroup]="serviceForm">
           @if (section == 'general') {
+          @if (expertMode) {
           <c8y-li>
             <c8y-li-icon icon="swipe-left"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -130,6 +131,7 @@
               </div>
             </div>
           </c8y-li>
+          }
           <c8y-li>
             <c8y-li-icon icon="link"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -164,25 +166,6 @@
                 <label class="editable" title="{{ 'Number of mapping versions to retain' | translate }}">
                   <input class="form-control" name="mappingVersionRetention" type="number" min="1"
                     formControlName="mappingVersionRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-          <c8y-li>
-            <c8y-li-icon icon="clock-o"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Message Explorer session TTL (minutes)' | translate }}</p>
-                <p>
-                  <small translate>Default lifetime of a Message Explorer session: it is automatically stopped once
-                    the UI has not polled it for this long. Can be overridden per session when starting it.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Message Explorer session TTL (minutes)' | translate }}">
-                  <input class="form-control" name="explorerSessionTTLMinutes" type="number" min="1"
-                    formControlName="explorerSessionTTLMinutes" />
                   <span></span>
                 </label>
               </div>
@@ -240,6 +223,28 @@
                   }}
                 </div>
                 }
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="refresh"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum processing attempts per message' | translate }}</p>
+                <p>
+                  <small translate>How many times a message may fail before the connector drops it instead of asking
+                    the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar,
+                    Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST
+                    polling, a page of polled data that keeps failing is skipped after this many attempts; server
+                    errors do not count, so an outage never skips data. The default is 3.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Maximum processing attempts per message' | translate }}">
+                  <input class="form-control" name="maxProcessingAttempts" type="number" min="1"
+                    formControlName="maxProcessingAttempts" />
+                  <span></span>
+                </label>
               </div>
             </div>
           </c8y-li>
@@ -477,6 +482,7 @@
               </div>
             </div>
           </c8y-li>
+          @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
               Retention
@@ -488,8 +494,9 @@
               <div>
                 <p>{{ 'Minutes lifetime flow state' | translate }}</p>
                 <p>
-                  <small translate>Set time in minutes after which the complete flow state for Smart Functions and Java
-                    Extensions is cleared. Set to 0 to disable TTL.</small>
+                  <small translate>Set time in minutes after which the flow state of a Smart Function or Java Extension
+                    mapping is cleared when that mapping has not written it. Each mapping expires on its own. Set to 0
+                    to disable TTL.</small>
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
@@ -501,6 +508,7 @@
               </div>
             </div>
           </c8y-li>
+          }
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
@@ -671,6 +679,7 @@
             </div>
           </c8y-li>
           }
+          @if (expertMode) {
           <ng-container formGroupName="serviceLogs">
             <c8y-li class="p-t-16">
               <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
@@ -735,7 +744,6 @@
                 </div>
               </div>
             </c8y-li>
-            @if (expertMode) {
             <c8y-li>
               <c8y-li-icon icon="clock"></c8y-li-icon>
               <div class="d-flex a-i-center">
@@ -843,8 +851,8 @@
                 </div>
               </div>
             </c8y-li>
-            }
           </ng-container>
+          }
           }
           @if (section == 'ai') {
           @if (aiCapabilitiesDisabled) {
@@ -867,13 +875,20 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of jsonata agent' | translate }}">
+                  @if (aiAgentDeployed) {
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" name="jsonataAgent" formControlName="jsonataAgent"
+                      [attr.aria-label]="'Select agent' | translate">
+                      @for (agent of agentOptions('jsonataAgent'); track agent) {
+                      <option [value]="agent">{{ agent }}</option>
+                      }
+                    </select>
+                    <span></span>
+                  </div>
+                  } @else {
                   <input class="form-control" type="text" formControlName="jsonataAgent" name="jsonataAgent"
-                    list="dynamic-mapper-jsonata-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
-                  <datalist id="dynamic-mapper-jsonata-agents">
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent"></option>
-                    }
-                  </datalist>
+                    autocomplete="off" placeholder="{{ 'Enter agent name' | translate }}" />
+                  }
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
                     [popover]="(aiCapabilitiesDisabled
@@ -899,13 +914,20 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of smartFunction agent' | translate }}">
+                  @if (aiAgentDeployed) {
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" name="smartFunctionAgent" formControlName="smartFunctionAgent"
+                      [attr.aria-label]="'Select agent' | translate">
+                      @for (agent of agentOptions('smartFunctionAgent'); track agent) {
+                      <option [value]="agent">{{ agent }}</option>
+                      }
+                    </select>
+                    <span></span>
+                  </div>
+                  } @else {
                   <input class="form-control" type="text" formControlName="smartFunctionAgent" name="smartFunctionAgent"
-                    list="dynamic-mapper-smart-function-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
-                  <datalist id="dynamic-mapper-smart-function-agents">
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent"></option>
-                    }
-                  </datalist>
+                    autocomplete="off" placeholder="{{ 'Enter agent name' | translate }}" />
+                  }
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
                     [popover]="(aiCapabilitiesDisabled

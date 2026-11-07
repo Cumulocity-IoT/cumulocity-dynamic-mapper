@@ -167,7 +167,7 @@ class OutboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create measurement notification
         String payload = """
@@ -218,7 +218,7 @@ class OutboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create event notification
         String payload = """
@@ -261,7 +261,7 @@ class OutboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create alarm notification
         String payload = """
@@ -306,7 +306,7 @@ class OutboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create operation notification
         String payload = """
@@ -454,7 +454,7 @@ class OutboundPipelineIntegrationTest {
 
     private C8YMessage routedMessageOfTestNotification(boolean send) throws Exception {
         Mapping mapping = outboundMappings.get(0);
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
         Notification notification = createNotification(API.MEASUREMENT, "CREATE", """
                 {"id": "12345", "source": {"id": "67890"}, "type": "c8y_TemperatureMeasurement"}
                 """);
@@ -494,7 +494,7 @@ class OutboundPipelineIntegrationTest {
         io.micrometer.core.instrument.Metrics.addRegistry(registry);
         try {
             Mapping mapping = outboundMappings.get(0);
-            when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+            when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
             when(mappingService.resolveMappingOutbound(eq(TEST_TENANT), any(), any())).thenReturn(List.of(mapping));
             Notification notification = createNotification(API.MEASUREMENT, "CREATE",
                     "{\"id\": \"12345\", \"source\": {\"id\": \"67890\"}, \"type\": \"t\"}");
@@ -521,7 +521,7 @@ class OutboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping1, mapping2));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping1.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping1.getQos());
 
         String payload = """
                 {

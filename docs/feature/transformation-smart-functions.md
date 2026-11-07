@@ -25,14 +25,18 @@ not enough — conditionals, loops, derived values, state across messages.
   the Cumulocity objects to create. One invocation may return several objects.
 - **A shared library is available to every function**, so common helpers are written once; the
   tenant can edit it.
-- **A function may keep state between messages** — per device, per mapping — for deduplication,
-  running statistics, or change detection. That state has a bounded lifetime.
+- **A function may keep state between messages**, one state per mapping (a function that needs per-device state keys
+  it itself), for deduplication, running statistics, or change detection. The state lives in service memory: it does
+  not survive a restart and it expires after a retention period (see *Runtime state*).
 - **A function may look data up in Cumulocity**, e.g. resolving a managed object by external ID,
   so a transformation can enrich from inventory.
 - **Execution is sandboxed.** A function cannot reach the host, the filesystem, the network, or
   another tenant's data — a tenant runs untrusted code by definition.
-- **Execution is bounded.** A function that never returns is stopped, and its failure is attributed
-  to its mapping rather than affecting the service — see [reliability.md](reliability.md).
+- **Execution is bounded.** A function that runs longer than the CPU budget (`maxCPUTimeMS`, default 5 s) or the
+  processing pipeline timeout (default 8 s) is stopped, and its failure is attributed to its mapping rather than
+  affecting the service — see [reliability.md](reliability.md).
+- **A test never touches the persisted state.** Dry Run and Live Test start from an empty state and write nothing back
+  (see [mapping-testing-isolation.md](mapping-testing-isolation.md)).
 - **Errors must point at the function**, with the line number where it failed, not at mapper
   internals.
 - **Both directions are supported**, inbound and outbound.
@@ -63,26 +67,28 @@ see the corresponding rules in [mapping-validation.md](mapping-validation.md) ru
 
 Smart Function code runs inside a GraalVM polyglot JS `Context`, one per tenant `Engine`,
 pooled per mapping+code-hash so repeated invocations reuse a warmed-up context instead of
-paying JS parse/JIT cost every message.
+paying JS parse and AST specialization cost every message. The production image has no JIT: JavaScript runs in
+Truffle's AST interpreter (see the `GraalVMContextService` class comment).
 
 #### Context construction and sandboxing
 
 `AbstractEnrichmentProcessor.createGraalContext()`
-([`AbstractEnrichmentProcessor.java:178-205`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java#L178-L205)) builds each `Context` with an
+([`AbstractEnrichmentProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) builds each `Context` with an
 explicit allowlist rather than unrestricted host access:
 
 ```java
 Context.Builder builder = Context.newBuilder("js")
         .engine(graalEngine)
         .option("js.text-encoding", "true")
-        .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
-        .allowHostClassLookup(className ->
-                className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        // ... a fixed list of specific classes, java.util.Base64, ArrayList, etc.
-                );
+        .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
+        .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
 ```
+
+`GraalVMContextService.isAllowedHostClass()` names the reachable classes (the substitution classes,
+`RepairStrategy`, `StandardCharsets`, `Base64`, `String`, `ArrayList`, `Arrays`, `HashMap`, `HashSet`), and
+`SCRIPT_ACCESSIBLE_CLASSES` lists what the host-access policy exposes (for example `DataPrepContext`, not its
+implementation). The two lists must agree: JavaScript templates call `Java.type('<fqn>')` with a string, so moving a
+class compiles but fails at run time.
 
 Only a fixed set of Java classes are reachable from JS via `Java.type(...)`; everything
 else — including file/network/process access — is unreachable because it was never
@@ -103,7 +109,7 @@ flag is set, to allow `export function` module syntax in mapping code.
 (`dynamic-mapper-service/src/main/java/dynamic/mapper/core/GraalVMContextService.java`)
 implement a per-tenant, per-mapping-code-hash pool of pre-built `PooledGraalContext`s, set
 up in `AbstractEnrichmentProcessor.process()`
-([`AbstractEnrichmentProcessor.java:100-156`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java#L100-L156)):
+([`AbstractEnrichmentProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)):
 
 ```java
 PooledGraalContext pooledCtx = graalVMContextService.borrowOrCreateContext(
@@ -115,11 +121,11 @@ context.setEngineReleaseAction(() -> graalVMContextService.returnContext(poolKey
 
 `ProcessingContext` — the per-message context, not a separate `ExecutionContext` type —
 implements `AutoCloseable` itself and centralizes GraalVM cleanup in its own `close()`
-([`ProcessingContext.java:509-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java#L509-L556)): if a pooled context is set, `close()` returns
+([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java)): if a pooled context is set, `close()` returns
 it to the pool via `engineReleaseAction` (or discards it if it was killed) instead of
 closing the raw GraalVM `Context` directly; for the non-pooled path it calls
 `graalContext.close()` directly. `AbstractFlowProcessor.process()`
-([`AbstractFlowProcessor.java:200-213`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractFlowProcessor.java#L200-L213)) is the call site that guarantees this
+([`AbstractFlowProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractFlowProcessor.java)) is the call site that guarantees this
 runs — a `try { processSmartMapping(context); } ... finally { context.close(); }` around
 every Smart Function invocation, so the pooled/raw context is always released or closed
 exactly once per message regardless of success or failure.
@@ -130,8 +136,11 @@ A running Smart Function can be forcibly stopped mid-execution — e.g. an MQTT-
 timeout — via `Context.close(cancelIfExecuting=true)`, since plain thread interruption is
 ignored by GraalVM. `AbstractFlowProcessor.process()` registers a cancel action on the
 message's `ProcessingResultWrapper` before invoking the function
-([`AbstractFlowProcessor.java:110-158`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractFlowProcessor.java#L110-L158)) that either kills the pooled context
-(`PooledGraalContext.kill()`) or calls `graalCtx.close(true)` directly. On the way out, a
+([`AbstractFlowProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractFlowProcessor.java)) that either kills the pooled context
+(`PooledGraalContext.kill()`) or calls `graalCtx.close(true)` directly. Two limits trigger it: the CPU budget
+`maxCPUTimeMS` (default 5000 ms; deadlines are scheduled in `GraalVMContextService` and the blocking kill runs on a
+separate virtual thread) and the pipeline timeout `pipelineTimeoutMS` (default 8000 ms, always larger than the CPU
+budget). The error names the limit that was hit and adds the JavaScript location (`describeJsLocation()`). On the way out, a
 `PolyglotException` whose `isCancelled()`/`isResourceExhausted()` is true is treated as a
 timeout/kill rather than a script bug, and any `console.log()` output written before the
 kill is salvaged into the processing result when possible.
@@ -142,7 +151,7 @@ Smart Function code gets a `console` object backed by
 [`JavaScriptConsole`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/flow/JavaScriptConsole.java), which formats GraalVM `Value` arguments (including nested
 objects/arrays, via Jackson) and routes `console.log/warn/error/debug` into the flow
 context's log sink — for `SMART_FUNCTION` this is
-[`DataPrepContext.addLogMessage`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/DataPrepContext.java#L164-L180), which is
+[`DataPrepContext.addLogMessage`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/DataPrepContext.java), which is
 where `context.addWarning(...)` (documented in `docs/smart-functions.md`) also lands
 (`DataPrepContext.WARNINGS` / `DataPrepContext.LOGS` state keys).
 
@@ -160,10 +169,24 @@ At runtime, `context` inside a Smart Function is backed by
 `JavaExtensionContext`, used for `EXTENSION_JAVA` — see
 [transformation-java-extensions.md](transformation-java-extensions.md)). It is
 constructed fresh per message in `AbstractEnrichmentProcessor.process()`
-([`AbstractEnrichmentProcessor.java:144-146`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java#L144-L146)), seeded with the
-mapping's persisted flow state loaded from `FlowStateStore` — this is the backing store
+([`AbstractEnrichmentProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)), seeded with the
+mapping's flow state loaded from `FlowStateStore` — this is the backing store
 for the `context.getState()`/`setState()` persistence documented in
-`docs/smart-functions.md`.
+`docs/smart-functions.md`. `FlowStateStore` is an in-memory map keyed `tenant → mapping identifier → key`. A message loads a copy when it starts and
+`SmartFunctionContext.persistState()` (called from `ProcessingContext.close()`) writes back **only the keys that message
+changed** through `FlowStateStore.commitChanges`; `clearState()` from the function wipes the mapping's stored state, and a
+`null` value removes the key. Two messages writing the same key still race, and the last one wins. The store is
+lost on restart, a mapping's state is cleared when the mapping is deleted, and the cleanup job clears **each mapping's** state
+once that mapping has not written it for `flowStateRetention` minutes (default 1440; a read does not count; `0`
+disables expiry). When the run is a test (`!affectsMappingStatus()`), the context gets an empty state and no store, so
+nothing is read or written.
+
+### Engine rotation and warm-up
+
+Each tenant's `Engine` is retired and replaced after `engineRotationThreshold` distinct source compilations (default
+1000, a service configuration value), or on demand through the admin `ROTATE_GRAALVM_ENGINE` operation. Activating an
+active `SMART_FUNCTION` mapping pre-compiles its code on a virtual thread; a compile failure is published as a
+`MAPPING_ACTIVATION_ERROR_EVENT_TYPE` service event (see [mapping-versioning.md](mapping-versioning.md)).
 
 ### Where this fits in the pipeline
 

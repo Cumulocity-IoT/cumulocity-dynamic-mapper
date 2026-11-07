@@ -21,8 +21,6 @@
 
 package dynamic.mapper.core;
 
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,13 +32,10 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
-import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.outbound.OutboundMessageRouter;
 import dynamic.mapper.processor.inbound.InboundMessageRouter;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
@@ -48,19 +43,25 @@ import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.mapping.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 @Slf4j
 @Component
-public class ServiceRegistry implements IMapperConfiguration {
+@Order(TenantScoped.ORDER_REGISTRY)
+public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     @Getter
     private final TenantRegistry tenantRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
 
     @Getter
     private final GraalVMContextService graalVMContextService;
 
     @Getter
     private final C8YAgent c8yAgent;
+
+    @Getter
+    private final ConnectorStatusEventService connectorStatusEventService;
 
     @Getter
     private final CacheManager cacheManager;
@@ -112,6 +113,7 @@ public class ServiceRegistry implements IMapperConfiguration {
 
     public ServiceRegistry(
             TenantRegistry tenantRegistry,
+            DeviceToClientRegistry deviceToClientRegistry,
             GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
             NotificationSubscriber notificationSubscriber,
@@ -120,11 +122,13 @@ public class ServiceRegistry implements IMapperConfiguration {
             @Lazy InboundMessageRouter inboundMessageRouter,
             @Lazy OutboundMessageRouter outboundMessageRouter,
             @Lazy C8YAgent c8yAgent,
+            @Lazy ConnectorStatusEventService connectorStatusEventService,
             CacheManager cacheManager,
             @Lazy MappingService mappingService,
             @Lazy ConnectorConfigurationService connectorConfigurationService,
             @Lazy ServiceConfigurationService serviceConfigurationService) {
         this.tenantRegistry = tenantRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
         this.notificationSubscriber = notificationSubscriber;
@@ -133,6 +137,7 @@ public class ServiceRegistry implements IMapperConfiguration {
         this.inboundMessageRouter = inboundMessageRouter;
         this.outboundMessageRouter = outboundMessageRouter;
         this.c8yAgent = c8yAgent;
+        this.connectorStatusEventService = connectorStatusEventService;
         this.cacheManager = cacheManager;
         this.mappingService = mappingService;
         this.connectorConfigurationService = connectorConfigurationService;
@@ -147,7 +152,15 @@ public class ServiceRegistry implements IMapperConfiguration {
         return true;
     }
 
-    public void initializeResources(String tenant) {
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        String tenant = ctx.tenant();
+        addMicroserviceCredentials(tenant, ctx.credentials());
+        addServiceConfiguration(tenant, ctx.serviceConfiguration());
+        storeMapperServiceRepresentation(tenant, ctx.mapperServiceMo());
+        if (ctx.deviceToClientMo() != null) {
+            storeDeviceToClientMapRepresentation(tenant, ctx.deviceToClientMo());
+        }
     }
 
     public MapperServiceRepresentation storeMapperServiceRepresentation(String tenant,
@@ -162,7 +175,7 @@ public class ServiceRegistry implements IMapperConfiguration {
             ManagedObjectRepresentation mor) {
         DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
                 .convertValue(mor, DeviceToClientMapRepresentation.class);
-        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
+        deviceToClientRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
         return deviceToClientMapRepresentation;
     }
 
@@ -176,6 +189,21 @@ public class ServiceRegistry implements IMapperConfiguration {
 
     public void addServiceConfiguration(String tenant, ServiceConfiguration configuration) {
         tenantRegistry.addServiceConfiguration(tenant, configuration);
+    }
+
+    /** Last step: credentials and configuration may still be read while the other beans are removed. */
+    @Override
+    public void removeTenant(String tenant) {
+        TenantScoped.removeAll(tenant, this,
+                () -> clearExternalIdCache(tenant), // keyed "tenant|…"; would grow across tenant churn
+                () -> removeDeviceToClientState(tenant),
+                () -> removeMapperServiceRepresentation(tenant),
+                () -> removeServiceConfiguration(tenant),
+                () -> removeMicroserviceCredentials(tenant));
+    }
+
+    public void removeDeviceToClientState(String tenant) {
+        deviceToClientRegistry.removeDeviceToClientState(tenant);
     }
 
     public void removeServiceConfiguration(String tenant) {
@@ -196,7 +224,7 @@ public class ServiceRegistry implements IMapperConfiguration {
     }
 
     public String getDeviceToClientMapId(String tenant) {
-        return tenantRegistry.getDeviceToClientMapId(tenant);
+        return deviceToClientRegistry.getDeviceToClientMapId(tenant);
     }
 
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
@@ -205,66 +233,6 @@ public class ServiceRegistry implements IMapperConfiguration {
 
     public void removeMicroserviceCredentials(String tenant) {
         tenantRegistry.removeMicroserviceCredentials(tenant);
-    }
-
-    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
-            AConnectorClient connectorClient) {
-        if (serviceConfiguration.getOutboundMappingEnabled()
-                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            OutboundMessageDispatcher dispatcherOutbound = new OutboundMessageDispatcher(
-                    this, connectorClient);
-            // Always register the dispatcher so a Notification 2.0 WebSocket is established
-            // regardless of connector enabled state. This allows the Message Explorer to
-            // capture outbound notifications even when connectors are disabled.
-            // processNotification() guards actual mapping execution via isConnected().
-            getNotificationSubscriber().addConnector(tenant,
-                    connectorClient.getConnectorIdentifier(),
-                    dispatcherOutbound);
-        }
-    }
-
-    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
-        tenantRegistry.addOrUpdateClientRelation(tenant, clientId, deviceId);
-    }
-
-    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
-        tenantRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
-    }
-
-    public void removeClientRelation(String tenant, String deviceId) {
-        tenantRegistry.removeClientRelation(tenant, deviceId);
-    }
-
-    public void removeClientById(String tenant, String clientId) {
-        tenantRegistry.removeClientById(tenant, clientId);
-    }
-
-    public void clearCacheDeviceToClient(String tenant) {
-        tenantRegistry.clearCacheDeviceToClient(tenant);
-    }
-
-    public String resolveDeviceToClient(String tenant, String deviceId) {
-        return tenantRegistry.resolveDeviceToClient(tenant, deviceId);
-    }
-
-    public Map<String, String> getAllClientRelations(String tenant) {
-        return tenantRegistry.getAllClientRelations(tenant);
-    }
-
-    public List<String> getDevicesForClient(String tenant, String clientId) {
-        return tenantRegistry.getDevicesForClient(tenant, clientId);
-    }
-
-    public List<String> getAllClients(String tenant) {
-        return tenantRegistry.getAllClients(tenant);
-    }
-
-    public int getClientRelationCount(String tenant) {
-        return tenantRegistry.getClientRelationCount(tenant);
-    }
-
-    public boolean hasClientRelation(String tenant, String deviceId) {
-        return tenantRegistry.hasClientRelation(tenant, deviceId);
     }
 
     /**

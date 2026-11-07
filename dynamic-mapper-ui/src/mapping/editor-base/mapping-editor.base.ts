@@ -37,9 +37,11 @@ import {
   TransformationType
 } from '../../shared';
 import {
+  base64ToString,
   buildTestMapping,
   checkTransformationType,
   isConnectorSelectionEmpty,
+  stripTemplateMetadataTags,
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
@@ -188,6 +190,59 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.stepperService.cleanup();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /** Starts the editor session shared by both hosts and applies it; the caller assigns the schemas. */
+  protected async initSession(disableExtensionSelectorsWhenHidden = false): Promise<EditorSessionResult> {
+    const init = await this.stepperService.initializeEditorSession(
+      this.mapping,
+      this.stepperConfiguration,
+      this.destroy$,
+      {
+        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
+        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
+        getSourceTemplate: () => this.sourceTemplate,
+        setSourceTemplate: (template) => { this.sourceTemplate = template; }
+      },
+      disableExtensionSelectorsWhenHidden
+    );
+    this.applyEditorSession(init);
+    return init;
+  }
+
+  /**
+   * Seeds mappingCode from the persisted mapping, once. mappingCode is the live, editable state
+   * from then on and must never be re-derived from mapping.code (stale until save), or in-progress
+   * edits get clobbered.
+   */
+  protected seedMappingCode(): void {
+    if (this.mappingCode === undefined && this.mapping.code) {
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
+    }
+  }
+
+  /** (Re-)loads the tenant's extensions and re-patches the extension selects. */
+  protected async reloadExtensions(): Promise<void> {
+    this.isLoadingExtensions = true;
+    try {
+      this.extensions = await this.stepperService.loadExtensions(this.mapping);
+      this.updateExtensionItems();
+      // Re-patches form values after items are loaded so c8y-select can match them
+      this.restoreExtensionSelection(true);
+    } finally {
+      this.isLoadingExtensions = false;
+    }
+  }
+
+  /** Entering the transformation step/tab: pull the latest templates and refresh the test mapping. */
+  protected enterTransformation(): void {
+    this.updateTemplatesInEditors();
+    this.refreshSubstitutionValidity();
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
+  }
+
+  protected enterTesting(): void {
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
   }
 
   /**
@@ -372,14 +427,47 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * The "Generate with AI" button is unavailable without a deployed agent or in read-only mode.
+   * Substitutions are generated against the source editor, so they also need it. A Smart Function
+   * does not: ANY_PAYLOAD has no source editor because the message is binary, but its code can
+   * still be generated (the AI gets the base64 sample from the mapping).
+   */
+  get aiGenerationDisabled(): boolean {
+    const needsSourceEditor = !isSubstitutionsAsCode(this.mapping);
+    return !!this.stepperViewModel?.config.readOnly
+      || !this.aiAgentDeployed
+      || (needsSourceEditor && !this.stepperViewModel?.config.showEditorSource);
+  }
+
   async openGenerateSubstitutionDrawer(): Promise<void> {
     this.isGenerateSubstitutionOpen = true;
 
-    const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
-
-    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
-    });
+    let drawer;
+    try {
+      const testMapping: any = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      // What is known about the captured message (type, size, sender, broker metadata) lives on the
+      // stepper configuration only; attach it to the drawer's copy so AI generation sees it. Never
+      // persisted on the mapping itself.
+      if (this.stepperConfiguration.sampleTransportFields) {
+        testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+      }
+      if (this.stepperConfiguration.sampleMessageInfo) {
+        testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+      }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
+      drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
+        initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
+      });
+    } catch (error) {
+      // Without this the click handler's promise rejects silently and the button just does nothing.
+      console.error('Could not open the AI assistant:', error);
+      this.alertService.danger(`Could not open the AI assistant: ${(error as Error)?.message ?? error}`);
+      this.isGenerateSubstitutionOpen = false;
+      return;
+    }
 
     try {
       const result = await drawer.instance.result;

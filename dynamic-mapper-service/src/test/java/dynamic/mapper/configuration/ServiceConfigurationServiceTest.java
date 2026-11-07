@@ -60,10 +60,15 @@ class ServiceConfigurationServiceTest {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     private ServiceConfigurationService service;
+    private CodeTemplateHeaderService headers;
+    private CodeTemplateLoader loader;
 
     @BeforeEach
     void setUp() {
-        service = new ServiceConfigurationService(tenantOptionApi, subscriptionsService, new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        headers = new CodeTemplateHeaderService(objectMapper);
+        loader = new CodeTemplateLoader(headers);
+        service = new ServiceConfigurationService(tenantOptionApi, subscriptionsService, objectMapper, loader);
     }
 
     private static String decode(String base64) {
@@ -93,7 +98,7 @@ class ServiceConfigurationServiceTest {
     void rectifyHeaderInCodeTemplate_createsNewHeader_whenNoneExists() {
         CodeTemplate t = template("function onMessage(msg, context) {\n  return [];\n}\n");
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         assertTrue(result.startsWith("/**\n * @name My Template"), result);
@@ -123,7 +128,7 @@ class ServiceConfigurationServiceTest {
         CodeTemplate t = template(onDisk);
         t.name = "My Template";
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         // Exactly one metadata header, not two.
@@ -146,9 +151,9 @@ class ServiceConfigurationServiceTest {
         String onDisk = "// @ts-check\n/**\n * @name My Template\n */\n\nfunction onMessage() {}\n";
         CodeTemplate t = template(onDisk);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         String once = decode(t.code);
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         String twice = decode(t.code);
 
         assertEquals(once, twice, "re-saving a template must not accumulate headers");
@@ -171,7 +176,7 @@ class ServiceConfigurationServiceTest {
         CodeTemplate t = template(legacy);
         t.name = "My Template"; // POJO is the source of truth, differs from stale header value
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         // System section is regenerated from the POJO, not the stale header value
@@ -190,10 +195,10 @@ class ServiceConfigurationServiceTest {
     @Test
     void rectifyHeaderInCodeTemplate_isIdempotent_onAlreadyTwoSectionHeader() {
         CodeTemplate t = template("function onMessage(msg, context) { return []; }\n");
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         String firstPass = decode(t.code);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         String secondPass = decode(t.code);
 
         assertEquals(firstPass, secondPass);
@@ -213,7 +218,7 @@ class ServiceConfigurationServiceTest {
                 "function onMessage(msg, context) { return []; }\n";
         CodeTemplate t = template(corrupted);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         assertEquals(1, countOccurrences(result, "/**"));
@@ -235,7 +240,7 @@ class ServiceConfigurationServiceTest {
                 "function onMessage(msg, context) { return []; }\n";
         CodeTemplate t = template(withStaleBodyHeader);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         assertEquals(1, countOccurrences(result, "@templateType"));
@@ -260,7 +265,7 @@ class ServiceConfigurationServiceTest {
                 "function onMessage(msg, context) { return []; }\n";
         CodeTemplate t = template(withLookalikeInFreeForm);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         // The free-form mention survives verbatim, below the marker where the author put it...
@@ -291,18 +296,18 @@ class ServiceConfigurationServiceTest {
                 " */\n\n" +
                 "function onMessage(msg, context) { return []; }\n";
         CodeTemplate t = template(legacy);
-        t.description = service.extractAnnotation(legacy, "@description");
+        t.description = headers.extractAnnotation(legacy, "@description");
 
         assertEquals("Demonstrates custom routing: forwards the incoming device payload to a tenant-local"
                 + " microservice via cumulocityType: \"custom\", in addition to creating a standard"
                 + " Cumulocity measurement.", t.description);
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         int markerIdx = result.indexOf("--- metadata above is auto-generated");
         // The whole description survives in the regenerated system section above the marker...
-        assertEquals(t.description, service.extractAnnotation(result, "@description"), result);
+        assertEquals(t.description, headers.extractAnnotation(result, "@description"), result);
         // ...and no part of it is left stranded below it as orphaned prose
         String belowMarker = result.substring(markerIdx);
         assertFalse(belowMarker.contains("tenant-local"), belowMarker);
@@ -317,12 +322,12 @@ class ServiceConfigurationServiceTest {
                 + " microservice via cumulocityType: \"custom\", in addition to creating a standard"
                 + " Cumulocity measurement.";
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         String firstPass = decode(t.code);
         // Re-reading the rendered header must yield the description it was rendered from
-        assertEquals(t.description, service.extractAnnotation(firstPass, "@description"));
+        assertEquals(t.description, headers.extractAnnotation(firstPass, "@description"));
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         assertEquals(firstPass, decode(t.code));
     }
 
@@ -336,10 +341,10 @@ class ServiceConfigurationServiceTest {
                 " * { \"foo\": \"bar\" }\n" +
                 " */\n\n" +
                 "function onMessage(msg, context) { return []; }\n";
-        assertEquals("Short description", service.extractAnnotation(legacy, "@description"));
+        assertEquals("Short description", headers.extractAnnotation(legacy, "@description"));
 
         CodeTemplate t = template(legacy);
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
         int markerIdx = result.indexOf("--- metadata above is auto-generated");
@@ -349,7 +354,7 @@ class ServiceConfigurationServiceTest {
     @Test
     void shippedTemplates_allDeclareTheirSystemMetadata() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
 
         // Exactly one default per type: a second one would only get the type's id if the
         // classpath happened to enumerate it first.
@@ -405,7 +410,7 @@ class ServiceConfigurationServiceTest {
     void initCodeTemplates_loadsShippedClasspathTemplates() {
         ServiceConfiguration configuration = new ServiceConfiguration();
 
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
 
         Map<String, CodeTemplate> templates = configuration.getCodeTemplates();
         assertNotNull(templates);
@@ -426,7 +431,7 @@ class ServiceConfigurationServiceTest {
     @Test
     void initCodeTemplates_withOverrideSystem_preservesSharedButDropsOtherInternalTemplates() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
         Map<String, CodeTemplate> initial = configuration.getCodeTemplates();
 
         // Simulate a user-created (non-internal) custom template that must survive a reset
@@ -435,7 +440,7 @@ class ServiceConfigurationServiceTest {
         custom.internal = false;
         initial.put(custom.id, custom);
 
-        service.initCodeTemplates(configuration, true);
+        loader.initCodeTemplates(configuration, true);
 
         Map<String, CodeTemplate> afterReset = configuration.getCodeTemplates();
         assertTrue(afterReset.containsKey("custom01"), "user-created template must survive a system reset");
@@ -449,7 +454,7 @@ class ServiceConfigurationServiceTest {
         // Matching stored templates by @name alone meant the second one was never added to a
         // tenant that already had the first.
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
         Map<String, CodeTemplate> templates = configuration.getCodeTemplates();
 
         long inboundDefaults = templates.values().stream()
@@ -465,7 +470,7 @@ class ServiceConfigurationServiceTest {
         templates.entrySet().removeIf(e -> e.getValue().templateType != TemplateType.INBOUND_SMART_FUNCTION
                 || !e.getValue().defaultTemplate);
 
-        service.addMissingInternalTemplates(configuration);
+        loader.addMissingInternalTemplates(configuration);
 
         assertEquals(1, configuration.getCodeTemplates().values().stream()
                 .filter(t -> t.templateType == TemplateType.OUTBOUND_SMART_FUNCTION && t.defaultTemplate)
@@ -476,10 +481,10 @@ class ServiceConfigurationServiceTest {
     void addMissingInternalTemplates_isIdempotent_noDuplicatesOnSecondCall() {
         ServiceConfiguration configuration = new ServiceConfiguration();
 
-        boolean firstCallAdded = service.addMissingInternalTemplates(configuration);
+        boolean firstCallAdded = loader.addMissingInternalTemplates(configuration);
         int countAfterFirst = configuration.getCodeTemplates().size();
 
-        boolean secondCallAdded = service.addMissingInternalTemplates(configuration);
+        boolean secondCallAdded = loader.addMissingInternalTemplates(configuration);
         int countAfterSecond = configuration.getCodeTemplates().size();
 
         assertTrue(firstCallAdded);
@@ -524,7 +529,7 @@ class ServiceConfigurationServiceTest {
                         true, true));
         ServiceConfiguration config = configWith(templates);
 
-        assertTrue(service.refreshSystemTemplate(config), "a stale template must report a change");
+        assertTrue(loader.refreshSystemTemplate(config), "a stale template must report a change");
 
         String refreshed = decode(config.getCodeTemplates().get(TemplateType.SYSTEM.name()).code);
         assertTrue(refreshed.contains("Java.type('dynamic.mapper.model.RepairStrategy')"),
@@ -547,7 +552,7 @@ class ServiceConfigurationServiceTest {
                 storedTemplate(TemplateType.SHARED, customerCode, false, false));
         ServiceConfiguration config = configWith(templates);
 
-        service.refreshSystemTemplate(config);
+        loader.refreshSystemTemplate(config);
 
         assertEquals(customerCode,
                 decode(config.getCodeTemplates().get(TemplateType.SHARED.name()).code),
@@ -560,16 +565,16 @@ class ServiceConfigurationServiceTest {
         templates.put(TemplateType.SYSTEM.name(), storedTemplate(TemplateType.SYSTEM, "stale", true, true));
         ServiceConfiguration config = configWith(templates);
 
-        assertTrue(service.refreshSystemTemplate(config));
+        assertTrue(loader.refreshSystemTemplate(config));
         // Second run has nothing to do — the caller must not persist the configuration again.
-        assertFalse(service.refreshSystemTemplate(config), "an up-to-date template must report no change");
+        assertFalse(loader.refreshSystemTemplate(config), "an up-to-date template must report no change");
     }
 
     @Test
     void refreshSystemTemplateInstallsTheTemplateWhenNoneIsStored() {
         ServiceConfiguration config = configWith(new java.util.HashMap<>());
 
-        assertTrue(service.refreshSystemTemplate(config));
+        assertTrue(loader.refreshSystemTemplate(config));
         assertNotNull(config.getCodeTemplates().get(TemplateType.SYSTEM.name()));
     }
 
@@ -577,7 +582,7 @@ class ServiceConfigurationServiceTest {
     void refreshSystemTemplateToleratesAConfigurationWithoutTemplates() {
         ServiceConfiguration config = configWith(null);
 
-        assertFalse(service.refreshSystemTemplate(config));
+        assertFalse(loader.refreshSystemTemplate(config));
     }
 
     @Test
@@ -590,7 +595,7 @@ class ServiceConfigurationServiceTest {
                 storedTemplate(TemplateType.INBOUND_SMART_FUNCTION, "sample inbound", true, true));
         ServiceConfiguration config = configWith(templates);
 
-        service.refreshSystemTemplate(config);
+        loader.refreshSystemTemplate(config);
 
         assertEquals("sample inbound",
                 decode(config.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name()).code));
@@ -601,7 +606,7 @@ class ServiceConfigurationServiceTest {
     @Test
     void directionIsDerivedFromTemplateTypeForEveryShippedTemplate() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
 
         for (CodeTemplate t : configuration.getCodeTemplates().values()) {
             assertEquals(t.templateType.getDirection(), t.getDirection(),
@@ -617,7 +622,7 @@ class ServiceConfigurationServiceTest {
         t.code = encode("/**\n * @name My Template\n * @templateType INBOUND_SMART_FUNCTION\n"
                 + " * @direction OUTBOUND\n */\nfunction onMessage(msg, context) {\n  return [];\n}\n");
 
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
 
         assertFalse(decode(t.code).contains("@direction"), "@direction must be stripped on rectify");
         assertEquals(Direction.INBOUND, t.getDirection(), "direction follows templateType, not the header");
@@ -650,7 +655,7 @@ class ServiceConfigurationServiceTest {
     /** A stored template whose header was generated from its fields, as after any save. */
     private CodeTemplate storedTemplate() {
         CodeTemplate t = template("function onMessage(msg, context) { return []; }\n");
-        service.rectifyHeaderInCodeTemplate(t);
+        headers.rectifyHeaderInCodeTemplate(t);
         return t;
     }
 
@@ -667,11 +672,11 @@ class ServiceConfigurationServiceTest {
         CodeTemplate stored = storedTemplate();
         CodeTemplate incoming = editedInEditor(stored, "@name My Template", "@name Renamed In Header");
 
-        service.adoptHeaderMetadataEdits(incoming, stored);
-        service.rectifyHeaderInCodeTemplate(incoming);
+        headers.adoptHeaderMetadataEdits(incoming, stored);
+        headers.rectifyHeaderInCodeTemplate(incoming);
 
         assertEquals("Renamed In Header", incoming.name);
-        assertEquals("Renamed In Header", service.extractAnnotation(decode(incoming.code), "@name"));
+        assertEquals("Renamed In Header", headers.extractAnnotation(decode(incoming.code), "@name"));
     }
 
     @Test
@@ -679,7 +684,7 @@ class ServiceConfigurationServiceTest {
         CodeTemplate stored = storedTemplate();
         CodeTemplate incoming = editedInEditor(stored, "@description A description", "@description New text");
 
-        service.adoptHeaderMetadataEdits(incoming, stored);
+        headers.adoptHeaderMetadataEdits(incoming, stored);
 
         assertEquals("New text", incoming.description);
         assertEquals("My Template", incoming.name);
@@ -692,12 +697,12 @@ class ServiceConfigurationServiceTest {
         incoming.name = "Renamed By Form";
         incoming.description = "Described by form";
 
-        service.adoptHeaderMetadataEdits(incoming, stored);
-        service.rectifyHeaderInCodeTemplate(incoming);
+        headers.adoptHeaderMetadataEdits(incoming, stored);
+        headers.rectifyHeaderInCodeTemplate(incoming);
 
         assertEquals("Renamed By Form", incoming.name);
         assertEquals("Described by form", incoming.description);
-        assertEquals("Renamed By Form", service.extractAnnotation(decode(incoming.code), "@name"));
+        assertEquals("Renamed By Form", headers.extractAnnotation(decode(incoming.code), "@name"));
     }
 
     @Test
@@ -705,7 +710,7 @@ class ServiceConfigurationServiceTest {
         CodeTemplate stored = storedTemplate();
         CodeTemplate incoming = editedInEditor(stored, "@name My Template", "@name");
 
-        service.adoptHeaderMetadataEdits(incoming, stored);
+        headers.adoptHeaderMetadataEdits(incoming, stored);
 
         assertEquals("My Template", incoming.name);
     }
@@ -716,7 +721,7 @@ class ServiceConfigurationServiceTest {
         String code = decode(stored.code).replace(" */\n", " * @name Not The Name\n */\n");
         CodeTemplate incoming = template(code);
 
-        service.adoptHeaderMetadataEdits(incoming, stored);
+        headers.adoptHeaderMetadataEdits(incoming, stored);
 
         assertEquals("My Template", incoming.name);
     }
@@ -733,7 +738,7 @@ class ServiceConfigurationServiceTest {
     void extractSamplePayload_readsAMultiLineValueAsPrettyPrintedJson() {
         String header = "/**\n * @name X\n * @samplePayload\n *   {\n *     \"a\": 1,\n *     \"b\": [1, 2]\n *   }\n *\n * docs\n */";
 
-        String sample = service.extractSamplePayload(header);
+        String sample = headers.extractSamplePayload(header);
 
         assertNotNull(sample);
         assertEquals("{\"a\":1,\"b\":[1,2]}", sample.replaceAll("\\s", ""));
@@ -741,14 +746,14 @@ class ServiceConfigurationServiceTest {
 
     @Test
     void extractSamplePayload_dropsAValueThatIsNotJson_andReturnsNullWhenAbsent() {
-        assertNull(service.extractSamplePayload("/**\n * @samplePayload\n *   {not json\n */"));
-        assertNull(service.extractSamplePayload("/**\n * @name X\n */"));
+        assertNull(headers.extractSamplePayload("/**\n * @samplePayload\n *   {not json\n */"));
+        assertNull(headers.extractSamplePayload("/**\n * @name X\n */"));
     }
 
     @Test
     void shippedSmartFunctionTemplates_allDeclareASample_andTheDefaultsDeclareBoth() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
 
         for (CodeTemplate t : configuration.getCodeTemplates().values()) {
             if (t.templateType != TemplateType.INBOUND_SMART_FUNCTION
@@ -767,7 +772,7 @@ class ServiceConfigurationServiceTest {
     @Test
     void shippedInboundDefault_sampleMatchesTheFieldsItsCodeReads() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
         CodeTemplate inboundDefault = configuration.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
 
         // The default template reads payload["sensorData"]["temp_val"]; a generic sample once
@@ -781,11 +786,11 @@ class ServiceConfigurationServiceTest {
     @Test
     void shippedTemplates_keepTheirSampleInTheHeaderAfterBeingLoaded_andStayStableOnResave() {
         ServiceConfiguration configuration = new ServiceConfiguration();
-        service.initCodeTemplates(configuration, false);
+        loader.initCodeTemplates(configuration, false);
         CodeTemplate inboundDefault = configuration.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
 
         String loaded = decode(inboundDefault.code);
-        service.rectifyHeaderInCodeTemplate(inboundDefault);
+        headers.rectifyHeaderInCodeTemplate(inboundDefault);
         String resaved = decode(inboundDefault.code);
 
         assertTrue(loaded.contains("temp_val"), "the sample must survive header rectification");
@@ -795,23 +800,23 @@ class ServiceConfigurationServiceTest {
     @Test
     void addMissingInternalTemplates_fillsInSamplesOfStoredTemplates_withoutOverwritingExistingOnes() {
         ServiceConfiguration fresh = new ServiceConfiguration();
-        service.initCodeTemplates(fresh, false);
+        loader.initCodeTemplates(fresh, false);
         CodeTemplate packaged = fresh.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
 
         // A tenant upgraded from a version that did not know the sample fields
         ServiceConfiguration upgraded = new ServiceConfiguration();
-        service.initCodeTemplates(upgraded, false);
+        loader.initCodeTemplates(upgraded, false);
         CodeTemplate stored = upgraded.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
         stored.samplePayload = null;
         stored.sampleTopic = null;
 
-        assertTrue(service.addMissingInternalTemplates(upgraded), "a refreshed template must be reported for persisting");
+        assertTrue(loader.addMissingInternalTemplates(upgraded), "a refreshed template must be reported for persisting");
         assertEquals(packaged.samplePayload, stored.samplePayload);
         assertEquals(packaged.sampleTopic, stored.sampleTopic);
 
         // A sample the tenant already has (or edited) is never overwritten
         stored.samplePayload = "{\"mine\":true}";
-        assertFalse(service.addMissingInternalTemplates(upgraded));
+        assertFalse(loader.addMissingInternalTemplates(upgraded));
         assertEquals("{\"mine\":true}", stored.samplePayload);
     }
 

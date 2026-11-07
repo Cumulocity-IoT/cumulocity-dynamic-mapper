@@ -73,6 +73,7 @@ class ConnectionStateManagerTest {
         notifiedIsNewSession = new ArrayList<>();
 
         manager = new ConnectionStateManager(TENANT, CONNECTOR_NAME, CONNECTOR_IDENTIFIER,
+                () -> ConnectorType.MQTT,
                 (session, isNewSession) -> {
                     notifiedSessions.add(session);
                     notifiedIsNewSession.add(isNewSession);

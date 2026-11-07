@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -49,7 +51,10 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.model.DeploymentMapEntry;
+import dynamic.mapper.model.DeploymentMapEntryExpanded;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -72,6 +77,7 @@ public class DeploymentController {
 
 	private final ConnectorRegistry connectorRegistry;
 	private final MappingService mappingService;
+	private final MappingOrchestrationService mappingOrchestrationService;
 	private final ConnectorConfigurationService connectorConfigurationService;
 	private final ContextService<UserCredentials> contextService;
 
@@ -90,6 +96,11 @@ public class DeploymentController {
 			**Response Format:**
 			- Key: Mapping identifier
 			- Value: DeploymentMapEntry with connector details
+
+			**Query Parameter:**
+			- `expand=true`: Value is a DeploymentMapEntryExpanded with the mapping name and
+			  direction next to the identifier, and each connector reduced to identifier, name,
+			  and connector type
 			"""
 	)
 	@ApiResponses(value = {
@@ -137,7 +148,8 @@ public class DeploymentController {
 		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
 	})
 	@GetMapping(value = "/effective", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
+	public ResponseEntity<?> getMappingsDeployed(
+			@Parameter(description = "Resolve mapping and connector names") @RequestParam(defaultValue = "false") boolean expand) {
 		String tenant = contextService.getContext().getTenant();
 		Map<String, DeploymentMapEntry> mappingsDeployed = new ConcurrentHashMap<>();
 		try {
@@ -151,6 +163,21 @@ public class DeploymentController {
 			}
 
 			log.debug("{} - Get active subscriptions!", tenant);
+			if (expand) {
+				Map<String, Mapping> mappingsByIdentifier = mappingsByIdentifier(tenant);
+				Map<String, DeploymentMapEntryExpanded> expanded = new TreeMap<>();
+				mappingsDeployed.forEach((mappingIdentifier, entry) -> expanded.put(mappingIdentifier,
+						new DeploymentMapEntryExpanded(mappingIdentifier,
+								mappingName(mappingsByIdentifier.get(mappingIdentifier)),
+								mappingsByIdentifier.get(mappingIdentifier) == null ? null
+										: mappingsByIdentifier.get(mappingIdentifier).getDirection(),
+								entry.getConnectors().stream()
+										.map(c -> new DeploymentMapEntryExpanded.ConnectorRef(c.getIdentifier(),
+												c.getName(),
+												c.getConnectorType() == null ? null : c.getConnectorType().name()))
+										.toList())));
+				return ResponseEntity.status(HttpStatus.OK).body(expanded);
+			}
 			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -235,7 +262,7 @@ public class DeploymentController {
 				// Apply the new deployment immediately: reconcile the affected connectors so the
 				// mapping is (un)subscribed live. Without this the change is only persisted and would
 				// not take effect until a connector reconnect or an explicit RELOAD_MAPPINGS.
-				reconcileConnectors(tenant, affected);
+				mappingOrchestrationService.reconcileConnectors(tenant, affected::contains);
 				return ResponseEntity.status(HttpStatus.CREATED).build();
 			} catch (Exception ex) {
 				log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
@@ -264,30 +291,6 @@ public class DeploymentController {
 			log.warn("{} - Rejecting deployment with unknown connector identifier(s): {}", tenant, unknown);
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Unknown connector identifier(s): " + unknown);
-		}
-	}
-
-	/**
-	 * Reconcile the subscriptions of the given connectors against the current deployment map.
-	 * Only connectors whose identifier is in {@code affectedConnectorIdentifiers} are touched;
-	 * each is reconciled independently so a failure on one does not prevent the others.
-	 */
-	private void reconcileConnectors(String tenant, Set<String> affectedConnectorIdentifiers)
-			throws ConnectorRegistryException {
-		Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-		if (connectorMap == null) {
-			return;
-		}
-		for (AConnectorClient client : connectorMap.values()) {
-			if (!affectedConnectorIdentifiers.contains(client.getConnectorIdentifier())) {
-				continue;
-			}
-			try {
-				client.reconcileSubscriptions();
-			} catch (Exception e) {
-				log.error("{} - Error reconciling subscriptions for connector {} after deployment change",
-						tenant, client.getConnectorIdentifier(), e);
-			}
 		}
 	}
 
@@ -357,6 +360,11 @@ public class DeploymentController {
 			**Response Format:**
 			- Key: Mapping identifier
 			- Value: List of connector identifiers
+
+			**Query Parameter:**
+			- `expand=true`: Value is a DeploymentMapEntryExpanded with the mapping name and
+			  direction next to the identifier, and each connector as identifier, name, and
+			  connector type
 			
 			**Use Cases:**
 			- Get overview of all deployment configurations
@@ -392,15 +400,45 @@ public class DeploymentController {
 		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
 	})
 	@GetMapping(value = "/defined", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, List<String>>> getDeploymentMap() {
+	public ResponseEntity<?> getDeploymentMap(
+			@Parameter(description = "Resolve mapping and connector names") @RequestParam(defaultValue = "false") boolean expand) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("{} - Get complete deployment", tenant);
 		try {
 			Map<String, List<String>> map = mappingService.getDeploymentMap(tenant);
-			return new ResponseEntity<Map<String, List<String>>>(map, HttpStatus.OK);
+			if (expand) {
+				Map<String, Mapping> mappingsByIdentifier = mappingsByIdentifier(tenant);
+				Map<String, ConnectorConfiguration> connectorsByIdentifier = connectorConfigurationService
+						.getConnectorConfigurations(tenant).stream()
+						.collect(Collectors.toMap(ConnectorConfiguration::getIdentifier, c -> c, (a, b) -> a));
+				Map<String, DeploymentMapEntryExpanded> expanded = new TreeMap<>();
+				map.forEach((mappingIdentifier, connectorIdentifiers) -> {
+					Mapping mapping = mappingsByIdentifier.get(mappingIdentifier);
+					expanded.put(mappingIdentifier, new DeploymentMapEntryExpanded(mappingIdentifier,
+							mappingName(mapping), mapping == null ? null : mapping.getDirection(),
+							connectorIdentifiers.stream().map(connectorIdentifier -> {
+								ConnectorConfiguration c = connectorsByIdentifier.get(connectorIdentifier);
+								return new DeploymentMapEntryExpanded.ConnectorRef(connectorIdentifier,
+										c == null ? null : c.getName(),
+										c == null || c.getConnectorType() == null ? null
+												: c.getConnectorType().name());
+							}).toList()));
+				});
+				return new ResponseEntity<>(expanded, HttpStatus.OK);
+			}
+			return new ResponseEntity<>(map, HttpStatus.OK);
 		} catch (Exception ex) {
 			log.error("{} - Error getting complete deployment!", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
+	}
+
+	private Map<String, Mapping> mappingsByIdentifier(String tenant) {
+		return mappingService.getMappings(tenant, null).stream()
+				.collect(Collectors.toMap(Mapping::getIdentifier, m -> m, (a, b) -> a));
+	}
+
+	private static String mappingName(Mapping mapping) {
+		return mapping == null ? null : mapping.getName();
 	}
 }

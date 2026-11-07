@@ -268,7 +268,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+        this.alertService.add({ text: 'Current expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
       }
     } catch (error) {
       // sourceExpression can still be unset here (e.g. right after selecting an existing
@@ -439,6 +439,13 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.sampleTransportFields) {
       testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
     }
+
+    if (this.stepperConfiguration.sampleMessageInfo) {
+      testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+    }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
 
     const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }

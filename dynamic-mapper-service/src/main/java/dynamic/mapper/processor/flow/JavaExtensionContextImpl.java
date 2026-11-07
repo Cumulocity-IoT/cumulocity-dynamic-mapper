@@ -57,6 +57,9 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     private final Map<String, Object> nativeState;
     private final FlowStateStore flowStateStore;
     private final String mappingIdentifier;
+    // Keys this invocation wrote, and whether it called clearState(): only these reach the store.
+    private final java.util.Set<String> changedNativeKeys = new java.util.HashSet<>();
+    private boolean wipeRequested;
 
     // Resolved external ID for outbound mappings (set by EnrichmentOutboundProcessor)
     private String externalId;
@@ -90,8 +93,28 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         this.processingContext = processingContext;
         this.flowStateStore = flowStateStore;
         this.mappingIdentifier = mapping != null ? mapping.getIdentifier() : null;
-        this.nativeState = (initialState != null && !initialState.isEmpty())
-                ? new HashMap<>(initialState) : new HashMap<>();
+        this.nativeState = new HashMap<>();
+        if (initialState != null) {
+            // Nested collections are copied: the stored objects are shared by messages running in parallel.
+            initialState.forEach((key, value) -> this.nativeState.put(key, deepCopy(value)));
+        }
+    }
+
+    private static Object deepCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<Object, Object> copy = new HashMap<>();
+            map.forEach((k, v) -> copy.put(k, deepCopy(v)));
+            return copy;
+        } else if (value instanceof java.util.List<?> list) {
+            java.util.List<Object> copy = new java.util.ArrayList<>(list.size());
+            list.forEach(element -> copy.add(deepCopy(element)));
+            return copy;
+        } else if (value instanceof java.util.Set<?> set) {
+            java.util.Set<Object> copy = new java.util.HashSet<>();
+            set.forEach(element -> copy.add(deepCopy(element)));
+            return copy;
+        }
+        return value;
     }
 
     /**
@@ -321,16 +344,43 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         return testing;
     }
 
+    /**
+     * Removes every state entry held for this mapping, effective when {@link #persistNativeState()}
+     * runs at the end of the message.
+     */
     @Override
     public void clearState() {
         if (dataPrepContext != null) {
             dataPrepContext.clearState();
         }
-        // Persist native state to FlowStateStore
-        if (flowStateStore != null && mappingIdentifier != null) {
-            flowStateStore.saveState(tenant, mappingIdentifier, new HashMap<>(nativeState));
-        }
         nativeState.clear();
+        changedNativeKeys.clear();
+        wipeRequested = true;
+    }
+
+    /**
+     * Writes back what this invocation changed, so a message that only reads state cannot revert what
+     * concurrent messages wrote. Called by the extensible processors after {@code onMessage} returned
+     * normally. It is not called when the extension throws: the message fails and is redelivered, and
+     * state written by the failed attempt would make the retry look like a duplicate. A no-op for test
+     * runs, which have no store.
+     */
+    public void persistNativeState() {
+        if (flowStateStore != null && mappingIdentifier != null) {
+            Map<String, Object> upserts = new HashMap<>();
+            java.util.Set<String> removals = new java.util.HashSet<>();
+            for (String key : changedNativeKeys) {
+                Object value = nativeState.get(key);
+                if (value == null) {
+                    removals.add(key);
+                } else {
+                    upserts.put(key, value);
+                }
+            }
+            flowStateStore.commitChanges(tenant, mappingIdentifier, wipeRequested, upserts, removals);
+        }
+        changedNativeKeys.clear();
+        wipeRequested = false;
     }
 
     // ==================== Native (Java) State Methods ====================
@@ -346,6 +396,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         } else {
             nativeState.put(key, value);
         }
+        changedNativeKeys.add(key);
         log.debug("{} - Native flow state set: {}={}", tenant, key, value);
     }
 

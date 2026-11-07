@@ -119,7 +119,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         java.util.Map<String, Object> initialState = isolateState
                 ? new java.util.HashMap<String, Object>()
                 : flowStateStore.loadState(tenant, mapping.getIdentifier());
-        JavaExtensionContext prepContext = new JavaExtensionContextImpl(
+        JavaExtensionContextImpl prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
             tenant,
@@ -145,19 +145,30 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
                 extensionEntry.getFqnClassName());
             log.error(errorMsg, e);
             throw new ProcessingException(errorMsg, e);
+        } catch (LinkageError e) {
+            // e.g. NoClassDefFoundError when the extension jar was replaced or deleted while processing
+            String errorMsg = String.format("%s - Extension '%s' (class: %s) failed with a class loading error: %s",
+                tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName(), e);
+            log.error(errorMsg, e);
+            throw new ProcessingException(errorMsg, e);
         }
 
         // 4. Store results in context for processing by ExtensibleResultInboundProcessor
         if (results != null && results.length > 0) {
             log.debug("{} - Extension returned {} CumulocityObject(s)", tenant, results.length);
             context.setExtensionResult(results);
+            // Returning normally does not mean delivery succeeded: commit the state after the
+            // requests were sent, so a redelivery after a failure is not treated as a duplicate.
+            context.setDeferredStateCommit(prepContext::persistNativeState);
         } else {
             String errorMsg = String.format(
-                "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - no data to process",
+                "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to process, ignoring",
                 tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
-            log.warn(errorMsg);
+            log.info(errorMsg);
+            // An empty result means "nothing to do" (e.g. deduplication), as for Smart Functions; not a failure.
+            // Nothing is delivered, so deduplication extensions record what they saw right away.
+            prepContext.persistNativeState();
             context.setIgnoreFurtherProcessing(true);
-            throw new ProcessingException(errorMsg);
         }
     }
 

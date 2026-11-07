@@ -23,7 +23,6 @@ package dynamic.mapper.connector.kafka;
 
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
-import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
@@ -31,6 +30,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -38,13 +38,13 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -671,8 +671,27 @@ public class KafkaClientV2 extends AConnectorClient {
                         ConsumerRecords<String, String> records = consumer
                                 .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
 
-                        for (ConsumerRecord<String, String> record : records) {
-                            processKafkaMessage(record, wrapper);
+                        // Per partition and in order: when a record fails, seek back to it and skip
+                        // the rest of that partition's batch, so a later success can never commit
+                        // past the failed record. The next poll redelivers it.
+                        boolean anyFailed = false;
+                        for (TopicPartition partition : records.partitions()) {
+                            for (ConsumerRecord<String, String> record : records.records(partition)) {
+                                if (!processKafkaMessage(record, wrapper)) {
+                                    consumer.seek(partition, record.offset());
+                                    anyFailed = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (anyFailed) {
+                            // Avoid a hot redelivery loop while the cause (e.g. a Cumulocity outage) persists.
+                            try {
+                                Thread.sleep(CONSUMER_RESTART_DELAY_MS);
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
                         }
 
                         // Reset failed count on successful poll
@@ -740,10 +759,22 @@ public class KafkaClientV2 extends AConnectorClient {
         }
     }
 
+    /** Kafka record headers as {@code header.<name>} transport metadata (last value wins on repeats). */
+    static java.util.Map<String, String> kafkaMetadata(ConsumerRecord<?, ?> record) {
+        dynamic.mapper.connector.core.callback.TransportMetadata metadata =
+                new dynamic.mapper.connector.core.callback.TransportMetadata();
+        for (org.apache.kafka.common.header.Header header : record.headers()) {
+            metadata.put(dynamic.mapper.connector.core.callback.TransportMetadata.HEADER, header.key(), header.value());
+        }
+        return metadata.build();
+    }
+
     /**
      * Process individual Kafka message
+     *
+     * @return {@code false} if the record failed and must be redelivered (QoS above 0 only)
      */
-    private void processKafkaMessage(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
+    private boolean processKafkaMessage(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         String topic = record.topic();
         String value = record.value();
         String key = record.key();
@@ -756,6 +787,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .key(key)
+                .metadata(kafkaMetadata(record))
                 .build();
 
         if (serviceConfiguration.getLogPayload()) {
@@ -768,87 +800,75 @@ public class KafkaClientV2 extends AConnectorClient {
         int mappingQos = processedResults.getConsolidatedQos().getLevel();
         int timeout = processedResults.getPipelineTimeoutMS();
 
-        if (mappingQos > 0) {
-            virtualThreadPool.submit(() -> processMessageWithQos(record, wrapper, processedResults, timeout));
-        } else {
-            handleSuccessfulProcessing(record, wrapper);
+        if (mappingQos > 0 && processedResults.getProcessingResult() != null) {
+            // Waits on the poll-loop thread: records of a partition must be settled in order.
+            return processMessageWithQos(record, wrapper, processedResults, timeout);
         }
+        handleSuccessfulProcessing(record, wrapper);
+        return true;
     }
 
     /**
-     * Process message with QoS handling
+     * Process message with QoS handling: waits for the pipeline result and settles the record.
+     *
+     * <p>The decision is the shared one ({@link ProcessingResultHelper#awaitAckable}): success and
+     * client errors commit, a server error, timeout, cancellation, or exception does not. A record that
+     * failed {@code maxProcessingAttempts} times is dropped: it is committed past, so the partition does not
+     * block on it. Package-private for unit tests.</p>
+     *
+     * @return {@code true} if the record is settled and the loop may continue; {@code false} if it must
+     *         be redelivered
      */
-    private Void processMessageWithQos(ConsumerRecord<String, String> record,
+    boolean processMessageWithQos(ConsumerRecord<String, String> record,
             KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
-        String topic = record.topic();
-
-        try {
-            List<? extends ProcessingContext<?>> results;
-            if (timeout > 0) {
-                results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
-            } else {
-                // Always bounded — an unbounded get() parks this worker, and blocks the offset
-                // commit, forever if the pipeline hangs in I/O.
-                results = processedResults.getProcessingResult()
-                        .get(ServiceConfiguration.PROCESSING_HARD_CEILING_MS, TimeUnit.MILLISECONDS);
-            }
-
-            boolean hasErrors = false;
-            int httpStatusCode = 0;
-
-            if (results != null) {
-                for (ProcessingContext<?> context : results) {
-                    if (context.hasError()) {
-                        for (Exception error : context.getErrors()) {
-                            if (error instanceof ProcessingException) {
-                                Throwable origin = ((ProcessingException) error).getOriginException();
-                                if (origin instanceof SDKException) {
-                                    int status = ((SDKException) origin).getHttpStatus();
-                                    if (status > httpStatusCode) {
-                                        httpStatusCode = status;
-                                    }
-                                }
-                            }
-                        }
-                        hasErrors = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasErrors || httpStatusCode < 500) {
-                handleSuccessfulProcessing(record, wrapper);
-            } else {
-                handleProcessingError(record, wrapper, httpStatusCode);
-            }
-
-        } catch (InterruptedException | ExecutionException e) {
-            log.warn("{} - Processing interrupted for topic: [{}], offset: {}",
-                    tenant, topic, record.offset(), e);
-            handleProcessingError(record, wrapper, 0);
-        } catch (TimeoutException e) {
-            // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
-            // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
-            // (Context.close(cancelIfExecuting=true)) are what actually stop it.
-            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-            log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
-                    tenant, topic, record.offset(), drained);
-            handleProcessingTimeout(record, wrapper);
+        // topic-partition-offset is the same on every redelivery of the record
+        String recordKey = record.topic() + "-" + record.partition() + "@" + record.offset();
+        MessageFailureTracker tracker = failureTracker();
+        if (ProcessingResultHelper.awaitAckable(processedResults, tenant, record.topic(), log)) {
+            tracker.clear(recordKey);
+            handleSuccessfulProcessing(record, wrapper);
+            return true;
         }
+        if (tracker.recordFailureReachedLimit(recordKey)) {
+            // Drop: commit past the record so the partition does not block on it forever
+            log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
+                    + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
+                    record.offset(), connectorIdentifier);
+            handleSuccessfulProcessing(record, wrapper);
+            return true;
+        }
+        log.warn("{} - Not committing topic: [{}], partition: {}, offset: {}", tenant, record.topic(),
+                record.partition(), record.offset());
+        handleProcessingError(record, wrapper, 0);
+        return false;
+    }
 
-        return null;
+    private volatile MessageFailureTracker failureTracker;
+
+    /** Created on first use: the service configuration is only known once the client is wired. */
+    private MessageFailureTracker failureTracker() {
+        MessageFailureTracker tracker = failureTracker;
+        if (tracker == null) {
+            synchronized (this) {
+                if (failureTracker == null) {
+                    failureTracker = MessageFailureTracker.forConfiguration(this::currentServiceConfiguration);
+                }
+                tracker = failureTracker;
+            }
+        }
+        return tracker;
     }
 
     /**
      * Handle successful message processing.
      * <p>
      * Queues the offset to commit rather than committing directly: this method can run either on
-     * the topic's own poll-loop thread (QoS 0, called synchronously from {@link #processKafkaMessage})
-     * or on a separate virtual thread (QoS &gt; 0, called from {@link #processMessageWithQos}) —
-     * calling {@code commitSync} directly from the latter would touch the KafkaConsumer from a
-     * foreign thread, which is not thread-safe. The queued offset is committed by
+     * the topic's own poll-loop thread (called synchronously from {@link #processKafkaMessage})
+     * or, from {@code handleProcessingError}-triggered restarts, another thread — calling
+     * {@code commitSync} directly from a foreign thread would touch the KafkaConsumer, which is
+     * not thread-safe. The queued offset is committed by
      * {@link #drainPendingCommits} on the consumer's own thread on its next loop iteration.
      */
     private void handleSuccessfulProcessing(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
@@ -895,15 +915,6 @@ public class KafkaClientV2 extends AConnectorClient {
                 }
             });
         }
-    }
-
-    /**
-     * Handle processing timeout
-     */
-    private void handleProcessingTimeout(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
-        log.warn("{} - Processing timeout for topic: [{}], partition: {}, offset: {}",
-                tenant, record.topic(), record.partition(), record.offset());
-        handleProcessingError(record, wrapper, 0);
     }
 
     /**

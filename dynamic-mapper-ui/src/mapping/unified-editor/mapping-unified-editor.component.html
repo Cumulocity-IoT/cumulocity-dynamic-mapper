@@ -31,23 +31,23 @@
   <c8y-tab [icon]="'c8y-device-management'"
     [label]="(isButtonDisabled$ | async) ? 'Connector *' : 'Connector'"
     [priority]="50" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(TAB_GENERAL_SETTINGS)) {
   <c8y-tab [icon]="'settings'" [label]="(stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? 'General Settings *' : 'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
   @if (isTabVisible(TAB_SELECT_TEMPLATES)) {
   <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
   }
   @if (isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
   <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_DEFINE_TRANSFORMATION" (onSelect)="onTabSelected(TAB_DEFINE_TRANSFORMATION)" data-cy="dm-unified-editor-tab-transformation"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_DEFINE_TRANSFORMATION" (onSelect)="onTabSelected(TAB_DEFINE_TRANSFORMATION)" data-cy="dm-unified-editor-tab-transformation"></c8y-tab>
   }
   @if (isTabVisible(TAB_TEST_MAPPING)) {
   <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
   }
 
   <!-- Tab content – only the active tab is rendered (@if); tab components are destroyed on switch, so state lives on this component and is synced in onTabSelected() -->
@@ -63,14 +63,14 @@
     }
 
     <!-- Tab 0: Connector -->
-    @if (activeTabIndex === TAB_CONNECTOR && isTabVisible(TAB_CONNECTOR)) {
+    @if (currentStepIndex === TAB_CONNECTOR && isTabVisible(TAB_CONNECTOR)) {
     <d11r-mapping-connector [showHeader]="true" [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
       [deploymentMapEntry]="deploymentMapEntry" (deploymentMapEntryChange)="deploymentMapEntryChange($event)">
     </d11r-mapping-connector>
     }
 
     <!-- Tab 1: General Settings -->
-    @if (activeTabIndex === TAB_GENERAL_SETTINGS && isTabVisible(TAB_GENERAL_SETTINGS)) {
+    @if (currentStepIndex === TAB_GENERAL_SETTINGS && isTabVisible(TAB_GENERAL_SETTINGS)) {
     <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [propertyFormly]="propertyFormly" [deploymentMapEntry]="deploymentMapEntry"
       (targetAPIChanged)="onTargetAPIChanged($event)">
@@ -78,7 +78,8 @@
     }
 
     <!-- Tab 2: Templates -->
-    @if (activeTabIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
+    @if (currentStepIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
+    @if (stepperViewModel) {
     <d11r-mapping-template-step #templateStep
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"
@@ -114,9 +115,10 @@
       }
     </d11r-mapping-template-step>
     }
+    }
 
     <!-- Tab 3: Substitutions -->
-    @if (activeTabIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
+    @if (currentStepIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
     <d11r-mapping-transformation-step #transformationStep [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" [aiAgent]="aiAgent"
@@ -134,8 +136,9 @@
     }
 
     <!-- Tab 4: Testing -->
-    @if (activeTabIndex === TAB_TEST_MAPPING && isTabVisible(TAB_TEST_MAPPING)) {
+    @if (currentStepIndex === TAB_TEST_MAPPING && isTabVisible(TAB_TEST_MAPPING)) {
     <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="updateTestingTemplate" [mapping]="mapping"
+      [connectorsUnsaved]="connectorsUnsaved"
       [stepperConfiguration]="stepperConfiguration" (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)">
     </d11r-mapping-testing>
     }
@@ -168,12 +171,27 @@
       <!-- Only blockers the user cannot fix from inside the editor disable Save. A missing connector or
            topic does not: onCommitButton() reports it and jumps to the right tab, which is far easier to
            discover than a silently greyed-out button. -->
-      <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.readOnly || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
-        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
-        translate data-cy="dm-unified-editor-save">
-        Save
-      </button>
+      <!-- Split button. Plain Save only writes the draft, so the running mapping is unchanged until a
+           version is published and activated; "Save & Activate" does all three, so users do not have to
+           leave the editor and find the Activate toggle. The last choice stays the main action. -->
+      <div class="btn-group dropdown" role="group" [dropup]="true" dropdown
+        [isDisabled]="saveDisabled">
+        <button type="button" class="btn btn-primary" (click)="onCommitButton(saveAndActivate)"
+          [disabled]="saveDisabled"
+          [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
+          data-cy="dm-unified-editor-save">
+          {{ saveButtonText | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" style="min-width: auto" dropdownToggle
+          [disabled]="saveDisabled" [attr.aria-label]="'More save options' | translate"
+          data-cy="dm-unified-editor-save-toggle">
+          <i c8yIcon="chevron-up"></i>
+        </button>
+        <ul class="dropdown-menu" *dropdownMenu>
+          <li><button type="button" class="dropdown-item" (click)="saveAndActivate = false" data-cy="dm-unified-editor-save-only">{{ 'Save' | translate }}</button></li>
+          <li><button type="button" class="dropdown-item" (click)="saveAndActivate = true" data-cy="dm-unified-editor-save-activate">{{ 'Save & Activate' | translate }}</button></li>
+        </ul>
+      </div>
     </div>
     <!-- right: spacer matching the left column width to keep buttons centered -->
     <div style="flex:1;"></div>
@@ -208,7 +226,7 @@
           data-cy="dm-unified-editor-generate-with-ai"
           (click)="openGenerateSubstitutionDrawer()"
           title="{{ (stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
-          [disabled]="!stepperViewModel?.config.showEditorSource || stepperViewModel?.config.readOnly || !aiAgentDeployed">
+          [disabled]="aiGenerationDisabled">
           <span>{{ stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
         </button>
         @if (!aiAgentDeployed) {

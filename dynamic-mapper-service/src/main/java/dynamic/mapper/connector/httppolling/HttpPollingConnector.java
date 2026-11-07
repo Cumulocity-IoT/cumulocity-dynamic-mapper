@@ -30,6 +30,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -67,6 +68,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -122,7 +124,11 @@ public class HttpPollingConnector extends AConnectorClient {
     /** Bounds every GET call, independent of TCP-level connect/socket timeouts. */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
-    protected WebClient pollingClient;
+    /** Response buffer limit. WebClient's default (256 KB) fails a page of a larger payload with
+     * DataBufferLimitException, which would surface as a permanent poll failure. */
+    private static final int MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
+
+    protected volatile WebClient pollingClient;
     protected String baseUrl;
 
     /** Topics currently subscribed. Membership (not the future map below) gates whether
@@ -473,6 +479,10 @@ public class HttpPollingConnector extends AConnectorClient {
         }
         try {
             executePollInternal(topic);
+        } catch (Exception e) {
+            // Setup code outside executePollInternal's own try (mapping/config lookup) or a failing
+            // status update must not end the poll chain silently: nothing else reschedules.
+            handlePollFailure(topic, e);
         } finally {
             inFlightTopics.remove(topic);
         }
@@ -540,9 +550,6 @@ public class HttpPollingConnector extends AConnectorClient {
                     return;
                 }
 
-                consecutiveFailuresByTopic.computeIfAbsent(topic, k -> new AtomicInteger()).set(0);
-                connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-
                 String body = response.getBody();
                 if ("PageNumber".equals(paginationMode)) {
                     HttpPollingRequestHelper.PageStatus pageStatus = HttpPollingRequestHelper.classifyPage(body);
@@ -556,9 +563,15 @@ public class HttpPollingConnector extends AConnectorClient {
                         break;
                     }
                 }
-                byte[] payload = body != null
-                        ? body.getBytes(StandardCharsets.UTF_8)
-                        : new byte[0];
+                if (StringUtils.isBlank(body)) {
+                    // e.g. 204 No Content: "nothing new" is a normal answer to an incremental poll,
+                    // not a payload to run through the mapping pipeline (where it would fail
+                    // deserialization and count as a poll failure).
+                    log.debug("{} - Poll for topic [{}] returned an empty body, nothing to dispatch", tenant, topic);
+                    markPollHealthy(topic);
+                    break;
+                }
+                byte[] payload = body.getBytes(StandardCharsets.UTF_8);
 
                 ConnectorMessage connectorMessage = ConnectorMessage.builder()
                         .tenant(tenant)
@@ -568,19 +581,19 @@ public class HttpPollingConnector extends AConnectorClient {
                         .sendPayload(true)
                         .build();
 
-                if (serviceConfiguration.getLogPayload()) {
-                    log.info("{} - Poll succeeded for topic [{}], page {}, status: {}", tenant, topic,
-                            pageCount, response.getStatusCode());
-                }
+                log.debug("{} - Poll succeeded for topic [{}], page {}, status: {}", tenant, topic,
+                        pageCount, response.getStatusCode());
 
                 if (dispatcher != null) {
                     ProcessingResultWrapper<?> resultWrapper = dispatcher.onMessage(connectorMessage);
-                    if (!awaitProcessingSuccess(resultWrapper, topic)) {
+                    PageOutcome outcome = awaitProcessingOutcome(resultWrapper, topic);
+                    if (!settlePage(mapping, topic, body, outcome)) {
                         // Treated exactly like a failed fetch: caught by the surrounding
                         // try/catch below, which routes through handlePollFailure (backoff,
                         // RETRYING/FAILED) — the cursor is not advanced for this page, and
                         // pagination stops here, so the next poll resumes from the last page
-                        // that actually completed successfully.
+                        // that actually completed successfully. After maxProcessingAttempts
+                        // failures of the same page (server errors do not count), settlePage() skips it.
                         throw new ConnectorException("Mapping processing did not complete " +
                                 "successfully for topic [" + topic + "]");
                     }
@@ -593,11 +606,17 @@ public class HttpPollingConnector extends AConnectorClient {
                 } else {
                     log.warn("{} - No dispatcher wired, dropping poll result for topic [{}]", tenant, topic);
                 }
+                // Only now is the page fully successful (fetched AND processed). Resetting after the
+                // fetch alone meant a mapping that always fails never accumulated failures, so it
+                // retried at 1x interval forever and never escalated to FAILED.
+                markPollHealthy(topic);
 
                 hasMore = false;
                 switch (paginationMode) {
                     case "NextLinkHeader" -> {
-                        nextUri = HttpPollingRequestHelper.extractNextLinkUri(response, tenant, log);
+                        nextUri = HttpPollingRequestHelper.resolveSameOrigin(
+                                HttpPollingRequestHelper.extractNextLinkUri(response, tenant, log),
+                                requestUri(topic, nextUri), baseUrl, tenant, log);
                         hasMore = nextUri != null;
                     }
                     case "NextFieldInBody" -> {
@@ -631,6 +650,65 @@ public class HttpPollingConnector extends AConnectorClient {
     }
 
     /**
+     * Decides whether a polled page is settled once its processing finished.
+     *
+     * <p>A page that was processed is settled. A page whose processing failed is retried by the next poll
+     * (the cursor holds), until it failed {@code maxProcessingAttempts} times: then it is <em>skipped</em>. The
+     * skip is recorded as the mapping's last error and logged as an error, and the caller advances the cursor
+     * past the page, so one page that always fails cannot block the topic forever. The data of a skipped page is
+     * not processed.</p>
+     *
+     * <p>A server error (HTTP 5xx, for example while Cumulocity is unavailable) is not the page's fault: it is
+     * retried but <em>not counted</em>, so an outage never makes the connector skip data. It does not reset
+     * the count either.</p>
+     *
+     * <p>The failures are counted per position, not per body: with a cursor the position is the cursor, because
+     * the body of the same unprocessed range grows as new data arrives; without a cursor every poll returns the
+     * same full response, so the body identifies it.</p>
+     *
+     * @return {@code true} if the page is settled (processed or skipped), {@code false} if it must be retried
+     */
+    boolean settlePage(Mapping mapping, String topic, String body, PageOutcome outcome) {
+        if (outcome == PageOutcome.SERVER_ERROR) {
+            return false;
+        }
+        MessageFailureTracker tracker = failureTracker();
+        String cursor = currentCursor(mapping);
+        String pageKey = topic + "|" + (cursor != null ? cursor : "body:" + Objects.hashCode(body));
+        if (outcome == PageOutcome.PROCESSED) {
+            tracker.clear(pageKey);
+            return true;
+        }
+        if (!tracker.recordFailureReachedLimit(pageKey)) {
+            return false;
+        }
+        String message = String.format("Skipped polled data of topic [%s] after %d failed processing attempts%s",
+                topic, tracker.limit(), cursor != null ? " (cursor: " + cursor + ")" : "");
+        log.error("{} - {}, mapping: {}, connector: {}", tenant, message,
+                mapping != null ? mapping.getIdentifier() : null, connectorIdentifier);
+        if (mapping != null) {
+            mappingService.getMappingStatus(tenant, mapping).recordError(System.currentTimeMillis(), message);
+        }
+        return true;
+    }
+
+    private volatile MessageFailureTracker failureTracker;
+
+    /** Created on first use: the service configuration is only known once the client is wired. */
+    private MessageFailureTracker failureTracker() {
+        MessageFailureTracker tracker = failureTracker;
+        if (tracker == null) {
+            synchronized (this) {
+                if (failureTracker == null) {
+                    failureTracker = MessageFailureTracker.forConfiguration(this::currentServiceConfiguration);
+                }
+                tracker = failureTracker;
+            }
+        }
+        return tracker;
+    }
+
+    /**
      * Blocks (bounded) on the mapping pipeline's actual result for one dispatched message,
      * mirroring the same wait/timeout/cancellation handling every broker callback (e.g.
      * {@code AbstractMqttCallback}) already uses for QoS &gt; 0 messages. {@code onMessage}
@@ -644,6 +722,20 @@ public class HttpPollingConnector extends AConnectorClient {
      *         failure/timeout (already logged) — the caller must not advance the cursor then.
      */
     private boolean awaitProcessingSuccess(ProcessingResultWrapper<?> resultWrapper, String topic) {
+        return awaitProcessingOutcome(resultWrapper, topic) == PageOutcome.PROCESSED;
+    }
+
+    /** How the processing of one polled page ended. */
+    enum PageOutcome {
+        /** Processed without any error. */
+        PROCESSED,
+        /** Failed in a way that can repeat with the same page: a mapping or client error, a timeout, a cancellation. */
+        FAILED,
+        /** Failed with a server error (HTTP 5xx), for example while Cumulocity is unavailable: not the page's fault. */
+        SERVER_ERROR
+    }
+
+    PageOutcome awaitProcessingOutcome(ProcessingResultWrapper<?> resultWrapper, String topic) {
         // Found in review 2026-09-22: ProcessingResultHelper.failure() — an early-exit wrapper
         // for a dispatch that never even started real (async) processing, e.g. payload
         // deserialization failure or no mapping resolved — builds a wrapper with NO
@@ -654,7 +746,7 @@ public class HttpPollingConnector extends AConnectorClient {
         if (resultWrapper.getProcessingResult() == null) {
             log.warn("{} - Dispatch for topic [{}] failed before processing started (no mapping " +
                     "resolved, or the payload could not be deserialized)", tenant, topic);
-            return false;
+            return PageOutcome.FAILED;
         }
 
         long timeoutMs = resultWrapper.getPipelineTimeoutMS() > 0
@@ -669,19 +761,32 @@ public class HttpPollingConnector extends AConnectorClient {
             if (resultWrapper.getCancellationRequested().get()) {
                 log.warn("{} - Processing for topic [{}] was cancelled (JS CPU timeout) before " +
                         "the wall-clock timeout, treating as failed", tenant, topic);
-                return false;
+                return PageOutcome.FAILED;
             }
 
             int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(results, tenant, topic, log);
-            return httpStatusCode < 0;
+            if (httpStatusCode < 0) {
+                return PageOutcome.PROCESSED;
+            }
+            return httpStatusCode >= 500 ? PageOutcome.SERVER_ERROR : PageOutcome.FAILED;
         } catch (InterruptedException | ExecutionException e) {
             log.warn("{} - Mapping processing failed for topic [{}]: {}", tenant, topic, e.getMessage());
-            return false;
+            return PageOutcome.FAILED;
         } catch (TimeoutException e) {
             boolean drained = resultWrapper.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Mapping processing timed out for topic [{}] after {}ms (drained={})",
                     tenant, topic, timeoutMs, drained);
-            return false;
+            return PageOutcome.FAILED;
+        }
+    }
+
+    private void markPollHealthy(String topic) {
+        consecutiveFailuresByTopic.computeIfAbsent(topic, k -> new AtomicInteger()).set(0);
+        // Don't mask another topic that is still FAILED: the connector status is shared.
+        boolean anyTopicFailed = consecutiveFailuresByTopic.values().stream()
+                .anyMatch(c -> c.get() > MAX_CONSECUTIVE_FAILURES);
+        if (!anyTopicFailed) {
+            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
         }
     }
 
@@ -709,12 +814,12 @@ public class HttpPollingConnector extends AConnectorClient {
                     tenant, topic, attempt, MAX_CONSECUTIVE_FAILURES, delayMs, e.getMessage());
             connectionStateManager.updateStatusRetrying(scopedError, delayMs / 1000);
         } else {
-            log.error("{} - Poll failed for topic [{}] {} consecutive times, marking connector FAILED: {}",
-                    tenant, topic, attempt, e.getMessage());
+            // FAILED is a status signal, not a stop: a poller has no reconnect step that would
+            // revive a dead topic, and outages/expired tokens are usually transient. Keep retrying
+            // at the capped delay so the topic recovers on its own.
+            log.error("{} - Poll failed for topic [{}] {} consecutive times, marking connector FAILED " +
+                    "(still retrying in {}ms): {}", tenant, topic, attempt, delayMs, e.getMessage());
             connectionStateManager.updateStatusWithError(scopedError);
-            // FAILED is terminal for this polling lifecycle; do not allow a later
-            // success to overwrite it with CONNECTED.
-            return;
         }
 
         scheduleNextPoll(topic, delayMs);
@@ -825,6 +930,7 @@ public class HttpPollingConnector extends AConnectorClient {
         WebClient.Builder builder = WebClient.builder()
                 .baseUrl(normalizedBaseUrl)
                 .clientConnector(new ReactorClientHttpConnector(HttpClient.create().keepAlive(false)))
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(MAX_RESPONSE_BYTES))
                 .defaultHeader("Accept", "application/json");
 
         if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) && !StringUtils.isEmpty(password)) {
@@ -859,6 +965,16 @@ public class HttpPollingConnector extends AConnectorClient {
      *                    this URI directly instead of {@link #baseUrl} + path + {@code queryParams}
      *                    — the server already handed back the complete next-page URL.
      */
+    /** The URL the poll request for {@code topic} was sent to: the followed Link, or base URL plus topic path. */
+    private URI requestUri(String topic, URI followedLink) {
+        if (followedLink != null) {
+            return followedLink;
+        }
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return org.springframework.web.util.UriComponentsBuilder.fromUriString(base)
+                .path(HttpPollingRequestHelper.topicPath(topic)).build().encode().toUri();
+    }
+
     private Mono<ResponseEntity<String>> executeGet(String topic, Map<String, String> queryParams, URI absoluteUri) {
         WebClient.RequestHeadersSpec<?> request;
         if (absoluteUri != null) {
@@ -866,8 +982,17 @@ public class HttpPollingConnector extends AConnectorClient {
         } else {
             request = pollingClient.get().uri(uriBuilder -> {
                 uriBuilder.path(HttpPollingRequestHelper.topicPath(topic));
-                queryParams.forEach(uriBuilder::queryParam);
-                return uriBuilder.build();
+                // Values go in as URI variables, not literals: literal query values are only
+                // template-encoded, so a "+" (ISO timestamp offset, base64 token) reaches the server
+                // as a space and "{" is parsed as a template variable.
+                Map<String, String> vars = new java.util.HashMap<>();
+                int i = 0;
+                for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+                    String var = "q" + i++;
+                    uriBuilder.queryParam(entry.getKey(), "{" + var + "}");
+                    vars.put(var, entry.getValue());
+                }
+                return uriBuilder.build(vars);
             });
         }
 
@@ -923,7 +1048,7 @@ public class HttpPollingConnector extends AConnectorClient {
     private Mapping resolveMapping(String topic) {
         return mappingSubscriptionManager.getEffectiveMappingsInbound().values().stream()
                 .filter(m -> topic.equals(m.getMappingTopic()))
-                .min(Comparator.comparing(Mapping::getIdentifier))
+                .min(Comparator.comparing(Mapping::getIdentifier, Comparator.nullsLast(Comparator.naturalOrder())))
                 .orElse(null);
     }
 

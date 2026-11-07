@@ -130,7 +130,8 @@ class MappingVersioningIntegrationTest {
 
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
                 resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
-                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
+                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService,
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class));
         mappingService = spy(real);
 
         // ----- shared infrastructure -----

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.mapping;
 
+import dynamic.mapper.core.TenantScoped;
 import dynamic.mapper.util.MappingLogContext;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
@@ -29,7 +30,6 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -56,6 +56,8 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.annotation.Order;
 
 /**
  * Main orchestrating service for mapping operations.
@@ -65,7 +67,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Validated
 @Service
 @RequiredArgsConstructor
-public class MappingService {
+@Order(TenantScoped.ORDER_MAPPINGS)
+public class MappingService implements TenantScoped {
 
     private final InventoryFacade inventoryApi;
     private final MappingRepository mappingRepository;
@@ -79,6 +82,7 @@ public class MappingService {
     private final MappingValidator mappingValidator;
     private final FlowStateStore flowStateStore;
     private final MappingVersionService mappingVersionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Track dirty mappings that need to be persisted
     private final Map<String, Set<Mapping>> dirtyMappings = new ConcurrentHashMap<>();
@@ -95,41 +99,48 @@ public class MappingService {
     // ========== Resource Lifecycle Management ==========
 
     /**
-     * Creates all necessary resources for a tenant
+     * Creates the empty per-tenant state (caches, status, deployment map, dirty set).
+     * Counterpart of {@link #removeTenant(String)}; mappings are loaded by {@link #loadTenantMappings}.
      */
-    public void createResources(String tenant) {
-        cacheManager.createTenantCache(tenant);
-        statusService.initializeTenantStatus(tenant, false);
-        deploymentMapService.initializeTenantDeploymentMap(tenant, false);
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
+    public void initializeTenant(String tenant) {
+        cacheManager.initializeTenant(tenant);
+        statusService.initializeTenant(tenant, false);
+        deploymentMapService.initializeTenant(tenant, false);
         dirtyMappings.put(tenant, ConcurrentHashMap.newKeySet());
 
-        log.info("{} - Resources created", tenant);
+        log.info("{} - Tenant initialized", tenant);
     }
 
     /**
-     * Initializes resources by loading mappings from inventory
+     * Loads the tenant's mappings from inventory and rebuilds the mapping caches.
+     * Requires {@link #initializeTenant(String)} to have run.
      */
-    public void initializeResources(String tenant) {
-        statusService.initializeTenantStatus(tenant, false);
+    public void loadTenantMappings(String tenant) {
         rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
-        log.info("{} - Resources initialized", tenant);
+        log.info("{} - Mappings loaded", tenant);
     }
 
     /**
-     * Removes all resources for a tenant
+     * Drops all per-tenant state. Counterpart of {@link #initializeTenant(String)}.
      */
-    public void removeResources(String tenant) {
-        cacheManager.removeTenantCache(tenant);
-        statusService.removeTenantStatus(tenant);
-        deploymentMapService.removeTenantDeploymentMap(tenant);
-        flowStateStore.clearTenantState(tenant);
-        mappingRepository.clearReportedWarnings(tenant);
-        dirtyMappings.remove(tenant);
-        activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":"));
-        deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":"));
+    public void removeTenant(String tenant) {
+        TenantScoped.removeAll(tenant, this,
+                () -> cacheManager.removeTenant(tenant),
+                () -> statusService.removeTenant(tenant),
+                () -> deploymentMapService.removeTenant(tenant),
+                () -> flowStateStore.removeTenant(tenant),
+                () -> mappingRepository.clearReportedWarnings(tenant),
+                () -> dirtyMappings.remove(tenant),
+                () -> activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":")),
+                () -> deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":")));
 
-        log.info("{} - Resources removed", tenant);
+        log.info("{} - Tenant removed", tenant);
     }
 
     // ========== Mapping CRUD Operations ==========
@@ -286,6 +297,58 @@ public class MappingService {
                 return null;
             }
         });
+    }
+
+    /**
+     * Compiles the code of all Smart Function mappings of the tenant in the GraalVM service, and
+     * registers a supplier so the service re-warms them on every future engine rotation. This keeps
+     * the cold-start latency of the first message bounded.
+     */
+    public void warmupMappingCodes(String tenant) {
+        serviceRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
+        serviceRegistry.getGraalVMContextService()
+                .setMappingCodeSupplier(tenant, () -> buildMappingCodeMap(tenant));
+    }
+
+    /** Smart Function source of each mapping of the tenant, keyed by script name (module syntax stripped). */
+    private Map<String, String> buildMappingCodeMap(String tenant) {
+        Map<String, String> result = new HashMap<>();
+        for (Direction direction : Direction.values()) {
+            if (direction == Direction.UNSPECIFIED) continue;
+            for (Mapping mapping : getMappings(tenant, direction)) {
+                if (mapping.getCode() == null || mapping.getCode().isBlank()) continue;
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(mapping.getCode());
+                    // Strip all ESM export/import declarations so the warm-up context
+                    // can compile the code as a plain script regardless of supportESM.
+                    String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
+                    if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+                        String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
+                        result.put(id + ".js", code);
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,
+                            mapping.getName(), e.getMessage());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Creates the given sample mappings that the tenant does not have yet (matched by identifier) in
+     * the given direction. They are created inactive, so a sample never starts processing by itself.
+     */
+    public void addSampleMappings(String tenant, Direction direction, List<Mapping> samples) {
+        Set<String> existingIdentifiers = getMappings(tenant, direction).stream()
+                .map(Mapping::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        for (Mapping sample : samples) {
+            if (!existingIdentifiers.contains(sample.getIdentifier())) {
+                sample.setActive(false);
+                createMapping(tenant, sample);
+            }
+        }
     }
 
     /**
@@ -1003,10 +1066,11 @@ public class MappingService {
                 }
                 Mapping deactivated = setActivationMapping(tenant, mapping.getId(), false, null);
                 // setActivationMapping only persists and updates the cache; the connectors have
-                // to be told separately, exactly as OperationController does for a manual
-                // (de)activation. Without this the mapping would be flagged inactive but its
-                // topic would stay subscribed, and every further message would keep failing.
-                notifyDeployedConnectorsOfDeactivation(tenant, deactivated != null ? deactivated : mapping);
+                // to be told separately, as for a manual (de)activation. The event makes
+                // MappingOrchestrationService do that; without it the mapping would be flagged
+                // inactive but its topic would stay subscribed, and every message would keep failing.
+                eventPublisher.publishEvent(
+                        new MappingDeactivatedEvent(tenant, deactivated != null ? deactivated : mapping));
                 log.warn("{} - Deactivated mapping {} after {} consecutive failures (maxFailureCount: {})",
                         tenant, mapping.displayLabel(), mappingStatus.getCurrentFailureCount(),
                         mapping.getMaxFailureCount());
@@ -1017,35 +1081,6 @@ public class MappingService {
                 deactivationsInFlight.remove(key);
             }
         });
-    }
-
-    /**
-     * Makes the connectors this mapping is deployed to drop it: inbound connectors release
-     * their topic subscription (reference-counted, so a topic shared with another active
-     * mapping stays subscribed), outbound connectors remove it from their applied set.
-     *
-     * <p>Best-effort per connector — one unreachable connector must not prevent the others
-     * from being updated.
-     */
-    private void notifyDeployedConnectorsOfDeactivation(String tenant, Mapping mapping) {
-        List<String> deployedConnectorIds = getDeploymentMapEntry(tenant, mapping.getIdentifier());
-        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
-            return;
-        }
-        for (String connectorId : deployedConnectorIds) {
-            try {
-                AConnectorClient client = serviceRegistry.getConnectorRegistry()
-                        .getClientForTenant(tenant, connectorId);
-                if (Direction.OUTBOUND.equals(mapping.getDirection())) {
-                    client.updateSubscriptionForOutbound(mapping, false, true);
-                } else {
-                    client.updateSubscriptionForInbound(mapping, false, true);
-                }
-            } catch (Exception e) {
-                log.warn("{} - Could not update subscription on connector {} while deactivating mapping {}: {}",
-                        tenant, connectorId, mapping.displayLabel(), e.getMessage());
-            }
-        }
     }
 
     // ========== Deployment Map Operations ==========
@@ -1071,20 +1106,6 @@ public class MappingService {
      */
     public Map<String, List<String>> getDeploymentMap(String tenant) {
         return deploymentMapService.getDeploymentMap(tenant);
-    }
-
-    /**
-     * Removes a connector from all mappings
-     */
-    public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdentifier) {
-        return deploymentMapService.removeConnectorFromAllMappings(tenant, connectorIdentifier);
-    }
-
-    /**
-     * Removes stale connector identifiers (those no longer configured) from all deployment entries.
-     */
-    public boolean cleanupStaleDeploymentConnectors(String tenant, Set<String> validConnectorIdentifiers) {
-        return deploymentMapService.cleanupStaleConnectors(tenant, validConnectorIdentifiers);
     }
 
     /**

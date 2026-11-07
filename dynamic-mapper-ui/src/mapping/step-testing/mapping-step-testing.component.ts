@@ -43,8 +43,7 @@ import {
   Mapping,
   MappingType,
   StepperConfiguration,
-  isSubstitutionsAsCode,
-  ALERT_INFO_TIMEOUT
+  isSubstitutionsAsCode
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { TestingService } from '../core/testing.service';
@@ -81,6 +80,8 @@ function stableStringify(value: unknown): string {
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping!: Mapping;
+  /** The Connector tab has changes that are not saved yet; an outbound Live Test ignores them. */
+  @Input() connectorsUnsaved = false;
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
   @Output() sourceTemplateChanged = new EventEmitter<any>();
@@ -380,9 +381,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     try {
       const result = await this.performTest(sendPayload, assumeDeviceExists);
       await this.handleTestResult(result, sendPayload, assumeDeviceExists);
-
       if (this.testingModel.results.length > 0) {
         this.displayTestResult(0);
+      }
+      // Results are reported in the console, so a collapsed console is opened when a run wrote to it.
+      // After displayTestResult: it adds the "No response in test mode" line of a Dry Run.
+      if (this.testingModel.logs?.length) {
+        this.showConsole = true;
       }
     } catch (error) {
       this.handleError(gettext('Test execution failed'), error);
@@ -393,11 +398,29 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
 
-  private parseRequestResponse(req: DynamicMapperRequest): DynamicMapperRequest {
+  /**
+   * The editors show JSON objects. A request or response that is something else (the CSV or hex text an
+   * outbound mapping publishes, the error text of a failed call) used to make JSON.parse throw, which
+   * discarded the whole result and its errors; sorting the keys of such text would also have turned it
+   * into one entry per character. It is shown as { "payload": <text> } instead, and the caller adds a note.
+   */
+  private toEditable(value: unknown): { value: any; wrapped: boolean } {
+    if (typeof value !== 'string' || value === '') {
+      return { value, wrapped: false };
+    }
+    const parsed = this.tryParse(value);
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return { value: parsed, wrapped: false };
+    }
+    return { value: { payload: parsed === undefined ? value : parsed }, wrapped: true };
+  }
+
+  private parseRequestResponse(req: DynamicMapperRequest): { request: DynamicMapperRequest; wrapped: boolean } {
+    const request = this.toEditable(req.request);
+    const response = this.toEditable(req.response);
     return {
-      ...req,
-      request: typeof req.request === 'string' ? JSON.parse(req.request) : req.request,
-      response: typeof req.response === 'string' ? JSON.parse(req.response) : req.response
+      request: { ...req, request: request.value, response: response.value },
+      wrapped: request.wrapped || response.wrapped
     };
   }
 
@@ -428,8 +451,14 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
     this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate, undefined, false);
 
+    // Raw-payload types carry their text in a `payload` property. An ANY_PAYLOAD mapping handled by a
+    // Java extension can instead have a plain JSON source template (the shipped IN-17 sample): then
+    // there is no `payload` property, the request went out without one and the backend answered 400.
+    const rawPayload = this.sourceTemplate?.['payload'];
     const extractedPayload = this.requiresRawPayload()
-      ? this.sourceTemplate?.['payload']
+      ? (typeof rawPayload === 'string' || this.testMapping.mappingType !== MappingType.ANY_PAYLOAD
+          ? rawPayload
+          : this.testMapping.sourceTemplate)
       : this.testMapping.sourceTemplate;
 
     // Create test context and call remote testing endpoint
@@ -444,9 +473,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const result = await this.testingService.testMapping(testContext);
 
     // Convert request and response from JSON string to object for all items
-    this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
+    const parsed = result.requests.map(req => this.parseRequestResponse(req));
+    this.testingModel.results = parsed.map(p => p.request);
     this.generatedKey = result.key;
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
+    if (parsed.some(p => p.wrapped)) {
+      staticLogs.push('INFO ' + this.t(gettext('A request or response is not a JSON object, so it is shown as text under "payload".')));
+    }
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];
 
@@ -478,6 +511,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
+      if (sendPayload && this.mapping?.direction === Direction.OUTBOUND && this.connectorsUnsaved) {
+        this.testingModel.logs.push('INFO ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.')));
+      }
+      // The errors are listed in the console output; no alert repeats them.
       return;
     }
 
@@ -488,14 +525,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         ? gettext('The mapping produced no request, so nothing was sent.')
         : gettext('The mapping produced no request for this payload.'));
       this.testingModel.logs = [...(this.testingModel.logs ?? []), note];
-      if (sendPayload) {
-        this.alertService.add({ text: this.t(gettext('Live test ran, but the mapping produced no request: nothing was sent.')), type: 'warning', timeout: ALERT_INFO_TIMEOUT });
-      }
       return;
     }
 
     if (sendPayload) {
-      this.alertService.add({ text: this.describeSendResult(result), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      // The console is the record of a run; no alert repeats the result. Warnings are already in the console.
+      this.testingModel.logs = [...(this.testingModel.logs ?? []), 'INFO ' + this.describeSendResult(result)];
     }
   }
 
@@ -505,6 +540,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
    */
   describeSendResult(result: TestResult): string {
+    if (this.mapping?.direction === Direction.OUTBOUND) {
+      return this.describePublishResult(result);
+    }
     const first = result.requests?.[0];
     const rawResponse = first?.response;
     const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
@@ -549,6 +587,29 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       text += ' ' + (result.testDeviceCreated === false
         ? this.t(gettext('Reused test device {{testDevice}} from an earlier Live Test.'), { testDevice })
         : this.t(gettext('Test device {{testDevice}} created; remove it under Monitoring > Test device.'), { testDevice }));
+    }
+    return text;
+  }
+
+  /** An outbound Live Test publishes to the broker; it does not create anything in Cumulocity. */
+  private describePublishResult(result: TestResult): string {
+    const requests = result.requests ?? [];
+    const topic = requests[0]?.publishTopic;
+    let text: string;
+    if (requests.length === 1) {
+      text = topic
+        ? this.t(gettext('Live test successful: published 1 message to topic {{topic}}.'), { topic })
+        : this.t(gettext('Live test successful: published 1 message.'));
+    } else {
+      text = this.t(gettext('Live test successful: published {{count}} messages; see "Show Next Test Result".'),
+        { count: requests.length });
+    }
+    const connectors = (result.publishedConnectors ?? []).join(', ');
+    if (connectors) {
+      text += ' ' + this.t(gettext('Published through connector(s): {{connectors}}.'), { connectors });
+    }
+    if (this.connectorsUnsaved) {
+      text += ' ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.'));
     }
     return text;
   }

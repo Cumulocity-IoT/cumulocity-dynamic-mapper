@@ -24,20 +24,25 @@ of a guess.
   addressed to a device; without a target there is nothing to subscribe to and the session
   would silently capture nothing.
 - **A session buffers a bounded number of messages** (1–500, default 50); once full, the
-  oldest captured message is dropped to make room for the newest.
+  oldest captured message is dropped to make room for the newest. A value outside the range is clamped.
 - **A session expires if the UI stops polling it** — an abandoned browser tab must not leave a
   broker subscription (or a Notification 2.0 subscription) running forever. The idle timeout
-  is tenant-configurable and defaults to 10 minutes.
+  is chosen per session when it starts (the drawer's TTL input, in minutes) and defaults to 10 minutes; there
+  is no tenant-wide setting.
 - **Duplicate deliveries of the same message are suppressed** within a short window — this can
   happen legitimately (an outbound event is delivered once per connector; overlapping inbound
   topic subscriptions can match the same broker message twice) and must not be shown to the
   user as multiple captures.
 - **A captured message can seed a new mapping directly** — its topic, payload, and (for
-  outbound) key are handed to the mapping-creation flow as a starting point, without the user
-  retyping or re-pasting anything.
+  outbound) key, the connector type and any broker metadata are handed to the mapping-creation flow as a starting point, without the user
+  retyping or re-pasting anything. For an outbound message the target API and publish topic are
+  inferred from the captured topic, and the user is offered to set up the device subscription
+  that an outbound mapping needs.
+- **Only mapping administrators and creators can use it.** All four endpoints require
+  `ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`.
 - **Binary/non-UTF-8 payloads are still captured**, just flagged and shown differently, rather
   than dropped or corrupted.
-- **Starting a new session for the same target stops any previous one** — a page refresh that
+- **Starting a new session for the same target stops that user's previous one** — a page refresh that
   skips the normal stop call must not leave a ghost subscription running indefinitely
   alongside the new one.
 
@@ -49,37 +54,37 @@ of a guess.
 
 | Endpoint | Class | Description |
 |---|---|---|
-| `POST /explorer/session` | [`ExplorerController.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L101-L146) | Creates a session; returns `sessionId` (and an optional `subscriptionWarning`, inbound only). |
-| `DELETE /explorer/session/{sessionId}` | [`ExplorerController.stopSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L154-L165) | Stops the session and unregisters its listener(s)/subscription(s). |
-| `GET /explorer/session/{sessionId}/messages` | [`ExplorerController.getMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L175-L185) | Returns the buffered messages (oldest first) and resets the idle timer. |
-| `DELETE /explorer/session/{sessionId}/messages` | [`ExplorerController.clearMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L193-L203) | Empties the buffer without stopping the session. |
+| `POST /explorer/session` | [`ExplorerController.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java) | Creates a session; returns `sessionId` (and an optional `subscriptionWarning`, inbound only). |
+| `DELETE /explorer/session/{sessionId}` | [`ExplorerController.stopSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java) | Stops the session and unregisters its listener(s)/subscription(s). |
+| `GET /explorer/session/{sessionId}/messages` | [`ExplorerController.getMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java) | Returns the buffered messages (oldest first) and resets the idle timer. |
+| `DELETE /explorer/session/{sessionId}/messages` | [`ExplorerController.clearMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java) | Empties the buffer without stopping the session. |
 
 All four return `404` when the session no longer exists (expired or already stopped); the
 frontend's [`MessageExplorerService`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer.service.ts)
 turns a `404` into a `SessionExpiredError` rather than a generic HTTP failure.
 
 `StartSessionRequest` validation happens in the controller, before
-[`ExplorerService.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerService.java#L144-L333)
+[`ExplorerService.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerService.java)
 is called at all:
 
-- INBOUND requires `connectorIdentifier` (`ExplorerController.java:107`).
-- OUTBOUND requires `sourceId` or `deviceType` (`ExplorerController.java:113`) — without
+- INBOUND requires `connectorIdentifier`.
+- OUTBOUND requires `sourceId` or `deviceType`, without
   either, no Notification 2.0 subscription would be created.
 
 ### Session model and lifecycle — [`ExplorerService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerService.java)
 
 Sessions live entirely in memory, keyed `tenant → sessionId → ExplorerSession`. Each session
 owns a bounded `ConcurrentLinkedDeque<ExplorerMessage>` (trimmed to `maxMessages` on every
-append, `buildListener()` lines 579-584).
+append, in `buildListener()`).
 
-**INBOUND** (`startSession`, lines 277-330): looks up the one named connector via
+**INBOUND** (`startSession`): looks up the one named connector via
 `ConnectorRegistry`, registers a listener with `client.addExplorerListener(listener)`, and
 calls `client.subscribeExplorerTopic(topic)` to actually subscribe the topic on the broker —
 a no-op for connectors that don't require explicit subscriptions (e.g. HTTP). A non-null
 return value from `subscribeExplorerTopic` is surfaced to the UI as `subscriptionWarning`
 rather than failing the whole request.
 
-**OUTBOUND** (`startSession`, lines 159-276): `connectorIdentifier` is ignored — the listener
+**OUTBOUND** (`startSession`): `connectorIdentifier` is ignored — the listener
 is registered on *every* connector for the tenant (`client.addOutboundExplorerListener`),
 because an outbound message can be published through any of them. If a device or group is
 given, it's resolved via `DeviceDiscoveryService.findAllRelatedDevicesByMO()` (a group expands
@@ -91,14 +96,14 @@ when no outbound mapping exists yet for that device. A device-type target instea
 every currently-matching device up front (mirroring `UpdateSubscriptionDeviceTypeTask`); a
 device created *after* the session starts is not automatically added.
 
-**Stale-session eviction** (lines 184-202 outbound, 296-313 inbound): before creating a
+**Stale-session eviction**: before creating a
 session, any other session belonging to the same user on the same target (outbound: same
 `sourceId`; inbound: same connector + topic) is torn down first. This is the primary defence
 against ghost listeners from a browser reload that skipped the `DELETE` call.
 
-**Per-message filtering and dedup** — `buildListener()` (lines 502-586):
+**Per-message filtering and dedup** — `buildListener()`:
 
-1. Topic filter via `topicMatches()` (lines 592-606) — lightweight MQTT wildcard matching
+1. Topic filter via `topicMatches()` — lightweight MQTT wildcard matching
    (`+` = one level, `#` = rest of path), independent of what the broker itself already
    filtered.
 2. OUTBOUND source filter: message's `sourceId` must be in the session's resolved
@@ -113,25 +118,24 @@ against ghost listeners from a browser reload that skipped the `DELETE` call.
    subscriptions (e.g. a mapping on `a/b` plus an explorer session on `a/#`) can otherwise
    double-deliver the same broker message.
 5. Payload decoding: UTF-8 first, falling back to Base64 with `binary=true` when the bytes
-   contain non-printable characters (`isPrintableUtf8()`, lines 609-619).
+   contain non-printable characters (`isPrintableUtf8()`).
 
 ### TTL watchdog
 
-`expireIdleSessions()` (`@Scheduled(fixedDelay = 30_000)`, lines 408-429) runs every 30
+`expireIdleSessions()` (`@Scheduled(fixedDelay = 30_000)`) runs every 30
 seconds and removes any session whose `lastPolledAt` is older than its TTL. Default TTL is
-10 minutes (`SESSION_TTL_MS`), overridable per-request (`sessionTTLMinutes`) or per-tenant
-(`ServiceConfiguration.getExplorerSessionTTLMinutes()`, `resolveSessionTtlMs()` lines
-435-439). `getMessages()` refreshes `lastPolledAt` on every poll, so a UI that keeps
+10 minutes (`SESSION_TTL_MS`), overridable per-request (`sessionTTLMinutes`); there is no tenant-wide
+setting. The inbound and outbound dedup caches are pruned by the same watchdog. `getMessages()` refreshes `lastPolledAt` on every poll, so a UI that keeps
 auto-refreshing never expires; only an abandoned session does.
 
-Stopping/expiring a session calls `unregisterListener()` (lines 460-500), which:
+Stopping/expiring a session calls `unregisterListener()`, which:
 
 - OUTBOUND: removes the listener from every connector, closes the dedicated
   Notification 2.0 client (`notificationSubscriber.closeExplorerDeviceClient()`), and
   unsubscribes each device the session subscribed.
 - INBOUND: removes the listener from the one connector, then unsubscribes the broker topic
   **only if no other still-active session on the same connector needs the exact same topic**
-  (`otherSessionStillNeedsTopic()`, lines 451-458) — otherwise stopping one user's session
+  (`otherSessionStillNeedsTopic()`) — otherwise stopping one user's session
   would silently kill another concurrent session watching the same topic.
 
 ### Frontend
@@ -142,25 +146,62 @@ Stopping/expiring a session calls `unregisterListener()` (lines 460-500), which:
 | `MessageExplorerComponent` | [`message-explorer/message-explorer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer.component.ts) | Main list page: start/stop/pause/resume/clear controls, auto-refresh polling, per-row "Create mapping" action. |
 | `MessageExplorerDrawerComponent` | [`message-explorer/message-explorer-drawer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer-drawer.component.ts) | The "Start exploring messages…" configuration drawer: direction toggle, connector picker (filtered to connectors supporting the chosen direction), topic input, device/group asset-selector or device-type filter for OUTBOUND. |
 | `MessageExplorerPayloadRendererComponent` | [`message-explorer/message-explorer-payload.renderer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer-payload.renderer.component.ts) | Renders/expands a captured payload (JSON editor, binary badge). |
-| `ExplorerMappingHandoffService` | [`core/explorer-mapping-handoff.service.ts`](../../dynamic-mapper-ui/src/mapping/core/explorer-mapping-handoff.service.ts) | Single-shot hand-off object carrying topic/payload/key/mappingType/transformationType from a "Create mapping" click across `router.navigate` into the mapping-creation wizard, replacing an older `history.state`-based approach. |
+| `SubscriptionChoiceDrawerComponent` | [`message-explorer/subscription-choice-drawer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/subscription-choice-drawer.component.ts) | Shown before "Create mapping" for an outbound message: skip, subscribe by device type, or subscribe a device group. |
+| `ExplorerMappingHandoffService` | [`core/explorer-mapping-handoff.service.ts`](../../dynamic-mapper-ui/src/mapping/core/explorer-mapping-handoff.service.ts) | Single-shot hand-off object carrying topic/payload/key/metadata/connectorType/mappingType/transformationType from a "Create mapping" click across `router.navigate` into the mapping-creation wizard, replacing an older `history.state`-based approach. |
 
 **Flow:** drawer collects direction + target → `POST /explorer/session` → backend registers
 listener(s)/subscription(s) → UI polls `GET /explorer/session/{id}/messages` (auto-refresh or
 manual) → user clicks "Create mapping" on a row → `ExplorerMappingHandoffService.set()` stores
-the payload/topic/key → navigates to
-[`MappingTypeDrawerComponent`](../../dynamic-mapper-ui/src/mapping/mapping-create/mapping-type-drawer.component.ts#L632-L647),
-which `consume()`s the hand-off to pre-fill the new mapping's source template.
+the payload/topic/key → the user picks the mapping and transformation type in
+[`MappingTypeDrawerComponent`](../../dynamic-mapper-ui/src/mapping/mapping-create/mapping-type-drawer.component.ts),
+the component navigates to the inbound or outbound grid, and the grid
+([`grid/mapping.component.ts`](../../dynamic-mapper-ui/src/mapping/grid/mapping.component.ts)) `consume()`s the hand-off
+once it loads and pre-fills the new mapping (topic, source template, key, and for outbound the target API and publish topic).
+
+### Message metadata
+
+Besides the payload, the explorer captures what the connector knows about the message and hands it to
+the mapping flow, so a mapping (and the AI agent that generates it) is built from the same facts the deployed
+mapping receives at runtime.
+
+| Field on `ExplorerMessage` | Source | Reaches the mapping as |
+|---|---|---|
+| `connectorType` | `ConnectorType` of the connector client (`KAFKA`, `PULSAR`, `MQTT`, ...); null for OUTBOUND, which listens on all connectors | AI input only (`sampleMessageInfo.connectorType`) |
+| `key` | Kafka record key, Pulsar message key | `msg.transportFields["key"]` (Smart Function, Java extension), `_CONTEXT_DATA_.key` (JSONata) |
+| `metadata` | `ConnectorMessage.metadata`, filled per connector (below) | `msg.transportFields[...]` (Smart Function, Java extension) |
+
+Metadata names are prefixed by origin so they never collide with `key`:
+
+| Connector | Fields |
+|---|---|
+| Kafka | `header.<name>` per record header (value read as UTF-8) |
+| Pulsar | `property.<name>` per message property |
+| AMQP 0-9-1 | `routingKey` (the original, the topic has dots replaced by slashes), `exchange`, `contentType`, `correlationId`, `messageId`, `type`, `appId`, `header.<name>` |
+| MQTT 5 | `property.<name>` per user property, `contentType`, `correlationData`, `responseTopic` |
+| Google Pub/Sub | `attribute.<name>` per attribute, `orderingKey` |
+| MQTT 3, AMQP 1.0, HTTP, Webhook | none |
+
+`TransportMetadata` bounds the map (50 entries, 1024 characters per value) because the values come from the broker.
+At runtime `ProcessingContext.buildTransportFields()` merges `key` and the metadata, the key winning on a name clash,
+and both `FlowInboundProcessor` (Smart Functions) and `Message.from` (Java extensions) use it. JSONata mappings only
+receive `key` via `_CONTEXT_DATA_`, so the explorer does not seed metadata into a JSONata sample.
+
+In the UI the handoff stores the metadata in `stepperConfiguration.sampleTransportFields` for Smart Function and
+Java extension mappings, and the connector type, client ID, payload type and size in `sampleMessageInfo`. Both are
+sent to the AI agents (see [ai-agent-generation.md](ai-agent-generation.md)) and are never persisted on the mapping.
 
 ### Known gotchas
 
 - **Kafka requires an isolated consumer group** for explorer subscriptions
   (`KafkaClientV2.subscribeExplorer()`) so exploring a topic never steals messages from — or
   duplicates the offset position of — the consumer group backing live mappings on the same
-  topic. This is currently only documented in code comments on that method.
-- **MQTT Service (Cumulocity's managed broker) has no real per-topic subscription mechanism**;
-  its explorer listener relies on messages already flowing through the shared connection
-  rather than issuing a dedicated broker-level subscribe, which is why `subscribeExplorerTopic`
-  can return a `subscriptionWarning` instead of guaranteeing delivery for connectors like this.
+  topic. The default `AConnectorClient.subscribeExplorer()` delegates to the normal `subscribe()`; only Kafka
+  overrides it.
+- **`subscriptionWarning` means the broker subscribe failed.** `AConnectorClient.subscribeExplorerTopic()` returns
+  the failure text (connector not connected, invalid topic) instead of failing the request, so the session still
+  starts but captures nothing. Connectors without topic subscriptions (HTTP, Webhook) return no warning. If a
+  mapping already subscribes the exact topic, the explorer skips its own subscribe, and on stop it does not
+  unsubscribe a topic a mapping still uses.
 - **Session cleanup on browser close is best-effort**, not authoritative: it relies on the
   stale-session eviction on next start plus the idle TTL watchdog, not a reliable
   page-unload/disconnect signal. A tab closed uncleanly can leave a broker or Notification 2.0

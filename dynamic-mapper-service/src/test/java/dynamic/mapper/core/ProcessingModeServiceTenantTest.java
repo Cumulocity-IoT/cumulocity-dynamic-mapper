@@ -107,7 +107,7 @@ class ProcessingModeServiceTenantTest {
         RestConnector firstB = connectorFor(TENANT_B);
 
         // Happens when tenant A unsubscribes — its credentials must not stay resident.
-        service.clearConnectorCache(TENANT_A);
+        service.removeTenant(TENANT_A);
 
         runningAs(TENANT_A);
         assertNotSame(firstA, connectorFor(TENANT_A),

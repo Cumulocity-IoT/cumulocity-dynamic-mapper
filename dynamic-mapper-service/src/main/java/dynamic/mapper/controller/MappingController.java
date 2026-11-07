@@ -45,14 +45,12 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.version.MappingVersion;
 import dynamic.mapper.model.version.MappingVersionCount;
 import dynamic.mapper.model.validation.ValidationErrorResponse;
+import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.mapping.MappingValidationException;
 import jakarta.validation.Valid;
@@ -75,7 +73,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Mapping Controller", description = "API for managing dynamic mappings between external systems and Cumulocity IoT")
 public class MappingController {
 
-    private final ConnectorRegistry connectorRegistry;
+    private final MappingOrchestrationService mappingOrchestrationService;
     private final MappingService mappingService;
     private final ContextService<UserCredentials> contextService;
 
@@ -165,6 +163,7 @@ public class MappingController {
         ),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(value = "/version-counts", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MappingVersionCount>> getVersionCounts(
             @RequestParam(required = false) Direction direction) {
@@ -283,7 +282,7 @@ public class MappingController {
             Mapping createdMapping = mappingService.createMapping(tenant, mapping);
             
             // Handle post-creation operations
-            handleMappingCreation(tenant, createdMapping);
+            mappingOrchestrationService.onMappingCreated(tenant, createdMapping);
             
             MappingLogContext.run(createdMapping.getIdentifier(), () -> log.info(
                 "{} - Successfully created mapping: {} [{}]",
@@ -381,7 +380,7 @@ public class MappingController {
             Mapping updatedMapping = mappingService.updateMapping(tenant, mapping, false, false);
             
             // Handle post-update operations
-            handleMappingUpdate(tenant, updatedMapping);
+            mappingOrchestrationService.onMappingUpdated(tenant, updatedMapping);
             
             MappingLogContext.run(updatedMapping.getIdentifier(), () -> log.info(
                 "{} - Successfully updated mapping: {} [{}]",
@@ -752,7 +751,7 @@ public class MappingController {
             }
             
             // Handle post-deletion operations (cleanup subscriptions)
-            handleMappingDeletion(tenant, deletedMapping);
+            mappingOrchestrationService.onMappingDeleted(tenant, deletedMapping);
             
             MappingLogContext.run(deletedMapping.getIdentifier(), () -> log.info(
                 "{} - Successfully deleted mapping: {} [{}]",
@@ -786,155 +785,5 @@ public class MappingController {
      */
     private String getTenant() {
         return contextService.getContext().getTenant();
-    }
-
-    /**
-     * Handles post-creation operations for a mapping
-     * @throws ConnectorRegistryException 
-     */
-    private void handleMappingCreation(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        if (Direction.OUTBOUND.equals(mapping.getDirection())) {
-            handleOutboundMappingCreation(tenant, mapping);
-        } else {
-            handleInboundMappingCreation(tenant, mapping);
-        }
-    }
-
-    /**
-     * Handles outbound mapping creation
-     */
-    private void handleOutboundMappingCreation(String tenant, Mapping mapping) {
-        try {
-            // Rebuild outbound cache using the new service
-            mappingService.rebuildMappingCaches(tenant, dynamic.mapper.configuration.ConnectorId.INTERNAL);
-            log.debug("{} - Rebuilt outbound cache after creating mapping: {}", tenant, mapping.getId());
-            
-        } catch (Exception e) {
-            log.error("{} - Failed to rebuild outbound cache for mapping: {}", 
-                tenant, mapping.getId(), e);
-            // Don't throw - mapping is created, cache rebuild can be retried
-        }
-    }
-
-    /**
-     * Handles inbound mapping creation
-     * @throws ConnectorRegistryException
-     */
-    private void handleInboundMappingCreation(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        // A brand-new mapping has no deployment yet, so notifying all connectors is wasteful.
-        // Notify only connectors it is already deployed to (covers import/restore scenarios).
-        notifyDeployedConnectorsInbound(tenant, mapping, true);
-
-        // Add to inbound cache (automatically updates resolver)
-        try {
-            mappingService.addMappingInboundToCache(tenant, mapping.getId(), mapping);
-            log.debug("{} - Added inbound mapping to cache: {}", tenant, mapping.getId());
-        } catch (Exception e) {
-            log.error("{} - Failed to add mapping to cache: {}", tenant, mapping.getId(), e);
-        }
-    }
-
-    /**
-     * Handles post-update operations for a mapping
-     * @throws ConnectorRegistryException 
-     */
-    private void handleMappingUpdate(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        if (Direction.OUTBOUND.equals(mapping.getDirection())) {
-            handleOutboundMappingUpdate(tenant, mapping);
-        } else {
-            handleInboundMappingUpdate(tenant, mapping);
-        }
-    }
-
-    /**
-     * Handles outbound mapping update
-     */
-    private void handleOutboundMappingUpdate(String tenant, Mapping mapping) {
-        try {
-            // Rebuild outbound cache
-            mappingService.rebuildMappingCaches(tenant, dynamic.mapper.configuration.ConnectorId.INTERNAL);
-            log.debug("{} - Rebuilt outbound cache after updating mapping: {}", tenant, mapping.getId());
-            
-        } catch (Exception e) {
-            log.error("{} - Failed to rebuild outbound cache for mapping: {}", 
-                tenant, mapping.getId(), e);
-        }
-    }
-
-    /**
-     * Handles inbound mapping update
-     * @throws ConnectorRegistryException
-     */
-    private void handleInboundMappingUpdate(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        // Only notify connectors where the mapping is deployed; others are unaffected.
-        notifyDeployedConnectorsInbound(tenant, mapping, false);
-
-        // Remove old entry then add updated one so stale topics are cleaned from the resolver tree
-        try {
-            mappingService.removeFromMappingFromCaches(tenant, mapping);
-            mappingService.addMappingInboundToCache(tenant, mapping.getId(), mapping);
-            log.debug("{} - Updated inbound mapping in cache: {}", tenant, mapping.getId());
-        } catch (Exception e) {
-            log.error("{} - Failed to update mapping in cache: {}", tenant, mapping.getId(), e);
-        }
-    }
-
-    /**
-     * Notifies only the connectors where this mapping is deployed about a subscription change.
-     * Avoids iterating all connectors for operations that affect only a subset.
-     */
-    private void notifyDeployedConnectorsInbound(String tenant, Mapping mapping, boolean create)
-            throws ConnectorRegistryException {
-        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
-        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
-            log.debug("{} - Mapping {} has no deployed connectors, skipping subscription update",
-                    tenant, mapping.getId());
-            return;
-        }
-        for (String connectorId : deployedConnectorIds) {
-            try {
-                AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorId);
-                client.updateSubscriptionForInbound(mapping, create, false);
-                log.debug("{} - Updated subscription on connector {} after {} mapping: {}",
-                        tenant, connectorId, create ? "creating" : "updating", mapping.getId());
-            } catch (ConnectorRegistryException e) {
-                log.warn("{} - Connector {} not found while updating mapping {}: {}",
-                        tenant, connectorId, mapping.getId(), e.getMessage());
-            } catch (Exception e) {
-                log.error("{} - Failed to update subscription on connector {} for mapping {}: {}",
-                        tenant, connectorId, mapping.getId(), e);
-            }
-        }
-    }
-
-    /**
-     * Handles post-deletion operations for a mapping
-     * @throws ConnectorRegistryException 
-     */
-    private void handleMappingDeletion(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        // Only handle inbound mappings - outbound don't have subscriptions
-        if (!Direction.OUTBOUND.equals(mapping.getDirection())) {
-            deleteInboundSubscriptions(tenant, mapping);
-        }
-    }
-
-    /**
-     * Deletes subscriptions for an inbound mapping from all connectors
-     * @throws ConnectorRegistryException 
-     */
-    private void deleteInboundSubscriptions(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
-        
-        clients.values().forEach(client -> {
-            try {
-                client.deleteActiveSubscription(mapping);
-                log.debug("{} - Deleted subscription for connector after deleting mapping: {}", 
-                    tenant, mapping.getId());
-            } catch (Exception e) {
-                log.error("{} - Failed to delete subscription for connector for mapping: {}", 
-                    tenant, mapping.getId(), e);
-                // Continue with other connectors
-            }
-        });
     }
 }

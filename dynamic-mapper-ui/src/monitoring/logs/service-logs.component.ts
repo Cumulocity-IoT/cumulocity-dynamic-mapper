@@ -158,6 +158,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
 
   applyDateFrom(): void {
     if (this.dateFromInput) {
+      this.pauseAutoRefresh();
       // The picker value is interpreted as UTC, like in the Administration application.
       this.fetch({ dateFrom: new Date(`${this.dateFromInput}Z`).toISOString() });
     }
@@ -212,7 +213,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   /** The source switch: an explicit choice, so it is not undone when the mapping filter is cleared. */
-  async onSourceChange(collected: boolean): Promise<void> {
+  async onSourceChange(collected: boolean, checkbox?: { checked: boolean }): Promise<void> {
     this.sourceBeforeMapping = undefined;
     const target = collected ? this.collectedLogs : this.nativeLogs;
     if (this.source === target) return;
@@ -226,8 +227,17 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     ++this.requestSeq;
     this.inFlight = false;
     this.isLoading = true;
+    // activate() sets source/error before reporting a collected log as unavailable: keep them to restore.
+    const previous = { source: this.source, error: this.error, errorHint: this.errorHint };
     try {
-      await this.activate(target);
+      if (!(await this.activate(target))) {
+        this.source = previous.source;
+        this.error = previous.error;
+        this.errorHint = previous.errorHint;
+        // Not available: stay on the current source, and make the switch say so (Angular would not redraw an unchanged binding).
+        if (checkbox) checkbox.checked = this.isCollected;
+        this.alertService.warning(collected ? 'The collected log is not available.' : 'The platform log is not available to your tenant.');
+      }
     } finally {
       this.isLoading = false;
     }
@@ -312,6 +322,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   loadFirst(): Promise<void> {
+    this.pauseAutoRefresh();
     return this.fetch({ dateFrom: EPOCH });
   }
 
@@ -320,6 +331,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   loadPrevious(): Promise<void> {
+    this.pauseAutoRefresh();
     return this.fetch({ dateTo: this.window?.before ?? this.window?.dateFrom });
   }
 
@@ -432,6 +444,12 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     this.nothingCollected = window.empty;
     this.logsText = window.logs;
     this.dateFromInput = window.dateFrom ? new Date(window.dateFrom).toISOString().slice(0, 19) : '';
+  }
+
+  /** Auto refresh always reloads the newest lines: it must not run while the user looks at another window. */
+  private pauseAutoRefresh(): void {
+    this.stopTimer();
+    this.autoRefresh = false;
   }
 
   private stopTimer(): void {

@@ -238,8 +238,10 @@ describe('MappingUnifiedEditorComponent', () => {
       'saveDraft',
       'createMapping',
       'refreshMappings',
+      'reloadMappings',
       'updateDefinedDeploymentMapEntry'
     ]);
+    mockMappingService.reloadMappings.and.resolveTo();
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
     mockGlobalContextService = jasmine.createSpyObj('GlobalContextService', ['register', 'unregister']);
     mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']);
@@ -318,7 +320,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('opens on the Transformation tab for a regular mapping', async () => {
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_DEFINE_TRANSFORMATION);
+      expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
     });
 
     it('opens on the General-settings tab for an EXTENSION_JAVA mapping', async () => {
@@ -326,7 +328,7 @@ describe('MappingUnifiedEditorComponent', () => {
         transformationType: TransformationType.EXTENSION_JAVA
       });
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_GENERAL_SETTINGS);
+      expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
     it('opens on the General-settings tab for a PROTOBUF_INTERNAL mapping', async () => {
@@ -334,7 +336,7 @@ describe('MappingUnifiedEditorComponent', () => {
         mappingType: MappingType.PROTOBUF_INTERNAL
       });
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_GENERAL_SETTINGS);
+      expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
     // The real bootstrap logic (view model, systems, schemas, read-only gating, code-editor help
@@ -353,9 +355,9 @@ describe('MappingUnifiedEditorComponent', () => {
           onSelectExtensionEvent: jasmine.any(Function),
           getSourceTemplate: jasmine.any(Function),
           setSourceTemplate: jasmine.any(Function)
-        })
-        // No 5th argument — unlike the stepper, the unified editor uses the default
-        // (disableExtensionSelectorsWhenHidden = false).
+        }),
+        // Unlike the stepper (true), the unified editor does not disable the extension controls.
+        false
       );
     });
 
@@ -475,7 +477,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('revalidates substitutions against the newly active tab index', async () => {
       await component.onTabSelected(TAB_DEFINE_TRANSFORMATION);
-      expect(component.activeTabIndex).toBe(TAB_DEFINE_TRANSFORMATION);
+      expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
       expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
       expect(mockStepperService.refreshSubstitutionValidity).toHaveBeenCalled();
     });
@@ -612,12 +614,12 @@ describe('MappingUnifiedEditorComponent', () => {
       ];
 
       for (const [blocker, tab] of cases) {
-        component.activeTabIndex = TAB_TEST_MAPPING;
+        component.currentStepIndex = TAB_TEST_MAPPING;
         commitResolvesTo({ status: 'blocked', blocker });
 
         await component.onCommitButton();
 
-        expect(component.activeTabIndex).withContext(blocker).toBe(tab);
+        expect(component.currentStepIndex).withContext(blocker).toBe(tab);
       }
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });

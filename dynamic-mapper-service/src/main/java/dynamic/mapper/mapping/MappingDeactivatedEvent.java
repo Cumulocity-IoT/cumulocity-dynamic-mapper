@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,19 +19,17 @@
  *
  */
 
-package dynamic.mapper.core;
+package dynamic.mapper.mapping;
 
-import java.util.concurrent.Semaphore;
+import dynamic.mapper.model.Mapping;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class SemaphoreConfiguration {
-
-    @Bean
-    public Semaphore c8ySemaphore(@Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
-        return new Semaphore(maxConnections, false);
-    }
+/**
+ * Published when a mapping was deactivated by the service itself, after it failed
+ * {@code maxFailureCount} times in a row. The mapping is already saved as inactive; listeners make the
+ * connectors drop it.
+ *
+ * @param tenant  the tenant of the mapping
+ * @param mapping the deactivated mapping
+ */
+public record MappingDeactivatedEvent(String tenant, Mapping mapping) {
 }

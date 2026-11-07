@@ -28,6 +28,7 @@ describe('ServiceLogsComponent mapping selection', () => {
   function make(queryParams: Record<string, string> = {}, opts: { nativeUsable?: boolean; collectedEmpty?: boolean } = {}) {
     const loads: any[] = [];
     const infos: string[] = [];
+    const warnings: string[] = [];
     const collected = {
       kind: 'collected',
       init: async () => undefined,
@@ -55,11 +56,11 @@ describe('ServiceLogsComponent mapping selection', () => {
         { identifier: 'bad id', name: 'Broken', direction: Direction.INBOUND }
       ]
     };
-    const component = new ServiceLogsComponent(native as any, collected as any, mappingService as any, { info: (m: string) => infos.push(m), danger: () => undefined } as any, {
+    const component = new ServiceLogsComponent(native as any, collected as any, mappingService as any, { info: (m: string) => infos.push(m), danger: () => undefined, warning: (m: string) => warnings.push(m) } as any, {
       snapshot: { queryParamMap: convertToParamMap(queryParams) }
     } as any);
     component.source = collected as any;
-    return { component, loads, infos };
+    return { component, loads, infos, warnings };
   }
 
   async function withMappings() {
@@ -312,6 +313,18 @@ describe('ServiceLogsComponent mapping selection', () => {
       expect(loads).toEqual([jasmine.objectContaining({ source: 'native', mapping: undefined })]);
     });
 
+    it('stays on the current source, resets the switch and says so when the platform log is not available', async () => {
+      const { component, warnings } = make({}); // native is not usable here
+      await component.ngOnInit();
+      const checkbox = { checked: false };
+
+      await component.onSourceChange(false, checkbox);
+
+      expect(component.source.kind).toBe('collected');
+      expect(checkbox.checked).toBe(true);
+      expect(warnings.length).toBe(1);
+    });
+
     it('an explicit choice of the source is not undone when the mapping is cleared', async () => {
       const { component } = make({}, both);
       await component.ngOnInit();
@@ -326,3 +339,43 @@ describe('ServiceLogsComponent mapping selection', () => {
     });
   });
 });
+
+describe('ServiceLogsComponent auto refresh', () => {
+  function makeComponent() {
+    const source = {
+      kind: 'collected',
+      init: async () => undefined,
+      load: async () => ({ dateFrom: null, dateTo: null, logs: 'x', more: false, instance: '', instances: [], empty: false, omitted: 0 })
+    };
+    const component = new ServiceLogsComponent(source as any, source as any, { getMappings: async () => [] } as any, {} as any, {
+      snapshot: { queryParamMap: convertToParamMap({}) }
+    } as any);
+    component.source = source as any;
+    return component;
+  }
+
+  for (const action of ['loadPrevious', 'loadFirst'] as const) {
+    it(`${action} stops auto refresh, which would jump back to the newest lines`, () => {
+      const component = makeComponent();
+      component.toggleAutoRefresh();
+      expect(component.autoRefresh).toBe(true);
+
+      component[action]();
+
+      expect(component.autoRefresh).toBe(false);
+      component.ngOnDestroy();
+    });
+  }
+
+  it('applying a date stops auto refresh', () => {
+    const component = makeComponent();
+    component.toggleAutoRefresh();
+    component.dateFromInput = '2026-10-31T10:00:00';
+
+    component.applyDateFrom();
+
+    expect(component.autoRefresh).toBe(false);
+    component.ngOnDestroy();
+  });
+});
+

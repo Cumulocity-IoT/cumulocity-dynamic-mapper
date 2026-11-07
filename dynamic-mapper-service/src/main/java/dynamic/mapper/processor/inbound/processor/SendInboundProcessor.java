@@ -17,7 +17,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -37,7 +37,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final C8YAgent c8yAgent;
 
-    private final ServiceRegistry serviceRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
 
     private final IdentityResolutionService identityResolutionService;
 
@@ -45,11 +45,11 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    public SendInboundProcessor(C8YAgent c8yAgent, ServiceRegistry serviceRegistry,
+    public SendInboundProcessor(C8YAgent c8yAgent, DeviceToClientRegistry deviceToClientRegistry,
             IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
             MappingService mappingService) {
         this.c8yAgent = c8yAgent;
-        this.serviceRegistry = serviceRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.identityResolutionService = identityResolutionService;
         this.objectMapper = objectMapper;
         this.mappingService = mappingService;
@@ -80,6 +80,14 @@ public class SendInboundProcessor extends BaseProcessor {
             storeSparkPlugBBirthMessage(context);
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
+
+            // Commit extension state only for a fully delivered message; on failure the message is
+            // redelivered and must not look like a duplicate. A timeout can interrupt a send (createMEAO
+            // swallows the interrupt without recording an error), so cancellation counts as a failure too.
+            if (!context.hasError() && (wrapper == null || !wrapper.getCancellationRequested().get())
+                    && !Thread.currentThread().isInterrupted()) {
+                context.runDeferredStateCommit();
+            }
 
             // At least one request failed above (recorded via context.addError, not thrown) —
             // bookkeeping mirrors the catch block below, just for isolated per-request failures.
@@ -291,8 +299,9 @@ public class SendInboundProcessor extends BaseProcessor {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
                     // Cache the mapping of device to client ID
-                    if (context.getClientId() != null) {
-                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                    if (!context.isTesting() && context.getClientId() != null
+                            && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
+                        deviceToClientRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }
@@ -345,8 +354,9 @@ public class SendInboundProcessor extends BaseProcessor {
                     }
 
                     // Cache the mapping of device to client ID
-                    if (!context.isTesting() && context.getClientId() != null) {
-                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                    if (!context.isTesting() && context.getClientId() != null
+                            && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
+                        deviceToClientRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 } else {

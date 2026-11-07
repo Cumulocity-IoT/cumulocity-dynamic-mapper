@@ -20,21 +20,17 @@
 
 
 import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
-  Input,
-  OnInit,
-  OnDestroy,
-  ViewChild,
-  Output,
   EventEmitter,
-  ChangeDetectionStrategy,
+  Input,
+  OnDestroy,
+  Output,
+  ViewChild,
   ViewEncapsulation,
-  AfterViewInit,
-  ChangeDetectorRef,
-  SimpleChanges
+  AfterViewInit
 } from '@angular/core';
-import { Subject } from 'rxjs';
 import {
   JsonEditor,
   createJSONEditor,
@@ -44,16 +40,13 @@ import {
   JSONEditorSelection,
   isKeySelection,
   isJSONContent,
-  JSONContent,
   isMultiSelection,
   createMultiSelection,
-  TextContent,
   isValueSelection,
-  ContextMenuItem,
-  OnChangeStatus // Add this import
+  ContextMenuItem
 } from 'vanilla-jsoneditor';
 
-import type { JSONPath } from 'immutable-json-patch'
+import type { JSONPath } from 'immutable-json-patch';
 import { parseJSONPathCustom, stringifyJSONPathCustom } from './util';
 
 export interface ContentChanges {
@@ -61,38 +54,69 @@ export interface ContentChanges {
   updatedContent: Content,
 }
 
+/** Characters that mark a string as an expression (JSONata etc.) rather than a plain JSON path. */
+const EXPRESSION_CHARS = /[$()&\s+\-/*=]/;
+
+/** Returns `items` without the buttons labelled `text`, dropping groups that become empty. */
+export function withoutButton(items: ContextMenuItem[], text: string): ContextMenuItem[] {
+  return items.flatMap((item) => {
+    if (item.type === 'button') {
+      return item.text === text ? [] : [item];
+    }
+    const group = item as ContextMenuItem & { items?: ContextMenuItem[] };
+    if (!Array.isArray(group.items)) {
+      return [item];
+    }
+    const children = withoutButton(group.items, text);
+    return children.length > 0 ? [{ ...group, items: children } as ContextMenuItem] : [];
+  });
+}
+
+/**
+ * Wrapper around vanilla-jsoneditor.
+ *
+ * Inputs: `data` (replaces the content; empty values are ignored), `options` (editor props plus
+ * `removeModes`), `schema` (JSON schema for validation), `class`.
+ * Outputs: `contentChanged` (user edits only; programmatic `data`/`set()` never emit, because the
+ * library does not call `onChange` for them) and `pathChanged`.
+ */
 @Component({
   selector: 'd11r-mapping-json-editor',
-  template: '<div [class]="class" [id]="id" #jsonEditorContainer></div>',
+  template: '<div [class]="class" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./json-editor.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: true,
-  imports: []
+  standalone: true
 })
-export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
-  @Input() options;
+export class JsonEditorComponent implements OnDestroy, AfterViewInit {
+  /** Editor props, plus `removeModes`: mode buttons (e.g. 'text', 'table') to hide from the menu. */
+  @Input()
+  set options(value: any) {
+    const changed = JSON.stringify(value) !== JSON.stringify(this._options);
+    this._options = value;
+    if (changed) {
+      this.editor?.updateProps(this.libraryProps());
+    }
+  }
+  get options(): any {
+    return this._options;
+  }
+
   @Input()
   set data(value: unknown) {
-    if (value && Object.keys(value).length != 0 && this.initRan) {
-      this.content = { json: value }
-      if (this.editor) {
-        this.isReverting = true;
-        this.editor.set(this.content);
-      }
-      this.cdr.detectChanges();
+    if (value && Object.keys(value).length !== 0) {
+      this.set(value);
     }
   }
+
   @Input()
   set schema(value: any) {
-    if (!value) return;
-    if (this.editor) {
+    if (value) {
       this.setSchema(value);
-    } else {
-      this._pendingSchema = value;
     }
   }
+
   @Input()
   class: string;
 
@@ -102,93 +126,48 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
 
   @ViewChild('jsonEditorContainer', { static: true })
-  jsonEditorContainer: ElementRef;
+  jsonEditorContainer: ElementRef<HTMLElement>;
 
-  initRan: boolean = true;
-  private _pendingSchema: any;
-  private isReverting: boolean = false; // Flag to prevent emission during revert
-  private readonly destroy$ = new Subject<void>();
-
-  constructor(
-    private cdr: ChangeDetectorRef
-  ) {
-
-  }
-
-  private editor: JsonEditor;
-  id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
-  content: Content = {
-    text: undefined,
-    json: {}
-  };
-
-  ngOnInit() {
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes) {
-      if (JSON.stringify(changes['options']?.currentValue) !== JSON.stringify(changes['options']?.previousValue)) {
-        this.updateProps();
-      }
-    }
-  }
-
-  private updateProps() {
-    this.editor?.updateProps(this.options);
-    this.cdr.detectChanges();
-  }
+  private _options: any;
+  private editor: JsonEditor | undefined;
+  /** Content/schema received before the editor exists; applied on creation. */
+  private content: Content = { json: {} };
+  private pendingSchema: any;
 
   ngAfterViewInit() {
-    this.initializeEditor();
-    this.initRan = true;
-  }
-
-  initializeEditor() {
-    if (!this.jsonEditorContainer.nativeElement) {
-      console.error("Can't find the ElementRef reference for jsoneditor)");
-    }
-    delete (this.content as any).text;
     this.editor = createJSONEditor({
       target: this.jsonEditorContainer.nativeElement,
       props: {
-        ...this.options,
+        ...this.libraryProps(),
         content: this.content,
-        onChange: (
-          updatedContent,
-          previousContent,
-          { contentErrors, patchResult }
-        ) => {
-          // Skip emission if we're reverting
-          if (this.isReverting) {
-            this.isReverting = false;
-            return;
-          }
-
+        onChange: (updatedContent, previousContent) => {
           this.content = updatedContent;
           this.contentChanged.emit({ previousContent, updatedContent });
         },
-        onSelect: this.onSelect.bind(this),
-        onRenderMenu: this.onRenderMenu.bind(this),
-        onRenderContextMenu: this.onRenderContextMenu.bind(this),
-        onClassName: this.onClassName.bind(this)
+        onSelect: (selection) => this.onSelect(selection),
+        onRenderMenu: (items) => this.onRenderMenu(items),
+        onRenderContextMenu: (items) => withoutButton(items, 'Transform'),
+        onClassName: (path) => this.onClassName(path)
       }
     });
 
-    this.class = `jsoneditor2 ${this.class}`;
-    if (this._pendingSchema) {
-      this.setSchema(this._pendingSchema);
-      this._pendingSchema = null;
+    if (this.pendingSchema) {
+      this.setSchema(this.pendingSchema);
+      this.pendingSchema = null;
     }
   }
 
   ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this._pendingSchema = null;
     this.editor?.destroy();
   }
 
-  onClassName(path: JSONPath, value: any): string | undefined {
+  /** Editor props without the wrapper-only `removeModes`. */
+  private libraryProps() {
+    const { removeModes, ...props } = this._options ?? {};
+    return props;
+  }
+
+  private onClassName(path: JSONPath): string | undefined {
     if (path.length === 0 || typeof path[0] !== 'string' || !path[0].startsWith('_')) {
       return undefined;
     }
@@ -200,83 +179,39 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     return path.length === 1 ? 'jse-metadata-node' : 'jse-metadata-node-content';
   }
 
-  onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
-    items.splice(
-      items.findIndex((i) => i['className'] === 'jse-transform'),
-      1
+  private onRenderMenu(items: MenuItem[]): MenuItem[] {
+    const removeModes: string[] = this._options?.removeModes ?? [];
+    return items.filter(
+      (i) => i['className'] !== 'jse-transform' && !removeModes.includes(i['text'])
     );
-    this.options.removeModes?.forEach(mode => items.splice(
-      items.findIndex((i) => i['text'] === mode),
-      1
-    ))
-    return items;
-  }
-
-  removeItem(items: ContextMenuItem[], textToRemove: string) {
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i];
-      if (item.type === 'button') {
-        if (item.text === textToRemove) {
-          items.splice(i, 1);
-        }
-      } else if (item.type === 'row' || item.type === ('column' as any)) {
-        this.removeItem(item['items'] as any, textToRemove);
-        if (item['items'].length === 0) {
-          items.splice(i, 1);
-        }
-      } else if (item.type === 'dropdown-button') {
-        this.removeItem(item['items'] as any, textToRemove);
-        this.removeItem([item['main']] as any, textToRemove);
-        if (item.items.length === 0) {
-          items.splice(i, 1);
-        }
-      }
-    }
-  }
-
-  private onRenderContextMenu(
-    items: ContextMenuItem[],
-    context: { mode: 'tree' | 'text' | 'table'; modal: boolean }
-  ): ContextMenuItem[] | undefined {
-    this.removeItem(items, 'Transform');
-    return items;
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
-    const c: any = selection;
-    if (!c?.triggeredSelection) {
-      if (isKeySelection(selection) || isValueSelection(selection)) {
-        const st = stringifyJSONPathCustom((selection as any).path);
-        this.pathChanged.emit(st);
-      } else if (isMultiSelection(selection)) {
-        const st = stringifyJSONPathCustom((selection as any).anchorPath);
-        this.pathChanged.emit(st);
-      }
+    const path = isKeySelection(selection) || isValueSelection(selection)
+      ? selection.path
+      : isMultiSelection(selection) ? selection.anchorPath : undefined;
+    if (path) {
+      this.pathChanged.emit(stringifyJSONPathCustom(path));
     }
   }
 
   setSchema(schema: any) {
-    const validator = createAjvValidator({ schema });
-    this.editor?.updateProps({ validator: validator });
+    if (this.editor) {
+      this.editor.updateProps({ validator: createAjvValidator({ schema }) });
+    } else {
+      this.pendingSchema = schema;
+    }
   }
 
   async setSelectionToPath(pathString: string) {
-    const containsSpecialChars = (str: string): boolean => {
-      const regex = /[\$\(\)&\s\+\-\/\*\=]/;
-      return regex.test(str);
+    if (!this.editor || !pathString || EXPRESSION_CHARS.test(pathString)) return;
+    const path = parseJSONPathCustom(pathString);
+    try {
+      await this.editor.select(createMultiSelection(path, path));
+    } catch (error) {
+      console.warn('Set selection to path not possible:', pathString, error);
     }
-    if (pathString && !containsSpecialChars(pathString)) {
-      const path = parseJSONPathCustom(pathString);
-      const selection: any = createMultiSelection(path, path);
-      selection.triggeredSelection = false;
-
-      try {
-        await this.editor.select(selection);
-      } catch (error) {
-        console.warn('Set selection to path not possible:', pathString, error);
-      }
-      this.pathChanged.emit(pathString);
-    }
+    this.pathChanged.emit(pathString);
   }
 
   clearSelection(): void {
@@ -287,45 +222,15 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  get(): JSON {
-    const content: Content = this.editor.get();
-    if (isJSONContent(content)) {
-      const j: any = (this.editor.get() as JSONContent).json;
-      return j;
-    } else {
-      const t: any = (this.editor.get() as TextContent).text;
-      const j: JSON = JSON.parse(t);
-      return j;
-    }
+  /** Current content as JSON, parsing the text if the editor is in text mode. */
+  get(): any {
+    const content = this.editor.get();
+    return isJSONContent(content) ? content.json : JSON.parse(content.text);
   }
 
+  /** Replaces the content. Does not emit `contentChanged`. */
   set(json: any) {
-    const value: JSONContent = {
-      json: json
-    };
-    this.editor.set(value);
-  }
-
-  /**
-   * Revert content without triggering onChange event and preserving expansion state
-   */
-  revertContent(json: any) {
-    this.isReverting = true;
-    const value: JSONContent = {
-      json: json
-    };
-    // Use patch instead of set to maintain the expansion state
-    try {
-      this.editor.update(value);
-    } catch (error) {
-      // If update fails, fall back to set
-      console.warn('Update failed, falling back to set:', error);
-      this.editor.set(value);
-    }
-    this.content = value;
-  }
-
-  updateOptions(opts) {
-    this.editor?.updateProps(opts)
+    this.content = { json };
+    this.editor?.set(this.content);
   }
 }

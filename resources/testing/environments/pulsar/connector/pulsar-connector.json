@@ -9,6 +9,8 @@
       "serviceUrl": "pulsar://localhost:6650",
       "enableTls": false,
       "authenticationMethod": "none",
+      "supportsWildcardInTopicInbound": true,
+      "supportsWildcardInTopicOutbound": false,
       "connectionTimeoutSeconds": 30,
       "operationTimeoutSeconds": 30,
       "keepAliveIntervalSeconds": 30,

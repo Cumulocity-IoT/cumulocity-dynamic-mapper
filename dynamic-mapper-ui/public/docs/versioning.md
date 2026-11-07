@@ -5,8 +5,8 @@ title: Versioning mappings
 ### Overview {#versioning-overview}
 
 Every mapping keeps a history of **versions** using **semantic versioning** (`MAJOR.MINOR.PATCH`, e.g.
-<span class="label label-default">v1.2.0</span>). Editing a mapping no longer changes the running configuration
-directly — instead your changes are saved to a **draft**. You then **publish** the draft to create a new immutable
+<span class="label label-default">v1.2.0</span>). Editing a mapping does not change the running configuration
+directly. Instead, your changes are saved to a **draft**. You then **publish** the draft to create a new immutable
 version, choosing the version label yourself, and **activate** the version you want to run. This lets you change a
 mapping safely, review what changed over time, and roll back to a known-good configuration at any point.
 
@@ -18,24 +18,25 @@ messages.
 
 The full flow when working with a mapping is:
 
-1. **Edit → Save** — your changes are stored in the mapping's single **draft**. The active configuration keeps
+1. **Edit → Save**: your changes are stored in the mapping's single **draft**. The active configuration keeps
    running unchanged, so **saving alone changes nothing at runtime**. A
    <span class="label label-warning">draft</span> badge appears in the Version/Status column of the mapping list
    to mark the mapping as unfinished. Click the badge to open the version drawer for that mapping.
-2. **Publish** the draft — either from the version drawer, or directly from the mapping list via
+2. **Publish** the draft: either from the version drawer, or directly from the mapping list via
    **⋮ → Publish draft**, which only appears while a draft exists. A dialog opens where you choose the version
    label and an optional **change note**. Use the **Patch**, **Minor**, or **Major** bump buttons to auto-suggest
    the next semver label, or type any `MAJOR.MINOR.PATCH` string directly. Once confirmed, the draft becomes a new
    immutable version.
-3. **Activate** a version — its configuration is loaded into the running mapping. Publishing does not by itself
+3. **Activate** a version: its configuration is loaded into the running mapping. Publishing does not by itself
    activate anything: if the mapping is **inactive** when you publish, you are asked whether to activate it right
    away, since it would otherwise process no messages. An already-active mapping picks the new version up
    immediately. To **roll back**, simply activate an older version; newer versions are kept and remain available.
 
 The first time you publish or activate a mapping that has no version history yet, its current active configuration
-is automatically captured as **1.0.0**, so no history is lost. Existing mappings that previously used sequential
-integer version numbers (1, 2, 3…) are automatically migrated to semver format (`1.0.0`, `2.0.0`, etc.) on first
-access.
+is automatically captured as a version, so no history is lost. It keeps its current version label if that is valid
+semver, and uses **1.0.0** otherwise. Existing mappings that previously used sequential integer version numbers
+(1, 2, 3…) are migrated to semver format (`1.0.0`, `2.0.0`, etc.). An imported mapping keeps the version it was
+exported with.
 
 ### Choosing the right version bump {#versioning-semver}
 
@@ -49,22 +50,24 @@ highest version published so far:
 | **Major** | Breaking change: different topic pattern, removed field, restructured template | `1.3.0` → `2.0.0` |
 
 You can also type any valid `MAJOR.MINOR.PATCH` string directly into the version field. Version labels must be
-unique within a mapping line — a label that was previously used cannot be reused after deletion.
+unique within a mapping: publishing is rejected when the label already exists. Publishing also validates the
+draft with the full set of mapping rules, so an incomplete draft can be saved but cannot be published until the
+errors are fixed.
 
 ### The Versions view {#versioning-view}
 
 Open the version history from the mapping list: click the **⋮** (actions) menu of a mapping and select
-**Versions**. A drawer lists every record of that mapping in a single grid — the current draft and all published
-versions — each tagged with its **State**:
+**Versions**. A drawer lists every record of that mapping in a single grid, the current draft and all published
+versions, each tagged with its **State**:
 
-- <span class="label label-primary">active</span> — the version currently running.
-- <span class="label label-default">published</span> — an immutable version you can activate or delete.
-- <span class="label label-warning">draft</span> — unpublished edits waiting to be published.
+- <span class="label label-primary">active</span>: the version currently running.
+- <span class="label label-default">published</span>: an immutable version you can activate or delete.
+- <span class="label label-warning">draft</span>: unpublished edits waiting to be published.
 
 Versions are listed in descending semver order (newest first). Each row offers contextual actions in its **⋮**
-menu: **Publish** (on the draft, opens the version-picker dialog), **Activate** and **Delete** (on inactive
-published versions), and inline note editing (on any published version). The active version cannot be deleted —
-activate another version first.
+menu: **Publish** and **Discard** (on the draft; Discard deletes the draft and keeps the active configuration),
+**Activate** and **Delete** (on inactive published versions), and inline note editing (on any published version). The active version cannot be deleted.
+Activate another version first.
 
 ![Versions drawer](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Drawer.png "The Versions drawer for a mapping.")
 
@@ -81,17 +84,17 @@ the version drawer.
 
 A **change note** is an optional free-text description of what a version contains or why it was created. You set
 it in the publish dialog when creating the version, and you can edit it later for any published version directly
-in the Versions drawer. The note is the only field of a published version that can be changed after publishing —
-the version label, snapshot, and all other fields are immutable.
+in the Versions drawer. The note is the only field of a published version that can be changed after publishing.
+The version label, snapshot, and all other fields are immutable.
 
 ### Configuring how many versions are kept {#versioning-retention}
 
 To bound storage, only the most recent versions of each mapping are retained. The limit is configured per tenant
 under **Configuration → Service configuration → General** in the field **Number of mapping versions to retain**
-(default 10). When a new version is published, versions older than this limit are deleted, ordered by publish date
-— the **active version is never deleted**, even if it falls outside the retention window.
+(default 10). When a new version is published, only the newest versions (highest version number) are kept and older ones are deleted. The
+**active version is never deleted**, even if it falls outside the retention window.
 
-![Mapping version retention setting](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png "The \"Number of mapping versions to retain\" setting under Service configuration → Caching.")
+![Mapping version retention setting](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png "The \"Number of mapping versions to retain\" setting under Service configuration → General.")
 
 ### Relationship in the inventory {#versioning-inventory}
 

@@ -166,4 +166,78 @@ class SendOutboundProcessorTest {
         assertTrue(context.hasError(),
                 "A CUSTOM request failure must also be recorded on the context, not just the request");
     }
+
+    // ---- outbound Live Test: publishing to the real connectors ----
+
+    private void useLiveTestContext() {
+        // An outbound test always uses the mock services (testing=true) and publishes when send=true.
+        context.setTesting(true);
+        context.setTestRun(true);
+    }
+
+    private AConnectorClient realClient(String name, boolean connected, boolean deployed) {
+        AConnectorClient client = mock(AConnectorClient.class);
+        when(client.getConnectorType()).thenReturn(dynamic.mapper.connector.core.client.ConnectorType.MQTT);
+        when(client.getConnectorName()).thenReturn(name);
+        when(client.isConnected()).thenReturn(connected);
+        when(client.isMappingAssignedToConnector(mapping)).thenReturn(deployed);
+        return client;
+    }
+
+    @Test
+    void liveTest_withoutAConnectedConnector_failsInsteadOfPretendingToPublish() throws Exception {
+        useLiveTestContext();
+        AConnectorClient offline = realClient("Broker A", false, true);
+        when(connectorRegistry.getClientsForTenant(TEST_TENANT)).thenReturn(java.util.Map.of("c1", offline));
+
+        processor.process(context, TEST_CONNECTOR);
+
+        assertTrue(context.hasError(), "nothing was published, which a Live Test must not report as success");
+        assertTrue(context.getErrors().get(0).getMessage().contains("Nothing was published"));
+        assertTrue(context.getWarnings().stream().anyMatch(w -> w.contains("Broker A") && w.contains("not connected")),
+                "the reason each connector was skipped must reach the user, not only the log");
+    }
+
+    @Test
+    void liveTest_publishesAnInactiveMappingThatIsDeployed() throws Exception {
+        useLiveTestContext();
+        mapping.setActive(false);
+        AConnectorClient publishing = realClient("Broker B", true, true);
+        when(connectorRegistry.getClientsForTenant(TEST_TENANT)).thenReturn(java.util.Map.of("b", publishing));
+
+        processor.process(context, TEST_CONNECTOR);
+
+        verify(publishing).publishMEAO(context);
+        assertFalse(context.hasError());
+    }
+
+    @Test
+    void liveTest_saysWhyAConnectorWasSkippedWhenAnotherOnePublished() throws Exception {
+        useLiveTestContext();
+        AConnectorClient notDeployed = realClient("Broker A", true, false);
+        AConnectorClient publishing = realClient("Broker B", true, true);
+        when(connectorRegistry.getClientsForTenant(TEST_TENANT))
+                .thenReturn(new java.util.LinkedHashMap<>(java.util.Map.of("a", notDeployed, "b", publishing)));
+
+        processor.process(context, TEST_CONNECTOR);
+
+        verify(publishing).publishMEAO(context);
+        verify(notDeployed, never()).publishMEAO(any());
+        assertFalse(context.hasError());
+        assertTrue(context.getWarnings().stream().anyMatch(w -> w.contains("Broker A") && w.contains("not deployed")));
+    }
+
+    @Test
+    void liveTest_aConnectorThatFailsToPublish_isReportedOnTheContext() throws Exception {
+        useLiveTestContext();
+        AConnectorClient failing = realClient("Broker A", true, true);
+        doThrow(new RuntimeException("socket closed")).when(failing).publishMEAO(context);
+        when(connectorRegistry.getClientsForTenant(TEST_TENANT)).thenReturn(java.util.Map.of("a", failing));
+
+        processor.process(context, TEST_CONNECTOR);
+
+        assertTrue(context.hasError());
+        assertTrue(context.getErrors().stream().anyMatch(e -> e.getMessage().contains("Broker A")
+                && e.getMessage().contains("socket closed")));
+    }
 }
