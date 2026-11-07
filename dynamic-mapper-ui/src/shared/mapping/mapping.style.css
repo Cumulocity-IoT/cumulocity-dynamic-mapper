@@ -241,3 +241,9 @@ d11r-mapping-mapping-grid c8y-data-grid .table-data-grid .cdk-row > .cdk-cell:no
 d11r-mapping-mapping-grid .table.table-data-grid .cdk-column-actions .btn-dot {
   align-self: center;
 }
+
+/* Drops a Formly field's bottom margin, which otherwise leaves a gap before whatever replaces its
+   validation message (e.g. the expand-as-array hint in the transformation step). */
+.d11r-flush-field .form-group {
+  margin-bottom: 0;
+}

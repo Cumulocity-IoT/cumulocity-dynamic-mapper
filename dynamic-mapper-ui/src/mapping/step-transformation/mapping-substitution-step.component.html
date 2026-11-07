@@ -105,26 +105,25 @@
       </div>
       <!-- Expert Mode Fields -->
       <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
-        <!-- One grid with shared rows, so the optional hint row pushes both result boxes down together
-             and the two columns stay aligned. Plain bindings for the results, not Formly fields: a Formly
+        <!-- One grid with shared rows, so a taller source cell (hint shown) pushes both result boxes down
+             together and the two columns stay aligned. Plain bindings for the results, not Formly fields: a Formly
              label expression left the label reading "[empty]" while the result text was current. -->
         <div class="d-grid grid__col--6-6 p-t-4 gap-4">
-          <div>
+          <!-- While the hint shows, it replaces the field's validation-message space: the field's bottom
+               margin is dropped (d11r-flush-field) so the hint sits right under the input, like an error. -->
+          <div [class.d11r-flush-field]="showExpandArrayHint">
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
             </formly-form>
+            @if (showExpandArrayHint) {
+            <small class="text-info d-block m-t-4" data-cy="dm-substitution-expand-array-hint">
+              {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
+            </small>
+            }
           </div>
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
             </formly-form>
           </div>
-          @if (showExpandArrayHint) {
-          <!-- Negative margin: the field above keeps a bottom margin that holds its validation message; the
-               hint takes that space instead of leaving a gap (it is hidden while a message is shown). -->
-          <small class="text-info" style="margin-top: -1.25rem" data-cy="dm-substitution-expand-array-hint">
-            {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
-          </small>
-          <div></div>
-          }
           <div class="form-group m-b-0">
             <label class="text-pre-wrap" for="dm-source-result">{{ 'Source Result' | translate }} [{{ substitutionModel.sourceExpression?.resultType ?? 'empty' }}]</label>
             <textarea id="dm-source-result" class="form-control font-smaller" readonly rows="2" c8y-textarea-autoresize
