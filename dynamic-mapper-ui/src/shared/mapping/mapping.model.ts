@@ -393,6 +393,19 @@ export interface StepperConfiguration {
   /** What is known about the captured message the sample comes from (payload type/size/format,
    *  sender client ID); carried to AI generation, see {@link SampleMessageInfo}. */
   sampleMessageInfo?: SampleMessageInfo;
+  /** Further captured messages of the same payload type as the primary sample (Message Explorer
+   *  multi-select). Stepper state only, never persisted: used solely to give AI generation more
+   *  than one example so it can generalize (optional fields, varying array lengths). */
+  additionalSamples?: AdditionalSample[];
+}
+
+/** One extra sample message handed to AI generation, see {@link StepperConfiguration.additionalSamples}. */
+export interface AdditionalSample {
+  /** Concrete topic the message was received on. */
+  topic: string;
+  /** Sample in the same shape as the mapping's sourceTemplate (JSON text; raw payloads wrapped as {"payload": ...}). */
+  payload: string;
+  transportFields?: Record<string, string>;
 }
 
 export enum TransformationType {

@@ -25,6 +25,8 @@ Your input is a JSON of a mapping where `sourceTemplate` is the JSON input docum
 
 The mapping JSON may also include `sampleTransportFields`: the transport fields actually observed on a real message this mapping was created from (e.g. `{ "key": "863859042393327" }` for a Kafka record key). These are delivered out-of-band as `msg.transportFields`, NOT inside `msg.payload`, which is why they do not appear in `sourceTemplate`. When present, treat them as evidence that the stream really carries those fields, and read them via `msg.transportFields["key"]` — a Kafka record key is frequently the device identifier and is often the best source for the external ID. Never read them from `msg.payload`. Besides `key`, they can hold broker metadata named by origin: `header.<name>` (Kafka and AMQP headers), `property.<name>` (Pulsar properties, MQTT 5 user properties), `attribute.<name>` (Google Pub/Sub) and well-known names such as `routingKey` or `exchange`. Always check that such a field exists before using it, and never copy its sample value into the code as a constant.
 
+The mapping JSON may also include `additionalSamples`: further real messages of the same payload type as `sourceTemplate`, which is sample 1. `sampleTransportFields` and `sampleMessageInfo` describe sample 1 only. When present, write ONE function that handles every sample, not just the first: treat a field that appears in only some samples as optional and guard it, accept arrays of different lengths, and never hard-code a value that differs between samples. Where samples have different shapes (for example a different `topic` or a different set of fields), branch on a field or on `msg.topic` that distinguishes them. If a distinguishing rule is not evident from the samples, pick the most defensive handling instead of asking the user. Mention in your summary which differences between the samples you handled.
+
 # Payload access rules
 - `msg.payload` is the **canonical form** — returns the pre-deserialized JSON payload as a plain JavaScript object.
 - `msg.getPayload()` is a **deprecated alias** kept for backward compatibility. Do NOT generate it in new code.
@@ -134,6 +136,13 @@ export interface Mapping {
    *  "property.<name>". Delivered at runtime as msg.transportFields, not in the
    *  payload — so they are absent from sourceTemplate by design. */
   sampleTransportFields?: Record<string, string>;
+
+  /** Further real messages of the same payload type as sourceTemplate (Message Explorer
+   *  multi-select), at most 4. Each entry has the same shape as sourceTemplate (raw payloads
+   *  are wrapped as { "payload": ... }), its concrete topic, and optional transportFields.
+   *  sourceTemplate is sample 1; sampleTransportFields and sampleMessageInfo describe sample 1
+   *  only. Absent when only one message was captured. */
+  additionalSamples?: { topic: string; payload: any; transportFields?: Record<string, string> }[];
 
   /** Facts about the real message the sample in sourceTemplate was captured from (Message
    *  Explorer). payloadType: JSON | XML | TEXT | BINARY | EMPTY. binaryFormat: recognized

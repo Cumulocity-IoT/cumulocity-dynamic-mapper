@@ -78,7 +78,7 @@ import { CodeTemplate } from '../../shared/configuration/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
-import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
+import { ExplorerMappingHandoffService, ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-mappings.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
@@ -158,7 +158,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; payloadType?: SamplePayloadType; binaryFormat?: string | null; payloadSize?: number; clientId?: string; connectorType?: string; key?: string; metadata?: Record<string, string>; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; payloadType?: SamplePayloadType; binaryFormat?: string | null; payloadSize?: number; clientId?: string; connectorType?: string; key?: string; metadata?: Record<string, string>; additionalMessages?: ExplorerSampleMessage[]; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -253,6 +253,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           connectorType: explorerHandoff.connectorType,
           key: explorerHandoff.key,
           metadata: explorerHandoff.metadata,
+          additionalMessages: explorerHandoff.additionalMessages,
           targetAPI: explorerHandoff.targetAPI,
           publishTopic: explorerHandoff.publishTopic,
           publishTopicSample: explorerHandoff.publishTopicSample
@@ -275,6 +276,23 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.isLoading = false;
     }
 
+  }
+
+  /** Shapes a captured payload like the primary sample (see addMapping): Any Payload gets the
+   *  Base64 wrapper, other non-JSON raw payloads the plain {"payload": ...} wrapper. */
+  private toSourceSample(payload: string, binary: boolean, mappingType: MappingType, isInbound: boolean): string {
+    if (isInbound && mappingType === MappingType.ANY_PAYLOAD) {
+      const base64 = binary ? payload : stringToBase64(payload);
+      return JSON.stringify({ payload: base64 } as PayloadWrapper);
+    }
+    if (binary || [MappingType.ANY_PAYLOAD, MappingType.HEX, MappingType.FLAT_FILE].includes(mappingType)) {
+      try {
+        JSON.parse(payload);
+      } catch {
+        return JSON.stringify({ payload } as PayloadWrapper);
+      }
+    }
+    return payload;
   }
 
   /** Default row order for the grid; see the 'name' column in {@link getColumnsMappings}. */
@@ -726,6 +744,22 @@ export class MappingComponent implements OnInit, OnDestroy {
             // sample is not a JSON object — nothing to attach the key to, leave it untouched
           }
         }
+      }
+      // Extra messages of the same payload type (Message Explorer multi-select): shaped like the
+      // primary sample so AI generation sees consistent examples. Stepper state only.
+      if (this.explorerPreFill.additionalMessages?.length) {
+        this.stepperConfiguration.additionalSamples = this.explorerPreFill.additionalMessages.map(m => {
+          const transportFields: Record<string, string> = {};
+          if (isCodeOrExtensionTransformation(mapping.transformationType)) {
+            Object.assign(transportFields, m.metadata ?? {});
+            if (m.key) transportFields[CONTEXT_DATA_KEY_NAME] = m.key;
+          }
+          return {
+            topic: m.topic,
+            payload: this.toSourceSample(m.payload, !!m.binary, mapping.mappingType, isInbound),
+            transportFields: Object.keys(transportFields).length ? transportFields : undefined
+          };
+        });
       }
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;

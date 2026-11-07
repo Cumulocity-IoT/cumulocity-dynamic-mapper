@@ -87,6 +87,7 @@ export function generationInputsKey(mappingForAI: Record<string, unknown> | null
     mappingType: m['mappingType'],
     sampleTransportFields: m['sampleTransportFields'],
     sampleMessageInfo: m['sampleMessageInfo'],
+    additionalSamples: m['additionalSamples'],
     supportESM: !!m['supportESM']
   });
 }

@@ -400,6 +400,9 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       if (this.stepperConfiguration.sampleMessageInfo) {
         testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
       }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
       drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
         initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
       });

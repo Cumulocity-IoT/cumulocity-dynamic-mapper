@@ -443,6 +443,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.sampleMessageInfo) {
       testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
     }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
 
     const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }

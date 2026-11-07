@@ -46,6 +46,14 @@ export function isRawPayload(msg: Pick<ExplorerMessage, 'binary' | 'payloadType'
   return msg.binary || msg.payloadType === 'XML' || msg.payloadType === 'TEXT';
 }
 
+/** Maximum number of messages that can be selected together to generate a Smart Function. */
+export const MAX_EXPLORER_SAMPLES = 5;
+
+/** Selection key: messages can only be combined when they share it (JSON with JSON, binary with binary, ...). */
+export function samplePayloadKind(msg: Pick<ExplorerMessage, 'binary' | 'payloadType'>): string {
+  return msg.payloadType ?? (msg.binary ? 'BINARY' : 'JSON');
+}
+
 export class SessionExpiredError extends Error {
   constructor(sessionId: string) {
     super(`Explorer session ${sessionId} has expired or does not exist`);

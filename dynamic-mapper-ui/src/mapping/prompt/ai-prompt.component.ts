@@ -447,6 +447,18 @@ export class AiPromptComponent implements OnInit {
     delete m.substitutions;
     m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
     m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    // Further samples of the same payload type (Message Explorer multi-select), so the agent can
+    // generalize instead of fitting a single message. Payloads are parsed like sourceTemplate;
+    // raw text that is not JSON stays a string.
+    if (Array.isArray(m.additionalSamples) && m.additionalSamples.length > 0) {
+      m.additionalSamples = m.additionalSamples.map((sample: any) => {
+        let payload = sample.payload;
+        try { payload = JSON.parse(sample.payload); } catch { /* keep as string */ }
+        return { ...sample, payload };
+      });
+    } else {
+      delete m.additionalSamples;
+    }
     // Tell the AI whether ESM exports are required in the generated code
     m.supportESM = this.serviceConfiguration?.supportESM ?? false;
     return m;

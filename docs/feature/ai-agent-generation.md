@@ -207,6 +207,10 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
 - `save()` resolves the drawer's promise with either `generatedCode` (Smart Function) or
   `substitutions` (JSONata) back to the caller.
 
+### Several sample messages from the Message Explorer
+
+In the Message Explorer, the user can select 2 to 5 messages and run "Create mapping from selected messages". The messages must have the same payload type and direction (JSON with JSON, binary with binary), enforced by `samplePayloadKind()` and `canCombine()` in `message-explorer.component.ts`. The oldest message becomes the primary sample (`sourceTemplate`). The others travel as `additionalMessages` in `ExplorerMappingHandoff`, become `StepperConfiguration.additionalSamples`, and reach the agent as `additionalSamples` in the mapping context. They are used only when the user chooses a Smart Function generated with AI; otherwise only the primary message is used. They are stepper state and are never persisted with the mapping, so the backend `Mapping` model is unchanged. Existing tenants keep their stored agent prompts, so the `additionalSamples` guidance in `smartfunction_prompt.txt` takes effect after the agents are re-created.
+
 ### What is and is not validated
 
 The AI path applies substitutions through a different route than the manual editor: the manual
