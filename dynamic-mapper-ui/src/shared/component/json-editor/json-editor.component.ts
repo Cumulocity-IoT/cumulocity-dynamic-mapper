@@ -57,6 +57,9 @@ export interface ContentChanges {
 /** Characters that mark a string as an expression (JSONata etc.) rather than a plain JSON path. */
 const EXPRESSION_CHARS = /[$()&\s+\-/*=]/;
 
+/** A key no JSON document contains; selecting it removes the highlight. */
+const NO_SELECTION_KEY = '\u0000no-selection';
+
 /** Returns `items` without the buttons labelled `text`, dropping groups that become empty. */
 export function withoutButton(items: ContextMenuItem[], text: string): ContextMenuItem[] {
   return items.flatMap((item) => {
@@ -190,7 +193,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
     const path = isKeySelection(selection) || isValueSelection(selection)
       ? selection.path
       : isMultiSelection(selection) ? selection.anchorPath : undefined;
-    if (path) {
+    if (path && path[0] !== NO_SELECTION_KEY) {
       this.pathChanged.emit(stringifyJSONPathCustom(path));
     }
   }
@@ -203,20 +206,35 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  /**
+   * Selects the node at `pathString`. A path that is empty or a JSONata expression has no node,
+   * so the previous selection is cleared instead of being left highlighted as if it still applied.
+   */
   async setSelectionToPath(pathString: string) {
-    if (!this.editor || !pathString || EXPRESSION_CHARS.test(pathString)) return;
+    if (!this.editor) return;
+    if (!pathString || EXPRESSION_CHARS.test(pathString)) {
+      this.clearSelection();
+      return;
+    }
     const path = parseJSONPathCustom(pathString);
     try {
       await this.editor.select(createMultiSelection(path, path));
     } catch (error) {
       console.warn('Set selection to path not possible:', pathString, error);
+      this.clearSelection();
     }
     this.pathChanged.emit(pathString);
   }
 
+  /**
+   * Removes the node highlight. The library's `select(undefined)` and `select(null)` leave the
+   * old highlight in place, so this selects a path that does not exist, which highlights nothing.
+   * That select fires `onSelect`, which ignores the sentinel key.
+   */
   clearSelection(): void {
     try {
-      this.editor?.select(undefined);
+      const path = [NO_SELECTION_KEY];
+      this.editor?.select(createMultiSelection(path, path));
     } catch (error) {
       console.warn('Clear selection not possible:', error);
     }

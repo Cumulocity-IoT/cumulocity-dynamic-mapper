@@ -107,6 +107,48 @@ describe('JsonEditorComponent', () => {
     expect(paths).toEqual([]);
   });
 
+  describe('selection highlight (real editor)', () => {
+    const highlighted = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.jse-contents .jse-selected'));
+    const settle = () => new Promise(r => setTimeout(r, 100));
+
+    async function selectValue() {
+      create();
+      component.set({ value: 100, other: 1 });
+      await settle();
+      await component.setSelectionToPath('value');
+      await settle();
+    }
+
+    it('highlights the node of a plain path', async () => {
+      await selectValue();
+      expect(highlighted().length).toBeGreaterThan(0);
+    });
+
+    it('removes the previous highlight when the path is an expression', async () => {
+      await selectValue();
+      await component.setSelectionToPath('$now()');
+      await settle();
+      expect(highlighted().length).toBe(0);
+    });
+
+    it('removes the previous highlight when the path is empty', async () => {
+      await selectValue();
+      await component.setSelectionToPath('');
+      await settle();
+      expect(highlighted().length).toBe(0);
+    });
+
+    it('does not report the clearing as a path change', async () => {
+      await selectValue();
+      const paths: string[] = [];
+      component.pathChanged.subscribe(p => paths.push(p));
+      component.clearSelection();
+      await settle();
+      expect(paths).toEqual([]);
+    });
+  });
+
   it('does not pass removeModes to the library', () => {
     create({ readOnly: true, removeModes: ['text'] });
     expect((component as any).libraryProps()).toEqual({ readOnly: true });
