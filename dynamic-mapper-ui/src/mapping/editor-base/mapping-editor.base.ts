@@ -346,6 +346,10 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.mapping.substitutions = substitutions;
   }
 
+  onPropertiesChange(patch: Partial<Mapping>): void {
+    Object.assign(this.mapping, patch);
+  }
+
   onFilterMappingChange(filterMapping: string): void {
     this.mapping.filterMapping = filterMapping;
   }

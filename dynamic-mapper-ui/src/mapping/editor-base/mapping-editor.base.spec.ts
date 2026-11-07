@@ -133,6 +133,17 @@ describe('MappingEditorBase', () => {
       expect(host.mapping.substitutions).toBe(substitutions);
     });
 
+    it('onPropertiesChange applies the patch to the mapping and leaves other fields alone', () => {
+      host.mapping.name = 'before';
+      host.mapping.filterMapping = 'keep';
+
+      host.onPropertiesChange({ name: 'after', targetAPI: 'EVENT' } as any);
+
+      expect(host.mapping.name).toBe('after');
+      expect(host.mapping.targetAPI).toBe('EVENT');
+      expect(host.mapping.filterMapping).toBe('keep');
+    });
+
     it('onFilterMappingChange writes the filter expression into the mapping', () => {
       host.onFilterMappingChange('$exists(foo)');
 

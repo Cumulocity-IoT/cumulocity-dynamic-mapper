@@ -50,6 +50,8 @@ async function createComponent(
   component.mapping = makeMapping();
   component.stepperConfiguration = makeStepperConfiguration();
   component.propertyFormly = new FormGroup({});
+  // Act as the host: apply every patch to the mapping.
+  component.propertiesChange.subscribe(patch => Object.assign(component.mapping, patch));
   if (deployedConnectors) {
     component.deploymentMapEntry = { identifier: 'mapping-1', connectors: deployedConnectors };
   }
@@ -228,12 +230,16 @@ describe('MappingStepPropertiesComponent', () => {
     it('accepts a boolean-valued expression, stores the result, and sets mapping.filterInventory', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);
       const component = await createComponent();
+      const emitted: Partial<Mapping>[] = [];
+      component.propertiesChange.subscribe(patch => emitted.push(patch));
 
       await component.updateFilterInventoryExpressionResult('type = "lora_device_type"');
 
       expect(component.filterInventoryModel.filterExpression.valid).toBeTrue();
       expect(component.filterInventoryModel.filterExpression.resultType).toBe('Boolean');
-      expect(component.mapping.filterInventory).toBe('type = "lora_device_type"');
+      expect(component.model.filterInventory).toBe('type = "lora_device_type"');
+      expect(emitted).toContain(jasmine.objectContaining({ filterInventory: 'type = "lora_device_type"' }));
+      expect(component.mapping.filterInventory).toBe('type = "lora_device_type"'); // applied by the host stand-in
     });
 
     it('rejects a non-boolean-valued expression and surfaces a form control error instead of updating mapping.filterInventory', async () => {
@@ -247,6 +253,7 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.propertyFormly.get('filterInventory')?.errors).toEqual(
         jasmine.objectContaining({ validationError: jasmine.anything() })
       );
+      expect(component.model.filterInventory).toBeUndefined();
       expect(component.mapping.filterInventory).toBeUndefined();
     });
 
@@ -261,14 +268,75 @@ describe('MappingStepPropertiesComponent', () => {
   });
 
   describe('target API change', () => {
-    it('updates mapping.targetAPI and emits targetAPIChanged', async () => {
+    it('emits the new target API as a patch and as targetAPIChanged', async () => {
       const component = await createComponent();
       const emitSpy = spyOn(component.targetAPIChanged, 'emit');
+      const patches: Partial<Mapping>[] = [];
+      component.propertiesChange.subscribe(patch => patches.push(patch));
 
       component.onTargetAPIChanged('EVENT');
 
-      expect(component.mapping.targetAPI).toBe('EVENT');
+      expect(patches).toEqual([{ targetAPI: 'EVENT' } as Partial<Mapping>]);
       expect(emitSpy).toHaveBeenCalledWith('EVENT');
+    });
+  });
+
+  describe('working copy', () => {
+    it('does not modify the host mapping during init, and leaves a mapping without direction as it is', async () => {
+      const mapping = makeMapping();
+      delete (mapping as any).direction;
+      const before = JSON.stringify(mapping);
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const component = fixture.componentInstance;
+      component.mapping = mapping;
+      component.stepperConfiguration = makeStepperConfiguration();
+      component.propertyFormly = new FormGroup({});
+
+      await component.ngOnInit();
+
+      expect(JSON.stringify(mapping)).toBe(before);
+      expect(component.targetSystem).toBe('Cumulocity');
+    });
+
+    it('announces the default external id type once, as a patch', async () => {
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const component = fixture.componentInstance;
+      component.mapping = makeMapping();
+      component.stepperConfiguration = makeStepperConfiguration();
+      component.propertyFormly = new FormGroup({});
+      const patches: Partial<Mapping>[] = [];
+      component.propertiesChange.subscribe(patch => patches.push(patch));
+
+      await component.ngOnInit();
+
+      expect(patches).toEqual([{ externalIdType: 'c8y_Serial' } as Partial<Mapping>]);
+    });
+
+    it('emits only the properties that differ, and nothing when the copy matches the mapping', async () => {
+      const component = await createComponent();
+      const patches: Partial<Mapping>[] = [];
+      component.propertiesChange.subscribe(patch => patches.push(patch));
+      component.mapping.externalIdType = 'c8y_Serial';
+
+      component.commitModel();
+      expect(patches).toEqual([]);
+
+      component.model.name = 'renamed';
+      component.model.qos = Qos.AT_LEAST_ONCE;
+      component.commitModel();
+      expect(patches).toEqual([{ name: 'renamed', qos: Qos.AT_LEAST_ONCE } as Partial<Mapping>]);
+    });
+
+    it('never carries mapping state outside its own properties, so the host can change it meanwhile', async () => {
+      const component = await createComponent();
+      component.mapping.substitutions = [{ pathSource: 'a', pathTarget: 'b' } as any];
+      const patches: Partial<Mapping>[] = [];
+      component.propertiesChange.subscribe(patch => patches.push(patch));
+
+      component.model.name = 'x';
+      component.commitModel();
+
+      expect(Object.keys(patches[0])).toEqual(['name']);
     });
   });
 

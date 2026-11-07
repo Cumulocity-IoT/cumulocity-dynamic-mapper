@@ -280,9 +280,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private initializeMapping(): void {
-    // Ensure direction is always set (fallback to INBOUND if not specified)
-    this.mapping.direction = this.mapping.direction ?? Direction.INBOUND;
-    const isInbound = this.mapping.direction === Direction.INBOUND;
+    // A mapping without a direction is treated as inbound; the host's mapping is not modified.
+    const isInbound = (this.mapping.direction ?? Direction.INBOUND) === Direction.INBOUND;
     this.sourceSystem = isInbound ? 'Broker' : 'Cumulocity';
     this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
 

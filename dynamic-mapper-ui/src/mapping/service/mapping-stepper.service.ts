@@ -96,10 +96,11 @@ export class MappingStepperService {
      * Components subscribe once and re-expand their working templates accordingly,
      * removing the need for per-property @Output() events on MappingStepPropertiesComponent.
      */
-    readonly mappingPropertyChanged$ = new Subject<Mapping>();
+    private readonly mappingPropertyChanged = new Subject<Mapping>();
+    readonly mappingPropertyChanged$ = this.mappingPropertyChanged.asObservable();
 
     notifyMappingPropertyChanged(mapping: Mapping): void {
-        this.mappingPropertyChanged$.next(mapping);
+        this.mappingPropertyChanged.next(mapping);
     }
 
     async evaluateSourceExpression(sourceTemplate: any, path: string): Promise<{
@@ -578,7 +579,7 @@ export class MappingStepperService {
         this.buttonDisabled.complete();
         this.sourceMessage.complete();
         this.targetMessage.complete();
-        this.mappingPropertyChanged$.complete();
+        this.mappingPropertyChanged.complete();
     }
 
     // ─── Phase 4: consolidated ngOnInit bootstrap / form & template initialization ─────────

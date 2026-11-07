@@ -98,6 +98,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
    */
   @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() targetAPIChanged = new EventEmitter<string>();
+  /**
+   * Changed properties, as a patch. The step edits a working copy (`model`), never the host's
+   * mapping; the host applies the patch.
+   */
+  @Output() propertiesChange = new EventEmitter<Partial<Mapping>>();
+
+  /** The properties this step edits. Anything else on the mapping is not copied, so a stale copy can never overwrite it. */
+  static readonly PROPERTY_KEYS: (keyof Mapping)[] = [
+    'name', 'mappingTopic', 'publishTopic', 'mappingTopicSample', 'publishTopicSample',
+    'filterInventory', 'targetAPI', 'createNonExistingDevice', 'updateExistingDevice',
+    'eventWithAttachment', 'autoAckOperation', 'useExternalId', 'externalIdType', 'qos',
+    'maxFailureCount'
+  ];
+
+  /** Formly's model: a working copy of the properties in PROPERTY_KEYS. */
+  model: Partial<Mapping> = {};
 
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
@@ -140,6 +156,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     await this.loadQosCapabilities();
     this.initializeDirection();
     this.initializeFilterModels();
+    this.initializeModel();
 
     const isInbound = this.stepperConfiguration.direction === Direction.INBOUND;
     const isOutbound = this.stepperConfiguration.direction === Direction.OUTBOUND;
@@ -184,8 +201,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             expressions: {
               template: (field: FormlyFieldConfig) =>
                 `<div class="form-group"><label>Mapping and transformation type</label>` +
-                `<div class="m-t-4"><span class="label label-default m-r-8" data-cy="dm-mapping-properties-mapping-type">${field.model?.mappingType ?? ''}</span>` +
-                `<span class="label label-default" data-cy="dm-mapping-properties-transformation-type">${field.model?.transformationType ?? ''}</span></div></div>`
+                `<div class="m-t-4"><span class="label label-default m-r-8" data-cy="dm-mapping-properties-mapping-type">${this.mapping.mappingType ?? ''}</span>` +
+                `<span class="label label-default" data-cy="dm-mapping-properties-transformation-type">${this.mapping.transformationType ?? ''}</span></div></div>`
             }
           }
         ]
@@ -298,10 +315,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 this.filterInventoryField = field;
                 // An existing mapping opens with its filter already set: evaluate it right away
                 // (result and cache warning) instead of only after the first edit.
-                if (this.mapping.filterInventory) {
-                  void this.updateFilterInventoryExpressionResult(this.mapping.filterInventory);
+                if (this.model.filterInventory) {
+                  void this.updateFilterInventoryExpressionResult(this.model.filterInventory);
                 } else {
-                  void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
+                  void this.refreshFilterInventoryWarning(this.model.filterInventory);
                 }
                 field.formControl.valueChanges.pipe(
                   debounceTime(1500),
@@ -369,7 +386,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               'Create device',
               'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
             ),
-            hideExpression: () => isOutbound || this.mapping.targetAPI === API.INVENTORY.name
+            hideExpression: () => isOutbound || this.model.targetAPI === API.INVENTORY.name
           },
           {
             className: 'col-lg-3',
@@ -380,7 +397,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               'Update existing device',
               'Update the managed object of the device if it already exists.'
             ),
-            hideExpression: () => isOutbound || this.mapping.targetAPI !== API.INVENTORY.name
+            hideExpression: () => isOutbound || this.model.targetAPI !== API.INVENTORY.name
           },
           {
             className: 'col-lg-3',
@@ -391,7 +408,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               'Event contains attachment',
               'Event contains attachment, e.g. image, ... that is stored separately.'
             ),
-            hideExpression: () => isOutbound || this.mapping.targetAPI !== API.EVENT.name
+            hideExpression: () => isOutbound || this.model.targetAPI !== API.EVENT.name
           },
           {
             className: 'col-lg-3',
@@ -402,7 +419,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               'Auto acknowledge',
               'Auto acknowledge outbound operation.'
             ),
-            hideExpression: () => isInbound || this.mapping.targetAPI !== API.OPERATION.name
+            hideExpression: () => isInbound || this.model.targetAPI !== API.OPERATION.name
           }
         ]
       },
@@ -420,7 +437,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 'If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type.'
               ),
               change: () => {
-                this.mapping.useExternalId = !!this.propertyFormly.get('useExternalId').value;
+                this.model.useExternalId = !!this.propertyFormly.get('useExternalId').value;
+                this.commitModel();
                 this.stepperService.notifyMappingPropertyChanged(this.mapping);
               }
             }
@@ -539,7 +557,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         valid: true
       };
       if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
-      this.mapping.filterInventory = path;
+      this.model.filterInventory = path;
+      this.commitModel();
       await this.refreshFilterInventoryWarning(path);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
@@ -598,7 +617,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   onTargetAPIChanged(targetAPI: string): void {
-    this.mapping.targetAPI = targetAPI;
+    this.model.targetAPI = targetAPI;
+    this.commitModel();
     this.targetAPIChanged.emit(targetAPI);
   }
 
@@ -660,12 +680,34 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private initializeDirection(): void {
-    if (!this.mapping.direction) {
-      this.mapping.direction = Direction.INBOUND;
-    }
+    // A mapping without a direction is treated as inbound; the host's mapping is not modified.
+    const direction = this.mapping.direction ?? Direction.INBOUND;
+    this.targetSystem = direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+  }
 
-    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+  private initializeModel(): void {
+    const model: Record<string, unknown> = {};
+    for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
+      model[key] = this.mapping[key];
+    }
+    // The field's own defaultValue would only reach this copy, so apply it here and commit it.
+    model['externalIdType'] ??= 'c8y_Serial';
+    this.model = model as Partial<Mapping>;
+    this.commitModel();
+  }
+
+  /** Emits the properties that differ from the host's mapping. Also called on every form change. */
+  commitModel(): void {
+    const patch: Record<string, unknown> = {};
+    for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
+      if (this.model[key] !== this.mapping[key]) {
+        patch[key] = this.model[key];
+      }
+    }
+    if (Object.keys(patch).length > 0) {
+      this.propertiesChange.emit(patch as Partial<Mapping>);
+    }
   }
 
   private initializeFilterModels(): void {

@@ -44,7 +44,8 @@
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0 d11r-props-compact">
     <div [formGroup]="propertyFormly">
-      <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
+      <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="model"
+        (modelChange)="commitModel()"></formly-form>
     </div>
   </div>
 </div>
