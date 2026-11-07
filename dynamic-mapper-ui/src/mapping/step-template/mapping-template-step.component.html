@@ -107,11 +107,11 @@
       @if (!(isContentChangeValid$ | async)) {
       <div class="p-b-16">
         <span class="text-warning text-12 p-l-8 p-b-12" style="display: block;">
-          @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+          @if (sourceIssues.protectedFieldsChanged) {
           Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
           directly in templates is not supported. Use substitutions instead. Changes are reverted!
           }
-          @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType, sourceTemplateUpdated)) {
+          @if (sourceIssues.arrayNeedsSmartFunction) {
           Array templates require transformation type <code>SMART_FUNCTION</code>.
           }
         </span>

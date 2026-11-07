@@ -118,34 +118,34 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('onSourceTemplateChanged', () => {
-    it('captures JSON content as the updated source template and flags the change valid', () => {
+    it('flags an ordinary JSON change valid and reports no issues', () => {
       const changes: ContentChanges = {
         previousContent: { json: { a: 1 } } as Content,
         updatedContent: { json: { a: 2 } } as Content
       };
       component.onSourceTemplateChanged(changes);
 
-      expect(component.sourceTemplateUpdated).toEqual({ a: 2 });
+      expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
       expect(contentValidEmissions).toContain(true);
     });
 
-    it('parses valid text content into JSON', () => {
-      const changes: ContentChanges = {
-        previousContent: { json: { a: 1 } } as Content,
-        updatedContent: { text: '{"a":3}' } as Content
-      };
-      component.onSourceTemplateChanged(changes);
-      expect(component.sourceTemplateUpdated).toEqual({ a: 3 });
+    it('parses valid text content into JSON before judging it', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      component.onSourceTemplateChanged({
+        previousContent: { json: {} } as Content,
+        updatedContent: { text: '[1,2]' } as Content
+      });
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeTrue();
     });
 
-    it('tolerates invalid JSON while the user is mid-edit (keeps raw content, stays valid)', () => {
+    it('tolerates invalid JSON while the user is mid-edit (stays valid, no issues)', () => {
       const changes: ContentChanges = {
         previousContent: { json: { a: 1 } } as Content,
         updatedContent: { text: '{ broken' } as Content
       };
       component.onSourceTemplateChanged(changes);
 
-      expect(component.sourceTemplateUpdated).toEqual({ text: '{ broken' } as any);
+      expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
       expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
     });
 
@@ -163,6 +163,7 @@ describe('MappingTemplateStepComponent', () => {
       component.onSourceTemplateChanged(changes);
 
       expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.sourceIssues.protectedFieldsChanged).toBeTrue();
       expect(mockAlertService.add).toHaveBeenCalled();
     });
 
@@ -174,6 +175,14 @@ describe('MappingTemplateStepComponent', () => {
       };
       component.onSourceTemplateChanged(changes);
       expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeTrue();
+    });
+
+    it('does not record target edits as source issues', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      component.onTargetTemplateChanged({ previousContent: { json: {} } as Content, updatedContent: { json: [1] } as Content });
+
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeFalse();
     });
   });
 
@@ -307,9 +316,8 @@ describe('MappingTemplateStepComponent', () => {
       expect(component.getSourceTemplate()._IDENTITY_).toEqual({ externalId: 'edited' });
     });
 
-    it('falls back to the change mirror, then undefined, without an editor', () => {
-      component.sourceTemplateUpdated = { mirror: true };
-      expect(component.getSourceTemplate()).toEqual({ mirror: true });
+    it('is undefined without an editor, so the host keeps its own value', () => {
+      expect(component.getSourceTemplate()).toBeUndefined();
       expect(component.getTargetTemplate()).toBeUndefined();
     });
   });

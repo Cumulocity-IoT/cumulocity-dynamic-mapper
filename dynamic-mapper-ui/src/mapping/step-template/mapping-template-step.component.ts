@@ -54,6 +54,14 @@ import { MappingStepperService } from '../service/mapping-stepper.service';
 import { PROTECTED_TOKENS } from '../../shared/mapping/processor/processor.model';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 
+/** What is wrong with the user's last edit of a template. */
+export interface TemplateIssues {
+  protectedFieldsChanged: boolean;
+  arrayNeedsSmartFunction: boolean;
+}
+
+const NO_TEMPLATE_ISSUES: TemplateIssues = { protectedFieldsChanged: false, arrayNeedsSmartFunction: false };
+
 @Component({
   selector: 'd11r-mapping-template-step',
   templateUrl: './mapping-template-step.component.html',
@@ -115,8 +123,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
   // ─── Internal state ────────────────────────────────────────────────────────
   filterModel: { filterMapping?: string; filterExpression?: { result: string; resultType: string; valid: boolean } } = {};
-  sourceTemplateUpdated: any;
-  targetTemplateUpdated: any;
+  /** Why the user's last edit of the source template is not accepted; drives the warning below the editors. */
+  sourceIssues: TemplateIssues = NO_TEMPLATE_ISSUES;
   selectedPathFilterFilterMapping: string;
   /** _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ are only relevant for the Transformation step; hide them here by default. */
   showSourceMetadata = false;
@@ -163,9 +171,6 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   get isContentChangeValid$(): Observable<boolean> {
     return this.stepperService.isContentChangeValid$;
   }
-
-  readonly checkTransformationType = checkTransformationType;
-  readonly validateProtectedFields = validateProtectedFields;
 
   private computeSampleTransportFields(): { name: string; value: string; accessor: string }[] {
     const fields = this.stepperConfiguration?.sampleTransportFields;
@@ -234,17 +239,21 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * `undefined` while the editor does not exist (step not rendered, or still being created).
    */
   getSourceTemplate(): any {
-    return this.currentTemplate(this.editorSourceStepTemplate, this.sourceTemplateUpdated, this.sourceTemplate, this.showSourceMetadata);
+    return this.currentTemplate(this.editorSourceStepTemplate, this.sourceTemplate, this.showSourceMetadata);
   }
 
   /** The target-side counterpart of {@link getSourceTemplate}. */
   getTargetTemplate(): any {
-    return this.currentTemplate(this.editorTargetStepTemplate, this.targetTemplateUpdated, this.targetTemplate, this.showTargetMetadata);
+    return this.currentTemplate(this.editorTargetStepTemplate, this.targetTemplate, this.showTargetMetadata);
   }
 
-  private currentTemplate(editor: JsonEditorComponent | undefined, mirror: any, full: any, showMetadata: boolean): any {
+  /**
+   * The editor itself is the single source of truth for what the user has typed: the library's
+   * own change event does not fire for every edit path, so nothing mirrors it here.
+   */
+  private currentTemplate(editor: JsonEditorComponent | undefined, full: any, showMetadata: boolean): any {
     const live = tryGetLiveEditorContent(editor);
-    if (live === undefined) return mirror;
+    if (live === undefined) return undefined;
     return showMetadata ? live : this.restoreMetadataKeys(live, full);
   }
 
@@ -368,37 +377,35 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Template content changes ───────────────────────────────────────────────
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
-    // sourceTemplateChange has no @Output emitter; the parent reads sourceTemplateUpdated
-    // via templateStepRef when leaving the step.
-    this.onTemplateChanged(contentChanges, this.sourceTemplate, this.showSourceMetadata, json => { this.sourceTemplateUpdated = json; });
+    // Only validates; the host reads the content via getSourceTemplate() when it needs it
+    // (leaving the step, saving), so nothing is emitted per keystroke.
+    this.sourceIssues = this.validateTemplateChange(contentChanges, this.sourceTemplate, this.showSourceMetadata);
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
-    // Like onSourceTemplateChanged: only update the local mirror here, don't emit upward.
-    // This used to emit targetTemplateChange on every keystroke so the parent's targetTemplate
-    // stayed "live" — but that reassignment flows straight back down through the parent's
-    // [data]="targetTemplate" binding into JsonEditorComponent's data setter, which calls
-    // editor.set() and resets the editor's content/cursor, visibly interrupting typing. The
-    // parent instead reads targetTemplateUpdated via templateStepRef when it actually needs the
-    // value (leaving the step, triggering AI generation, etc.).
-    this.onTemplateChanged(contentChanges, this.targetTemplate, this.showTargetMetadata, json => { this.targetTemplateUpdated = json; });
+    // Like onSourceTemplateChanged, don't emit upward. This used to emit targetTemplateChange on
+    // every keystroke so the parent's targetTemplate stayed "live" — but that reassignment flows
+    // straight back down through the parent's [data]="targetTemplate" binding into
+    // JsonEditorComponent's data setter, which calls editor.set() and resets the editor's
+    // content/cursor, visibly interrupting typing. The host reads getTargetTemplate() instead.
+    this.validateTemplateChange(contentChanges, this.targetTemplate, this.showTargetMetadata);
   }
 
-  private onTemplateChanged(
+  /** Validates an edit, publishes the verdict on isContentChangeValid$ and returns what is wrong with it. */
+  private validateTemplateChange(
     contentChanges: ContentChanges,
     baseline: any,
-    showMetadata: boolean,
-    onUpdated?: (json: any) => void
-  ): void {
+    showMetadata: boolean
+  ): TemplateIssues {
     const { previousContent, updatedContent } = contentChanges;
     let updatedJson: any;
 
     if ('text' in updatedContent && updatedContent['text']) {
       try { updatedJson = JSON.parse(updatedContent['text']); }
       catch {
-        onUpdated?.(updatedContent);
+        // Mid-edit text that does not parse yet: nothing to judge.
         this.stepperService.isContentChangeValid$.next(true);
-        return;
+        return NO_TEMPLATE_ISSUES;
       }
     } else {
       updatedJson = updatedContent['json'];
@@ -410,8 +417,6 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     if (!showMetadata) {
       updatedJson = this.restoreMetadataKeys(updatedJson, baseline);
     }
-
-    onUpdated?.(updatedJson);
 
     if (previousContent) {
       if ('text' in previousContent && previousContent['text']) {
@@ -433,6 +438,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
       this.raiseAlert({ type: 'warning', text: 'Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.' });
     }
+    return { protectedFieldsChanged: hasProtectedChanges, arrayNeedsSmartFunction: !isTransformationTypeValid };
   }
 
   // ─── Sample target templates ────────────────────────────────────────────────
