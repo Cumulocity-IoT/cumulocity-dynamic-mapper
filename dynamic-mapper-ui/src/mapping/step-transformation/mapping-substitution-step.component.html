@@ -109,6 +109,13 @@
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
             </formly-form>
+            <!-- Plain bindings, not Formly fields: a Formly label expression left this label reading
+                 "[empty]" while the result text beside it was current. -->
+            <div class="form-group">
+              <label class="text-pre-wrap" for="dm-source-result">{{ 'Source Result' | translate }} [{{ substitutionModel.sourceExpression?.resultType ?? 'empty' }}]</label>
+              <textarea id="dm-source-result" class="form-control font-smaller" readonly rows="2" c8y-textarea-autoresize
+                data-cy="dm-field-sourceExpression-result" [value]="substitutionModel.sourceExpression?.result ?? ''"></textarea>
+            </div>
             @if (showExpandArrayHint) {
             <small class="text-info d-block m-t-4" data-cy="dm-substitution-expand-array-hint">
               {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
@@ -118,6 +125,11 @@
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
             </formly-form>
+            <div class="form-group">
+              <label class="text-pre-wrap" for="dm-target-result">{{ 'Target Result' | translate }} [{{ substitutionModel.targetExpression?.resultType ?? 'empty' }}]</label>
+              <textarea id="dm-target-result" class="form-control font-smaller" readonly rows="2" c8y-textarea-autoresize
+                data-cy="dm-field-targetExpression-result" [value]="substitutionModel.targetExpression?.result ?? ''"></textarea>
+            </div>
           </div>
         </div>
       </div>

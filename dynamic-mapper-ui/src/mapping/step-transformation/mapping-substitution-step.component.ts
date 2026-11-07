@@ -188,22 +188,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
             ).subscribe(path => this.updateSourceExpressionResult(path));
           }
         }
-      },
-      {
-        key: 'sourceExpression.result',
-        type: 'd11r-textarea',
-        wrappers: ['c8y-form-field'],
-        props: {
-          readonly: true,
-          required: false,
-          rows: 2,
-          class: 'font-smaller',
-          label: ' Source Result [empty]'
-        },
-        expressions: {
-          'props.label': (field: FormlyFieldConfig) =>
-            ` Source Result [${field.model?.sourceExpression?.resultType ?? 'empty'}]`
-        }
       }
     ];
     this.substitutionFormlyFieldsTarget = [
@@ -228,22 +212,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
               takeUntil(this.destroy$)
             ).subscribe(path => this.updateTargetExpressionResult(path));
           }
-        }
-      },
-      {
-        key: 'targetExpression.result',
-        type: 'd11r-textarea',
-        wrappers: ['c8y-form-field'],
-        props: {
-          readonly: true,
-          required: false,
-          rows: 2,
-          class: 'font-smaller',
-          label: ' Target Result [empty]'
-        },
-        expressions: {
-          'props.label': (field: FormlyFieldConfig) =>
-            ` Target Result [${field.model?.targetExpression?.resultType ?? 'empty'}]`
         }
       }
     ];
