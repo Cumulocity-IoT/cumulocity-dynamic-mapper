@@ -70,8 +70,8 @@ export class SubstitutionGridComponent implements OnDestroy {
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
   @Output() editSub = new EventEmitter<number>();
-  /** Fired after an in-grid edit of expandArray/repairStrategy so the parent can re-run validity checks. */
-  @Output() substitutionChange = new EventEmitter<void>();
+  /** An in-grid edit of expandArray/repairStrategy. The grid never changes the mapping itself. */
+  @Output() substitutionPatch = new EventEmitter<{ index: number; patch: Partial<Substitution> }>();
   /** Fired from the "Cancel / New substitution" control in the header, next to the selection count. */
   @Output() cancelEdit = new EventEmitter<void>();
 
@@ -161,17 +161,16 @@ export class SubstitutionGridComponent implements OnDestroy {
     return SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
   }
 
-  onExpandArrayChange(sub: Substitution, expandArray: boolean): void {
-    sub.expandArray = expandArray;
+  onExpandArrayChange(index: number, sub: Substitution, expandArray: boolean): void {
+    const patch: Partial<Substitution> = { expandArray };
     if (expandArray && SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
-      sub.repairStrategy = RepairStrategy.DEFAULT;
+      patch.repairStrategy = RepairStrategy.DEFAULT;
     }
-    this.substitutionChange.emit();
+    this.substitutionPatch.emit({ index, patch });
   }
 
-  onRepairStrategyChange(sub: Substitution, repairStrategy: string): void {
-    sub.repairStrategy = repairStrategy as RepairStrategy;
-    this.substitutionChange.emit();
+  onRepairStrategyChange(index: number, repairStrategy: string): void {
+    this.substitutionPatch.emit({ index, patch: { repairStrategy: repairStrategy as RepairStrategy } });
   }
 
   onSubstitutionDelete(index: number): void {

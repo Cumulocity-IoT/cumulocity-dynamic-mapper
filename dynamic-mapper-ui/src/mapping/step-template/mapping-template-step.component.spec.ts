@@ -198,15 +198,18 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('updateFilterExpressionResult', () => {
-    it('stores the evaluated expression and writes the path back to the mapping', async () => {
+    it('stores the evaluated expression and announces the path to the host', async () => {
       const evaluated = { result: 'true', resultType: 'boolean', valid: true };
       mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(evaluated));
+      const announced: string[] = [];
+      component.filterMappingChange.subscribe(p => announced.push(p));
 
       await component.updateFilterExpressionResult('$exists(foo)', { foo: 1 });
 
       expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalledWith({ foo: 1 }, '$exists(foo)');
       expect(component.filterModel.filterExpression).toEqual(evaluated);
-      expect(component.mapping.filterMapping).toBe('$exists(foo)');
+      expect(announced).toEqual(['$exists(foo)']);
+      expect(component.mapping.filterMapping).toBe(''); // the step never writes the mapping
       expect(component.filterFormly.get('filterMapping')?.value).toBe('$exists(foo)');
     });
 

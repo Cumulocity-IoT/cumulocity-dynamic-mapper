@@ -66,7 +66,7 @@
         <col style="width: 9%">
       </colgroup>
       <tbody>
-        @for (sub of mapping.substitutions; track sub; let i = $index) {
+        @for (sub of mapping.substitutions; track $index; let i = $index) {
           <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
             [class.active]="settings.selectedSubstitutionIndex === i">
             <td>
@@ -95,7 +95,7 @@
               <label class="c8y-checkbox" title="{{ 'Expand as array' | translate }}">
                 <input type="checkbox" [attr.data-cy]="'dm-substitution-expand-array-' + i"
                   [ngModel]="sub.expandArray" [disabled]="isExpandArrayDisabled()"
-                  (ngModelChange)="onExpandArrayChange(sub, $event)" />
+                  (ngModelChange)="onExpandArrayChange(i, sub, $event)" />
                 <span></span>
               </label>
             </td>
@@ -104,7 +104,7 @@
                 <select class="form-control" [attr.data-cy]="'dm-substitution-repair-strategy-' + i"
                   [title]="repairStrategyDescriptionFor(sub)"
                   [disabled]="isRepairStrategyDisabled()" [ngModel]="sub.repairStrategy"
-                  (ngModelChange)="onRepairStrategyChange(sub, $event)">
+                  (ngModelChange)="onRepairStrategyChange(i, $event)">
                   @for (opt of repairStrategyOptionsFor(sub); track opt.value) {
                   <option [value]="opt.value" [disabled]="opt.disabled" [title]="opt.description">{{ opt.label |
                     formatStringAsWords }}</option>

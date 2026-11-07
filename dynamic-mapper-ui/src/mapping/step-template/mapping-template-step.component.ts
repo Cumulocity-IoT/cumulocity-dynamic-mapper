@@ -110,6 +110,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Outputs ──────────────────────────────────────────────────────────────
   /** Emits the new computed target template when "Reset to default" is clicked */
   @Output() targetTemplateChange = new EventEmitter<any>();
+  /** The filter expression the user set; the host owns the mapping and applies it. */
+  @Output() filterMappingChange = new EventEmitter<string>();
 
   // ─── Internal state ────────────────────────────────────────────────────────
   filterModel: { filterMapping?: string; filterExpression?: { result: string; resultType: string; valid: boolean } } = {};
@@ -326,7 +328,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       );
       this.filterModel.filterExpression = result;
       this.filterModel.filterMapping = path;
-      this.mapping.filterMapping = path;
+      this.filterMappingChange.emit(path);
       // Patch the FormControl so the input field shows the value.
       // emitEvent: false prevents triggering the valueChanges subscription again.
       this.filterFormly.get('filterMapping')?.setValue(path, { emitEvent: false });

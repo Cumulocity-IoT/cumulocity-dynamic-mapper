@@ -124,6 +124,29 @@ describe('MappingEditorBase', () => {
     });
   });
 
+  describe('applying changes reported by children', () => {
+    it('onSubstitutionsChange writes the list into the mapping it owns', () => {
+      const substitutions = [{ pathSource: '$.a', pathTarget: '$.b', repairStrategy: 'DEFAULT', expandArray: false }] as any;
+
+      host.onSubstitutionsChange(substitutions);
+
+      expect(host.mapping.substitutions).toBe(substitutions);
+    });
+
+    it('onFilterMappingChange writes the filter expression into the mapping', () => {
+      host.onFilterMappingChange('$exists(foo)');
+
+      expect(host.mapping.filterMapping).toBe('$exists(foo)');
+    });
+
+    it('onTestingSourceTemplateChanged keeps the host template and the mapping source template in step', () => {
+      host.onTestingSourceTemplateChanged({ a: 2 });
+
+      expect(host.sourceTemplate).toEqual({ a: 2 });
+      expect(JSON.parse(host.mapping.sourceTemplate)).toEqual({ a: 2 });
+    });
+  });
+
   describe('aiButtonLabel', () => {
     it('says refine for an existing draft and generate otherwise', () => {
       host.stepperConfiguration.persistence = 'draft';

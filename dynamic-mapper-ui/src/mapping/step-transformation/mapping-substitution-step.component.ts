@@ -21,14 +21,15 @@ import {
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
-  RepairStrategy
+  RepairStrategy,
+  Substitution
 } from '../../shared';
 import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepperService } from '../service/mapping-stepper.service';
-import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { SubstitutionManagementService, SubstitutionsUpdate } from '../service/substitution-management.service';
 import { isExpression } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -63,6 +64,11 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() isBeforeSubstitutionStep: boolean;
 
   @Output() mappingCodeChange = new EventEmitter<string>();
+  /**
+   * The substitution list after the user changed it. The host owns the mapping and applies it:
+   * this step reads `mapping.substitutions` but never writes it.
+   */
+  @Output() substitutionsChange = new EventEmitter<Substitution[]>();
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution!: JsonEditorComponent;
@@ -305,27 +311,36 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionModel.expandArray = false;
     this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
 
-    this.substitutionService.addSubstitution(
-      this.substitutionModel,
-      this.mapping,
-      this.refreshSubstitutionValidity
+    this.applySubstitutions(
+      this.substitutionService.addSubstitution(this.substitutionModel, this.mapping.substitutions)
     );
 
     this.selectedSubstitution = -1;
   }
 
   onUpdateSubstitution(): void {
-    this.substitutionService.updateSubstitution(
+    const update = this.substitutionService.updateSubstitution(
       this.selectedSubstitution,
       this.substitutionModel,
-      this.mapping,
-      () => {
-        this.refreshSubstitutionValidity();
-        // A completed update is a natural end to the editing session - return to "add" state
-        // rather than leaving the just-saved row selected and both buttons still enabled.
-        this.cancelEditSubstitution();
-      }
+      this.mapping.substitutions
     );
+    if (!update) return;
+
+    this.applySubstitutions(update);
+    // A completed update is a natural end to the editing session - return to "add" state
+    // rather than leaving the just-saved row selected and both buttons still enabled.
+    this.cancelEditSubstitution();
+  }
+
+  /**
+   * Hands a changed substitution list to the host, which owns the mapping and applies it, then
+   * re-runs validity against the result. The step never writes `mapping.substitutions` itself.
+   */
+  private applySubstitutions(update: SubstitutionsUpdate | Substitution[]): void {
+    const { substitutions, notice } = Array.isArray(update) ? { substitutions: update, notice: undefined } : update;
+    this.substitutionsChange.emit(substitutions);
+    if (notice) this.alertService.info(notice);
+    this.refreshSubstitutionValidity();
   }
 
   /** Leaves edit mode: clears the selected row, resets the form back to its "add" state, and
@@ -339,18 +354,16 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.editorTargetStepSubstitution?.clearSelection();
   }
 
-  /** Inline expandArray/repairStrategy edits in the grid mutate the substitution in place -
-   *  no selection/model change is needed, just re-run validity. */
-  onGridSubstitutionChange(): void {
-    this.refreshSubstitutionValidity();
+  /** Inline expandArray/repairStrategy edit in the grid: no selection/model change is needed. */
+  onGridSubstitutionPatch(change: { index: number; patch: Partial<Substitution> }): void {
+    this.applySubstitutions(
+      this.substitutionService.patchSubstitution(this.mapping.substitutions, change.index, change.patch)
+    );
   }
 
   onDeleteSubstitution(selected: number): void {
-    this.substitutionService.deleteSubstitution(
-      selected,
-      this.mapping,
-      this.refreshSubstitutionValidity
-    );
+    const remaining = this.substitutionService.deleteSubstitution(selected, this.mapping.substitutions);
+    if (remaining) this.applySubstitutions(remaining);
     // Deleting shifts every later index down by one, so a stale selectedSubstitution would
     // otherwise point at the wrong row (or go out of range) for "Update substitution".
     if (this.selectedSubstitution === selected) {
@@ -440,11 +453,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
           // Bulk-replace rather than looping addSubstitution(): that method collapses duplicate
           // targets and raises an info alert per hit, which is noise when applying a
           // freshly-generated set wholesale.
-          this.substitutionService.replaceAllSubstitutions(
-            resultOf,
-            this.mapping,
-            this.refreshSubstitutionValidity
-          );
+          this.applySubstitutions(this.substitutionService.replaceAllSubstitutions(resultOf));
         } else {
           this.alertService.warning('No substitutions were generated.');
         }

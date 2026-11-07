@@ -145,7 +145,7 @@
               selectedSubstitutionIndex: selectedSubstitution,
               readOnly: !!stepperConfiguration.readOnly
             }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)"
-          (substitutionChange)="onGridSubstitutionChange()" (cancelEdit)="cancelEditSubstitution()">
+          (substitutionPatch)="onGridSubstitutionPatch($event)" (cancelEdit)="cancelEditSubstitution()">
         </d11r-mapping-substitution-grid>
       </div>
       @if (!(isSubstitutionValid$ | async)) {

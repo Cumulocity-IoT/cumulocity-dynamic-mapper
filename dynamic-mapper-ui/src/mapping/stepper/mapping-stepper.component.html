@@ -79,7 +79,7 @@
         [templateForm]="templateForm"
         [filterFormly]="filterFormly"
         [filterFormlyFields]="filterFormlyFields"
-        (targetTemplateChange)="targetTemplate = $event">
+        (targetTemplateChange)="targetTemplate = $event" (filterMappingChange)="onFilterMappingChange($event)">
         @if (stepperViewModel?.showExtensionSelectors) {
         <ng-container extensionSource>
           <d11r-mapping-extension-selector side="source" dataCyPrefix="dm-mapping-stepper" [form]="templateForm" [mapping]="mapping"
@@ -111,7 +111,7 @@
         [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" [aiAgent]="aiAgent"
         [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
         [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [isBeforeSubstitutionStep]="currentStepIndex < STEP_DEFINE_SUBSTITUTIONS"
-        (mappingCodeChange)="mappingCode = $event">
+        (mappingCodeChange)="mappingCode = $event" (substitutionsChange)="onSubstitutionsChange($event)">
 
         <!-- Project code editor content if needed -->
         @if (stepperViewModel?.showCodeEditorSection) {

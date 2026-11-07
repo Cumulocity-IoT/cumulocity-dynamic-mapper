@@ -99,7 +99,14 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
    */
   private aiReviewBaseline?: string;
 
+  /**
+   * "Generate with AI" was chosen at creation and has not been launched yet. Held here rather
+   * than cleared on the shared stepperConfiguration, which the host that created it also reads.
+   */
+  private aiGenerationPending = false;
+
   async ngOnInit(): Promise<void> {
+    this.aiGenerationPending = !!this.stepperConfiguration.triggerAIGenerationOnStart;
     // true: stepper-only, also disables extensionName/eventName while no selector is shown
     const init = await this.initSession(true);
     this.schemaSource = init.schemaSource;
@@ -197,8 +204,8 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
     // One-shot: user chose "Generate with AI" back in the type-selection drawer, when
     // source/target templates were still empty placeholders. Now that this step has the
     // real templates (just updated above), launch the actual generation.
-    if (this.stepperConfiguration.triggerAIGenerationOnStart) {
-      this.stepperConfiguration.triggerAIGenerationOnStart = false;
+    if (this.aiGenerationPending) {
+      this.aiGenerationPending = false;
       if (this.aiAgentDeployed) {
         this.launchAIGenerationOnStart();
       }
@@ -325,7 +332,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
    * actual review step for Smart Function instead.
    */
   private captureAIReviewBaselineIfNeeded(): void {
-    if (!this.stepperConfiguration.triggerAIGenerationOnStart) return;
+    if (!this.aiGenerationPending) return;
     if (isCodeOrExtensionTransformation(this.mapping.transformationType)) return;
     this.aiReviewBaseline = JSON.stringify(this.targetTemplate);
   }

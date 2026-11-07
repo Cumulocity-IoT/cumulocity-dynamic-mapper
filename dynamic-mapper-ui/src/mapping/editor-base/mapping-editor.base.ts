@@ -34,6 +34,7 @@ import {
   isSubstitutionsAsCode,
   Mapping,
   StepperConfiguration,
+  Substitution,
   TransformationType
 } from '../../shared';
 import {
@@ -341,8 +342,19 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     });
   }
 
+  /** The host owns the mapping: children report changes, only the host writes them. */
+  onSubstitutionsChange(substitutions: Substitution[]): void {
+    this.mapping.substitutions = substitutions;
+  }
+
+  onFilterMappingChange(filterMapping: string): void {
+    this.mapping.filterMapping = filterMapping;
+  }
+
   onTestingSourceTemplateChanged(template: any): void {
     this.sourceTemplate = template;
+    // The payload the user edited in the test step becomes the mapping's source template.
+    this.mapping.sourceTemplate = JSON.stringify(template || {});
   }
 
   raiseAlert(alert: Alert): void {
@@ -491,7 +503,8 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
           this.alertService.success(`Generated ${result.length} substitutions.`);
           // Same bulk replace as the transformation step: the generated set replaces the whole
           // list atomically, with one validity refresh instead of one per item.
-          this.substitutionService.replaceAllSubstitutions(result, this.mapping, () => this.refreshSubstitutionValidity());
+          this.onSubstitutionsChange(this.substitutionService.replaceAllSubstitutions(result));
+          this.refreshSubstitutionValidity();
         } else {
           this.alertService.warning('No substitutions were generated.');
         }

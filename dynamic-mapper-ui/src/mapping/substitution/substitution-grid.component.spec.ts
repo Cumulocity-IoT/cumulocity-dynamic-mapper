@@ -22,6 +22,8 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
+import '../../shared';
+import { RepairStrategy, Substitution } from '../../shared';
 import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
 
 /**
@@ -65,6 +67,41 @@ describe('SubstitutionGridComponent', () => {
 
   it('creates', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('in-grid edits', () => {
+    const sub = (overrides: Partial<Substitution> = {}): Substitution => ({
+      pathSource: '$.a', pathTarget: '$.b', repairStrategy: RepairStrategy.DEFAULT, expandArray: false, ...overrides
+    });
+
+    it('announces an expandArray change as a patch and leaves the substitution untouched', () => {
+      const original = sub();
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onExpandArrayChange(2, original, true);
+
+      expect(patches).toEqual([{ index: 2, patch: { expandArray: true } }]);
+      expect(original.expandArray).toBeFalse();
+    });
+
+    it('also resets an array-only repair strategy when expanding', () => {
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onExpandArrayChange(0, sub({ repairStrategy: RepairStrategy.USE_FIRST_VALUE_OF_ARRAY }), true);
+
+      expect(patches).toEqual([{ index: 0, patch: { expandArray: true, repairStrategy: RepairStrategy.DEFAULT } }]);
+    });
+
+    it('announces a repair strategy change as a patch', () => {
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onRepairStrategyChange(1, 'IGNORE');
+
+      expect(patches).toEqual([{ index: 1, patch: { repairStrategy: RepairStrategy.IGNORE } }]);
+    });
   });
 
   it('emits the selected index and records it in settings on select', (done) => {

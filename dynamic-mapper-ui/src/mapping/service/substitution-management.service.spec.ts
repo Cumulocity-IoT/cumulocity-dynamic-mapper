@@ -18,47 +18,12 @@
  * @authors Christof Strack
  */
 
-import { TestBed } from '@angular/core/testing';
-import { AlertService } from '@c8y/ngx-components';
 import { SubstitutionManagementService } from './substitution-management.service';
-import {
-  Direction,
-  Mapping,
-  MappingType,
-  RepairStrategy,
-  Substitution,
-  TransformationType
-} from '../../shared';
+import { RepairStrategy, Substitution } from '../../shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function makeMapping(substitutions: Substitution[] = []): Mapping {
-  return {
-    id: '1',
-    identifier: 'test-mapping',
-    name: 'Test',
-    direction: Direction.INBOUND,
-    targetAPI: 'MEASUREMENT',
-    mappingType: MappingType.JSON,
-    transformationType: TransformationType.DEFAULT,
-    substitutions,
-    sourceTemplate: '{}',
-    targetTemplate: '{}',
-    mappingTopic: 'a/b',
-    mappingTopicSample: 'a/b',
-    active: true,
-    debug: false,
-    tested: false,
-    filterMapping: '',
-    createNonExistingDevice: false,
-    updateExistingDevice: false,
-    useExternalId: false,
-    externalIdType: '',
-    qos: undefined
-  } as Mapping;
-}
 
 function makeSubstitution(pathSource = '$.temp', pathTarget = '$.value'): Substitution {
   return {
@@ -84,30 +49,17 @@ function makeSubstitutionModel(
   };
 }
 
+
 // ---------------------------------------------------------------------------
 // SubstitutionManagementService
 // ---------------------------------------------------------------------------
 
 describe('SubstitutionManagementService', () => {
   let service: SubstitutionManagementService;
-  let mockAlertService: jasmine.SpyObj<AlertService>;
 
   beforeEach(() => {
-    mockAlertService = jasmine.createSpyObj<AlertService>('AlertService', ['info']);
-
-    TestBed.configureTestingModule({
-      providers: [
-        SubstitutionManagementService,
-        { provide: AlertService, useValue: mockAlertService }
-      ]
-    });
-
-    service = TestBed.inject(SubstitutionManagementService);
+    service = new SubstitutionManagementService();
   });
-
-  // -------------------------------------------------------------------------
-  // isSubstitutionValid
-  // -------------------------------------------------------------------------
 
   describe('isSubstitutionValid', () => {
     it('should return true when both expressions are valid and paths are non-empty', () => {
@@ -135,130 +87,157 @@ describe('SubstitutionManagementService', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // addSubstitution — no duplicate
-  // -------------------------------------------------------------------------
+  describe('purity', () => {
+    it('never changes the list it is given', () => {
+      const current = [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB')];
+      const snapshot = JSON.stringify(current);
 
-  describe('addSubstitution (no duplicate)', () => {
-    it('should push substitution to mapping and call onSuccess', () => {
-      const mapping = makeMapping();
-      const model = makeSubstitutionModel(true, true, '$.temp', '$.c8y_Temp.T.value');
-      const onSuccess = jasmine.createSpy('onSuccess');
+      service.addSubstitution(makeSubstitutionModel(true, true, '$.c', '$.tgtC'), current);
+      service.addSubstitution(makeSubstitutionModel(true, true, '$.b2', '$.tgtB'), current);
+      service.updateSubstitution(0, makeSubstitutionModel(true, true, '$.x', '$.tgtB'), current);
+      service.deleteSubstitution(0, current);
+      service.patchSubstitution(current, 1, { expandArray: true });
 
-      service.addSubstitution(model, mapping, onSuccess);
-
-      expect(mapping.substitutions.length).toBe(1);
-      expect(mapping.substitutions[0].pathSource).toBe('$.temp');
-      expect(mapping.substitutions[0].pathTarget).toBe('$.c8y_Temp.T.value');
-      expect(onSuccess).toHaveBeenCalledTimes(1);
-      expect(mockAlertService.info).not.toHaveBeenCalled();
+      expect(JSON.stringify(current)).toBe(snapshot);
     });
   });
 
-  // -------------------------------------------------------------------------
-  // addSubstitution — duplicate target path
-  // -------------------------------------------------------------------------
+  describe('addSubstitution', () => {
+    it('appends a plain substitution without a notice', () => {
+      const update = service.addSubstitution(makeSubstitutionModel(true, true, '$.temp', '$.c8y_Temp.T.value'), []);
 
-  describe('addSubstitution (duplicate target path)', () => {
-    // The confirmation modal this used to open is gone: expandArray/repairStrategy are edited
-    // inline in the grid, and the replaced row is visible there, so the overwrite is applied
-    // directly and only reported via an alert.
-    it('should replace the colliding substitution in place and report it', () => {
-      const existing = makeSubstitution('$.old', '$.value');
-      const mapping = makeMapping([existing]);
-      const model = makeSubstitutionModel(true, true, '$.new', '$.value'); // same target path
-      const onSuccess = jasmine.createSpy('onSuccess');
-
-      service.addSubstitution(model, mapping, onSuccess);
-
-      expect(mapping.substitutions.length).toBe(1);
-      expect(mapping.substitutions[0].pathSource).toBe('$.new');
-      expect(mapping.substitutions[0].pathTarget).toBe('$.value');
-      expect(onSuccess).toHaveBeenCalledTimes(1);
-      expect(mockAlertService.info).toHaveBeenCalledTimes(1);
-    });
-
-    it('should replace at the colliding index, leaving other substitutions in place', () => {
-      const mapping = makeMapping([
-        makeSubstitution('$.a', '$.tgtA'),
-        makeSubstitution('$.b', '$.tgtB')
+      expect(update.substitutions).toEqual([
+        jasmine.objectContaining({ pathSource: '$.temp', pathTarget: '$.c8y_Temp.T.value' })
       ]);
+      expect(update.notice).toBeUndefined();
+    });
 
-      service.addSubstitution(makeSubstitutionModel(true, true, '$.b2', '$.tgtB'), mapping, () => {});
+    it('strips UI-only state from the model', () => {
+      const model = { ...makeSubstitutionModel(true, true), stepperConfiguration: {}, pathSourceIsExpression: true };
+      const [added] = service.addSubstitution(model as any, []).substitutions;
+      expect(Object.keys(added).sort()).toEqual(['expandArray', 'pathSource', 'pathTarget', 'repairStrategy']);
+    });
 
-      expect(mapping.substitutions.length).toBe(2);
-      expect(mapping.substitutions[0].pathSource).toBe('$.a');
-      expect(mapping.substitutions[1].pathSource).toBe('$.b2');
+    it('replaces the colliding substitution in place and reports it', () => {
+      const update = service.addSubstitution(
+        makeSubstitutionModel(true, true, '$.new', '$.value'),
+        [makeSubstitution('$.old', '$.value')]
+      );
+
+      expect(update.substitutions.length).toBe(1);
+      expect(update.substitutions[0].pathSource).toBe('$.new');
+      expect(update.notice).toContain('Replaced substitution # 1');
+    });
+
+    it('replaces at the colliding index, leaving other substitutions in place', () => {
+      const update = service.addSubstitution(
+        makeSubstitutionModel(true, true, '$.b2', '$.tgtB'),
+        [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB')]
+      );
+
+      expect(update.substitutions.map(s => s.pathSource)).toEqual(['$.a', '$.b2']);
     });
   });
-
-  // -------------------------------------------------------------------------
-  // updateSubstitution — guard: does nothing when index is -1
-  // -------------------------------------------------------------------------
 
   describe('updateSubstitution', () => {
-    it('should do nothing when selectedSubstitution is -1', () => {
-      const mapping = makeMapping([makeSubstitution()]);
+    it('returns undefined when nothing is selected', () => {
+      const current = [makeSubstitution()];
       const model = makeSubstitutionModel(true, true, '$.new', '$.other');
-      const onSuccess = jasmine.createSpy('onSuccess');
 
-      service.updateSubstitution(-1, model, mapping, onSuccess);
-
-      expect(onSuccess).not.toHaveBeenCalled();
-      expect(mapping.substitutions[0].pathSource).toBe('$.temp');
+      expect(service.updateSubstitution(-1, model, current)).toBeUndefined();
+      expect(service.updateSubstitution(5, model, current)).toBeUndefined();
     });
 
-    it('should apply the update directly when there is no duplicate target path', () => {
-      const mapping = makeMapping([makeSubstitution('$.src', '$.tgt')]);
-      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
-      const onSuccess = jasmine.createSpy('onSuccess');
+    it('applies the update directly when there is no duplicate target path', () => {
+      const update = service.updateSubstitution(
+        0,
+        makeSubstitutionModel(true, true, '$.src2', '$.tgt2'),
+        [makeSubstitution('$.src', '$.tgt')]
+      );
 
-      service.updateSubstitution(0, model, mapping, onSuccess);
-
-      expect(mapping.substitutions.length).toBe(1);
-      expect(mapping.substitutions[0].pathSource).toBe('$.src2');
-      expect(mapping.substitutions[0].pathTarget).toBe('$.tgt2');
-      expect(onSuccess).toHaveBeenCalledTimes(1);
-      expect(mockAlertService.info).not.toHaveBeenCalled();
+      expect(update.substitutions).toEqual([jasmine.objectContaining({ pathSource: '$.src2', pathTarget: '$.tgt2' })]);
+      expect(update.notice).toBeUndefined();
     });
 
-    it('should preserve the existing repairStrategy/expandArray (now edited inline in the grid) when applied directly', () => {
+    it('preserves repairStrategy/expandArray, which are edited inline in the grid', () => {
       const existing = { ...makeSubstitution('$.src', '$.tgt'), repairStrategy: RepairStrategy.IGNORE, expandArray: true };
-      const mapping = makeMapping([existing]);
-      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
 
-      service.updateSubstitution(0, model, mapping, () => {});
+      const update = service.updateSubstitution(0, makeSubstitutionModel(true, true, '$.src2', '$.tgt2'), [existing]);
 
-      expect(mapping.substitutions[0].repairStrategy).toBe(RepairStrategy.IGNORE);
-      expect(mapping.substitutions[0].expandArray).toBe(true);
+      expect(update.substitutions[0].repairStrategy).toBe(RepairStrategy.IGNORE);
+      expect(update.substitutions[0].expandArray).toBe(true);
     });
 
-    it('should collapse the edited row into the colliding slot and report it', () => {
-      const other = makeSubstitution('$.other', '$.tgt2');
-      const editing = makeSubstitution('$.src', '$.tgt');
-      const mapping = makeMapping([editing, other]);
-      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2'); // collides with `other`
-      const onSuccess = jasmine.createSpy('onSuccess');
+    it('keeps the old paths when either expression is invalid', () => {
+      const update = service.updateSubstitution(
+        0,
+        makeSubstitutionModel(false, true, '$.src2', '$.tgt2'),
+        [makeSubstitution('$.src', '$.tgt')]
+      );
 
-      service.updateSubstitution(0, model, mapping, onSuccess);
-
-      expect(mapping.substitutions.length).toBe(1);
-      expect(mapping.substitutions[0].pathSource).toBe('$.src2');
-      expect(mapping.substitutions[0].pathTarget).toBe('$.tgt2');
-      expect(onSuccess).toHaveBeenCalledTimes(1);
-      expect(mockAlertService.info).toHaveBeenCalledTimes(1);
+      expect(update.substitutions[0]).toEqual(jasmine.objectContaining({ pathSource: '$.src', pathTarget: '$.tgt' }));
     });
 
-    it('should collapse correctly when the colliding entry precedes the edited one', () => {
-      const other = makeSubstitution('$.other', '$.tgt2');
-      const editing = makeSubstitution('$.src', '$.tgt');
-      const mapping = makeMapping([other, editing]);
-      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
+    it('collapses the edited row into the colliding slot and reports it', () => {
+      const update = service.updateSubstitution(
+        0,
+        makeSubstitutionModel(true, true, '$.src2', '$.tgt2'), // collides with the second entry
+        [makeSubstitution('$.src', '$.tgt'), makeSubstitution('$.other', '$.tgt2')]
+      );
 
-      service.updateSubstitution(1, model, mapping, () => {});
+      expect(update.substitutions.length).toBe(1);
+      expect(update.substitutions[0]).toEqual(jasmine.objectContaining({ pathSource: '$.src2', pathTarget: '$.tgt2' }));
+      expect(update.notice).toContain('Merged into substitution # 2');
+    });
 
-      expect(mapping.substitutions.length).toBe(1);
-      expect(mapping.substitutions[0].pathSource).toBe('$.src2');
+    it('collapses correctly when the colliding entry precedes the edited one', () => {
+      const update = service.updateSubstitution(
+        1,
+        makeSubstitutionModel(true, true, '$.src2', '$.tgt2'),
+        [makeSubstitution('$.other', '$.tgt2'), makeSubstitution('$.src', '$.tgt')]
+      );
+
+      expect(update.substitutions.length).toBe(1);
+      expect(update.substitutions[0].pathSource).toBe('$.src2');
+    });
+  });
+
+  describe('deleteSubstitution', () => {
+    it('removes the substitution at the index', () => {
+      const result = service.deleteSubstitution(
+        1,
+        [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB'), makeSubstitution('$.c', '$.tgtC')]
+      );
+      expect(result.map(s => s.pathSource)).toEqual(['$.a', '$.c']);
+    });
+
+    it('returns undefined for an index outside the list', () => {
+      expect(service.deleteSubstitution(3, [makeSubstitution()])).toBeUndefined();
+      expect(service.deleteSubstitution(-1, [makeSubstitution()])).toBeUndefined();
+    });
+  });
+
+  describe('patchSubstitution', () => {
+    it('changes only the addressed substitution', () => {
+      const result = service.patchSubstitution(
+        [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB')],
+        1,
+        { expandArray: true, repairStrategy: RepairStrategy.IGNORE }
+      );
+
+      expect(result[0].expandArray).toBe(false);
+      expect(result[1]).toEqual(jasmine.objectContaining({ pathSource: '$.b', expandArray: true, repairStrategy: RepairStrategy.IGNORE }));
+    });
+  });
+
+  describe('replaceAllSubstitutions', () => {
+    it('maps every model to a plain substitution, without per-item duplicate handling', () => {
+      const result = service.replaceAllSubstitutions([
+        makeSubstitutionModel(true, true, '$.a', '$.same'),
+        makeSubstitutionModel(true, true, '$.b', '$.same')
+      ] as any);
+
+      expect(result.map(s => s.pathSource)).toEqual(['$.a', '$.b']);
     });
   });
 });

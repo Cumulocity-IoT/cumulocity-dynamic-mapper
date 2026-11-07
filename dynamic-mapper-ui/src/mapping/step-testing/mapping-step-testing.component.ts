@@ -426,8 +426,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // Keeps the testing component's own payload state (editor payload and the mapping copy that is
   // sent to the backend) in step.
-  // propagate = true additionally writes the payload back into the mapping being edited and tells
-  // the host, so that a payload the user deliberately edited here becomes the mapping's source
+  // propagate = true additionally tells the host (which writes it into the mapping being edited), so that a payload the user deliberately edited here becomes the mapping's source
   // template. Running a test or resetting must NOT propagate: it would rewrite the live mapping
   // (and store the test-only patched device id in it), and the editor would then report unsaved
   // changes although the user changed nothing.
@@ -441,7 +440,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       ...(topicSample ? { mappingTopicSample: topicSample } : {})
     };
     if (propagate) {
-      this.mapping.sourceTemplate = sourceTemplateStr;
       this.sourceTemplateChanged.emit(parsedContent);
     }
   }

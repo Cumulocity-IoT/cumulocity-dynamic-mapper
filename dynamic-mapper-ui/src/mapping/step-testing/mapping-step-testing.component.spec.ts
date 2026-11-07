@@ -672,11 +672,11 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(JSON.parse(ctx.mapping.sourceTemplate)).toEqual({ a: 1 });
     });
 
-    it('a payload the user really edited is written back and announced', () => {
+    it('a payload the user really edited is announced to the host, which owns the mapping', () => {
       component.onSourceTemplateChanged({ updatedContent: { json: { a: 2 } } } as any);
 
-      expect(JSON.parse(component.mapping.sourceTemplate)).toEqual({ a: 2 });
       expect(emitted).toEqual([{ a: 2 }]);
+      expect(component.mapping.sourceTemplate).toBe(originalSource); // the step never writes the mapping
     });
 
     it('a change event that only re-serializes the same payload is not an edit', () => {

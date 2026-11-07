@@ -1,5 +1,7 @@
 import '../../shared';
 import { MappingSubstitutionStepComponent } from './mapping-substitution-step.component';
+import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { RepairStrategy, Substitution } from '../../shared';
 
 describe('MappingSubstitutionStepComponent showExpandArrayHint', () => {
   // The getter only reads substitutionModel, so no TestBed (and no CoreModule DI graph) is needed.
@@ -27,5 +29,101 @@ describe('MappingSubstitutionStepComponent showExpandArrayHint', () => {
     expect(hintFor({ sourceExpression: { resultType: 'String' } })).toBeFalse();
     expect(hintFor({})).toBeFalse();
     expect(hintFor(undefined)).toBeFalse();
+  });
+});
+
+describe('MappingSubstitutionStepComponent substitution changes', () => {
+  const sub = (pathSource: string, pathTarget: string): Substitution => ({
+    pathSource, pathTarget, repairStrategy: RepairStrategy.DEFAULT, expandArray: false
+  });
+
+  let step: any;
+  let emitted: Substitution[][];
+  let alertService: jasmine.SpyObj<any>;
+  let refresh: jasmine.Spy;
+  let mapping: any;
+
+  beforeEach(() => {
+    // The step is exercised without a TestBed (no CoreModule DI graph): only what the methods read is set.
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    mapping = { substitutions: [sub('$.a', '$.tgtA'), sub('$.b', '$.tgtB')] };
+    emitted = [];
+    alertService = jasmine.createSpyObj('AlertService', ['info', 'warning']);
+    refresh = jasmine.createSpy('refreshSubstitutionValidity');
+    step.mapping = mapping;
+    step.substitutionService = new SubstitutionManagementService();
+    step.alertService = alertService;
+    step.refreshSubstitutionValidity = refresh;
+    step.substitutionsChange = { emit: (s: Substitution[]) => emitted.push(s) };
+    step.selectedSubstitution = -1;
+  });
+
+  it('delete announces the remaining list without touching the mapping, then revalidates', () => {
+    step.selectedSubstitution = 1;
+
+    step.onDeleteSubstitution(0);
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0].map(s => s.pathSource)).toEqual(['$.b']);
+    expect(mapping.substitutions.length).toBe(2); // the host applies the change
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(step.selectedSubstitution).toBe(0); // a row above the selected one was removed
+  });
+
+  it('delete of an index outside the list announces nothing', () => {
+    step.onDeleteSubstitution(7);
+
+    expect(emitted).toEqual([]);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('an in-grid edit is announced as a new list and leaves the old substitution untouched', () => {
+    const original = mapping.substitutions[1];
+
+    step.onGridSubstitutionPatch({ index: 1, patch: { expandArray: true } });
+
+    expect(emitted[0][1].expandArray).toBeTrue();
+    expect(original.expandArray).toBeFalse();
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('a replaced duplicate target is reported to the user', () => {
+    step.substitutionModel = { pathSource: '$.new', pathTarget: '$.tgtA', sourceExpression: { valid: true }, targetExpression: { valid: true } };
+
+    step.onAddSubstitution();
+
+    expect(emitted[0].map(s => s.pathSource)).toEqual(['$.new', '$.b']);
+    expect(alertService.info).toHaveBeenCalledWith(jasmine.stringContaining('Replaced substitution # 1'));
+    expect(step.selectedSubstitution).toBe(-1);
+  });
+
+  it('adding an invalid substitution warns and announces nothing', () => {
+    step.substitutionModel = { pathSource: '', pathTarget: '', sourceExpression: { valid: true }, targetExpression: { valid: true } };
+
+    step.onAddSubstitution();
+
+    expect(alertService.warning).toHaveBeenCalled();
+    expect(emitted).toEqual([]);
+  });
+
+  it('update announces the list, then leaves edit mode', () => {
+    step.selectedSubstitution = 0;
+    step.substitutionModel = { pathSource: '$.a2', pathTarget: '$.tgtA2', sourceExpression: { valid: true }, targetExpression: { valid: true } };
+    step.cancelEditSubstitution = jasmine.createSpy('cancelEditSubstitution');
+
+    step.onUpdateSubstitution();
+
+    expect(emitted[0][0]).toEqual(jasmine.objectContaining({ pathSource: '$.a2', pathTarget: '$.tgtA2' }));
+    expect(step.cancelEditSubstitution).toHaveBeenCalled();
+  });
+
+  it('update with no selected row does nothing', () => {
+    step.cancelEditSubstitution = jasmine.createSpy('cancelEditSubstitution');
+    step.substitutionModel = { pathSource: 'x', pathTarget: 'y', sourceExpression: { valid: true }, targetExpression: { valid: true } };
+
+    step.onUpdateSubstitution();
+
+    expect(emitted).toEqual([]);
+    expect(step.cancelEditSubstitution).not.toHaveBeenCalled();
   });
 });
