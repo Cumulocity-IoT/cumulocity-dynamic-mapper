@@ -21,8 +21,7 @@ import {
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
-  RepairStrategy,
-  ALERT_INFO_TIMEOUT
+  RepairStrategy
 } from '../../shared';
 import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
@@ -257,6 +256,11 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** The source expression yields an array but "Expand as array" is off: shown as a hint, not a toast. */
+  get showExpandArrayHint(): boolean {
+    return this.substitutionModel?.sourceExpression?.resultType === 'Array' && !this.substitutionModel.expandArray;
+  }
+
   async updateSourceExpressionResult(path: string): Promise<void> {
     try {
       const result = await this.stepperService.evaluateSourceExpression(
@@ -266,10 +270,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionModel.sourceExpression = result;
       this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
       this.substitutionFormly.get('pathSource').setErrors(null);
-
-      if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        this.alertService.add({ text: 'Current expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
-      }
     } catch (error) {
       // sourceExpression can still be unset here (e.g. right after selecting an existing
       // substitution, whose persisted form never carries it) - default it rather than assume it.

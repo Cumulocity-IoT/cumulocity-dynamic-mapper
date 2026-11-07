@@ -109,6 +109,11 @@
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
             </formly-form>
+            @if (showExpandArrayHint) {
+            <small class="text-info d-block m-t-4" data-cy="dm-substitution-expand-array-hint">
+              {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
+            </small>
+            }
           </div>
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
