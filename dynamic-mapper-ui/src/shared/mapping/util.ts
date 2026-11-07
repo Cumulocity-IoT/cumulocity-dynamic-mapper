@@ -981,15 +981,13 @@ export function isConnectorSelectionEmpty(deploymentMapEntry: DeploymentMapEntry
 }
 
 /**
- * Shape common to the template-step components (currently only `MappingTemplateStepComponent`)
- * that {@link updateTemplatesInEditors} needs — narrowed to just the fields it reads so this
- * shared util doesn't have to import the full step component type.
+ * What {@link updateTemplatesInEditors} needs from the template step (`MappingTemplateStepComponent`):
+ * the templates as the user currently has them, or `undefined` when the editors are not there.
+ * Narrowed to two methods so this util neither reaches into the step's editors nor imports it.
  */
 export interface TemplateEditorRef {
-  editorSourceStepTemplate?: JsonEditorComponent;
-  editorTargetStepTemplate?: JsonEditorComponent;
-  sourceTemplateUpdated?: any;
-  targetTemplateUpdated?: any;
+  getSourceTemplate(): any;
+  getTargetTemplate(): any;
 }
 
 /**
@@ -1010,21 +1008,18 @@ export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined)
 }
 
 /**
- * Pulls the latest source/target template values out of the template step's editors before a
- * save or a step/tab transition away from it. Tries the live editor content first, falling back
- * to the step component's own change-mirror, falling back to the current value — see
- * {@link tryGetLiveEditorContent} for why the live read is needed.
+ * Pulls the latest source/target template values out of the template step before a save or a
+ * step/tab transition away from it, falling back to the host's current value when the step is not
+ * rendered. The step answers with the full template, hidden metadata keys restored.
  */
 export function updateTemplatesInEditors(
   templateStepRef: TemplateEditorRef | undefined,
   currentSourceTemplate: any,
   currentTargetTemplate: any
 ): { sourceTemplate: any; targetTemplate: any } {
-  const liveSource = tryGetLiveEditorContent(templateStepRef?.editorSourceStepTemplate);
-  const liveTarget = tryGetLiveEditorContent(templateStepRef?.editorTargetStepTemplate);
   return {
-    sourceTemplate: liveSource ?? templateStepRef?.sourceTemplateUpdated ?? currentSourceTemplate,
-    targetTemplate: liveTarget ?? templateStepRef?.targetTemplateUpdated ?? currentTargetTemplate
+    sourceTemplate: templateStepRef?.getSourceTemplate() ?? currentSourceTemplate,
+    targetTemplate: templateStepRef?.getTargetTemplate() ?? currentTargetTemplate
   };
 }
 

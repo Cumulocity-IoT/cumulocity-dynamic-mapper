@@ -41,10 +41,7 @@ import {
   StepperConfiguration
 } from '../../shared';
 import { STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../../shared/mapping/stepper.model';
-import {
-  isCodeOrExtensionTransformation,
-  tryGetLiveEditorContent
-} from '../../shared/mapping/util';
+import { isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
 import { CommitEditorState, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
@@ -335,7 +332,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
 
   /** True if the user has edited the target template since `aiReviewBaseline` was captured. */
   private hasReviewedAITemplate(): boolean {
-    const liveTarget = tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    const liveTarget = this.templateStepRef?.getTargetTemplate();
     if (liveTarget === undefined) return true; // can't verify — don't block on a guess
     return JSON.stringify(liveTarget) !== this.aiReviewBaseline;
   }

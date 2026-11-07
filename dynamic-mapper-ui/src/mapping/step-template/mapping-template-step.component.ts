@@ -37,20 +37,15 @@ import { Observable, Subject, takeUntil } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   ContentChanges,
-  Direction,
   Feature,
-  getExternalTemplate,
   JsonEditorComponent,
   Mapping,
-  SAMPLE_TEMPLATES_C8Y,
   StepperConfiguration
 } from '../../shared';
 import {
   checkTransformationType,
-  expandC8YTemplate,
-  expandExternalTemplate,
   isCodeOrExtensionTransformation,
-  splitTopicExcludingSeparator,
+  tryGetLiveEditorContent,
   validateProtectedFields
 } from '../../shared/mapping/util';
 import { StepperViewModel } from '../stepper/stepper-view.model';
@@ -230,6 +225,27 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     }
   }
 
+  /**
+   * The source template as the user currently has it, hidden metadata keys included. The editor
+   * only holds the displayed template (metadata stripped while hidden), so reading it directly
+   * would drop `_IDENTITY_`/`_TOPIC_LEVEL_`/`_CONTEXT_DATA_` from whatever the host stores.
+   * `undefined` while the editor does not exist (step not rendered, or still being created).
+   */
+  getSourceTemplate(): any {
+    return this.currentTemplate(this.editorSourceStepTemplate, this.sourceTemplateUpdated, this.sourceTemplate, this.showSourceMetadata);
+  }
+
+  /** The target-side counterpart of {@link getSourceTemplate}. */
+  getTargetTemplate(): any {
+    return this.currentTemplate(this.editorTargetStepTemplate, this.targetTemplateUpdated, this.targetTemplate, this.showTargetMetadata);
+  }
+
+  private currentTemplate(editor: JsonEditorComponent | undefined, mirror: any, full: any, showMetadata: boolean): any {
+    const live = tryGetLiveEditorContent(editor);
+    if (live === undefined) return mirror;
+    return showMetadata ? live : this.restoreMetadataKeys(live, full);
+  }
+
   /** True when the template carries at least one metadata token that the toggle could hide. */
   private containsMetadata(template: any): boolean {
     if (!template || typeof template !== 'object' || Array.isArray(template)) {
@@ -303,9 +319,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       // has already expanded the templates but Angular hasn't yet propagated the
       // @Input change to this child). Fall back to the live editor content, then
       // to the @Input sourceTemplate as a last resort.
-      const editorTemplate = this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
-      const template = templateOverride
-        ?? (this.showSourceMetadata ? editorTemplate : this.restoreMetadataKeys(editorTemplate, this.sourceTemplate));
+      const template = templateOverride ?? this.getSourceTemplate() ?? this.sourceTemplate;
       const result = await this.stepperService.evaluateFilterExpression(
         template,
         path
@@ -422,23 +436,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Sample target templates ────────────────────────────────────────────────
 
   onSampleTargetTemplatesButton(): void {
-    let newTarget: any;
-    if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      if (isCodeOrExtensionTransformation(this.mapping.transformationType)) {
-        newTarget = {};
-      } else {
-        const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-        newTarget = this.stepperConfiguration.allowTemplateExpansion
-          ? expandC8YTemplate(template, this.mapping)
-          : template;
-      }
-    } else {
-      const levels = splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false);
-      const template = JSON.parse(getExternalTemplate(this.mapping));
-      newTarget = this.stepperConfiguration.allowTemplateExpansion
-        ? expandExternalTemplate(template, this.mapping, levels)
-        : template;
-    }
+    const newTarget = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
     this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
     this.targetTemplateChange.emit(newTarget);
   }

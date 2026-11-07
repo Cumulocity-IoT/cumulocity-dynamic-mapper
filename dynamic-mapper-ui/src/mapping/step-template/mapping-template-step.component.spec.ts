@@ -91,7 +91,7 @@ describe('MappingTemplateStepComponent', () => {
     contentValidEmissions = [];
     isContentChangeValid$.subscribe((v) => contentValidEmissions.push(v));
 
-    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression'], {
+    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression', 'computeSampleTargetTemplate'], {
       isContentChangeValid$: isContentChangeValid$
     });
     mockAlertService = jasmine.createSpyObj('AlertService', ['add', 'remove'], { state: [] });
@@ -264,16 +264,50 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('onSampleTargetTemplatesButton', () => {
-    it('emits a fresh sample target template for INBOUND mappings', () => {
-      component.stepperConfiguration = buildConfig({ direction: Direction.INBOUND });
-      component.mapping = buildMapping({ targetAPI: 'MEASUREMENT' });
+    it('emits the sample target template the service computes', () => {
+      mockStepperService.computeSampleTargetTemplate.and.returnValue({ sample: true });
       const emitted: any[] = [];
       component.targetTemplateChange.subscribe((t) => emitted.push(t));
 
       component.onSampleTargetTemplatesButton();
 
-      expect(emitted.length).toBe(1);
-      expect(emitted[0]).toBeDefined();
+      expect(mockStepperService.computeSampleTargetTemplate).toHaveBeenCalledWith(component.mapping, component.stepperConfiguration);
+      expect(emitted).toEqual([{ sample: true }]);
+    });
+  });
+
+  describe('getSourceTemplate / getTargetTemplate', () => {
+    const full = { value: 1, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] };
+    const editor = (content: any) => ({ get: () => content }) as any;
+
+    it('restores hidden metadata keys onto what the editor holds', () => {
+      component.sourceTemplate = full;
+      component.showSourceMetadata = false;
+      component.editorSourceStepTemplate = editor({ value: 2 }); // displayed template, metadata stripped
+
+      expect(component.getSourceTemplate()).toEqual({ value: 2, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] });
+    });
+
+    it('returns the editor content as is while metadata is shown', () => {
+      component.targetTemplate = full;
+      component.showTargetMetadata = true;
+      component.editorTargetStepTemplate = editor({ value: 2 }); // user removed the metadata on purpose
+
+      expect(component.getTargetTemplate()).toEqual({ value: 2 });
+    });
+
+    it('does not resurrect a key the user edited into a different value', () => {
+      component.sourceTemplate = full;
+      component.showSourceMetadata = false;
+      component.editorSourceStepTemplate = editor({ value: 2, _IDENTITY_: { externalId: 'edited' } });
+
+      expect(component.getSourceTemplate()._IDENTITY_).toEqual({ externalId: 'edited' });
+    });
+
+    it('falls back to the change mirror, then undefined, without an editor', () => {
+      component.sourceTemplateUpdated = { mirror: true };
+      expect(component.getSourceTemplate()).toEqual({ mirror: true });
+      expect(component.getTargetTemplate()).toBeUndefined();
     });
   });
 });

@@ -349,11 +349,6 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.stepperService.raiseAlert(alert);
   }
 
-  async onSampleTargetTemplatesButton(): Promise<void> {
-    this.targetTemplate = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
-    this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);
-  }
-
   onSelectExtensionName(extensionName: string): void {
     this.stepperService.applyExtensionNameSelection(extensionName, this.mapping, this.extensions);
   }
