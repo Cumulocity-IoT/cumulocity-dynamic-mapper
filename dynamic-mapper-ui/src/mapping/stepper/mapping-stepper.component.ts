@@ -50,12 +50,12 @@ import { CommitEditorState, MappingStepperService } from '../service/mapping-ste
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
+import { MappingCodeEditorSectionComponent } from '../editor-base/mapping-code-editor-section.component';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 
 interface StepperStepChange {
   stepper: C8yStepper;
@@ -70,7 +70,7 @@ interface StepperStepChange {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
-  imports: [CoreModule, CommonModule, EditorComponent, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, MappingTemplateStepComponent, MappingExtensionSelectorComponent]
+  imports: [CoreModule, CommonModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, MappingTemplateStepComponent, MappingExtensionSelectorComponent, MappingCodeEditorSectionComponent]
 })
 export class MappingStepperComponent extends MappingEditorBase implements OnInit {
   @Input() mapping!: Mapping;

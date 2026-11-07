@@ -440,6 +440,11 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       || (needsSourceEditor && !this.stepperViewModel?.config.showEditorSource);
   }
 
+  /** An existing mapping is being refined; a new one generated. */
+  get aiButtonLabel(): string {
+    return this.stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI';
+  }
+
   async openGenerateSubstitutionDrawer(): Promise<void> {
     this.isGenerateSubstitutionOpen = true;
 

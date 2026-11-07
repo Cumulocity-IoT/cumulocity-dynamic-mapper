@@ -76,10 +76,10 @@ import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
+import { MappingCodeEditorSectionComponent } from '../editor-base/mapping-code-editor-section.component';
 
 // The tabs are the stepper's steps, in the same order
 const TAB_CONNECTOR = STEP_SELECT_CONNECTOR;
@@ -113,15 +113,14 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     CommonModule,
     TabComponent,
     TabsOutletComponent,
-    EditorComponent,
-    PopoverModule,
     BsDropdownModule,
     MappingStepPropertiesComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
     MappingTemplateStepComponent,
     MappingStepTestingComponent,
-    MappingExtensionSelectorComponent
+    MappingExtensionSelectorComponent,
+    MappingCodeEditorSectionComponent
   ]
 })
 export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
