@@ -192,12 +192,11 @@ describe('MappingStepperComponent', () => {
         'initializeEditorSession',
         'registerCompletionProvider',
         'encodeMappingForCommit',
+        'setButtonDisabled',
       'commitMapping'
       ],
       {
-        countDeviceIdentifiers$: of(0),
         isSubstitutionValid$: isSubstitutionValid$,
-        isContentChangeValid$: new Subject(),
         extensionEvents$: of([]),
         isButtonDisabled$: isButtonDisabled$,
         sourceCustomMessage$: of(''),
@@ -576,36 +575,34 @@ describe('MappingStepperComponent', () => {
       await component.ngOnInit();
     });
 
-    it('disables the button when no connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: 'x', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(true);
-        done();
-      });
+    // The button state is published through the service from a microtask (change-detection safety).
+    const settled = () => Promise.resolve();
+
+    it('disables the button when no connectors are assigned', async () => {
       component.deploymentMapEntryChange({ identifier: 'x', connectors: [] });
+      await settled();
+
+      expect(mockStepperService.setButtonDisabled).toHaveBeenCalledWith(true);
     });
 
-    it('enables the button when connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: 'x', connectors: ['c1'] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(false);
-        done();
-      });
+    it('enables the button when connectors are assigned', async () => {
       component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
+      await settled();
+
+      expect(mockStepperService.setButtonDisabled).toHaveBeenCalledWith(false);
     });
 
-    it('stores the new selection on the component (not just the button state), regardless of what the previous selection was', (done) => {
+    it('stores the new selection on the component (not just the button state), regardless of what the previous selection was', async () => {
       // Regression test: deploymentMapEntryChange must reassign this.deploymentMapEntry to the
       // new value before computing isDisabled — previously it only used the stale prior value,
       // so the field bound back down into <d11r-mapping-connector> never updated and the button
       // state was always one selection behind.
       component.deploymentMapEntry = { identifier: 'x', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(component.deploymentMapEntry).toEqual({ identifier: 'x', connectors: ['c1'] });
-        expect(disabled).toBe(false);
-        done();
-      });
       component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
+      await settled();
+
+      expect(component.deploymentMapEntry).toEqual({ identifier: 'x', connectors: ['c1'] });
+      expect(mockStepperService.setButtonDisabled).toHaveBeenCalledWith(false);
     });
   });
 

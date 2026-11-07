@@ -174,7 +174,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.deploymentMapEntry = editData.deploymentMapEntry;
     this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     // Initialize the Save-button gate: a mapping requires at least one selected connector
-    this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
+    this.stepperService.setButtonDisabled(isConnectorSelectionEmpty(this.deploymentMapEntry));
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings

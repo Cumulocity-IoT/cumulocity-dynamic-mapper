@@ -64,14 +64,31 @@ export class MappingStepperService {
     private aiAgentService = inject(AiAgentService);
     private alertService = inject(AlertService);
 
-    // Observables
-    countDeviceIdentifiers$ = new BehaviorSubject<number>(0);
-    isSubstitutionValid$ = new BehaviorSubject<boolean>(false);
-    isContentChangeValid$ = new BehaviorSubject<boolean>(true);
-    extensionEvents$ = new BehaviorSubject<ExtensionEntry[]>([]);
-    isButtonDisabled$ = new BehaviorSubject<boolean>(true);
-    sourceCustomMessage$ = new Subject<string>();
-    targetCustomMessage$ = new Subject<string>();
+    // State shared with the host and its steps. Read-only observables: the subjects stay private
+    // so there is one place per value that writes it (the methods named next to each).
+    private readonly substitutionValid = new BehaviorSubject<boolean>(false);
+    private readonly extensionEvents = new BehaviorSubject<ExtensionEntry[]>([]);
+    private readonly buttonDisabled = new BehaviorSubject<boolean>(true);
+    private readonly sourceMessage = new Subject<string>();
+    private readonly targetMessage = new Subject<string>();
+
+    /** Written by {@link updateSubstitutionValidity}. */
+    readonly isSubstitutionValid$ = this.substitutionValid.asObservable();
+    /** Written by {@link loadExtensions}, {@link selectExtensionName} and the event filter. */
+    readonly extensionEvents$ = this.extensionEvents.asObservable();
+    /** Whether Next/Save is blocked (no connector selected); written by {@link setButtonDisabled}. */
+    readonly isButtonDisabled$ = this.buttonDisabled.asObservable();
+    /** Extra text shown with the source/target expression field; target written by {@link setTargetCustomMessage}. */
+    readonly sourceCustomMessage$ = this.sourceMessage.asObservable();
+    readonly targetCustomMessage$ = this.targetMessage.asObservable();
+
+    setButtonDisabled(disabled: boolean): void {
+        this.buttonDisabled.next(disabled);
+    }
+
+    setTargetCustomMessage(message: string): void {
+        this.targetMessage.next(message);
+    }
 
     /**
      * Emits whenever a mapping property relevant to template rendering changes
@@ -170,7 +187,6 @@ export class MappingStepperService {
      */
     updateSubstitutionValidity(mapping: Mapping, allowNoDefinedIdentifier: boolean, isBeforeSubstitutionStep: boolean, showCodeEditor: boolean): void {
         const ni = countDeviceIdentifiers(mapping);
-        this.countDeviceIdentifiers$.next(ni);
 
         const isValid = showCodeEditor ||
             (ni == 1 && mapping.direction == Direction.INBOUND) ||
@@ -178,7 +194,7 @@ export class MappingStepperService {
             allowNoDefinedIdentifier ||
             isBeforeSubstitutionStep;
 
-        this.isSubstitutionValid$.next(isValid);
+        this.substitutionValid.next(isValid);
     }
 
     /**
@@ -271,7 +287,7 @@ export class MappingStepperService {
 
         if (mapping?.extension?.extensionName && extensions.get(mapping.extension.extensionName)) {
             const entries = Object.values(extensions.get(mapping.extension.extensionName).extensionEntries);
-            this.extensionEvents$.next(entries);
+            this.extensionEvents.next(entries);
         }
 
         return extensions;
@@ -285,7 +301,7 @@ export class MappingStepperService {
     selectExtensionName(extensionName: string, extensions: Map<string, Extension>, mapping: Mapping): void {
         const extension = extensions.get(extensionName);
         if (!extension) {
-            this.extensionEvents$.next([]);
+            this.extensionEvents.next([]);
             return;
         }
 
@@ -311,7 +327,7 @@ export class MappingStepperService {
             ? allEntries.filter(entry => entry.extensionType === targetExtensionType)
             : allEntries;
 
-        this.extensionEvents$.next(filteredEntries);
+        this.extensionEvents.next(filteredEntries);
     }
 
     async loadCodeTemplates(): Promise<Map<string, CodeTemplate>> {
@@ -557,11 +573,11 @@ export class MappingStepperService {
 
     cleanup(): void {
         this.completionProviderDisposable?.dispose();
-        this.countDeviceIdentifiers$.complete();
-        this.isSubstitutionValid$.complete();
-        this.extensionEvents$.complete();
-        this.sourceCustomMessage$.complete();
-        this.targetCustomMessage$.complete();
+        this.substitutionValid.complete();
+        this.extensionEvents.complete();
+        this.buttonDisabled.complete();
+        this.sourceMessage.complete();
+        this.targetMessage.complete();
         this.mappingPropertyChanged$.complete();
     }
 

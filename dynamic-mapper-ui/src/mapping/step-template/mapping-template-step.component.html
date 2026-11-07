@@ -104,7 +104,7 @@
       }
     </div>
     <div>
-      @if (!(isContentChangeValid$ | async)) {
+      @if (!contentChangeValid) {
       <div class="p-b-16">
         <span class="text-warning text-12 p-l-8 p-b-12" style="display: block;">
           @if (sourceIssues.protectedFieldsChanged) {

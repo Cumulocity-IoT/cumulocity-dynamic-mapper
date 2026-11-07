@@ -33,7 +33,7 @@ import {
 import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   ContentChanges,
@@ -168,9 +168,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   private readonly alertService = inject(AlertService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  get isContentChangeValid$(): Observable<boolean> {
-    return this.stepperService.isContentChangeValid$;
-  }
+  /** False while the user's last template edit is not accepted (see {@link sourceIssues}); only this step shows it. */
+  contentChangeValid = true;
 
   private computeSampleTransportFields(): { name: string; value: string; accessor: string }[] {
     const fields = this.stepperConfiguration?.sampleTransportFields;
@@ -391,7 +390,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     this.validateTemplateChange(contentChanges, this.targetTemplate, this.showTargetMetadata);
   }
 
-  /** Validates an edit, publishes the verdict on isContentChangeValid$ and returns what is wrong with it. */
+  /** Validates an edit, records the verdict in contentChangeValid and returns what is wrong with it. */
   private validateTemplateChange(
     contentChanges: ContentChanges,
     baseline: any,
@@ -404,7 +403,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       try { updatedJson = JSON.parse(updatedContent['text']); }
       catch {
         // Mid-edit text that does not parse yet: nothing to judge.
-        this.stepperService.isContentChangeValid$.next(true);
+        this.contentChangeValid = true;
         return NO_TEMPLATE_ISSUES;
       }
     } else {
@@ -433,7 +432,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       && !validateProtectedFields(baseline, updatedJson);
     const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
-    this.stepperService.isContentChangeValid$.next(isValid);
+    this.contentChangeValid = isValid;
 
     if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
       this.raiseAlert({ type: 'warning', text: 'Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.' });

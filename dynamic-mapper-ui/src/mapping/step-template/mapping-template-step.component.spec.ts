@@ -22,7 +22,6 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import { MappingTemplateStepComponent } from './mapping-template-step.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
@@ -49,8 +48,6 @@ describe('MappingTemplateStepComponent', () => {
   let fixture: ComponentFixture<MappingTemplateStepComponent>;
   let mockStepperService: jasmine.SpyObj<MappingStepperService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
-  let isContentChangeValid$: Subject<boolean>;
-  let contentValidEmissions: boolean[];
 
   const buildMapping = (overrides: Partial<Mapping> = {}): Mapping => ({
     id: '1',
@@ -87,13 +84,7 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   beforeEach(async () => {
-    isContentChangeValid$ = new Subject<boolean>();
-    contentValidEmissions = [];
-    isContentChangeValid$.subscribe((v) => contentValidEmissions.push(v));
-
-    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression', 'computeSampleTargetTemplate'], {
-      isContentChangeValid$: isContentChangeValid$
-    });
+    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression', 'computeSampleTargetTemplate']);
     mockAlertService = jasmine.createSpyObj('AlertService', ['add', 'remove'], { state: [] });
 
     TestBed.overrideComponent(MappingTemplateStepComponent, {
@@ -126,7 +117,7 @@ describe('MappingTemplateStepComponent', () => {
       component.onSourceTemplateChanged(changes);
 
       expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
-      expect(contentValidEmissions).toContain(true);
+      expect(component.contentChangeValid).toBeTrue();
     });
 
     it('parses valid text content into JSON before judging it', () => {
@@ -146,7 +137,7 @@ describe('MappingTemplateStepComponent', () => {
       component.onSourceTemplateChanged(changes);
 
       expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.contentChangeValid).toBe(true);
     });
 
     it('flags an invalid change and warns when a protected field is altered (with expansion on)', () => {
@@ -162,7 +153,7 @@ describe('MappingTemplateStepComponent', () => {
 
       component.onSourceTemplateChanged(changes);
 
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.contentChangeValid).toBe(false);
       expect(component.sourceIssues.protectedFieldsChanged).toBeTrue();
       expect(mockAlertService.add).toHaveBeenCalled();
     });
@@ -174,7 +165,7 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { json: [1, 2, 3] } as Content
       };
       component.onSourceTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.contentChangeValid).toBe(false);
       expect(component.sourceIssues.arrayNeedsSmartFunction).toBeTrue();
     });
 
@@ -193,7 +184,7 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { json: { c8y_Temperature: { T: { value: 1 } } } } as Content
       };
       component.onTargetTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.contentChangeValid).toBe(true);
     });
 
     it('returns early (valid) on un-parseable text', () => {
@@ -202,7 +193,7 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { text: 'not json' } as Content
       };
       component.onTargetTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.contentChangeValid).toBe(true);
     });
   });
 

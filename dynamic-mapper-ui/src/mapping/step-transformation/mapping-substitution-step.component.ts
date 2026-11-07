@@ -274,7 +274,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathTarget').setErrors(null);
 
       if (path == '$') {
-        this.stepperService.targetCustomMessage$.next(
+        this.stepperService.setTargetCustomMessage(
           'By specifying "$" you selected the root of the target template...'
         );
       }

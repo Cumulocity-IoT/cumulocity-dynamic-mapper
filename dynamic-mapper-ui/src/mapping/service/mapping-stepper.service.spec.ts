@@ -247,12 +247,32 @@ describe('MappingStepperService', () => {
       return seen!;
     }
 
-    it('publishes the device-identifier count', () => {
-      let count: number | undefined;
-      const sub = service.countDeviceIdentifiers$.subscribe(n => (count = n));
-      service.updateSubstitutionValidity(withIdentifiers(2), false, false, false);
+    it('exposes read-only streams: only the service itself can write them', () => {
+      for (const stream of [service.isSubstitutionValid$, service.extensionEvents$, service.isButtonDisabled$,
+        service.sourceCustomMessage$, service.targetCustomMessage$]) {
+        expect((stream as any).next).toBeUndefined();
+      }
+    });
+
+    it('publishes the button state it is given', () => {
+      const seen: boolean[] = [];
+      const sub = service.isButtonDisabled$.subscribe(v => seen.push(v));
+
+      service.setButtonDisabled(false);
+      service.setButtonDisabled(true);
       sub.unsubscribe();
-      expect(count).toBe(2);
+
+      expect(seen).toEqual([true, false, true]); // starts disabled
+    });
+
+    it('publishes the target custom message it is given', () => {
+      let message: string | undefined;
+      const sub = service.targetCustomMessage$.subscribe(m => (message = m));
+
+      service.setTargetCustomMessage('root selected');
+      sub.unsubscribe();
+
+      expect(message).toBe('root selected');
     });
 
     it('INBOUND is valid with exactly one identifier', () => {
@@ -617,10 +637,10 @@ describe('MappingStepperService', () => {
         mapping, makeStepperConfig(), new Subject(), callbacks()
       );
 
-      service.isSubstitutionValid$.next(false);
+      service.updateSubstitutionValidity(makeMapping({ direction: Direction.INBOUND }), false, false, false); // no identifier
       expect(templateForm.errors).toEqual({ incorrect: true });
 
-      service.isSubstitutionValid$.next(true);
+      service.updateSubstitutionValidity(makeMapping({ direction: Direction.INBOUND }), false, true, false); // before the step
       expect(templateForm.errors).toBeNull();
     });
 

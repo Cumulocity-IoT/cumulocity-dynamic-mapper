@@ -191,6 +191,7 @@ describe('MappingUnifiedEditorComponent', () => {
         'loadCodeTemplates',
         'createCodeTemplate',
         'cleanup',
+        'setButtonDisabled',
         'raiseAlert',
         'patchExtensionFormValues',
         'applyExtensionNameSelection',
@@ -207,9 +208,7 @@ describe('MappingUnifiedEditorComponent', () => {
         'commitMapping'
       ],
       {
-        countDeviceIdentifiers$: of(0),
         isSubstitutionValid$: isSubstitutionValid$,
-        isContentChangeValid$: new Subject(),
         extensionEvents$: of([]),
         isButtonDisabled$: isButtonDisabled$,
         sourceCustomMessage$: of(''),
@@ -754,13 +753,11 @@ describe('MappingUnifiedEditorComponent', () => {
   });
 
   describe('Deployment map entry changes', () => {
-    it('disables the save button when no connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: '42', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(true);
-        done();
-      });
+    it('disables the save button when no connectors are assigned', async () => {
       component.deploymentMapEntryChange({ identifier: '42', connectors: [] });
+      await Promise.resolve(); // published from a microtask
+
+      expect(mockStepperService.setButtonDisabled).toHaveBeenCalledWith(true);
     });
   });
 

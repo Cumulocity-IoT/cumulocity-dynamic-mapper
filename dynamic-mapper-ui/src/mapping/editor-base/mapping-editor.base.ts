@@ -121,9 +121,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
-  get countDeviceIdentifiers$() { return this.stepperService.countDeviceIdentifiers$; }
   get isSubstitutionValid$() { return this.stepperService.isSubstitutionValid$; }
-  get isContentChangeValid$() { return this.stepperService.isContentChangeValid$; }
   get extensionEvents$() { return this.stepperService.extensionEvents$; }
   get isButtonDisabled$() { return this.stepperService.isButtonDisabled$; }
   get sourceCustomMessage$() { return this.stepperService.sourceCustomMessage$; }
@@ -337,7 +335,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.deploymentMapEntry = deploymentMapEntry;
     // Use queueMicrotask for change detection cycle completion
     queueMicrotask(() => {
-      this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
+      this.stepperService.setButtonDisabled(isConnectorSelectionEmpty(this.deploymentMapEntry));
       this.cdr.markForCheck();
     });
   }
