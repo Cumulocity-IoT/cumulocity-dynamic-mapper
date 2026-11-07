@@ -31,23 +31,23 @@
   <c8y-tab [icon]="'c8y-device-management'"
     [label]="(isButtonDisabled$ | async) ? 'Connector *' : 'Connector'"
     [priority]="50" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(TAB_GENERAL_SETTINGS)) {
   <c8y-tab [icon]="'settings'" [label]="(stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? 'General Settings *' : 'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
   @if (isTabVisible(TAB_SELECT_TEMPLATES)) {
   <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
   }
   @if (isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
   <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_DEFINE_TRANSFORMATION" (onSelect)="onTabSelected(TAB_DEFINE_TRANSFORMATION)" data-cy="dm-unified-editor-tab-transformation"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_DEFINE_TRANSFORMATION" (onSelect)="onTabSelected(TAB_DEFINE_TRANSFORMATION)" data-cy="dm-unified-editor-tab-transformation"></c8y-tab>
   }
   @if (isTabVisible(TAB_TEST_MAPPING)) {
   <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
+    [isActive]="currentStepIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
   }
 
   <!-- Tab content – only the active tab is rendered (@if); tab components are destroyed on switch, so state lives on this component and is synced in onTabSelected() -->
@@ -63,14 +63,14 @@
     }
 
     <!-- Tab 0: Connector -->
-    @if (activeTabIndex === TAB_CONNECTOR && isTabVisible(TAB_CONNECTOR)) {
+    @if (currentStepIndex === TAB_CONNECTOR && isTabVisible(TAB_CONNECTOR)) {
     <d11r-mapping-connector [showHeader]="true" [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
       [deploymentMapEntry]="deploymentMapEntry" (deploymentMapEntryChange)="deploymentMapEntryChange($event)">
     </d11r-mapping-connector>
     }
 
     <!-- Tab 1: General Settings -->
-    @if (activeTabIndex === TAB_GENERAL_SETTINGS && isTabVisible(TAB_GENERAL_SETTINGS)) {
+    @if (currentStepIndex === TAB_GENERAL_SETTINGS && isTabVisible(TAB_GENERAL_SETTINGS)) {
     <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [propertyFormly]="propertyFormly" [deploymentMapEntry]="deploymentMapEntry"
       (targetAPIChanged)="onTargetAPIChanged($event)">
@@ -78,7 +78,7 @@
     }
 
     <!-- Tab 2: Templates -->
-    @if (activeTabIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
+    @if (currentStepIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
     @if (stepperViewModel) {
     <d11r-mapping-template-step #templateStep
       [mapping]="mapping"
@@ -118,7 +118,7 @@
     }
 
     <!-- Tab 3: Substitutions -->
-    @if (activeTabIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
+    @if (currentStepIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
     <d11r-mapping-transformation-step #transformationStep [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" [aiAgent]="aiAgent"
@@ -136,7 +136,7 @@
     }
 
     <!-- Tab 4: Testing -->
-    @if (activeTabIndex === TAB_TEST_MAPPING && isTabVisible(TAB_TEST_MAPPING)) {
+    @if (currentStepIndex === TAB_TEST_MAPPING && isTabVisible(TAB_TEST_MAPPING)) {
     <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="updateTestingTemplate" [mapping]="mapping"
       [connectorsUnsaved]="connectorsUnsaved"
       [stepperConfiguration]="stepperConfiguration" (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)">

@@ -37,9 +37,11 @@ import {
   TransformationType
 } from '../../shared';
 import {
+  base64ToString,
   buildTestMapping,
   checkTransformationType,
   isConnectorSelectionEmpty,
+  stripTemplateMetadataTags,
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
@@ -188,6 +190,59 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.stepperService.cleanup();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /** Starts the editor session shared by both hosts and applies it; the caller assigns the schemas. */
+  protected async initSession(disableExtensionSelectorsWhenHidden = false): Promise<EditorSessionResult> {
+    const init = await this.stepperService.initializeEditorSession(
+      this.mapping,
+      this.stepperConfiguration,
+      this.destroy$,
+      {
+        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
+        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
+        getSourceTemplate: () => this.sourceTemplate,
+        setSourceTemplate: (template) => { this.sourceTemplate = template; }
+      },
+      disableExtensionSelectorsWhenHidden
+    );
+    this.applyEditorSession(init);
+    return init;
+  }
+
+  /**
+   * Seeds mappingCode from the persisted mapping, once. mappingCode is the live, editable state
+   * from then on and must never be re-derived from mapping.code (stale until save), or in-progress
+   * edits get clobbered.
+   */
+  protected seedMappingCode(): void {
+    if (this.mappingCode === undefined && this.mapping.code) {
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
+    }
+  }
+
+  /** (Re-)loads the tenant's extensions and re-patches the extension selects. */
+  protected async reloadExtensions(): Promise<void> {
+    this.isLoadingExtensions = true;
+    try {
+      this.extensions = await this.stepperService.loadExtensions(this.mapping);
+      this.updateExtensionItems();
+      // Re-patches form values after items are loaded so c8y-select can match them
+      this.restoreExtensionSelection(true);
+    } finally {
+      this.isLoadingExtensions = false;
+    }
+  }
+
+  /** Entering the transformation step/tab: pull the latest templates and refresh the test mapping. */
+  protected enterTransformation(): void {
+    this.updateTemplatesInEditors();
+    this.refreshSubstitutionValidity();
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
+  }
+
+  protected enterTesting(): void {
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
   }
 
   /**

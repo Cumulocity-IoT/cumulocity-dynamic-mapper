@@ -42,10 +42,7 @@ import {
 } from '../../shared';
 import { STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../../shared/mapping/stepper.model';
 import {
-  base64ToString,
-  buildTestMapping,
   isCodeOrExtensionTransformation,
-  stripTemplateMetadataTags,
   tryGetLiveEditorContent
 } from '../../shared/mapping/util';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
@@ -59,10 +56,6 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-
-const STEP_LABEL_TEST_MAPPING = 'Test mapping';
-const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
-const STEP_LABEL_SELECT_TEMPLATES = 'Select templates';
 
 interface StepperStepChange {
   stepper: C8yStepper;
@@ -97,7 +90,6 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
 
   labels: any = { next: 'Next', cancel: 'Cancel' };
 
-  step?: string;
   stepperForward = true;
   currentStepIndex = 0;
 
@@ -111,20 +103,8 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   private aiReviewBaseline?: string;
 
   async ngOnInit(): Promise<void> {
-    const init = await this.stepperService.initializeEditorSession(
-      this.mapping,
-      this.stepperConfiguration,
-      this.destroy$,
-      {
-        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
-        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
-        getSourceTemplate: () => this.sourceTemplate,
-        setSourceTemplate: (template) => { this.sourceTemplate = template; }
-      },
-      true // stepper-only: also disable extensionName/eventName while no selector is shown
-    );
-
-    this.applyEditorSession(init);
+    // true: stepper-only, also disables extensionName/eventName while no selector is shown
+    const init = await this.initSession(true);
     this.schemaSource = init.schemaSource;
     this.schemaTarget = init.schemaTarget;
   }
@@ -154,7 +134,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
     await this.transformationStepRef?.onSelectSubstitution(index);
   }
 
-  async onCancelButton(): Promise<void> {
+  onCancelButton(): void {
     this.cancel.emit();
   }
 
@@ -179,23 +159,14 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
         this.handleDefineSubstitutionsStep();
         break;
       case STEP_TEST_MAPPING:
-        this.handleTestMappingStep();
+        this.enterTesting();
         break;
     }
   }
 
   private async handleGeneralSettingsStep(): Promise<void> {
     this.templatesInitialized = false;
-    this.isLoadingExtensions = true;
-    try {
-      this.extensions = await this.stepperService.loadExtensions(this.mapping);
-      this.updateExtensionItems(); // Update cached extension items
-
-      // Re-patches form values after items are loaded so c8y-select can match them
-      this.restoreExtensionSelection(true);
-    } finally {
-      this.isLoadingExtensions = false;
-    }
+    await this.reloadExtensions();
   }
 
   private async handleSelectTemplatesStep(): Promise<void> {
@@ -214,13 +185,9 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
       );
     }
 
-    // Seed mappingCode from the persisted mapping once. mappingCode is the live,
-    // editable state from here on — re-deriving it from mapping.code on every visit
-    // to this step (e.g. after navigating back from Transformation) would clobber
-    // any in-progress code edits, since mapping.code is only updated at save time.
-    if (this.mappingCode === undefined && this.mapping.code) {
-      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
-    }
+    // Once only: re-deriving it on every visit (e.g. after navigating back from Transformation)
+    // would clobber in-progress code edits, since mapping.code is only updated at save time.
+    this.seedMappingCode();
 
     // Trigger extension event filtering if extension is already selected
     // This handles the case when navigating to step 3 with a pre-selected extension
@@ -228,10 +195,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   }
 
   private handleDefineSubstitutionsStep(): void {
-    this.updateTemplatesInEditors();
-    this.refreshSubstitutionValidity();
-
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
+    this.enterTransformation();
 
     // One-shot: user chose "Generate with AI" back in the type-selection drawer, when
     // source/target templates were still empty placeholders. Now that this step has the
@@ -259,10 +223,6 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
       this.cdr.detectChanges();
       this.transformationStepRef?.openGenerateSubstitutionDrawer();
     }, 0);
-  }
-
-  private handleTestMappingStep(): void {
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
   }
 
   onNextStep(event: StepperStepChange): void {
@@ -308,12 +268,13 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   }
 
   async onBackStep(event: StepperStepChange): Promise<void> {
-    this.step = event.step.label;
     this.stepperForward = false;
 
-    if (this.step === STEP_LABEL_TEST_MAPPING) {
+    // selectedIndex is still the step the Back button belongs to
+    const leavingStep = event.stepper.selectedIndex;
+    if (leavingStep === STEP_TEST_MAPPING) {
       this.mappingTestingStep.editorTestingRequest.setSchema({});
-    } else if (this.step === STEP_LABEL_GENERAL_SETTINGS || this.step === STEP_LABEL_SELECT_TEMPLATES) {
+    } else if (leavingStep === STEP_GENERAL_SETTINGS || leavingStep === STEP_SELECT_TEMPLATES) {
       this.templatesInitialized = false;
     }
 
@@ -333,40 +294,25 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   }
 
   private expandTemplates(): void {
-    if (this.stepperConfiguration.persistence === 'create' && !this.stepperConfiguration.isCopy && !this.templatesInitialized) {
-      this.templatesInitialized = true;
-      // Message Explorer prefill always lands on sourceTemplate, regardless of direction (see
-      // addMapping()'s comment: sourceTemplate is always "the side Message Explorer captured").
-      // Honour it directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
-      const hasPrefilledSource = this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
-      if (hasPrefilledSource) {
-        const templates = this.stepperService.expandExistingTemplates(
-          this.mapping,
-          this.stepperConfiguration.direction,
-          this.stepperConfiguration.allowTemplateExpansion
-        );
-        this.sourceTemplate = templates.sourceTemplate;
-        this.targetTemplate = templates.targetTemplate;
-      } else {
-        const templates = this.stepperService.expandTemplates(
-          this.mapping,
-          this.stepperConfiguration.direction,
-          this.stepperConfiguration.allowTemplateExpansion
-        );
-        this.sourceTemplate = templates.sourceTemplate;
-        this.targetTemplate = templates.targetTemplate;
-      }
-      this.captureAIReviewBaselineIfNeeded();
-      return;
-    }
+    const { persistence, isCopy, direction, allowTemplateExpansion } = this.stepperConfiguration;
+    const isFirstExpansion = persistence === 'create' && !isCopy && !this.templatesInitialized;
+    this.templatesInitialized ||= isFirstExpansion;
 
-    const templates = this.stepperService.expandExistingTemplates(
-      this.mapping,
-      this.stepperConfiguration.direction,
-      this.stepperConfiguration.allowTemplateExpansion
-    );
+    // Message Explorer prefill always lands on sourceTemplate, regardless of direction (see
+    // addMapping()'s comment: sourceTemplate is always "the side Message Explorer captured").
+    // Honour it directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
+    const hasPrefilledSource = !!this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
+    const useGenericDefaults = isFirstExpansion && !hasPrefilledSource;
+
+    const templates = useGenericDefaults
+      ? this.stepperService.expandTemplates(this.mapping, direction, allowTemplateExpansion)
+      : this.stepperService.expandExistingTemplates(this.mapping, direction, allowTemplateExpansion);
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
+
+    if (isFirstExpansion) {
+      this.captureAIReviewBaselineIfNeeded();
+    }
   }
 
   /**

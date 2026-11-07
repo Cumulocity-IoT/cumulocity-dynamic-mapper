@@ -22,7 +22,13 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from './stepper-configuration.strategy';
-import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
+import {
+  Direction,
+  MappingType,
+  MappingTypeDescriptionMap,
+  StepperConfiguration,
+  TransformationType
+} from './mapping.model';
 
 describe('StepperConfigurationResolver', () => {
   describe('resolve', () => {
@@ -53,11 +59,7 @@ describe('StepperConfigurationResolver', () => {
     });
 
     it('should keep testing enabled for ANY_PAYLOAD with SMART_FUNCTION but hide the source editor', () => {
-      const baseConfig: StepperConfiguration = {
-        showEditorSource: true,
-        allowTestSending: false,
-        allowTestTransformation: false
-      };
+      const baseConfig = MappingTypeDescriptionMap[MappingType.ANY_PAYLOAD].stepperConfiguration;
 
       const context: StepperConfigurationContext = {
         mappingType: MappingType.ANY_PAYLOAD,
@@ -92,6 +94,23 @@ describe('StepperConfigurationResolver', () => {
 
       expect(result.allowTestSending).toBe(false);
       expect(result.allowTestTransformation).toBe(true); // unchanged
+    });
+
+    it('should allow outbound test sending only when a connector is deployed', () => {
+      const context: StepperConfigurationContext = {
+        mappingType: MappingType.JSON,
+        transformationType: TransformationType.JSONATA,
+        direction: Direction.OUTBOUND,
+        persistence: 'create',
+        substitutionsAsCode: false,
+        hasDeployedConnector: true
+      };
+
+      expect(StepperConfigurationResolver.resolve({ allowTestSending: false }, context).allowTestSending).toBe(true);
+      expect(
+        StepperConfigurationResolver.resolve({ allowTestSending: true }, { ...context, hasDeployedConnector: false })
+          .allowTestSending
+      ).toBe(false);
     });
 
     it('should apply substitutionsAsCode override', () => {
@@ -191,7 +210,8 @@ describe('StepperConfigurationResolver', () => {
     it('should apply mapping type EXTENSION_JAVA inbound override', () => {
       const baseConfig: StepperConfiguration = {
         showEditorTarget: true,
-        showFilterExpression: true
+        showFilterExpression: true,
+        allowTemplateExpansion: false
       };
 
       const context: StepperConfigurationContext = {
@@ -301,7 +321,7 @@ describe('StepperConfigurationResolver', () => {
   });
 
   describe('getAppliedOverrides', () => {
-    it('should return only the DEFAULT transformation override for JSON DEFAULT INBOUND', () => {
+    it('should return no override for JSON DEFAULT INBOUND', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
@@ -312,11 +332,11 @@ describe('StepperConfigurationResolver', () => {
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
 
-      // Only the DEFAULT transformation override (allowTemplateExpansion: false) matches
-      expect(appliedOverrides.length).toBe(1);
+      // DEFAULT is covered by the base (allowTemplateExpansion: false); nothing overrides it
+      expect(appliedOverrides.length).toBe(0);
     });
 
-    it('should include outbound and DEFAULT semantics for outbound JSON DEFAULT', () => {
+    it('should include only the outbound override for outbound JSON DEFAULT', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
@@ -329,12 +349,9 @@ describe('StepperConfigurationResolver', () => {
       const descriptions = StepperConfigurationResolver.getAppliedOverrideDescriptions(context);
       const result = StepperConfigurationResolver.resolve({ allowTestSending: true }, context);
 
-      // Two overrides should match semantically: outbound + DEFAULT transformation.
-      expect(appliedOverrides.length).toBe(2);
+      expect(appliedOverrides.length).toBe(1);
       expect(descriptions.some(d => d.includes('allowTestSending'))).toBe(true);
-      expect(descriptions.some(d => d.includes('allowTemplateExpansion'))).toBe(true);
       expect(result.allowTestSending).toBe(false);
-      expect(result.allowTemplateExpansion).toBe(false);
     });
 
     it('should include semantic overrides for smart function with substitutionsAsCode', () => {

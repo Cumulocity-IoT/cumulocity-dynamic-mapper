@@ -30,7 +30,6 @@ import {
   ExtensionType,
   MappingType,
   MappingTypeDescriptionMap,
-  MappingTypeDescriptions,
   MappingTypeLabels,
   SharedService,
   TransformationType,
@@ -412,11 +411,11 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const option = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
     if (!option?.value) return false;
 
-    const config = this.getConfigForMappingType(option.value);
+    const supported = this.getSupportedTransformationTypes(option.value);
     // A single supported type (e.g. PROTOBUF_INTERNAL → DEFAULT) is auto-selected by
     // updateTransformationTypeOptions() and has nothing for the user to choose — hide the
     // selector rather than showing a forced, un-actionable dropdown.
-    return config.supportedTransformationTypes.length > 1;
+    return supported.length > 1;
   }
 
   shouldShowCodeTemplate(): boolean {
@@ -436,8 +435,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Private initialization methods
   private async initializeForm(): Promise<void> {
     const defaultMappingType = this.getDefaultMappingType();
-    const config = this.getConfigForMappingType(defaultMappingType);
-    const defaultTransformationType = this.getDefaultTransformationType(config.supportedTransformationTypes);
+    const defaultTransformationType = this.getDefaultTransformationType(this.getSupportedTransformationTypes(defaultMappingType));
 
     const initialMappingType = this.createMappingTypeOption(defaultMappingType);
     const initialTransformationType = this.createTransformationTypeOption(defaultTransformationType);
@@ -650,7 +648,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private getDefaultMappingType(): MappingType {
     const enabledTypes = Object.values(MappingType).filter(type => {
       const config = MappingTypeDescriptionMap[type];
-      return config?.enabled && config.properties?.[this.direction]?.directionSupported;
+      return config?.enabled && this.isDirectionSupported(type);
     });
 
     if (this.preferredMappingType && enabledTypes.includes(this.preferredMappingType)) {
@@ -677,8 +675,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
 
     const mappingType = currentMapping?.value || this.DEFAULTS.MAPPING_TYPE;
-    const config = this.getConfigForMappingType(mappingType);
-    const defaultTransformation = this.getDefaultTransformationType(config.supportedTransformationTypes);
+    const defaultTransformation = this.getDefaultTransformationType(this.getSupportedTransformationTypes(mappingType));
     
     this.formGroup.patchValue({
       transformationType: this.createTransformationTypeOption(defaultTransformation)
@@ -698,8 +695,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const config = this.getConfigForMappingType(currentMapping.value);
-    this.transformationTypeOptions = config.supportedTransformationTypes.map(type =>
+    this.transformationTypeOptions = this.getSupportedTransformationTypes(currentMapping.value).map(type =>
       this.createTransformationTypeOption(type)
     );
 
@@ -787,8 +783,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const mappingConfig = MappingTypeDescriptionMap[type];
     if (!mappingConfig?.enabled) return false;
 
-    const config = this.getConfigForMappingType(type);
-    if (!config.directionSupported) return false;
+    if (!this.isDirectionSupported(type)) return false;
 
     if (!this.showTransformationType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(type)) {
       return false;
@@ -797,17 +792,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private getConfigForMappingType(type: MappingType) {
-    const mappingConfig = MappingTypeDescriptionMap[type];
-    const directionConfig = mappingConfig?.properties?.[this.direction];
+  /** A mapping type is offered in a direction only if it has transformation types for it. */
+  private isDirectionSupported(type: MappingType): boolean {
+    return this.getSupportedTransformationTypes(type).length > 0;
+  }
 
-    return {
-      description: mappingConfig?.description || '',
-      enabled: mappingConfig?.enabled || false,
-      substitutionsAsCodeSupported: directionConfig?.substitutionsAsCodeSupported || false,
-      directionSupported: directionConfig?.directionSupported || false,
-      supportedTransformationTypes: directionConfig?.supportedTransformationTypes || []
-    };
+  private getSupportedTransformationTypes(type: MappingType): TransformationType[] {
+    return MappingTypeDescriptionMap[type]?.transformationTypes?.[this.direction] ?? [];
   }
 
   // Factory methods for options
@@ -815,7 +806,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return {
       label: MappingTypeLabels[type],
       value: type,
-      description: MappingTypeDescriptions[type]
+      description: MappingTypeDescriptionMap[type].description
     };
   }
 

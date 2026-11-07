@@ -44,14 +44,18 @@ import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import {
-  base64ToString,
-  buildTestMapping,
+  STEP_DEFINE_SUBSTITUTIONS,
+  STEP_GENERAL_SETTINGS,
+  STEP_SELECT_CONNECTOR,
+  STEP_SELECT_TEMPLATES,
+  STEP_TEST_MAPPING
+} from '../../shared/mapping/stepper.model';
+import {
   captureMappingContentSnapshot,
   describeMappingContentChanges,
   hasMappingContentChanged,
   isConnectorSelectionEmpty,
-  MappingContentSnapshot,
-  stripTemplateMetadataTags
+  MappingContentSnapshot
 } from '../../shared/mapping/util';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent } from '../../shared';
@@ -77,12 +81,12 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
 
-// Tab index constants
-const TAB_CONNECTOR = 0;
-const TAB_GENERAL_SETTINGS = 1;
-const TAB_SELECT_TEMPLATES = 2;
-const TAB_DEFINE_TRANSFORMATION = 3;
-const TAB_TEST_MAPPING = 4;
+// The tabs are the stepper's steps, in the same order
+const TAB_CONNECTOR = STEP_SELECT_CONNECTOR;
+const TAB_GENERAL_SETTINGS = STEP_GENERAL_SETTINGS;
+const TAB_SELECT_TEMPLATES = STEP_SELECT_TEMPLATES;
+const TAB_DEFINE_TRANSFORMATION = STEP_DEFINE_SUBSTITUTIONS;
+const TAB_TEST_MAPPING = STEP_TEST_MAPPING;
 
 /** Where a blocked commit sends the user. This is the only place that knows tabs exist —
  * {@link MappingStepperService.commitMapping} reports the blocker and owns no navigation. */
@@ -148,7 +152,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   readonly TAB_TEST_MAPPING = TAB_TEST_MAPPING;
 
   currentStepIndex = TAB_CONNECTOR;
-  activeTabIndex = TAB_CONNECTOR;
 
   protected readonly substitutionStepIndex = TAB_DEFINE_TRANSFORMATION;
 
@@ -176,25 +179,11 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
+    this.currentStepIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
-    this.currentStepIndex = this.activeTabIndex;
 
-    const init = await this.stepperService.initializeEditorSession(
-      this.mapping,
-      this.stepperConfiguration,
-      this.destroy$,
-      {
-        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
-        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
-        getSourceTemplate: () => this.sourceTemplate,
-        setSourceTemplate: (template) => { this.sourceTemplate = template; }
-      }
-      // disableExtensionSelectorsWhenHidden defaults to false — unified editor's current behavior
-    );
-
-    this.applyEditorSession(init);
+    const init = await this.initSession();
 
     // For the unified editor, expand existing templates upfront since mapping is fully defined
     await this.initializeTemplates();
@@ -211,12 +200,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // Load filter model – handled by MappingTemplateStepComponent on init
     // when filterFormly changes; no action needed here.
 
-    // Seed mappingCode from the persisted mapping once. mappingCode is the live,
-    // editable state from here on — it must never be re-derived from mapping.code
-    // later (mapping.code is stale until save), or in-progress edits get clobbered.
-    if (this.mappingCode === undefined && this.mapping.code) {
-      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
-    }
+    this.seedMappingCode();
 
     // Expand existing templates (mapping is fully defined)
     const templates = this.stepperService.expandExistingTemplates(
@@ -286,11 +270,10 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
   private async handleTabSelected(newIndex: number): Promise<void> {
     // Sync template changes when leaving the Templates tab
-    if (this.activeTabIndex === TAB_SELECT_TEMPLATES) {
+    if (this.currentStepIndex === TAB_SELECT_TEMPLATES) {
       this.updateTemplatesInEditors();
     }
 
-    this.activeTabIndex = newIndex;
     this.currentStepIndex = newIndex;
 
     this.refreshSubstitutionValidity();
@@ -303,23 +286,16 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         await this.handleSelectTemplatesTab();
         break;
       case TAB_DEFINE_TRANSFORMATION:
-        this.handleDefineSubstitutionsTab();
+        this.enterTransformation();
         break;
       case TAB_TEST_MAPPING:
-        this.handleTestMappingTab();
+        this.enterTesting();
         break;
     }
   }
 
   private async handleGeneralSettingsTab(): Promise<void> {
-    this.isLoadingExtensions = true;
-    try {
-      this.extensions = await this.stepperService.loadExtensions(this.mapping);
-      this.updateExtensionItems();
-      this.restoreExtensionSelection(true);
-    } finally {
-      this.isLoadingExtensions = false;
-    }
+    await this.reloadExtensions();
   }
 
   private async handleSelectTemplatesTab(): Promise<void> {
@@ -332,17 +308,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // on the Transformation tab. Seeding already happened once in initializeTemplates().
 
     this.restoreExtensionSelection();
-  }
-
-  private handleDefineSubstitutionsTab(): void {
-    this.updateTemplatesInEditors();
-    this.refreshSubstitutionValidity();
-
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
-  }
-
-  private handleTestMappingTab(): void {
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
   }
 
   /** The split button's main action: the last choice from its dropdown. */
@@ -390,7 +355,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     if (result.status === 'blocked') {
       if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
       const tab = TAB_FOR_BLOCKER[result.blocker];
-      // Through the normal transition (not a bare activeTabIndex assignment) so currentStepIndex
+      // Through the normal transition (not a bare currentStepIndex assignment) so currentStepIndex
       // and the per-tab setup stay consistent — same reasoning as showValidationIssues().
       if (tab !== undefined) await this.onTabSelected(tab);
       return;
@@ -597,7 +562,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       return;
     }
 
-    // Go through the normal transition rather than assigning activeTabIndex: it is queued behind
+    // Go through the normal transition rather than assigning currentStepIndex: it is queued behind
     // any in-flight tab change and performs the per-tab setup the step depends on.
     await this.onTabSelected(TAB_DEFINE_TRANSFORMATION);
     // The tab's content is rendered lazily, so the step only exists once that has been applied.

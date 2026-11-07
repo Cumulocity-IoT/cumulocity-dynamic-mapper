@@ -492,29 +492,11 @@ export const MappingTypeLabels = {
   [MappingType.SPARKPLUGB]: 'SparkPlug B Payload',
 } as const;
 
-export const MappingTypeDescriptions = {
-  [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
-  [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
-  [MappingType.HEX]: 'Hexadecimal data processing and conversion',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: 'Deprecated — use Any Payload with a Smart Function or Java Extension, which decode Protobuf against your own schema',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
-  [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
-  [MappingType.SPARKPLUGB]: 'SparkPlug B binary payload. Inbound: decoded automatically via Eclipse Tahu; outbound NCMD/DCMD: metric object serialized to protobuf binary. Only Smart Function transformations are supported.',
-} as const;
-
-export interface MappingTypeProperties {
-  directionSupported: boolean;
-  substitutionsAsCodeSupported: boolean;
-  supportedTransformationTypes: TransformationType[]; // Add this line
-}
-
 export interface MappingTypeDescriptionInterface {
-  key: MappingType;
   description: string;
   enabled: boolean;
-  properties: Record<Exclude<Direction, Direction.UNSPECIFIED>, MappingTypeProperties>;
+  /** Transformation types per direction; an empty list means the mapping type is not offered in that direction. */
+  transformationTypes: Record<Exclude<Direction, Direction.UNSPECIFIED>, TransformationType[]>;
   stepperConfiguration: StepperConfiguration;
 }
 
@@ -535,7 +517,21 @@ const BASE_STEPPER_CONFIGURATION: StepperConfiguration = {
   showProcessorExtensionsInternal: false,
   allowTestTransformation: true,
   allowTestSending: true,
+  allowTemplateExpansion: false,
   advanceFromStepToEndStep: undefined
+};
+
+/**
+ * Shared by every mapping type whose payload is not edited as source/target JSON (binary or
+ * decoded by code): no source editor, no filter, no substitution table, and the stepper jumps
+ * straight from the properties step (index 2) to the end step.
+ */
+const CODE_DRIVEN_STEPPER_CONFIGURATION: Partial<StepperConfiguration> = {
+  showEditorSource: false,
+  showFilterExpression: false,
+  allowDefiningSubstitutions: false,
+  allowNoDefinedIdentifier: true,
+  advanceFromStepToEndStep: 2
 };
 
 /**
@@ -554,33 +550,16 @@ export const MappingTypeDescriptionMap: Record<
   MappingTypeDescriptionInterface
 > = {
   [MappingType.JSON]: {
-    key: MappingType.JSON,
     enabled: true,
     description: 'Mapping handles payloads in JSON format.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION,
-          TransformationType.EXTENSION_JAVA
-        ]
-      },
+    transformationTypes: {
+      [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
+      [Direction.OUTBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
     },
     // JSON uses base configuration as-is (no overrides needed)
     stepperConfiguration: createStepperConfig({})
   },
   [MappingType.FLAT_FILE]: {
-    key: MappingType.FLAT_FILE,
     enabled: true,
     description: `Mapping handles payloads in CSV format. Any separator can be defined.\nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
       [
@@ -590,151 +569,77 @@ export const MappingTypeDescriptionMap: Record<
         "c8y_FuelMeasurement"
       ]
       .`,
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
+    transformationTypes: {
+      [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
+      // Direction not supported
+      [Direction.OUTBOUND]: [],
     },
     // FLAT_FILE uses same config as JSON (no overrides needed)
     stepperConfiguration: createStepperConfig({})
   },
   [MappingType.HEX]: {
-    key: MappingType.HEX,
     enabled: true,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x".
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      }
+    transformationTypes: {
+      [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
+      // Direction not supported
+      [Direction.OUTBOUND]: [],
     },
     // HEX uses same config as JSON (no overrides needed)
     stepperConfiguration: createStepperConfig({})
   },
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
   [MappingType.PROTOBUF_INTERNAL]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    key: MappingType.PROTOBUF_INTERNAL,
     // Deprecated: not offered when creating a mapping, but still rendered for existing ones.
     enabled: false,
     description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        supportedTransformationTypes: [TransformationType.DEFAULT]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [] // No transformation types supported for outbound
-      },
+    transformationTypes: {
+      // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      [Direction.INBOUND]: [TransformationType.DEFAULT],
+      // Direction not supported
+      [Direction.OUTBOUND]: [],
     },
     // PROTOBUF has significant differences: only specify what changes from base
     stepperConfiguration: createStepperConfig({
+      ...CODE_DRIVEN_STEPPER_CONFIGURATION,
       showProcessorExtensionsInternal: true,
-      allowDefiningSubstitutions: false,
-      showEditorSource: false,
-      showFilterExpression: false,
-      allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
+      allowTestSending: false
     })
   },
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    key: MappingType.EXTENSION_JAVA,
     // Hidden from the creation UI — existing mappings are migrated to ANY_PAYLOAD on load.
     enabled: false,
     description: 'Deprecated — use Any Payload with Java Extension transformation type instead.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
-      },
+    transformationTypes: {
+      [Direction.INBOUND]: [TransformationType.EXTENSION_JAVA],
+      // Direction not supported
+      [Direction.OUTBOUND]: [],
     },
     stepperConfiguration: createStepperConfig({
-      showProcessorExtensionsSource: true,
-      allowDefiningSubstitutions: false,
-      showEditorSource: false,
-      showFilterExpression: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: true,
-      advanceFromStepToEndStep: 2
+      ...CODE_DRIVEN_STEPPER_CONFIGURATION,
+      showProcessorExtensionsSource: true
     })
   },
   [MappingType.ANY_PAYLOAD]: {
-    key: MappingType.ANY_PAYLOAD,
     enabled: true,
     description:
       'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). ' +
       'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: []
-      },
+    transformationTypes: {
+      // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
+      [Direction.INBOUND]: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
+      // Direction not supported
+      [Direction.OUTBOUND]: [],
     },
-    // ANY_PAYLOAD base config: no source/target editors, no substitutions, skip to step 2.
-    // Per-transformation overrides in stepper-configuration.strategy.ts apply on top:
-    //   SMART_FUNCTION — testing disabled (binary payload cannot be test-sent as JSON)
-    //   EXTENSION_JAVA — testing enabled, processor-extension selector shown
-    stepperConfiguration: createStepperConfig({
-      showEditorSource: false,
-      showEditorTarget: false,
-      showFilterExpression: false,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
-    })
+    // Code-driven base. The per-transformation overrides in stepper-configuration.strategy.ts
+    // add the rest (target editor hidden, testing enabled, processor-extension selector for Java).
+    stepperConfiguration: createStepperConfig(CODE_DRIVEN_STEPPER_CONFIGURATION)
   },
   [MappingType.SPARKPLUGB]: {
-    key: MappingType.SPARKPLUGB,
     enabled: true,
     description:
       'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
@@ -746,30 +651,14 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       'NDATA / DDATA messages can resolve metric aliases. ' +
       'The aliasMap (metric name → alias) is available in the outbound Smart Function via ' +
       'context.getConfig().aliasMap.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
-      },
+    transformationTypes: {
+      // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
+      [Direction.INBOUND]: [TransformationType.SMART_FUNCTION],
+      // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
+      [Direction.OUTBOUND]: [TransformationType.SMART_FUNCTION],
     },
-    stepperConfiguration: createStepperConfig({
-      showEditorSource: false,
-      showEditorTarget: false,
-      showFilterExpression: false,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
-    })
+    // Smart Function is the only transformation; its override hides the target editor and enables testing.
+    stepperConfiguration: createStepperConfig(CODE_DRIVEN_STEPPER_CONFIGURATION)
   }
 };
 
