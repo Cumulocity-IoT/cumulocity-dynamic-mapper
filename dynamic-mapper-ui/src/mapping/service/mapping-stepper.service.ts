@@ -52,7 +52,7 @@ import { AiAgentService, resolveRequiredAgentName } from '../core/ai-agent.servi
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../shared/configuration/configuration.model';
 import { createCompletionProviderFlowFunction, MappingPersistence } from '../../shared/mapping/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
-import { StepperViewModel, createStepperViewModel } from '../stepper/stepper-view.model';
+import { StepperViewModel, createStepperViewModel } from '../editor-base/stepper-view.model';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { base64ToString, configurationToYaml, isConnectorSelectionEmpty, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../../shared/mapping/util';
 

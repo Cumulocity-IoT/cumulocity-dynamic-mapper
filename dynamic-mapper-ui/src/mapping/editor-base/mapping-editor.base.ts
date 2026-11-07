@@ -43,6 +43,7 @@ import {
   checkTransformationType,
   isConnectorSelectionEmpty,
   stripTemplateMetadataTags,
+  TemplateEditorRef,
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
@@ -52,8 +53,7 @@ import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
-import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
-import { StepperViewModel } from '../stepper/stepper-view.model';
+import { StepperViewModel } from './stepper-view.model';
 
 /**
  * State and behavior shared by the linear stepper and the unified (tabbed) editor.
@@ -72,7 +72,8 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   abstract mapping: Mapping;
   abstract stepperConfiguration: StepperConfiguration;
   abstract deploymentMapEntry: DeploymentMapEntry;
-  abstract templateStepRef: MappingTemplateStepComponent;
+  /** The rendered template step, if any; the base only needs what {@link TemplateEditorRef} offers. */
+  abstract templateStepRef: TemplateEditorRef | undefined;
   abstract codeEditor: EditorComponent;
   abstract currentStepIndex: number;
   /** Index of the transformation step/tab; anything before it counts as "before substitutions". */

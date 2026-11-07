@@ -48,7 +48,7 @@ import {
   tryGetLiveEditorContent,
   validateProtectedFields
 } from '../../shared/mapping/util';
-import { StepperViewModel } from '../stepper/stepper-view.model';
+import { StepperViewModel } from '../editor-base/stepper-view.model';
 import { CommonModule } from '@angular/common';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { PROTECTED_TOKENS } from '../../shared/mapping/processor/processor.model';
