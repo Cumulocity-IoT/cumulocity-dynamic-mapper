@@ -118,7 +118,9 @@
             </formly-form>
           </div>
           @if (showExpandArrayHint) {
-          <small class="text-info" data-cy="dm-substitution-expand-array-hint">
+          <!-- Negative margin: the field above keeps a bottom margin that holds its validation message; the
+               hint takes that space instead of leaving a gap (it is hidden while a message is shown). -->
+          <small class="text-info" style="margin-top: -1.25rem" data-cy="dm-substitution-expand-array-hint">
             {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
           </small>
           <div></div>

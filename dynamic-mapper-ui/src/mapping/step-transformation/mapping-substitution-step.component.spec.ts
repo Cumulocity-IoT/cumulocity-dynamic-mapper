@@ -14,6 +14,11 @@ describe('MappingSubstitutionStepComponent showExpandArrayHint', () => {
     expect(hintFor({ sourceExpression: { resultType: 'Array' } })).toBeTrue();
   });
 
+  it('is hidden while the expression is invalid, as the field error takes its place', () => {
+    expect(hintFor({ sourceExpression: { resultType: 'Array', valid: false } })).toBeFalse();
+    expect(hintFor({ sourceExpression: { resultType: 'Array', valid: true } })).toBeTrue();
+  });
+
   it('is hidden once expand-as-array is on', () => {
     expect(hintFor({ sourceExpression: { resultType: 'Array' }, expandArray: true })).toBeFalse();
   });

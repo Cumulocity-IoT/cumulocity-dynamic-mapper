@@ -224,9 +224,14 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** The source expression yields an array but "Expand as array" is off: shown as a hint, not a toast. */
+  /**
+   * The source expression yields an array but "Expand as array" is off: shown as a hint, not a toast.
+   * Not while the expression is invalid: the field's own error message occupies the same space and
+   * the model then still holds the previous, stale result.
+   */
   get showExpandArrayHint(): boolean {
-    return this.substitutionModel?.sourceExpression?.resultType === 'Array' && !this.substitutionModel.expandArray;
+    const source = this.substitutionModel?.sourceExpression;
+    return source?.resultType === 'Array' && source.valid !== false && !this.substitutionModel.expandArray;
   }
 
   async updateSourceExpressionResult(path: string): Promise<void> {
