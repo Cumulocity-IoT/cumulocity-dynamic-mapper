@@ -1,6 +1,6 @@
 # Translate all UI texts through .po files
 
-Status: Phases 0 and 1 done (2026-11-08). Phase 2 tooling done; the German catalog is empty and waits for a translator. Affects `dynamic-mapper-ui` only.
+Status (2026-11-08): Phases 0, 1, and 3 done. Phase 2 tooling done; the German catalog is empty and waits for a translator. Phase 4 not started. Affects `dynamic-mapper-ui` only.
 
 ## Summary
 
@@ -122,8 +122,8 @@ Done when: switching the user language in Cumulocity shows translated texts on e
 
 #### Phase 2 results
 
-- `extract-i18n` finds 2,597 messages. It also writes `locales/<language>.po` for 12 languages with the platform translations merged in, so those files are ignored by git (`locales/.gitignore`). Only `locales/locales.pot` is committed.
-- The app must not ship the platform translations again. `scripts/sync-app-catalogs.js` writes `src/locales/<language>.po` with the 1,033 messages the platform catalog does not contain, and keeps translations that already exist. `--check` exits with code 1 when a catalog is out of date, for Phase 3.
+- `extract-i18n` finds 1,072 messages when `dist/` does not exist. It also reads `dist/`, so a local build adds platform messages; delete `dist/` before extracting (CI does not have it). It also writes `locales/<language>.po` for 12 languages with the platform translations merged in, so those files are ignored by git (`locales/.gitignore`). Only `locales/locales.pot` is committed.
+- The app must not ship the platform translations again. `scripts/sync-app-catalogs.js` writes `src/locales/<language>.po` with the 955 messages the platform catalog does not contain, and keeps translations that already exist. `--check` exits with code 1 when a catalog is out of date, for Phase 3.
 - `src/i18n.ts` imports `src/locales/de.po`. The build produces the app's messages inside `de.json`. An empty `msgstr` is left out, so that text shows English.
 - To add a language: add it to `LANGUAGES` in the script, run it, import the file in `src/i18n.ts`.
 - Open: the languages, the translator, and the review. German is the only catalog, and it has no translations yet.
@@ -136,6 +136,14 @@ Done when: switching the user language in Cumulocity shows translated texts on e
 
 Done when: a pull request with a new unmarked text, or a changed `.pot`, fails the check.
 
+#### Phase 3 results
+
+- `npm run i18n:check` runs three checks: the finder (`--check`), the extraction followed by `git diff --exit-code locales/locales.pot`, and `sync-app-catalogs.js --check`. `npm run i18n:extract` regenerates `locales/locales.pot` and `src/locales/*.po`.
+- CI runs `i18n:check` in the "UI Lint, Build and Test" job, after the lint and before the build, because the extraction reads `dist/`.
+- The check was run locally without `dist/`. It passes on the committed files.
+- `docs/ui/architecture.md` has a "Translations" section with the conventions.
+- The CI step has not run on GitHub yet. Look at the first pull request that triggers it.
+
 ### Phase 4: verify in the app (half a day)
 
 1. Generate a test language `xx.po` that wraps every message in brackets and accents, for example `[Ámóúnt]`. Load it in a development build.
@@ -143,6 +151,21 @@ Done when: a pull request with a new unmarked text, or a changed `.pot`, fails t
 3. Repeat the walk-through for one real language with long words, such as German, to find layout problems.
 
 Done when: no unbracketed text remains in the test language, and no layout breaks in the real one.
+
+## Where things stand and what is left
+
+Done and committed on `develop`: `2d9aea2af` (tooling), `d96d1f9ed` (all texts marked), `a4a282583` (display gaps, catalog scaffold), plus the Phase 3 commit.
+
+| Item | Owner | State |
+|---|---|---|
+| Languages that ship, translator, reviewer | Product | Open. Decision 1 and 2 above. |
+| Fill `src/locales/de.po` (954 empty entries) and add other languages | Translator | Open. A machine draft is possible. |
+| Phase 4 walk-through with a bracketed test language | Developer | Not started. Do not commit the test language. |
+| Formly validator messages (`validation.util.ts`) are English at the field | Developer | Unverified. Check in Phase 4. |
+| Sentences split into pieces, for example the `, which provides ...` message and the overview sentence with links | Developer | Known. Rewrite with placeholders if translators need the whole sentence. |
+| Texts built as translated prefix plus error detail (`instant(gettext('Failed to ...:')) + error`) | Developer | Accepted: one message plus a technical detail. |
+| The doc pages in `public/docs` | Product | Out of scope. One file per language is needed. |
+| First CI run of `i18n:check` | Developer | Pending. |
 
 ## Risks
 

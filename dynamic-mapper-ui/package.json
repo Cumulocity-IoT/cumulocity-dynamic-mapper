@@ -19,6 +19,8 @@
     "test": "ng test",
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint \"src/**/*.ts\" \"cypress/**/*.ts\"",
+    "i18n:extract": "ng run dynamic-mapper:extract-i18n && node scripts/sync-app-catalogs.js",
+    "i18n:check": "node scripts/find-unmarked-texts.js --check && ng run dynamic-mapper:extract-i18n > /dev/null && git diff --exit-code -- locales/locales.pot && node scripts/sync-app-catalogs.js --check",
     "e2e:open": "env -u ELECTRON_RUN_AS_NODE cypress open",
     "e2e:run": "env -u ELECTRON_RUN_AS_NODE cypress run",
     "e2e:cleanup": "node scripts/e2e-cleanup.js"

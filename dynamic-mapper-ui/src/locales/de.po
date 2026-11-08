@@ -31,15 +31,6 @@ msgstr ""
 msgid "{{ editMode ? 'Update' : 'Start' }}"
 msgstr ""
 
-msgid "{{ sourceSystem }} Payload&nbsp;"
-msgstr ""
-
-msgid "{{ targetSystem }} Request&nbsp;"
-msgstr ""
-
-msgid "{{ targetSystem }} Response"
-msgstr ""
-
 msgid "{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}"
 msgstr ""
 
@@ -65,11 +56,6 @@ msgid "{{name}} has no unpublished changes."
 msgstr ""
 
 msgid "{{title}} with agent:"
-msgstr ""
-
-msgid ""
-"\\r\n"
-"            Enter the password of the user that you are currently logged in with.\\r"
 msgstr ""
 
 msgid "<i c8yicon=\"download-archive\"></i> Download mapping"
@@ -147,16 +133,10 @@ msgstr ""
 msgid "Activated version {{version}} of {{name}}"
 msgstr ""
 
-msgid "active"
-msgstr ""
-
 msgid "Active version"
 msgstr ""
 
 msgid "Add a note…"
-msgstr ""
-
-msgid "Add a note\\u2026"
 msgstr ""
 
 msgid "Add and select connector"
@@ -172,9 +152,6 @@ msgid "Add Java Extension"
 msgstr ""
 
 msgid "Add new client"
-msgstr ""
-
-msgid "Add new collection\\`collection\\`"
 msgstr ""
 
 msgid "Add Processor Extension"
@@ -261,13 +238,7 @@ msgstr ""
 msgid "All subjects"
 msgstr ""
 
-msgid "All time\\`interval option\\`"
-msgstr ""
-
 msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves."
-msgstr ""
-
-msgid "All\\`possible options\\`"
 msgstr ""
 
 msgid "Allow to define expressions using JSONata"
@@ -288,9 +259,6 @@ msgstr ""
 msgid "Any direction"
 msgstr ""
 
-msgid "Apply\\`selection\\`"
-msgstr ""
-
 msgid "are currently defined."
 msgstr ""
 
@@ -298,9 +266,6 @@ msgid "Array templates require transformation type <code>SMART_FUNCTION</code>."
 msgstr ""
 
 msgid "As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once."
-msgstr ""
-
-msgid "Ask before running each tool"
 msgstr ""
 
 msgid "Ask the agent to fix these"
@@ -333,19 +298,7 @@ msgstr ""
 msgid "Auto acknowledge outbound operation."
 msgstr ""
 
-msgid "Auto-approve is on. Tool calls run without asking until you turn this off. Tools requiring explicit approval will still ask."
-msgstr ""
-
-msgid "Auto\\`icon-selector: automatic / default icon\\`"
-msgstr ""
-
 msgid "Automatic mapping migration notifications"
-msgstr ""
-
-msgid "Availability\\`of dashboard based on permissions\\`"
-msgstr ""
-
-msgid "available in code as"
 msgstr ""
 
 msgid "Base64"
@@ -379,9 +332,6 @@ msgid "By device type"
 msgstr ""
 
 msgid "By specifying \"$\" you selected the root of the target template..."
-msgstr ""
-
-msgid "by\\`user\\`"
 msgstr ""
 
 msgid "Bytes (1024 to 262144) of log text in one event."
@@ -455,9 +405,6 @@ msgstr ""
 msgid "Clear the selection to see all lines again."
 msgstr ""
 
-msgid "Clear\\`selection\\`"
-msgstr ""
-
 msgid "Click «Start exploring messages…» to capture live inbound or outbound messages."
 msgstr ""
 
@@ -510,9 +457,6 @@ msgid "Connector"
 msgstr ""
 
 msgid "Connector *"
-msgstr ""
-
-msgid "Connector assignments for  saved."
 msgstr ""
 
 msgid "Connector assignments for {{mappingName}} saved."
@@ -602,9 +546,6 @@ msgstr ""
 msgid "Create or select client name"
 msgstr ""
 
-msgid "Create test device"
-msgstr ""
-
 msgid "Create the target node, including missing parent nodes, if it does not exist in the target template."
 msgstr ""
 
@@ -626,13 +567,7 @@ msgstr ""
 msgid "Cumulocity MQTT Service connector"
 msgstr ""
 
-msgid "Current\\`dashboard status\\`"
-msgstr ""
-
 msgid "Custom routing"
-msgstr ""
-
-msgid "Custom\\`badge indicating a user-added icon category\\`"
 msgstr ""
 
 msgid "Date Created"
@@ -708,9 +643,6 @@ msgid "Delete this custom template permanently. System templates cannot be delet
 msgstr ""
 
 msgid "Delete version {{version}}"
-msgstr ""
-
-msgid "Delete\\`dashboard\\`"
 msgstr ""
 
 msgid "Deleted {{successCount}} mapping(s) successfully."
@@ -791,9 +723,6 @@ msgstr ""
 msgid "Disconnected connectors cannot be selected."
 msgstr ""
 
-msgid "Don\\'t show again"
-msgstr ""
-
 msgid "Download managed object JSON"
 msgstr ""
 
@@ -821,22 +750,7 @@ msgstr ""
 msgid "Duplicate subscription removed to prevent multiply processed messages"
 msgstr ""
 
-msgid "e.g. +49 9 876 543 210\\`LOCALIZE\\`"
-msgstr ""
-
 msgid "e.g. c8y_MQTTDevice"
-msgstr ""
-
-msgid "e.g. Doe\\`LOCALIZE\\`"
-msgstr ""
-
-msgid "e.g. joe.doe@example.com\\`LOCALIZE\\`"
-msgstr ""
-
-msgid "e.g. joe.doe\\`LOCALIZE\\`"
-msgstr ""
-
-msgid "e.g. Joe\\`LOCALIZE\\`"
 msgstr ""
 
 msgid "e.g. placeholder"
@@ -855,9 +769,6 @@ msgid "Edit the mapping to create a draft, then publish it to create the first v
 msgstr ""
 
 msgid "Enable 'Send connector lifecycle' in Service configuration to record connector status logs."
-msgstr ""
-
-msgid "Enable \\'Send connector lifecycle\\' in Service configuration to record connector status logs."
 msgstr ""
 
 msgid "Enable debug"
@@ -923,9 +834,6 @@ msgstr ""
 msgid "Event name is required."
 msgstr ""
 
-msgid "Events for {{ mapping?.extension?.extensionName }}"
-msgstr ""
-
 msgid "Events published to Cumulocity"
 msgstr ""
 
@@ -975,9 +883,6 @@ msgid "Export mapping"
 msgstr ""
 
 msgid "Export service configuration"
-msgstr ""
-
-msgid "Export\\`verb, exports custom icons as a ZIP file\\`"
 msgstr ""
 
 msgid "Extension"
@@ -1040,9 +945,6 @@ msgstr ""
 msgid "Failed to copy code template"
 msgstr ""
 
-msgid "Failed to create mapping :"
-msgstr ""
-
 msgid "Failed to create mapping {{name}}:"
 msgstr ""
 
@@ -1074,9 +976,6 @@ msgid "Failed to delete subscription:"
 msgstr ""
 
 msgid "Failed to delete version"
-msgstr ""
-
-msgid "Failed to deploy mapping  to connectors:"
 msgstr ""
 
 msgid "Failed to deploy mapping {{name}} to connectors:"
@@ -1175,9 +1074,6 @@ msgstr ""
 msgid "Failed to save code template"
 msgstr ""
 
-msgid "Failed to save draft for :"
-msgstr ""
-
 msgid "Failed to save draft for {{name}}:"
 msgstr ""
 
@@ -1223,22 +1119,10 @@ msgstr ""
 msgid "Filter inventory"
 msgstr ""
 
-msgid "Filter Inventory Result [{{ filterInventoryModel.filterExpression.resultType }}]"
-msgstr ""
-
 msgid "Filter Inventory Result [{{resultType}}]"
 msgstr ""
 
-msgid "Filter Result [{{ filterModel.filterExpression?.resultType }}]"
-msgstr ""
-
 msgid "Filter Result [{{resultType}}]"
-msgstr ""
-
-msgid "Filter this column\\u2026"
-msgstr ""
-
-msgid "Filter\\u2026"
 msgstr ""
 
 msgid "Filtered"
@@ -1266,9 +1150,6 @@ msgid "Fragments from inventory to cache"
 msgstr ""
 
 msgid "From"
-msgstr ""
-
-msgid "From\\`date\\`"
 msgstr ""
 
 msgid "General settings"
@@ -1304,9 +1185,6 @@ msgstr ""
 msgid "Generating substitutions for this mapping based on its source and target templates. This starts automatically — no action needed."
 msgstr ""
 
-msgid "Getting things ready\\u2026"
-msgstr ""
-
 msgid "Go to problem"
 msgstr ""
 
@@ -1332,9 +1210,6 @@ msgid "header key"
 msgstr ""
 
 msgid "Hex"
-msgstr ""
-
-msgid "HH\\`HOURS\\`"
 msgstr ""
 
 msgid "Hierarchy mapping"
@@ -1376,9 +1251,6 @@ msgid "I can generate a Smart Function for this mapping based on its source temp
 msgstr ""
 
 msgid "I want to provide a sample target payload"
-msgstr ""
-
-msgid "I\\u2019m open to being contacted for follow-up about my feedback"
 msgstr ""
 
 msgid "Identifier"
@@ -1429,9 +1301,6 @@ msgstr ""
 msgid "Import service configuration"
 msgstr ""
 
-msgid "Import\\`verb, imports icons from a ZIP file\\`"
-msgstr ""
-
 msgid "Imported {{successCount}} connector(s) successfully."
 msgstr ""
 
@@ -1439,9 +1308,6 @@ msgid "Imported {{successCount}} mapping(s) successfully."
 msgstr ""
 
 msgid "Imported connectors were disabled because sensitive properties (e.g. passwords, tokens) are not exported. Please edit them and re-enter the real values before enabling."
-msgstr ""
-
-msgid "Importing icons\\u2026"
 msgstr ""
 
 msgid "In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically."
@@ -1464,9 +1330,6 @@ msgstr ""
 msgid "Init internal code templates"
 msgstr ""
 
-msgid "Input tokens: {{ input }}\\\\nOutput tokens: {{ output }}"
-msgstr ""
-
 msgid "Install sample mapping"
 msgstr ""
 
@@ -1477,9 +1340,6 @@ msgid "invalid file"
 msgstr ""
 
 msgid "Inventory cache"
-msgstr ""
-
-msgid "Inventory role updated"
 msgstr ""
 
 msgid "Java Extension"
@@ -1554,9 +1414,6 @@ msgstr ""
 msgid "Lines kept in memory"
 msgstr ""
 
-msgid "Listening\\u2026"
-msgstr ""
-
 msgid "Live Test"
 msgstr ""
 
@@ -1605,25 +1462,16 @@ msgstr ""
 msgid "Loaded"
 msgstr ""
 
-msgid "Loading asset properties\\u2026"
-msgstr ""
-
 msgid "Loading code templates..."
 msgstr ""
 
 msgid "Loading Extensions:"
 msgstr ""
 
-msgid "Loading icons\\u2026"
-msgstr ""
-
 msgid "Loading Java extensions..."
 msgstr ""
 
 msgid "Loading service events..."
-msgstr ""
-
-msgid "Loading\\u2026"
 msgstr ""
 
 msgid "Log connector errors"
@@ -1680,9 +1528,6 @@ msgid "Managing permissions"
 msgstr ""
 
 msgid "Mapping"
-msgstr ""
-
-msgid "Mapping  created successfully"
 msgstr ""
 
 msgid "Mapping {{mappingName}} created successfully"
@@ -1814,9 +1659,6 @@ msgstr ""
 msgid "Minutes lifetime flow state"
 msgstr ""
 
-msgid "MM\\`MINUTES\\`"
-msgstr ""
-
 msgid "Modal close error"
 msgstr ""
 
@@ -1827,9 +1669,6 @@ msgid "Monitoring overview"
 msgstr ""
 
 msgid "More save options"
-msgstr ""
-
-msgid "More\\u2026"
 msgstr ""
 
 msgid "Most lines per run"
@@ -1895,9 +1734,6 @@ msgstr ""
 msgid "No console output for this test run"
 msgstr ""
 
-msgid "No date filter applied \\u2014 every record is returned regardless of when it occurred."
-msgstr ""
-
 msgid "No device type available for this device."
 msgstr ""
 
@@ -1920,9 +1756,6 @@ msgid "No group detected for this device — group must be available to use this
 msgstr ""
 
 msgid "No Java extensions available — upload one first"
-msgstr ""
-
-msgid "No Java extensions available \\u2014 upload one first"
 msgstr ""
 
 msgid "No lines for this mapping in the part of the platform log that is loaded."
@@ -1952,9 +1785,6 @@ msgstr ""
 msgid "No source template"
 msgstr ""
 
-msgid "No source template \\u2014 this payload type is not editable as JSON. The payload is decoded by the mapper or passed to your code as raw data."
-msgstr ""
-
 msgid "No subscriptions for devices exist."
 msgstr ""
 
@@ -1964,13 +1794,7 @@ msgstr ""
 msgid "No target template"
 msgstr ""
 
-msgid "No target template \\u2014 the target payload structure is produced by your code."
-msgstr ""
-
 msgid "No template to edit — the payload structure comes from the Protobuf schema in the selected extension."
-msgstr ""
-
-msgid "No template to edit \\u2014 the payload structure comes from the Protobuf schema in the selected extension."
 msgstr ""
 
 msgid "No test devices exist."
@@ -2114,9 +1938,6 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
-msgid "Page {{ pageNo }} is loading\\u2026"
-msgstr ""
-
 msgid "Partially"
 msgstr ""
 
@@ -2192,9 +2013,6 @@ msgstr ""
 msgid "Publish topic sample"
 msgstr ""
 
-msgid "published"
-msgstr ""
-
 msgid "Published and activated version {{version}} of {{name}}"
 msgstr ""
 
@@ -2252,9 +2070,6 @@ msgstr ""
 msgid "Reference"
 msgstr ""
 
-msgid "Reject all\\`cookies\\`"
-msgstr ""
-
 msgid "Relation for this device deleted successfully"
 msgstr ""
 
@@ -2268,9 +2083,6 @@ msgid "Reliability settings"
 msgstr ""
 
 msgid "Reload mappings in service"
-msgstr ""
-
-msgid "Remove\\`column,verb\\`"
 msgstr ""
 
 msgid "Removed in 6.4.0:"
@@ -2363,9 +2175,6 @@ msgstr ""
 msgid "Run a Live Test on an inbound mapping to create a test device."
 msgstr ""
 
-msgid "Run tools without asking"
-msgstr ""
-
 msgid "Runs the mapping without writing anything to your tenant"
 msgstr ""
 
@@ -2375,19 +2184,7 @@ msgstr ""
 msgid "Saved code template"
 msgstr ""
 
-msgid "Saved draft and connector assignments for . It is not live yet: use Save & Activate, or publish and activate it (Versions)."
-msgstr ""
-
-msgid "Saved draft and connector assignments for . Publish and activate it (Versions) to apply the changes."
-msgstr ""
-
 msgid "Saved draft and connector assignments for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
-msgstr ""
-
-msgid "Saved draft for . It is not live yet: use Save & Activate, or publish and activate it (Versions)."
-msgstr ""
-
-msgid "Saved draft for . Publish and activate it (Versions) to apply the changes."
 msgstr ""
 
 msgid "Saved draft for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
@@ -2402,9 +2199,6 @@ msgstr ""
 msgid "Saved, but activating the version failed"
 msgstr ""
 
-msgid "Saving\\u2026"
-msgstr ""
-
 msgid "Scroll to top"
 msgstr ""
 
@@ -2417,13 +2211,7 @@ msgstr ""
 msgid "Search message or connector"
 msgstr ""
 
-msgid "Search\\u2026"
-msgstr ""
-
 msgid "Select 2 to {{ maxSamples }} messages of the same type, for example only JSON or only binary, to generate one Smart Function with AI from all of them."
-msgstr ""
-
-msgid "Select a date\\u2026"
 msgstr ""
 
 msgid "Select a device or group to create a dedicated Notification 2.0 subscription."
@@ -2576,9 +2364,6 @@ msgstr ""
 msgid "setting(s)"
 msgstr ""
 
-msgid "Share your feedback, suggestions, or any issues you\\u2019ve encountered."
-msgstr ""
-
 msgid "Shared code with agent:"
 msgstr ""
 
@@ -2639,9 +2424,6 @@ msgstr ""
 msgid "Source Result"
 msgstr ""
 
-msgid "Source Template - {{ sourceSystem }}"
-msgstr ""
-
 msgid "Source Template - {{system}}"
 msgstr ""
 
@@ -2664,9 +2446,6 @@ msgid "Specify device types. A subscription is only created (dynamic) when a dev
 msgstr ""
 
 msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
-msgstr ""
-
-msgid "SS\\`SECONDS\\`"
 msgstr ""
 
 msgid "Start exploring messages…"
@@ -2765,9 +2544,6 @@ msgid "Target Expression"
 msgstr ""
 
 msgid "Target Result"
-msgstr ""
-
-msgid "Target Template - {{ targetSystem }}"
 msgstr ""
 
 msgid "Target Template - {{system}}"
@@ -2962,16 +2738,10 @@ msgstr ""
 msgid "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
 msgstr ""
 
-msgid "To\\`date\\`"
-msgstr ""
-
 msgid "Toggle connection activation"
 msgstr ""
 
 msgid "Toggle mapping activation"
-msgstr ""
-
-msgid "Tool calls will run without asking for approval, in this and every future chat, until you turn this off again. Tools requiring explicit approval will still ask."
 msgstr ""
 
 msgid "Top"
@@ -3002,12 +2772,6 @@ msgid "Transport fields"
 msgstr ""
 
 msgid "Troubleshooting"
-msgstr ""
-
-msgid "Try adjusting your search or filter to find what you\\'re looking for."
-msgstr ""
-
-msgid "Type to filter icons\\u2026"
 msgstr ""
 
 msgid "Type your message..."
@@ -3077,9 +2841,6 @@ msgid "UTC"
 msgstr ""
 
 msgid "Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results."
-msgstr ""
-
-msgid "Verifying\\u2026"
 msgstr ""
 
 msgid "Version {{version}} of {{name}} is saved, but the mapping was not activated."
