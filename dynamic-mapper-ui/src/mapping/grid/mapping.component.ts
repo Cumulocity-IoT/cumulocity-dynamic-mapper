@@ -584,10 +584,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     try {
       await this.mappingService.deleteMapping(mapping.id, mapping.direction);
-      this.alertService.success(gettext(`Mapping ${mapping.name} deleted successfully`));
+      this.alertService.success(
+        this.translateService.instant(gettext('Mapping {{name}} deleted successfully'), { name: mapping.name })
+      );
       return true;
     } catch (error) {
-      this.alertService.danger(gettext(`Failed to delete mapping ${mapping.name}:`) + error);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Failed to delete mapping {{name}}:'), { name: mapping.name }) + error
+      );
       return false;
     }
   }
@@ -619,7 +623,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     const alert = commitSuccessMessage(
       result,
       editorState.mapping.name,
-      this.stepperConfiguration.persistence
+      this.stepperConfiguration.persistence,
+      this.translateService
     );
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.

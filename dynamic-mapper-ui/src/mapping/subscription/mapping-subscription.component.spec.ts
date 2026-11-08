@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -126,6 +127,7 @@ describe('MappingSubscriptionComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MappingSubscriptionComponent],
       providers: [
+        provideTranslateStub(),
         { provide: MappingService, useValue: mockMappingService },
         { provide: SubscriptionService, useValue: mockSubscriptionService },
         { provide: SharedService, useValue: mockSharedService },
@@ -199,6 +201,7 @@ describe('MappingSubscriptionComponent', () => {
       await TestBed.configureTestingModule({
         imports: [MappingSubscriptionComponent],
         providers: [
+        provideTranslateStub(),
           { provide: MappingService, useValue: mockMappingService },
           { provide: SubscriptionService, useValue: mockSubscriptionService },
           { provide: SharedService, useValue: mockSharedService },

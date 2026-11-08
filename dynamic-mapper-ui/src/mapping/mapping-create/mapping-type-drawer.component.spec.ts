@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { BottomDrawerRef, BottomDrawerService } from '@c8y/ngx-components';
@@ -79,6 +80,7 @@ describe('MappingTypeDrawerComponent', () => {
     TestBed.configureTestingModule({
       imports: [MappingTypeDrawerComponent],
       providers: [
+        provideTranslateStub(),
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
         { provide: AiAgentService, useValue: mockAIAgentService },

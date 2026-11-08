@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { TranslateService } from '@ngx-translate/core';
 import { Injectable, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
@@ -37,6 +38,7 @@ import { isConnectorSelectionEmpty, stringToBase64, hasMappingContentChanged, Ma
 export class MappingCommitService {
     private readonly mappingService = inject(MappingService);
     private readonly alertService = inject(AlertService);
+    private readonly translateService = inject(TranslateService);
 
     /**
      * The single commit path for both editors.
@@ -141,8 +143,8 @@ export class MappingCommitService {
                 return { status: 'rejected', error };
             }
             const message = persistence === 'draft'
-                ? gettext(`Failed to save draft for ${mapping.name}: `) + error.message
-                : gettext(`Failed to create mapping ${mapping.name}: `) + error.message;
+                ? this.translateService.instant(gettext('Failed to save draft for {{name}}: '), { name: mapping.name }) + error.message
+                : this.translateService.instant(gettext('Failed to create mapping {{name}}: '), { name: mapping.name }) + error.message;
             this.alertService.danger(message);
             return { status: 'failed', message };
         }
@@ -159,7 +161,7 @@ export class MappingCommitService {
                 // Surfaced rather than swallowed: the deployment was not applied.
                 deploymentFailed = true;
                 this.alertService.danger(
-                    gettext(`Failed to deploy mapping ${mapping.name} to connectors: `) + error.message
+                    this.translateService.instant(gettext('Failed to deploy mapping {{name}} to connectors: '), { name: mapping.name }) + error.message
                 );
             }
         }
@@ -300,11 +302,12 @@ export interface CommitSuccessAlert {
 export function commitSuccessMessage(
     result: Extract<CommitResult, { status: 'saved' }>,
     mappingName: string,
-    persistence: MappingPersistence
+    persistence: MappingPersistence,
+    translateService: Pick<TranslateService, 'instant'>
 ): CommitSuccessAlert | undefined {
     if (persistence !== 'draft') {
         return {
-            text: gettext(`Mapping ${mappingName} created successfully`),
+            text: translateService.instant(gettext('Mapping {{mappingName}} created successfully'), { mappingName }),
             timeout: ALERT_SUCCESS_TIMEOUT
         };
     }
@@ -313,19 +316,19 @@ export function commitSuccessMessage(
     // The two draft messages instruct a follow-up action, so they get the longer dwell time.
     if (result.contentChanged && deploymentChanged) {
         return {
-            text: gettext(`Saved draft and connector assignments for ${mappingName}. It is not live yet: use Save & Activate, or publish and activate it (Versions).`),
+            text: translateService.instant(gettext('Saved draft and connector assignments for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions).'), { mappingName }),
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
         };
     }
     if (result.contentChanged) {
         return {
-            text: gettext(`Saved draft for ${mappingName}. It is not live yet: use Save & Activate, or publish and activate it (Versions).`),
+            text: translateService.instant(gettext('Saved draft for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions).'), { mappingName }),
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
         };
     }
     if (deploymentChanged) {
         return {
-            text: gettext(`Connector assignments for ${mappingName} saved.`),
+            text: translateService.instant(gettext('Connector assignments for {{mappingName}} saved.'), { mappingName }),
             timeout: ALERT_SUCCESS_TIMEOUT
         };
     }

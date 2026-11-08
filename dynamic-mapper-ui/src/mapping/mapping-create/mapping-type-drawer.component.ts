@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { TranslateService } from '@ngx-translate/core';
 import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
@@ -81,6 +82,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   // Services
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly translateService = inject(TranslateService);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
@@ -392,7 +394,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Template helpers
   getMappingTypeDescription(): string {
     const option = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
-    return option?.value ? MappingTypeDescriptionMap[option.value]?.description : '';
+    const description = option?.value ? MappingTypeDescriptionMap[option.value]?.description : '';
+    return description ? this.translateService.instant(description) : '';
   }
 
   getTransformationTypeDescription(): string {
@@ -804,9 +807,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Factory methods for options
   private createMappingTypeOption(type: MappingType): MappingTypeOption {
     return {
-      label: MappingTypeLabels[type],
+      label: this.translateService.instant(MappingTypeLabels[type]),
       value: type,
-      description: MappingTypeDescriptionMap[type].description
+      description: this.translateService.instant(MappingTypeDescriptionMap[type].description)
     };
   }
 

@@ -145,9 +145,9 @@ export class ImportConnectorsComponent implements OnDestroy {
         this.alertService.success(this.translateService.instant(gettext('Imported {{successCount}} connector(s) successfully.'), { successCount }));
         successScreenShown = true;
       } else if (successCount === 0) {
-        this.errorMessage = `Failed to import connectors: ${errorDetail}`;
+        this.errorMessage = this.translateService.instant(gettext('Failed to import connectors: {{errorDetail}}'), { errorDetail });
       } else {
-        this.errorMessage = `Import completed: ${successCount} succeeded, ${errors.length} failed: ${errorDetail}`;
+        this.errorMessage = this.translateService.instant(gettext('Import completed: {{successCount}} succeeded, {{errorCount}} failed: {{errorDetail}}'), { successCount, errorCount: errors.length, errorDetail });
       }
 
       if (maskedSecretsFound) {
@@ -165,7 +165,7 @@ export class ImportConnectorsComponent implements OnDestroy {
         );
       }
     } catch (error) {
-      this.errorMessage = `Import failed: ${error?.message ?? 'invalid file'}`;
+      this.errorMessage = this.translateService.instant(gettext('Import failed: {{message}}'), { message: error?.message ?? this.translateService.instant(gettext('invalid file')) });
     } finally {
       this.ngZone.run(() => {
         this.isLoading = false;

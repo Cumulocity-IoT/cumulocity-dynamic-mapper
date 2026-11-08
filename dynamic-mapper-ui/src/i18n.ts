@@ -15,3 +15,6 @@ import '@c8y/ngx-components/locales/pl.po';
 import '@c8y/ngx-components/locales/pt_BR.po';
 import '@c8y/ngx-components/locales/zh_CN.po';
 import '@c8y/ngx-components/locales/zh_TW.po';
+
+// The app's own messages. Generate with scripts/sync-app-catalogs.js; an empty msgstr shows English.
+import './locales/de.po';

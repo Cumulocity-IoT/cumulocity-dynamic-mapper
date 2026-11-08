@@ -20,6 +20,7 @@
 import { Component, inject, Input, OnInit, ViewEncapsulation } from '@angular/core';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { ValidationIssue } from '../../shared/mapping/mapping-validation-error';
+import { TranslateService } from '@ngx-translate/core';
 import { translateValidationErrorCode } from '../../shared/mapping/util';
 
 /** What the drawer resolves with: either take the user to a problem, or just close. */
@@ -56,6 +57,7 @@ interface DisplayedIssue {
 })
 export class MappingValidationDrawerComponent implements OnInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly translateService = inject(TranslateService);
 
   /** Detailed failures from the 422 body's `details[]`. */
   @Input() issues: ValidationIssue[] = [];
@@ -75,13 +77,13 @@ export class MappingValidationDrawerComponent implements OnInit {
     this.displayedIssues = this.issues.length
       ? this.issues.map(issue => this.toDisplayed(issue))
       // An older backend, or a failure raised before the detailed form existed, sends codes only.
-      : this.errors.map(code => ({ message: translateValidationErrorCode(code) }));
+      : this.errors.map(code => ({ message: translateValidationErrorCode(code, (t) => this.translateService.instant(t)) }));
   }
 
   private toDisplayed(issue: ValidationIssue): DisplayedIssue {
     const hasIndex = issue.index !== undefined && issue.index !== null;
     return {
-      message: translateValidationErrorCode(issue.code),
+      message: translateValidationErrorCode(issue.code, (t) => this.translateService.instant(t)),
       field: issue.field,
       value: issue.value,
       reason: issue.reason,

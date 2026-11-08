@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
@@ -39,10 +40,13 @@ import {
   StepperConfiguration,
   TransformationType
 } from '../../shared';
+import { interpolateMessage } from '../../shared/testing/translate-stub';
 import { captureMappingContentSnapshot } from '../../shared/mapping/util';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 
 /** Unit tests for the save path shared by the stepper's parent and the unified editor. */
+const translateStub = { instant: interpolateMessage };
+
 describe('MappingCommitService', () => {
   let service: MappingCommitService;
   let mockAlertService: jasmine.SpyObj<AlertService>;
@@ -110,6 +114,7 @@ describe('MappingCommitService', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        provideTranslateStub(),
         MappingCommitService,
         { provide: MappingService, useValue: mockMappingService },
         { provide: AlertService, useValue: mockAlertService }
@@ -523,16 +528,16 @@ describe('MappingCommitService', () => {
       ({ status: 'saved', contentChanged, deploymentChanged }) as Extract<CommitResult, { status: 'saved' }>;
 
     it('announces a creation for every non-UPDATE mode', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.text).toContain('created successfully');
-      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.text).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create', translateStub)?.text).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create', translateStub)?.text).toContain('created successfully');
     });
 
     it('distinguishes the three UPDATE outcomes', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', 'draft')?.text)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'draft', translateStub)?.text)
         .toContain('Saved draft and connector assignments');
-      expect(commitSuccessMessage(saved(true, false), 'M', 'draft')?.text)
+      expect(commitSuccessMessage(saved(true, false), 'M', 'draft', translateStub)?.text)
         .toContain('Saved draft for M');
-      expect(commitSuccessMessage(saved(false, true), 'M', 'draft')?.text)
+      expect(commitSuccessMessage(saved(false, true), 'M', 'draft', translateStub)?.text)
         .toContain('Connector assignments for M saved');
     });
 
@@ -541,29 +546,29 @@ describe('MappingCommitService', () => {
         ({ status: 'saved', contentChanged, deploymentChanged, deploymentFailed: true }) as
           Extract<CommitResult, { status: 'saved' }>;
 
-      expect(commitSuccessMessage(failed(false, true), 'M', 'draft')).toBeUndefined();
-      expect(commitSuccessMessage(failed(true, true), 'M', 'draft')?.text).toContain('Saved draft for M');
+      expect(commitSuccessMessage(failed(false, true), 'M', 'draft', translateStub)).toBeUndefined();
+      expect(commitSuccessMessage(failed(true, true), 'M', 'draft', translateStub)?.text).toContain('Saved draft for M');
     });
 
     it('keeps the draft messages up longer, because they ask for a follow-up action', () => {
       // Cumulocity auto-dismisses a detail-less success alert after 3s; these two tell the user
       // to publish and activate afterwards, so they must outlast that.
-      expect(commitSuccessMessage(saved(true, true), 'M', 'draft')?.timeout)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'draft', translateStub)?.timeout)
         .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
-      expect(commitSuccessMessage(saved(true, false), 'M', 'draft')?.timeout)
+      expect(commitSuccessMessage(saved(true, false), 'M', 'draft', translateStub)?.timeout)
         .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
       expect(ALERT_ACTION_REQUIRED_TIMEOUT).toBeGreaterThan(3000);
     });
 
     it('uses the ordinary success dwell time for plain confirmations', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.timeout)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create', translateStub)?.timeout)
         .toBe(ALERT_SUCCESS_TIMEOUT);
-      expect(commitSuccessMessage(saved(false, true), 'M', 'draft')?.timeout)
+      expect(commitSuccessMessage(saved(false, true), 'M', 'draft', translateStub)?.timeout)
         .toBe(ALERT_SUCCESS_TIMEOUT);
     });
 
     it('says nothing when an UPDATE changed nothing', () => {
-      expect(commitSuccessMessage(saved(false, false), 'M', 'draft')).toBeUndefined();
+      expect(commitSuccessMessage(saved(false, false), 'M', 'draft', translateStub)).toBeUndefined();
     });
   });
 

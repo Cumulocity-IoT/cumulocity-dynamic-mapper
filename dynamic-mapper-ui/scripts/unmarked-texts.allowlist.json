@@ -113,5 +113,15 @@
     "file": "src/shared/service/connector-configuration.service.ts",
     "reason": "Only logged to the console",
     "text": "Unknown error occurred"
+  },
+  {
+    "file": "src/introduction/doc-markdown.service.ts",
+    "kind": "cssText",
+    "reason": "CSS, not text"
+  },
+  {
+    "file": "src/mapping/prompt/ai-prompt.component.ts",
+    "kind": "newMessage",
+    "reason": "Message sent to the AI agent, not shown as UI text"
   }
 ]

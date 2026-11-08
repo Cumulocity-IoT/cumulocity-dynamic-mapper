@@ -60,8 +60,9 @@ export function isFilterOutboundUnique(
  * de-slugified version of the code itself (underscores → spaces) for any code the
  * catalogue doesn't (yet) know about, rather than showing the raw enum token verbatim.
  */
-export function translateValidationErrorCode(code: string): string {
-  return ValidationFormlyError[code]?.message ?? code.replace(/_/g, ' ');
+export function translateValidationErrorCode(code: string, translate: (text: string) => string = (text) => text): string {
+  const message = ValidationFormlyError[code]?.message;
+  return message ? translate(message) : code.replace(/_/g, ' ');
 }
 
 /**
@@ -73,9 +74,13 @@ export function translateValidationErrorCode(code: string): string {
  * error shape (e.g. a plain `{ message }` from a different failure) falls back to that
  * message, or to `fallback` if the body has neither.
  */
-export function buildBackendErrorMessage(body: any, fallback: string): string {
+export function buildBackendErrorMessage(
+  body: any,
+  fallback: string,
+  translate: (text: string) => string = (text) => text
+): string {
   if (Array.isArray(body?.errors) && body.errors.length > 0) {
-    return body.errors.map((code: string) => translateValidationErrorCode(code)).join('; ');
+    return body.errors.map((code: string) => translateValidationErrorCode(code, translate)).join('; ');
   }
   return body?.message ?? fallback;
 }

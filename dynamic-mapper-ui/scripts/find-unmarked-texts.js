@@ -214,6 +214,16 @@ function scanTypeScript(files) {
           if (ALERT_METHODS.has(method)) literalsIn(node.arguments[0]).forEach((n) => flag(n, 'alert'));
         }
       }
+      // gettext(`… ${x} …`): the extractor cannot read a placeholder written as ${}
+      if (ts.isCallExpression(node) && node.expression.getText() === 'gettext'
+          && node.arguments[0] && ts.isTemplateExpression(node.arguments[0])) {
+        flag(node.arguments[0], 'gettext-interpolation');
+      }
+      // this.errorMessage = `…`;  this.statusText = '…';
+      if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+          && ts.isPropertyAccessExpression(node.left) && /(Message|Text|Warning)$/.test(node.left.name.text)) {
+        literalsIn(node.right).forEach((n) => flag(n, `assignment ${node.left.name.text}`));
+      }
       // label: '…', description: '…', placeholder: '…'
       if (ts.isPropertyAssignment(node) && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))) {
         const name = node.name.text;

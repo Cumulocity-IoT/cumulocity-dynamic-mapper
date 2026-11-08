@@ -17,14 +17,15 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import {
   ApplicationRef,
   Component,
   NgZone,
   OnDestroy,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, inject } from '@angular/core';
 import {
   CoreModule,
   DropAreaComponent,
@@ -43,6 +44,7 @@ import { createCustomUuid, Mapping } from '../../shared';
   imports:[CoreModule]
 })
 export class ImportMappingsComponent implements OnDestroy {
+  private readonly translateService = inject(TranslateService);
   @ViewChild(DropAreaComponent) dropAreaComponent;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   isLoading: boolean = false;
@@ -67,7 +69,7 @@ export class ImportMappingsComponent implements OnDestroy {
         await this.onFile(file);
       }
     } catch (error) {
-      this.errorMessage = `Import failed. Verify the format of the import file!`;
+      this.errorMessage = this.translateService.instant(gettext('Import failed. Verify the format of the import file!'));
       this.isLoading = false;
       this.progress$.next(null);
     }
@@ -103,13 +105,13 @@ export class ImportMappingsComponent implements OnDestroy {
     this.failedMappings = errors;
     if (errors.length === 0) {
       this.resultType = 'success';
-      this.resultText = `Imported ${successCount} mapping(s) successfully.`;
+      this.resultText = this.translateService.instant(gettext('Imported {{successCount}} mapping(s) successfully.'), { successCount });
     } else if (successCount === 0) {
       this.resultType = 'error';
-      this.resultText = `Failed to import mappings. ${errors.length} error(s) occurred.`;
+      this.resultText = this.translateService.instant(gettext('Failed to import mappings. {{errorCount}} error(s) occurred.'), { errorCount: errors.length });
     } else {
       this.resultType = 'warning';
-      this.resultText = `Import completed: ${successCount} succeeded, ${errors.length} failed.`;
+      this.resultText = this.translateService.instant(gettext('Import completed: {{successCount}} succeeded, {{errorCount}} failed.'), { successCount, errorCount: errors.length });
     }
 
     // Use NgZone.run to ensure the view updates run inside Angular's zone

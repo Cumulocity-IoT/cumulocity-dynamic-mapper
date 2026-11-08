@@ -1,0 +1,7969 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language: \n"
+"Language-Team: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: \n"
+
+msgid "\"{{ iconName }}\" (overridden)"
+msgstr ""
+
+msgid "\"{{ targetUserName }}\" user's password was updated by \"{{ userName }}\" user"
+msgstr ""
+
+msgid "\"{{ userName }}\" user changed own password"
+msgstr ""
+
+msgid "\"{{field}}\" must be less than or equal to {{maxValue}}"
+msgstr ""
+
+msgid "\"{{field}}\" must be true"
+msgstr ""
+
+msgid "\"{{field}}\" must not be empty"
+msgstr ""
+
+msgid "\"{{field}}\" must not be null"
+msgstr ""
+
+msgid "\"{{field}}\" should not be null"
+msgstr ""
+
+msgid "\"{{field}}\" should not contain null values"
+msgstr ""
+
+msgid "\"{{imageName}}\" assigned to \"{{address}}\"."
+msgstr ""
+
+msgid "\"{{name}}\" user logged in to the platform with OAI-Secure login mode"
+msgstr ""
+
+msgid "\"{{name}}\" user login with OAI-Secure mode failed"
+msgstr ""
+
+msgid "\"{{name}}\" user logout"
+msgstr ""
+
+msgid "(click to toggle)"
+msgstr ""
+
+msgid "(no data)"
+msgstr ""
+
+msgid "(required)"
+msgstr ""
+
+msgid "(unknown time)"
+msgstr ""
+
+msgid ", which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads."
+msgstr ""
+
+msgid "-- Select connector --"
+msgstr ""
+
+msgid "--- (step separator) ---"
+msgstr ""
+
+msgid "--- Tool call: {{ toolName }} ---"
+msgstr ""
+
+msgid "1 more request sent; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "1 problem must be fixed before this mapping can be saved. Your edits are kept."
+msgstr ""
+
+msgid "1 selected item."
+msgstr ""
+
+msgid "1 to 5000. Lines beyond this are stored in the next run."
+msgstr ""
+
+msgid "100 to 10000, and at most 16 MB. When full, the oldest waiting lines are dropped."
+msgstr ""
+
+msgid "15 seconds"
+msgstr ""
+
+msgid "30 seconds"
+msgstr ""
+
+msgid "5 seconds"
+msgstr ""
+
+msgid "60 seconds"
+msgstr ""
+
+msgid "<i c8yicon=\"download-archive\"></i> Download MO"
+msgstr ""
+
+msgid "<i c8yicon=\"download-archive\"></i> Download mapping"
+msgstr ""
+
+msgid "<i c8yicon=\"enter-right\"></i>Reset to default"
+msgstr ""
+
+msgid "<i c8yicon=\"filter\"></i>Update Filter Execution Mapping"
+msgstr ""
+
+msgid "<no name>"
+msgstr ""
+
+msgid ""
+"<p class=\"p-b-8\">\n"
+"              The layout and configuration of this dashboard is used by all assets based on asset model <span class=\"tag tag--info text-12\">{{ displayDeviceTypeValue }}</span>.\n"
+"            </p>\n"
+"            <p class=\"p-b-16\">\n"
+"              Disabling this option removes it from all assets based on the same model and makes it available only for the current instance.\n"
+"            </p>"
+msgstr ""
+
+msgid ""
+"<p class=\"p-b-8\">\n"
+"            The layout and configuration of this dashboard is used by all devices based on device type <span class=\"tag tag--info text-12\">{{ displayDeviceTypeValue }}</span>.\n"
+"          </p>\n"
+"          <p class=\"p-b-16\">\n"
+"            Disabling this option removes it from all devices based on the same type and makes it available only for the current instance.\n"
+"          </p>"
+msgstr ""
+
+msgid ""
+"<p class=\"p-b-8\">Enabling this option uses the layout and configuration of this dashboard to create dashboard instances for all devices based on the device type.</p>\n"
+"             <p class=\"p-b-16\">The current device doesn't have a device type assigned to it. Assign a device type to the device via the \"Asset properties\" widget in the <strong>Info</strong> tab of the device.</p>"
+msgstr ""
+
+msgid "<p>Enabling this option uses the layout and configuration of this dashboard to create dashboard instances for all assets based on the model <span class=\"tag tag--info text-12\">{{ displayDeviceTypeValue }}</span>.</p>"
+msgstr ""
+
+msgid "<p>Enabling this option uses the layout and configuration of this dashboard to create dashboard instances for all devices based on the type <span class=\"tag tag--info text-12\">{{ displayDeviceTypeValue }}</span>.</p>"
+msgstr ""
+
+msgid "A bulk registration CSV template for NO_SEC devices with all optional fields"
+msgstr ""
+
+msgid "A bulk registration CSV template for PSK devices with all optional fields"
+msgstr ""
+
+msgid "A bulk registration CSV template showing all mandatory fields"
+msgstr ""
+
+msgid "A general bulk registration CSV template showing all possible fields"
+msgstr ""
+
+msgid "A mapping was activated or deactivated"
+msgstr ""
+
+msgid "A mapping was created"
+msgstr ""
+
+msgid "A mapping was deleted"
+msgstr ""
+
+msgid "A mapping's configuration, filter, code, or debug flag was updated"
+msgstr ""
+
+msgid "A problem occurred with microservice subscription."
+msgstr ""
+
+msgid "A request or response is not a JSON object, so it is shown as text under \"payload\"."
+msgstr ""
+
+msgid "A role marker for device users. After registration, a device automatically has this role."
+msgstr ""
+
+msgid "A server error occurred."
+msgstr ""
+
+msgid "A substitution defining the DeviceIdentifier must be used."
+msgstr ""
+
+msgid "AI Agent"
+msgstr ""
+
+msgid "AI Agent Manager"
+msgstr ""
+
+msgid "AI Agents"
+msgstr ""
+
+msgid "AI Assistant"
+msgstr ""
+
+msgid "AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined."
+msgstr ""
+
+msgid "AI Mapping Assistant"
+msgstr ""
+
+msgid "AI Plugins"
+msgstr ""
+
+msgid "AI Shared Code Assistant"
+msgstr ""
+
+msgid "AI agent is not available."
+msgstr ""
+
+msgid "AI capabilities are disabled in this tenant."
+msgstr ""
+
+msgid "AI code assistant"
+msgstr ""
+
+msgid "AI generation failed. Please try again."
+msgstr ""
+
+msgid "AI response cancelled."
+msgstr ""
+
+msgid "AI result applied to the editor. Review it and press Save to keep it."
+msgstr ""
+
+msgid "AI settings could not be verified. The AI assistant is unavailable."
+msgstr ""
+
+msgid "AI-assisted mapping"
+msgstr ""
+
+msgid "AI-generated responses can contain errors. Verify the details before use."
+msgstr ""
+
+msgid "AMQP 0-9-1 connector"
+msgstr ""
+
+msgid "AMQP 1.0 connector"
+msgstr ""
+
+msgid "Aborted"
+msgstr ""
+
+msgid "About cookies on this website"
+msgstr ""
+
+msgid "About this log"
+msgstr ""
+
+msgid "About this page"
+msgstr ""
+
+msgid "Accept & don't show again"
+msgstr ""
+
+msgid "Access denied."
+msgstr ""
+
+msgid "Accessing and transforming payload data"
+msgstr ""
+
+msgid "Acknowledge and close"
+msgstr ""
+
+msgid "Acknowledged`alarm`"
+msgstr ""
+
+msgid "Action bar"
+msgstr ""
+
+msgid "Action required — removed in 6.3.0:"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Actions for \"{{ iconName }}\""
+msgstr ""
+
+msgid "Activate"
+msgstr ""
+
+msgid "Activate access"
+msgstr ""
+
+msgid "Activate support access"
+msgstr ""
+
+msgid "Activate support user access"
+msgstr ""
+
+msgid "Activated version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Activated {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Activated {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Active alarms status"
+msgstr ""
+
+msgid "Active filters"
+msgstr ""
+
+msgid "Active version"
+msgstr ""
+
+msgid "Active, critical alarms"
+msgstr ""
+
+msgid "Active`alarm`"
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Add AI Agent permissions to the current user or role to get started."
+msgstr ""
+
+msgid "Add Java Extension"
+msgstr ""
+
+msgid "Add Processor Extension"
+msgstr ""
+
+msgid "Add a note\\u2026"
+msgstr ""
+
+msgid "Add a note…"
+msgstr ""
+
+msgid "Add and select connector"
+msgstr ""
+
+msgid "Add another column after saving this one"
+msgstr ""
+
+msgid "Add connector"
+msgstr ""
+
+msgid "Add custom column"
+msgstr ""
+
+msgid "Add custom icon"
+msgstr ""
+
+msgid "Add dashboard"
+msgstr ""
+
+msgid "Add extension"
+msgstr ""
+
+msgid "Add first asset property mapping."
+msgstr ""
+
+msgid "Add icon"
+msgstr ""
+
+msgid "Add mapping"
+msgstr ""
+
+msgid "Add mappings"
+msgstr ""
+
+msgid "Add new client"
+msgstr ""
+
+msgid "Add new collection\\`collection\\`"
+msgstr ""
+
+msgid "Add next`identifier`"
+msgstr ""
+
+msgid "Add next`tag`"
+msgstr ""
+
+msgid "Add next`title`"
+msgstr ""
+
+msgid "Add next`value`"
+msgstr ""
+
+msgid "Add property"
+msgstr ""
+
+msgid "Add relations"
+msgstr ""
+
+msgid "Add relations (device selection)"
+msgstr ""
+
+msgid "Add relations, for devices and clients"
+msgstr ""
+
+msgid "Add sample mappings"
+msgstr ""
+
+msgid "Add subscriptions (device table)"
+msgstr ""
+
+msgid "Add subscriptions (table)"
+msgstr ""
+
+msgid "Add substitution"
+msgstr ""
+
+msgid "Add to selected properties"
+msgstr ""
+
+msgid "Add widget"
+msgstr ""
+
+msgid "Add widgets to this dashboard."
+msgstr ""
+
+msgid "Add your first extension by clicking below."
+msgstr ""
+
+msgid "Add {{ label }}"
+msgstr ""
+
+msgid "Added child device \"{{name}}\" (ID: {{id}})."
+msgstr ""
+
+msgid "Added new child device to \"{{parentDeviceName}}\" (ID: {{parentDeviceId}})."
+msgstr ""
+
+msgid "Added new code template."
+msgstr ""
+
+msgid "Added sample mappings for {{direction}}"
+msgstr ""
+
+msgid "Added widgets: {{ widgetList }}."
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "Adjust or clear the search."
+msgstr ""
+
+msgid "Admin User`role`"
+msgstr ""
+
+msgid "Administration"
+msgstr ""
+
+msgid "Advanced"
+msgstr ""
+
+msgid "Agent"
+msgstr ""
+
+msgid "Aggregation"
+msgstr ""
+
+msgid "Aggregation options"
+msgstr ""
+
+msgid "Agree and proceed"
+msgstr ""
+
+msgid "Alarm created"
+msgstr ""
+
+msgid "Alarm updated"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+msgid "All devices in the selected group will be subscribed automatically."
+msgstr ""
+
+msgid "All event types"
+msgstr ""
+
+msgid "All extensions"
+msgstr ""
+
+msgid "All filtered"
+msgstr ""
+
+msgid "All icons in this file already exist in this tenant."
+msgstr ""
+
+msgid "All lines"
+msgstr ""
+
+msgid "All lines of the selected instance."
+msgstr ""
+
+msgid "All severities"
+msgstr ""
+
+msgid "All subjects"
+msgstr ""
+
+msgid "All time\\`interval option\\`"
+msgstr ""
+
+msgid "All time`interval option`"
+msgstr ""
+
+msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves."
+msgstr ""
+
+msgid "All\\`possible options\\`"
+msgstr ""
+
+msgid "All`icons-category`"
+msgstr ""
+
+msgid "Allow to define expressions using JSONata"
+msgstr ""
+
+msgid "Already exists"
+msgstr ""
+
+msgid "Already removed in 6.3.0:"
+msgstr ""
+
+msgid "Always approve all tools"
+msgstr ""
+
+msgid "Always approve this tool"
+msgstr ""
+
+msgid "An error occurred"
+msgstr ""
+
+msgid "An error occurred while communicating with the AI agent."
+msgstr ""
+
+msgid "An error occurred while processing the response from the AI agent."
+msgstr ""
+
+msgid "An extension must be selected for an Extension (Java) mapping."
+msgstr ""
+
+msgid "Any direction"
+msgstr ""
+
+msgid "Appearance"
+msgstr ""
+
+msgid "Application"
+msgstr ""
+
+msgid "Application activated"
+msgstr ""
+
+msgid "Application deleted"
+msgstr ""
+
+msgid "Application enablement`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Application for tenant \"{{tenant}}\" with the following values ({{valuesList}}) already exists."
+msgstr ""
+
+msgid "Application name must not start with \"{{ prefix }}\"."
+msgstr ""
+
+msgid "Application output creation failed due to status code {{ statusCode }}."
+msgstr ""
+
+msgid "Application output update failed due to status code {{ statusCode }}."
+msgstr ""
+
+msgid "Application properties"
+msgstr ""
+
+msgid "Application switcher"
+msgstr ""
+
+msgid "Application with given name already exists."
+msgstr ""
+
+msgid "Application with key \"{{appKey}}\" not found."
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Apply device profile: {{ name }}"
+msgstr ""
+
+msgid "Apply filter"
+msgstr ""
+
+msgid "Apply global context"
+msgstr ""
+
+msgid "Apply selection"
+msgstr ""
+
+msgid "Apply software changes: {{ softwareChanges }}"
+msgstr ""
+
+msgid "Apply\\`selection\\`"
+msgstr ""
+
+msgid "Approve"
+msgstr ""
+
+msgid "Approve automatically, except tools that always need approval"
+msgstr ""
+
+msgid "Approved tool {{toolName}}"
+msgstr ""
+
+msgid "Are you sure you want to close dashboard details? All unsaved changes will be lost."
+msgstr ""
+
+msgid "Are you sure you want to delete this icon? This cannot be undone."
+msgstr ""
+
+msgid "Are you sure you want to exit the edit mode? All unsaved changes will be lost."
+msgstr ""
+
+msgid "Are you sure you want to rewrite the conversation by editing your message from {{timestamp}}, and deleting the following {{messageCount}} assistant and user messages?"
+msgstr ""
+
+msgid "Array templates require transformation type <code>SMART_FUNCTION</code>."
+msgstr ""
+
+msgid "Arrow`icons-category`"
+msgstr ""
+
+msgid "As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once."
+msgstr ""
+
+msgid "Ask before calls that need your approval"
+msgstr ""
+
+msgid "Ask before running each tool"
+msgstr ""
+
+msgid "Ask the agent to fix these"
+msgstr ""
+
+msgid "Asset"
+msgstr ""
+
+msgid "Asset Manager`role`"
+msgstr ""
+
+msgid "Asset properties"
+msgstr ""
+
+msgid "Asset property list"
+msgstr ""
+
+msgid "Asset selection"
+msgstr ""
+
+msgid "Asset selection is optional for this widget."
+msgstr ""
+
+msgid "Asset type node cannot become root node."
+msgstr ""
+
+msgid "Asset {{ assetId }}"
+msgstr ""
+
+msgid ""
+"Asset: {{assetName}}\n"
+"Property: {{label}}"
+msgstr ""
+
+msgid "Assign device profile {{profileName}} to device {{deviceName}}"
+msgstr ""
+
+msgid "Assign devices or device groups"
+msgstr ""
+
+msgid "Assign property"
+msgstr ""
+
+msgid "Assistant message"
+msgstr ""
+
+msgid "Assistant message at {{ time }}"
+msgstr ""
+
+msgid "Assistant message from {{ agent }}"
+msgstr ""
+
+msgid "Assistant message from {{ agent }} at {{ time }}"
+msgstr ""
+
+msgid "Assume device exists"
+msgstr ""
+
+msgid "At least once"
+msgstr ""
+
+msgid "At least one file is of an unsupported type."
+msgstr ""
+
+msgid "At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression."
+msgstr ""
+
+msgid "At least one substitution has an empty source or target path. Both must be set."
+msgstr ""
+
+msgid "At least one substitution of this outbound mapping has \"Expand as array\" set. Outbound mappings produce exactly one message, so switch it off."
+msgstr ""
+
+msgid "At most once"
+msgstr ""
+
+msgid "Authentication configuration with ID \"{{id}}\" added."
+msgstr ""
+
+msgid "Authentication configuration with ID \"{{id}}\" updated."
+msgstr ""
+
+msgid "Authentication failed due to: user account is locked."
+msgstr ""
+
+msgid "Authentication to the Actility platform failed with status code {{ statusCode }}. Check if the Profile ID is correct."
+msgstr ""
+
+msgid "Authentication to the Actility platform failed with status code {{ statusCode }}. Check if the base URL and/or the credentials are correct."
+msgstr ""
+
+msgid "Authentication to the Actility platform failed with status code {{ statusCode }}. Check if the credentials are correct."
+msgstr ""
+
+msgid "Authentication to the Actility platform failed. Check if the base URL {{ baseUrl }} is correct."
+msgstr ""
+
+msgid "Authentication to the LORIOT platform failed with status code {{ statusCode }}. Check if the base URL, credentials are correct and the application with the given ID exists."
+msgstr ""
+
+msgid "Authentication to the LORIOT platform failed with status code {{ statusCode }}. Check if the credentials are correct or if session ID is expired."
+msgstr ""
+
+msgid "Authentication to the LORIOT platform failed with status code {{ statusCode }}. Session ID might have expired."
+msgstr ""
+
+msgid "Authentication to the Sigfox platform failed. Check if the Parent group ID and/or the credentials are correct."
+msgstr ""
+
+msgid "Authentication to the Sigfox platform failed. Check if the base URL {{ baseUrl }} is correct."
+msgstr ""
+
+msgid "Author"
+msgstr ""
+
+msgid "Auto"
+msgstr ""
+
+msgid "Auto acknowledge"
+msgstr ""
+
+msgid "Auto acknowledge outbound operation."
+msgstr ""
+
+msgid "Auto picks an aggregation interval from the time range and the aggregation points per chart you set. Available only for the Data graph widget."
+msgstr ""
+
+msgid "Auto refresh"
+msgstr ""
+
+msgid "Auto refresh enabled"
+msgstr ""
+
+msgid "Auto refresh paused"
+msgstr ""
+
+msgid "Auto — {{ points }} points per chart"
+msgstr ""
+
+msgid "Auto — {{ points }} points per chart, kept on zoom"
+msgstr ""
+
+msgid "Auto-approve all tools"
+msgstr ""
+
+msgid "Auto-approve all tools?"
+msgstr ""
+
+msgid "Auto-approve is on. Tool calls run without asking until you turn this off. Tools requiring explicit approval will still ask."
+msgstr ""
+
+msgid "Auto-approve is on. Tool calls run without asking until you turn this off. Tools that always need approval will still ask."
+msgstr ""
+
+msgid "Auto\\`icon-selector: automatic / default icon\\`"
+msgstr ""
+
+msgid "Auto`automatic aggregation mode`"
+msgstr ""
+
+msgid "Automatic aggregation"
+msgstr ""
+
+msgid "Automatic mapping migration notifications"
+msgstr ""
+
+msgid "Availability"
+msgstr ""
+
+msgid "Availability monitoring record"
+msgstr ""
+
+msgid "Availability\\`of dashboard based on permissions\\`"
+msgstr ""
+
+msgid "Awake time registration parameter"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Backend"
+msgstr ""
+
+msgid "Base64"
+msgstr ""
+
+msgid "Between 1 and 500. Oldest messages are discarded when the limit is reached."
+msgstr ""
+
+msgid "Binary delivery encoding"
+msgstr ""
+
+msgid ""
+"Bind external IDs atomically during managed object creation in a single request\n"
+"                    (requires Cumulocity platform ≥ May 2026). Disable this on older instances such as\n"
+"                    Cumulocity Edge that do not yet support this feature."
+msgstr ""
+
+msgid "Binding mode"
+msgstr ""
+
+msgid "Bootstrap"
+msgstr ""
+
+msgid "Bootstrap PSK ID"
+msgstr ""
+
+msgid "Bootstrap pre-shared key"
+msgstr ""
+
+msgid "Border`style`"
+msgstr ""
+
+msgid "Branded`style`"
+msgstr ""
+
+msgid "Branded`theme`"
+msgstr ""
+
+msgid "Breadcrumb"
+msgstr ""
+
+msgid "Broker message key produced by this mapping, e.g. the Kafka record key"
+msgstr ""
+
+msgid "Bulk LWM2M device registration"
+msgstr ""
+
+msgid "Bulk operation delay must be greater than {{minSeconds}} seconds."
+msgstr ""
+
+msgid "Bulk/batch mapping configuration change notifications not tied to a single mapping"
+msgstr ""
+
+msgid "Business User`role`"
+msgstr ""
+
+msgid "By"
+msgstr ""
+
+msgid "By device group"
+msgstr ""
+
+msgid "By device or device group"
+msgstr ""
+
+msgid "By device type"
+msgstr ""
+
+msgid "By specifying \"$\" you selected the root of the target template..."
+msgstr ""
+
+msgid "Bytes (1024 to 262144) of log text in one event."
+msgstr ""
+
+msgid "Bytes (256 to 65536). A longer message or stack trace is cut."
+msgstr ""
+
+msgid "CEP Manager"
+msgstr ""
+
+msgid "CEP module \"{{name}}\" created"
+msgstr ""
+
+msgid "CEP module \"{{name}}\" deleted"
+msgstr ""
+
+msgid "CEP module \"{{name}}\" updated"
+msgstr ""
+
+msgid "CEP module created"
+msgstr ""
+
+msgid "CEP module deleted"
+msgstr ""
+
+msgid "CEP module updated"
+msgstr ""
+
+msgid "Cache alias maps for SparkPlug B mappings"
+msgstr ""
+
+msgid "Cache cleared."
+msgstr ""
+
+msgid "Cache event"
+msgstr ""
+
+msgid "Cache statistic"
+msgstr ""
+
+msgid "Caching"
+msgstr ""
+
+msgid "Calling tool {{toolName}}"
+msgstr ""
+
+msgid "Can access all devices and their data but has no management permission in the tenant."
+msgstr ""
+
+msgid "Can access and edit the full user hierarchy."
+msgstr ""
+
+msgid "Can conduct administrative tasks and manage offloading pipelines."
+msgstr ""
+
+msgid "Can configure offloading of data to the lakehouse and issue Iceberg catalog credentials."
+msgstr ""
+
+msgid "Can create new own sub-users and manage them."
+msgstr ""
+
+msgid "Can execute SQL queries against the data in the data lake."
+msgstr ""
+
+msgid "Can manage offloading pipelines."
+msgstr ""
+
+msgid "Can manage tenant wide configurations like applications, tenant options and retention rules."
+msgstr ""
+
+msgid "Can read all data (including users, in contrast to \"Global Reader\")."
+msgstr ""
+
+msgid "Can read all data from all devices."
+msgstr ""
+
+msgid "Can read all data of the asset."
+msgstr ""
+
+msgid "Can read and write all data from all devices."
+msgstr ""
+
+msgid "Can remotely manage the assets by sending operations to the device. This includes remote configuration, software update and more."
+msgstr ""
+
+msgid "Can restart devices."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Cancel editing / new substitution"
+msgstr ""
+
+msgid "Cancel password change"
+msgstr ""
+
+msgid "Cancelled"
+msgstr ""
+
+msgid "Cannot activate a certificate which is either expired or not yet valid."
+msgstr ""
+
+msgid "Cannot change password: provided token is invalid."
+msgstr ""
+
+msgid "Cannot delete device with associated device owner because this owner is still assigned to other device(s). Try to remove only the device."
+msgstr ""
+
+msgid "Cannot deploy module due to error: \"{{ errorMessage | translate }}\"."
+msgstr ""
+
+msgid "Cannot reschedule bulk operation. All its operations are already successful."
+msgstr ""
+
+msgid "Cannot reset password for user with such email: email not found."
+msgstr ""
+
+msgid "Cannot sync aggregation with dashboard"
+msgstr ""
+
+msgid "Cannot update/delete application binary via this endpoint"
+msgstr ""
+
+msgid ""
+"Capture raw JSON payloads from the Cumulocity Notification 2.0 API.\n"
+"          Specify a device / device group to subscribe for messages. And then select a message to build a mapping."
+msgstr ""
+
+msgid "Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping."
+msgstr ""
+
+msgid ""
+"Certificate fingerprint: \"{{ fingerprint }}\".\n"
+"Certificate subject name: \"{{ subjectName }}\"."
+msgstr ""
+
+msgid ""
+"Certificate fingerprint: \"{{ fingerprint }}\".\n"
+"Certificate subject name: \"{{ subjectName }}\".\n"
+"Expiration date: {{ expirationDate | absoluteDate }}."
+msgstr ""
+
+msgid ""
+"Certificate fingerprint: \"{{ fingerprint }}\".\n"
+"Certificate subject name: \"{{ subjectName }}\".\n"
+"Status: \"{{ status }}\"."
+msgstr ""
+
+msgid "Certificate serial number: \"{{ serialNumber }}\""
+msgstr ""
+
+msgid ""
+"Certificate serial number: \"{{ serialNumber }}\".\n"
+"Expiration date: {{ expirationDate | absoluteDate }}."
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "Change icon"
+msgstr ""
+
+msgid "Change password"
+msgstr ""
+
+msgid "Change relay status to {{status | translate}}."
+msgstr ""
+
+msgid "Change status of \"{{name}}\" to \"{{label}}\"."
+msgstr ""
+
+msgid "Change trace status to {{state | translate}}."
+msgstr ""
+
+msgid "Change value of \"{{name}}\" to {{value}}."
+msgstr ""
+
+msgid "Change value of \"{{name}}\" to {{value}}{{unit}}."
+msgstr ""
+
+msgid "Change widget"
+msgstr ""
+
+msgid "Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code> directly in templates is not supported. Use substitutions instead. Changes are reverted!"
+msgstr ""
+
+msgid "Chart"
+msgstr ""
+
+msgid "Chart processed"
+msgstr ""
+
+msgid "Chat conversation"
+msgstr ""
+
+msgid "Check internet connection or reload page."
+msgstr ""
+
+msgid ""
+"Check the\n"
+"            <span>user documentation</span>"
+msgstr ""
+
+msgid "Check the generated result before saving"
+msgstr ""
+
+msgid "Checkbox"
+msgstr ""
+
+msgid "Choose another file"
+msgstr ""
+
+msgid "City`icons-category`"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Clear all filters"
+msgstr ""
+
+msgid "Clear cache"
+msgstr ""
+
+msgid "Clear collection"
+msgstr ""
+
+msgid "Clear filter"
+msgstr ""
+
+msgid "Clear filtering to reorder"
+msgstr ""
+
+msgid "Clear filters"
+msgstr ""
+
+msgid "Clear flow state"
+msgstr ""
+
+msgid "Clear inbound external ID cache"
+msgstr ""
+
+msgid "Clear inventory cache"
+msgstr ""
+
+msgid "Clear mapping"
+msgstr ""
+
+msgid "Clear outbound external ID cache"
+msgstr ""
+
+msgid "Clear search"
+msgstr ""
+
+msgid "Clear search results"
+msgstr ""
+
+msgid "Clear selection"
+msgstr ""
+
+msgid "Clear the selection to see all lines again."
+msgstr ""
+
+msgid "Clear\\`selection\\`"
+msgstr ""
+
+msgid "Cleared`alarm`"
+msgstr ""
+
+msgid "Click \"Edit widgets\" to unlock"
+msgstr ""
+
+msgid "Click &quot;Edit widgets&quot; to unlock"
+msgstr ""
+
+msgid "Click a node in the source template to select it as the source of a substitution."
+msgstr ""
+
+msgid "Click and drag to reorder"
+msgstr ""
+
+msgid "Click the column headers to apply filters."
+msgstr ""
+
+msgid "Click the column headers to apply filters. Click <b>Active filters</b> button to manage applied filters."
+msgstr ""
+
+msgid "Click «Start exploring messages…» to capture live inbound or outbound messages."
+msgstr ""
+
+msgid "Client"
+msgstr ""
+
+msgid "Client ID"
+msgstr ""
+
+msgid "Client Name"
+msgstr ""
+
+msgid "Client relation outbound"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Close and fix"
+msgstr ""
+
+msgid "Close dashboard details"
+msgstr ""
+
+msgid "Close help"
+msgstr ""
+
+msgid "Close relay {{number}}."
+msgstr ""
+
+msgid "Closing relay {{number}}."
+msgstr ""
+
+msgid "Cockpit"
+msgstr ""
+
+msgid "Cockpit User"
+msgstr ""
+
+msgid "Code Template"
+msgstr ""
+
+msgid "Code template"
+msgstr ""
+
+msgid "Code template gallery"
+msgstr ""
+
+msgid "Code templates"
+msgstr ""
+
+msgid "Code templates are only available for Smart Function mappings, not {{transformationType}}."
+msgstr ""
+
+msgid "Collapse"
+msgstr ""
+
+msgid "Collapse \"{{ assetPropertyLabel }}\""
+msgstr ""
+
+msgid "Collapse all"
+msgstr ""
+
+msgid "Collected log"
+msgstr ""
+
+msgid "Collection"
+msgstr ""
+
+msgid "Collection is required."
+msgstr ""
+
+msgid "Columns"
+msgstr ""
+
+msgid "Command state is invalid: {{violations}}"
+msgstr ""
+
+msgid "Communication mode"
+msgstr ""
+
+msgid "Compaction task \"{{ taskName }}\" finished erroneously."
+msgstr ""
+
+msgid "Compaction task \"{{ taskName }}\" finished successfully."
+msgstr ""
+
+msgid "Complete"
+msgstr ""
+
+msgid "Completed"
+msgstr ""
+
+msgid "Component"
+msgstr ""
+
+msgid "Composited preview"
+msgstr ""
+
+msgid "Computed properties"
+msgstr ""
+
+msgid "Concepts`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Configurable"
+msgstr ""
+
+msgid "Configuration"
+msgstr ""
+
+msgid "Configuration and widget view"
+msgstr ""
+
+msgid "Configuration type: Basic Auth."
+msgstr ""
+
+msgid "Configuration type: OAI-Secure."
+msgstr ""
+
+msgid "Configuration type: Single sign-on."
+msgstr ""
+
+msgid "Configure"
+msgstr ""
+
+msgid "Configure a provider in the {{agentManager}} to get started."
+msgstr ""
+
+msgid "Configure columns"
+msgstr ""
+
+msgid "Configure computed properties"
+msgstr ""
+
+msgid "Configure custom column"
+msgstr ""
+
+msgid "Configure preferences"
+msgstr ""
+
+msgid "Configure the \"{{agentName}}\" agent using the {{agentManager}} to get started."
+msgstr ""
+
+msgid ""
+"Configure the settings below for each computed property. These configurations determine how\n"
+"      the properties will be calculated and displayed. All required fields must be completed before\n"
+"      you can apply the changes."
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Confirm and log out"
+msgstr ""
+
+msgid "Confirm password"
+msgstr ""
+
+msgid "Confirm removal"
+msgstr ""
+
+msgid "Confirm your current password"
+msgstr ""
+
+msgid "Confirm:"
+msgstr ""
+
+msgid "Connecting to AI agent…"
+msgstr ""
+
+msgid "Connection"
+msgstr ""
+
+msgid "Connection not monitored"
+msgstr ""
+
+msgid "Connection refused"
+msgstr ""
+
+msgid "Connection status"
+msgstr ""
+
+msgid "Connection to device established"
+msgstr ""
+
+msgid "Connection to device not established (not supported by device or no connectivity)"
+msgstr ""
+
+msgid "Connectivity"
+msgstr ""
+
+msgid "Connector"
+msgstr ""
+
+msgid "Connector \"{{name}}\" created: {{configuration}} added, {{baseProperties}}"
+msgstr ""
+
+msgid "Connector \"{{name}}\" deleted"
+msgstr ""
+
+msgid "Connector \"{{name}}\" updated: filters [{{filters}}] added"
+msgstr ""
+
+msgid "Connector \"{{name}}\" updated: {{newConfig}} added, {{oldConfig}} removed"
+msgstr ""
+
+msgid "Connector *"
+msgstr ""
+
+msgid "Connector assignments for  saved."
+msgstr ""
+
+msgid "Connector assignments for {{mappingName}} saved."
+msgstr ""
+
+msgid "Connector created"
+msgstr ""
+
+msgid "Connector deleted"
+msgstr ""
+
+msgid "Connector disconnected."
+msgstr ""
+
+msgid "Connector is connecting, please wait..."
+msgstr ""
+
+msgid "Connector name \"{{name}}\" already used by another connector."
+msgstr ""
+
+msgid "Connector reference"
+msgstr ""
+
+msgid "Connector status and connection events"
+msgstr ""
+
+msgid "Connector type"
+msgstr ""
+
+msgid "Connector updated"
+msgstr ""
+
+msgid "Connectors"
+msgstr ""
+
+msgid ""
+"Connectors of type Cumulocity MQTT Service - (device isolation) and Cumulocity MQTT Service - (tenant isolation)\n"
+"        can only be created once.\n"
+"        <br>"
+msgstr ""
+
+msgid "Console output"
+msgstr ""
+
+msgid "Console output copied to clipboard."
+msgstr ""
+
+msgid "Container created."
+msgstr ""
+
+msgid "Container image \"{{imageName}}\" already exists."
+msgstr ""
+
+msgid "Container started."
+msgstr ""
+
+msgid "Contains"
+msgstr ""
+
+msgid "Content couldn't be loaded."
+msgstr ""
+
+msgid "Continue"
+msgstr ""
+
+msgid "Continue without a subscription. Add one later from the Subscription outbound page."
+msgstr ""
+
+msgid "Control the number of columns and rows. Optionally scale row height to fit the viewport."
+msgstr ""
+
+msgid "Controls how many columns the grid is divided into. More columns allow finer control over widget width and placement."
+msgstr ""
+
+msgid "Conversation deleted."
+msgstr ""
+
+msgid "Conversation history"
+msgstr ""
+
+msgid "Conversations"
+msgstr ""
+
+msgid "Cookie preferences"
+msgstr ""
+
+msgid "Cookies are important to the proper functioning of a site. To improve your website experience, we use cookies to remember login details and provide secure login, collect statistics to optimize site functionality, and deliver content tailored to your interests. Click \"Agree and proceed\" to accept cookies and go directly to the site or click \"Configure preferences\" for further details and to manage your options. You can revoke your consent at any time."
+msgstr ""
+
+msgid "Copied code template"
+msgstr ""
+
+msgid "Copied to clipboard."
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Copy console output"
+msgstr ""
+
+msgid "Copy mapping to clipboard"
+msgstr ""
+
+msgid "Copy not possible: Some widgets reference data from another group or device. To copy this dashboard, make sure all widgets use data from the current device only."
+msgstr ""
+
+msgid "Copy not possible: Some widgets reference data from another group or device. To copy this dashboard, make sure all widgets use data from the current group only."
+msgstr ""
+
+msgid "Copy tenant ID to the clipboard"
+msgstr ""
+
+msgid "Copy`dashboard`"
+msgstr ""
+
+msgid "Core concepts"
+msgstr ""
+
+msgid "Could not access SSH server on endpoint \"{{endpointName}}\". Provided credentials for user \"{{userName}}\" are incorrect."
+msgstr ""
+
+msgid "Could not activate custom domain. DNS setup is incorrect."
+msgstr ""
+
+msgid "Could not add certificate. Certificate with {{fingerprint}} fingerprint already exists."
+msgstr ""
+
+msgid "Could not be tested! (HTTP {{status}})"
+msgstr ""
+
+msgid "Could not connect to endpoint \"{{endpointName}}\". Could not verify {{keyType}} host key with fingerprint {{fingerprint}} for host {{host}} on port {{port}}. If you expected this key, please remove the previous one from configuration to allow for connection."
+msgstr ""
+
+msgid "Could not copy the console output. Select the text and copy it manually."
+msgstr ""
+
+msgid "Could not copy to clipboard."
+msgstr ""
+
+msgid "Could not create a tenant. Tenant with given domain/URL already exists."
+msgstr ""
+
+msgid "Could not create mapping"
+msgstr ""
+
+msgid "Could not create the device in the LoRa platform."
+msgstr ""
+
+msgid "Could not delete application assigned to other tenants."
+msgstr ""
+
+msgid "Could not delete the LNS connection with the name \"{{ connectionName }}\" as it's associated with {{ numberOfDevices }} device(s)."
+msgstr ""
+
+msgid "Could not deploy module \"{{moduleName}}\". Compilation failed in expression \"{{expression}}\": exception compiling script \"{{scriptName}}\" of dialect \"{{scriptDialect}}\": missing \"{{missingSyntax}}\" before statement \"{{affectedStatement}}\"."
+msgstr ""
+
+msgid "Could not deploy module \"{{moduleName}}\". Compilation failed in expression \"{{expression}}\": incorrect syntax near \"{{incorrectExpression}}\" at line {{line}} column {{column}} near reserved keyword \"{{keyword}}\"."
+msgstr ""
+
+msgid "Could not deploy module \"{{moduleName}}\". Compilation failed in expression \"{{expression}}\": incorrect syntax near \"{{incorrectExpression}}\" at line {{line}} column {{column}}, check \"where\" clause."
+msgstr ""
+
+msgid "Could not deploy module \"{{moduleName}}\". Compilation failed in expression \"{{expression}}\": incorrect syntax near \"{{incorrectExpression}}\" at line {{line}} column {{column}}."
+msgstr ""
+
+msgid "Could not execute bulk operation on an empty group. Group with ID \"{{groupId}}\" has no child assets."
+msgstr ""
+
+msgid "Could not execute bulk operation on an empty group. Smart group with ID \"{{groupId}}\" has no child assets."
+msgstr ""
+
+msgid "Could not find application by ID {{applicationId}}."
+msgstr ""
+
+msgid "Could not find device"
+msgstr ""
+
+msgid "Could not find managed object with ID \"{{deviceId}}\"."
+msgstr ""
+
+msgid "Could not find the resource with ID \"{{id}}\"."
+msgstr ""
+
+msgid "Could not introduce cyclic ownership dependency."
+msgstr ""
+
+msgid "Could not open the AI assistant: {{message}}"
+msgstr ""
+
+msgid "Could not parse X.509 certificate: {{ failureReason | translate }}."
+msgstr ""
+
+msgid "Could not paste from clipboard."
+msgstr ""
+
+msgid "Could not reactivate the application as it has no active version."
+msgstr ""
+
+msgid "Could not reactivate the application as it is not hosted locally."
+msgstr ""
+
+msgid "Could not recognize \"Host key\" format"
+msgstr ""
+
+msgid "Could not recognize the format of \"Public key\" or \"Private key\""
+msgstr ""
+
+msgid "Could not remove tenant \"{{tenant}}\". Remove its subtenants first."
+msgstr ""
+
+msgid "Could not save acceptance. The notice may appear again next time."
+msgstr ""
+
+msgid "Could not update the LNS connection with the name \"{{ connectionName }}\" as it's associated with {{ numberOfDevices }} device(s)."
+msgstr ""
+
+msgid "Could not update user \"{{username}}\"."
+msgstr ""
+
+msgid "Could not upload the *.jar file. Please check your connection and try again."
+msgstr ""
+
+msgid "Could not use a reserved SQL keyword \"{{tenantId}}\" as a domain name."
+msgstr ""
+
+msgid "Could not verify AI agent availability — proceeding with manual entry only."
+msgstr ""
+
+msgid "Couple time context"
+msgstr ""
+
+msgid "Create agent"
+msgstr ""
+
+msgid "Create bulk operation"
+msgstr ""
+
+msgid "Create bulk operation: {{updatesList}}"
+msgstr ""
+
+msgid "Create device"
+msgstr ""
+
+msgid "Create instance"
+msgstr ""
+
+msgid "Create mapping"
+msgstr ""
+
+msgid "Create mapping from selected messages"
+msgstr ""
+
+msgid "Create new code template"
+msgstr ""
+
+msgid "Create new shared code"
+msgstr ""
+
+msgid "Create or select client name"
+msgstr ""
+
+msgid "Create test device"
+msgstr ""
+
+msgid "Create the \"{{agentName}}\" AI agent to get started."
+msgstr ""
+
+msgid "Create the target node, including missing parent nodes, if it does not exist in the target template."
+msgstr ""
+
+msgid "Create your first connector."
+msgstr ""
+
+msgid "Create your first mapping."
+msgstr ""
+
+msgid "Create your first relation for a device."
+msgstr ""
+
+msgid "Create your first subscription for a device."
+msgstr ""
+
+msgid "Created"
+msgstr ""
+
+msgid "Creating the \"{{agentName}}\" AI agent now…"
+msgstr ""
+
+msgid "Critical`alarm`"
+msgstr ""
+
+msgid "Cumulocity API connector"
+msgstr ""
+
+msgid "Cumulocity IoT Edge`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Cumulocity MQTT Service connector"
+msgstr ""
+
+msgid "Current"
+msgstr ""
+
+msgid "Current\\`dashboard status\\`"
+msgstr ""
+
+msgid "Custom"
+msgstr ""
+
+msgid "Custom properties"
+msgstr ""
+
+msgid "Custom routing"
+msgstr ""
+
+msgid "Custom\\`badge indicating a user-added icon category\\`"
+msgstr ""
+
+msgid "Custom`application`"
+msgstr ""
+
+msgid "Custom`icons-category`"
+msgstr ""
+
+msgid "Cycle detected for route {{route}}."
+msgstr ""
+
+msgid "DLT (single color) icons must not start with \"c8y-\". Use the C8Y (duocolor) type for c8y- prefixed icons."
+msgstr ""
+
+msgid "Daily"
+msgstr ""
+
+msgid "Daily aggregation"
+msgstr ""
+
+msgid "Dark"
+msgstr ""
+
+msgid "Dark layer"
+msgstr ""
+
+msgid "Dark layer SVG"
+msgstr ""
+
+msgid "Dark`style`"
+msgstr ""
+
+msgid "Dark`theme`"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Dashboard asset model has been disabled."
+msgstr ""
+
+msgid "Dashboard asset model has been enabled."
+msgstr ""
+
+msgid "Dashboard copied. Navigate to the target asset and select \"Paste dashboard\". You can paste this dashboard only to assets of the same kind to which you have the admin permission."
+msgstr ""
+
+msgid "Dashboard created."
+msgstr ""
+
+msgid "Dashboard default"
+msgstr ""
+
+msgid "Dashboard for \"{{ dashboardType }}\""
+msgstr ""
+
+msgid "Dashboard instances"
+msgstr ""
+
+msgid "Dashboard settings"
+msgstr ""
+
+msgid "Dashboard template"
+msgstr ""
+
+msgid "Dashboard template can only be copied into assets of a different type."
+msgstr ""
+
+msgid "Dashboard title"
+msgstr ""
+
+msgid "Dashboard updated: {{ values }}."
+msgstr ""
+
+msgid "Data Type"
+msgstr ""
+
+msgid "Data broker processing is currently overloaded and may stop forwarding your data. Please contact support."
+msgstr ""
+
+msgid "Data broker processing is not able to connect to destination tenant, thus data forwarding is not working. Please contact support."
+msgstr ""
+
+msgid "DataHub Administrator"
+msgstr ""
+
+msgid "DataHub Manager"
+msgstr ""
+
+msgid "DataHub Reader"
+msgstr ""
+
+msgid "Data`icons-category`"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Date & time"
+msgstr ""
+
+msgid "Date & time range"
+msgstr ""
+
+msgid "Date Created"
+msgstr ""
+
+msgid "Date and time`icons-category`"
+msgstr ""
+
+msgid "Date filter"
+msgstr ""
+
+msgid "Date from"
+msgstr ""
+
+msgid "Date to"
+msgstr ""
+
+msgid "Days lifetime"
+msgstr ""
+
+msgid "Days lifetime inbound Id cache"
+msgstr ""
+
+msgid "Days lifetime inventory cache"
+msgstr ""
+
+msgid "Days lifetime outbound Id cache"
+msgstr ""
+
+msgid "Deactivate"
+msgstr ""
+
+msgid "Deactivate access"
+msgstr ""
+
+msgid "Deactivate support access"
+msgstr ""
+
+msgid "Deactivate support user access"
+msgstr ""
+
+msgid "Deactivated {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Deactivated {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Deactivating support access as tenant admin will disable all other support requests on your tenant."
+msgstr ""
+
+msgid "Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs"
+msgstr ""
+
+msgid "Decouple time context"
+msgstr ""
+
+msgid "Default Parameter (YAML)"
+msgstr ""
+
+msgid "Default maximum period"
+msgstr ""
+
+msgid "Default minimum period"
+msgstr ""
+
+msgid "Default theme"
+msgstr ""
+
+msgid "Default widget header style"
+msgstr ""
+
+msgid "Define templates for source &amp; target payload"
+msgstr ""
+
+msgid "Defines how many rows divide the viewport height. More rows allow finer control over widget height. Also enables the height preset menu on each widget."
+msgstr ""
+
+msgid "Defining a mapping"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Delete \"{{ iconName }}\""
+msgstr ""
+
+msgid "Delete all relations"
+msgstr ""
+
+msgid "Delete all relations (table)"
+msgstr ""
+
+msgid "Delete all relations, for devices and clients"
+msgstr ""
+
+msgid "Delete and replace"
+msgstr ""
+
+msgid "Delete bulk operation"
+msgstr ""
+
+msgid "Delete bulk operation: {{updatesList}}"
+msgstr ""
+
+msgid "Delete connector"
+msgstr ""
+
+msgid "Delete conversation"
+msgstr ""
+
+msgid "Delete dashboard"
+msgstr ""
+
+msgid "Delete icon"
+msgstr ""
+
+msgid "Delete instance"
+msgstr ""
+
+msgid "Delete last exchange"
+msgstr ""
+
+msgid "Delete mapping extension"
+msgstr ""
+
+msgid "Delete old lines every"
+msgstr ""
+
+msgid "Delete old stored lines"
+msgstr ""
+
+msgid "Delete relation"
+msgstr ""
+
+msgid "Delete relations"
+msgstr ""
+
+msgid "Delete substitution"
+msgstr ""
+
+msgid "Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them."
+msgstr ""
+
+msgid "Delete version {{version}}"
+msgstr ""
+
+msgid "Delete {{itemName}}"
+msgstr ""
+
+msgid "Delete {{itemName}}s"
+msgstr ""
+
+msgid "Delete\\`dashboard\\`"
+msgstr ""
+
+msgid "Deleted code template"
+msgstr ""
+
+msgid "Deleted version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Deleted {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Deleted {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Delivery"
+msgstr ""
+
+msgid "Denied tool {{toolName}}"
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "Deprecated mapping type"
+msgstr ""
+
+msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Deselect"
+msgstr ""
+
+msgid "Detail toggle"
+msgstr ""
+
+msgid "Details"
+msgstr ""
+
+msgid "Details & logs"
+msgstr ""
+
+msgid "Details panel"
+msgstr ""
+
+msgid "Device ID"
+msgstr ""
+
+msgid "Device ID must not contain spaces or slashes (\"/\")."
+msgstr ""
+
+msgid "Device Info page in {{ deviceManagementAppName }}"
+msgstr ""
+
+msgid "Device Isolation Cumulocity MQTT Service"
+msgstr ""
+
+msgid "Device Management"
+msgstr ""
+
+msgid "Device Management User"
+msgstr ""
+
+msgid "Device User`role`"
+msgstr ""
+
+msgid "Device and communication"
+msgstr ""
+
+msgid "Device dashboards can only be copied into a device."
+msgstr ""
+
+msgid "Device data"
+msgstr ""
+
+msgid "Device does not exist"
+msgstr ""
+
+msgid "Device is under maintenance"
+msgstr ""
+
+msgid ""
+"Device last request:\n"
+"{{date}}"
+msgstr ""
+
+msgid "Device metadata made available to mappings."
+msgstr ""
+
+msgid "Device name: \"{{deviceName}}\", alarm text: \"{{alarmText | translate}}\""
+msgstr ""
+
+msgid "Device or device group"
+msgstr ""
+
+msgid "Device put into maintenance state"
+msgstr ""
+
+msgid "Device registration request with ID \"{{deviceId}}\" is in state \"Blocked\", not \"Pending acceptance\". Remove this registration request and start over."
+msgstr ""
+
+msgid "Device registration request with ID {{id}} already exists."
+msgstr ""
+
+msgid "Device selection"
+msgstr ""
+
+msgid "Device status"
+msgstr ""
+
+msgid "Device type"
+msgstr ""
+
+msgid "Device type filter"
+msgstr ""
+
+msgid "Device types"
+msgstr ""
+
+msgid "Device with ID \"{{deviceId}}\" is put into maintenance state"
+msgstr ""
+
+msgid "Device with external ID(s) {{ oldExtIds }} was replaced by device with external ID(s) {{ newExtIds }}."
+msgstr ""
+
+msgid "Device {{ devEUI }} is already registered in your tenant or in another tenant in the platform."
+msgstr ""
+
+msgid "Device {{ id }}"
+msgstr ""
+
+msgid "Device {{id}}"
+msgstr ""
+
+msgid "Devices"
+msgstr ""
+
+msgid "Devices and sensors`icons-category`"
+msgstr ""
+
+msgid "Digital Twin Manager"
+msgstr ""
+
+msgid "Direction"
+msgstr ""
+
+msgid "Direction filter"
+msgstr ""
+
+msgid "Directions"
+msgstr ""
+
+msgid "Disable auto refresh"
+msgstr ""
+
+msgid "Disable debug"
+msgstr ""
+
+msgid "Disable debugging"
+msgstr ""
+
+msgid "Disable realtime"
+msgstr ""
+
+msgid "Disable timeout"
+msgstr ""
+
+msgid "Disabled debug for {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Disabled debug for {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Disabled`typed dashboard`"
+msgstr ""
+
+msgid "Discard"
+msgstr ""
+
+msgid "Discard and leave"
+msgstr ""
+
+msgid "Discard draft"
+msgstr ""
+
+msgid "Discard unsaved changes"
+msgstr ""
+
+msgid "Discarded draft of {{name}}"
+msgstr ""
+
+msgid "Disconnect"
+msgstr ""
+
+msgid "Disconnected connectors cannot be selected."
+msgstr ""
+
+msgid "Display as"
+msgstr ""
+
+msgid "Display mode"
+msgstr ""
+
+msgid "Do you want to move or add the device?"
+msgstr ""
+
+msgid "Do you want to move the group?"
+msgstr ""
+
+msgid "Do you want to proceed?"
+msgstr ""
+
+msgid "Do you want to remove this column?"
+msgstr ""
+
+msgid "Documentation"
+msgstr ""
+
+msgid "Does not match pattern {{ requiredPattern }}."
+msgstr ""
+
+msgid "Domain name in uploaded certificate differs from the one in use. Please deactivate the custom domain before uploading new certificate."
+msgstr ""
+
+msgid "Domain name is already used by another tenant."
+msgstr ""
+
+msgid "Don't show again"
+msgstr ""
+
+msgid "Don\\'t show again"
+msgstr ""
+
+msgid "Done. Reloading the application."
+msgstr ""
+
+msgid "Dots not allowed."
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Download managed object JSON"
+msgstr ""
+
+msgid "Download platform details"
+msgstr ""
+
+msgid "Download raw mapping JSON for manual editing"
+msgstr ""
+
+msgid "Drag to resize (double-click to reset)"
+msgstr ""
+
+msgid "Drop SVG file here or click to browse"
+msgstr ""
+
+msgid "Drop ZIP file here or click to browse"
+msgstr ""
+
+msgid "Drop dark layer SVG"
+msgstr ""
+
+msgid "Drop file here"
+msgstr ""
+
+msgid "Drop file or click to browse"
+msgstr ""
+
+msgid "Drop files here or click to browse"
+msgstr ""
+
+msgid "Drop light layer SVG"
+msgstr ""
+
+msgid "Dry Run"
+msgstr ""
+
+msgid "Dry Run runs the mapping without sending anything."
+msgstr ""
+
+msgid "Dry Run runs the mapping without writing anything to your tenant."
+msgstr ""
+
+msgid "Dummy message!"
+msgstr ""
+
+msgid "Duocolor"
+msgstr ""
+
+msgid "Duplicate"
+msgstr ""
+
+msgid "Duplicate as regular dashboard"
+msgstr ""
+
+msgid "Duplicate subscription removed to prevent multiply processed messages"
+msgstr ""
+
+msgid "Dynamic time window that moves with current time to show recent data."
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Edit \"{{ iconName }}\""
+msgstr ""
+
+msgid "Edit and resend this message"
+msgstr ""
+
+msgid "Edit icon"
+msgstr ""
+
+msgid "Edit inline"
+msgstr ""
+
+msgid "Edit session"
+msgstr ""
+
+msgid "Edit the mapping to create a draft, then publish it to create the first version."
+msgstr ""
+
+msgid "Edit this prompt and delete the following messages"
+msgstr ""
+
+msgid "Edit user"
+msgstr ""
+
+msgid "Edit widget"
+msgstr ""
+
+msgid "Edit widgets"
+msgstr ""
+
+msgid "Editing`icons-category`"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Enable 'Send connector lifecycle' in Service configuration to record connector status logs."
+msgstr ""
+
+msgid ""
+"Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,\n"
+"                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled\n"
+"                    (default), code runs in flat-script mode."
+msgstr ""
+
+msgid "Enable \\'Send connector lifecycle\\' in Service configuration to record connector status logs."
+msgstr ""
+
+msgid "Enable auto refresh"
+msgstr ""
+
+msgid "Enable debug"
+msgstr ""
+
+msgid "Enable debugging"
+msgstr ""
+
+msgid "Enable in-product information & communication"
+msgstr ""
+
+msgid "Enable or disable"
+msgstr ""
+
+msgid ""
+"Enable or disable experimental features. Your feedback helps us improve functionality before\n"
+"      final release."
+msgstr ""
+
+msgid "Enable personalized product experience tracking"
+msgstr ""
+
+msgid "Enable realtime"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Enabled / Disabled"
+msgstr ""
+
+msgid "Enabled debug for {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Enabled debug for {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Enabled`typed dashboard`"
+msgstr ""
+
+msgid "Enables administrative permissions. The first user created for the tenant receives this role."
+msgstr ""
+
+msgid "Endpoint client ID"
+msgstr ""
+
+msgid "Ends with"
+msgstr ""
+
+msgid "Enriching data with device inventory information"
+msgstr ""
+
+msgid "Enter a value between {{ min }} and {{ max }}."
+msgstr ""
+
+msgid "Enter agent name"
+msgstr ""
+
+msgid "Enter your feedback here"
+msgstr ""
+
+msgid "Enter your password"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Error creating the device due to status code {{ statusCode }}. Check if the application name, Device EUI, Application EUI and Application key are in the correct format or the device limit has been exceeded or has been registered with another account in the LORIOT provider."
+msgstr ""
+
+msgid "Error handling and logging"
+msgstr ""
+
+msgid "Error in statement {{moduleName}}:{{statementNumber}}. Incorrect syntax near expression \"{{expression}}\" near reserved keyword \"{{keyword}}\"."
+msgstr ""
+
+msgid "Error rate"
+msgstr ""
+
+msgid "Error retrieving application with given ID: {{ applicationId }} with status code 400. Check if the selected application is correct"
+msgstr ""
+
+msgid "Error while processing report"
+msgstr ""
+
+msgid "Errors"
+msgstr ""
+
+msgid "Errors during mapping activation"
+msgstr ""
+
+msgid "Errors occurring during mapping configuration loading"
+msgstr ""
+
+msgid "Event"
+msgstr ""
+
+msgid "Event Implementation"
+msgstr ""
+
+msgid "Event Name"
+msgstr ""
+
+msgid "Event contains attachment"
+msgstr ""
+
+msgid "Event contains attachment, e.g. image, ... that is stored separately."
+msgstr ""
+
+msgid "Event is required"
+msgstr ""
+
+msgid "Event name is required."
+msgstr ""
+
+msgid "Event type"
+msgstr ""
+
+msgid "Events for {{ mapping?.extension?.extensionName }}"
+msgstr ""
+
+msgid "Events published to Cumulocity"
+msgstr ""
+
+msgid "Exactly once"
+msgstr ""
+
+msgid "Exception occurred while removing device: {{ exceptionMessage }}"
+msgstr ""
+
+msgid "Exception on tenant {{tenantId}} in statement \"{{moduleName}}\": Invocation exception when invoking method \"{{methodName}}\" of class \"{{classPath}}\" passing parameters [{{parameters}}] for statement \"{{statement}}\": {{exceptionType}} : {{exceptionMessage}}."
+msgstr ""
+
+msgid "Exception on tenant {{tenantId}} in statement \"{{statement}}\": HTTP status code: {{httpStatusCode}} : {{message | translate}}"
+msgstr ""
+
+msgid "Execute"
+msgstr ""
+
+msgid "Execute generic command: {{command}}"
+msgstr ""
+
+msgid "Execute with parameters"
+msgstr ""
+
+msgid "Existing nodes:"
+msgstr ""
+
+msgid "Exit"
+msgstr ""
+
+msgid "Exit edit mode"
+msgstr ""
+
+msgid "Exit full screen"
+msgstr ""
+
+msgid "Expand"
+msgstr ""
+
+msgid "Expand \"{{ assetPropertyLabel }}\""
+msgstr ""
+
+msgid "Expand all"
+msgstr ""
+
+msgid "Expand array"
+msgstr ""
+
+msgid "Expand as array"
+msgstr ""
+
+msgid "Expected 1 endpointId argument"
+msgstr ""
+
+msgid "Expert Mode"
+msgstr ""
+
+msgid "Expert settings"
+msgstr ""
+
+msgid "Explorer session has expired. Start a new session."
+msgstr ""
+
+msgid "Explorer session started, but subscribing to the topic failed: {{warning}}"
+msgstr ""
+
+msgid "Explorer session stopped."
+msgstr ""
+
+msgid "Explorer session updated, but subscribing to the topic failed: {{warning}}"
+msgstr ""
+
+msgid "Explorer session updated."
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "Export all connectors"
+msgstr ""
+
+msgid "Export all mappings"
+msgstr ""
+
+msgid "Export connector"
+msgstr ""
+
+msgid "Export connector(s)"
+msgstr ""
+
+msgid "Export custom icons as ZIP file"
+msgstr ""
+
+msgid "Export failed."
+msgstr ""
+
+msgid "Export mapping"
+msgstr ""
+
+msgid "Export service configuration"
+msgstr ""
+
+msgid "Export\\`verb, exports custom icons as a ZIP file\\`"
+msgstr ""
+
+msgid "Extension"
+msgstr ""
+
+msgid "Extension Name"
+msgstr ""
+
+msgid "Extension Parameter (YAML)"
+msgstr ""
+
+msgid "Extension is required"
+msgstr ""
+
+msgid "Extension name is required."
+msgstr ""
+
+msgid "Extension type"
+msgstr ""
+
+msgid "Extensions"
+msgstr ""
+
+msgid "Extensions reloaded"
+msgstr ""
+
+msgid "External"
+msgstr ""
+
+msgid "External ID \"{{value}}\" of the type \"{{type}}\" already exists."
+msgstr ""
+
+msgid "External ID binding during MO creation"
+msgstr ""
+
+msgid "External ID caches"
+msgstr ""
+
+msgid "External ID not found for type \"{{type}}\" and value \"{{value}}\"."
+msgstr ""
+
+msgid "External and Internal"
+msgstr ""
+
+msgid "External application \"{{appName}}\" activated: version \"{{version}}\" added, activeVersionId \"{{activeVersionId}}\" added"
+msgstr ""
+
+msgid "External application \"{{appName}}\" deleted for tenant \"{{tenant}}\""
+msgstr ""
+
+msgid "External id type"
+msgstr ""
+
+msgid "External`application`"
+msgstr ""
+
+msgid "Failed mappings:"
+msgstr ""
+
+msgid "Failed to activate mappings"
+msgstr ""
+
+msgid "Failed to activate version"
+msgstr ""
+
+msgid "Failed to add Java Extension"
+msgstr ""
+
+msgid "Failed to add sample mappings"
+msgstr ""
+
+msgid "Failed to clear cache"
+msgstr ""
+
+msgid "Failed to clear cache!"
+msgstr ""
+
+msgid "Failed to configure the agent."
+msgstr ""
+
+msgid "Failed to copy code template"
+msgstr ""
+
+msgid "Failed to create conversation."
+msgstr ""
+
+msgid "Failed to create mapping :"
+msgstr ""
+
+msgid "Failed to create mapping {{name}}:"
+msgstr ""
+
+msgid "Failed to create new code template"
+msgstr ""
+
+msgid "Failed to create subscription:"
+msgstr ""
+
+msgid "Failed to deactivate mappings"
+msgstr ""
+
+msgid "Failed to delete Java Extension"
+msgstr ""
+
+msgid "Failed to delete code template"
+msgstr ""
+
+msgid "Failed to delete conversation."
+msgstr ""
+
+msgid "Failed to delete icon."
+msgstr ""
+
+msgid "Failed to delete mapping {{name}}:"
+msgstr ""
+
+msgid "Failed to delete mappings"
+msgstr ""
+
+msgid "Failed to delete relation:"
+msgstr ""
+
+msgid "Failed to delete subscription:"
+msgstr ""
+
+msgid "Failed to delete the conversation."
+msgstr ""
+
+msgid "Failed to delete version"
+msgstr ""
+
+msgid "Failed to deploy mapping  to connectors:"
+msgstr ""
+
+msgid "Failed to deploy mapping {{name}} to connectors:"
+msgstr ""
+
+msgid "Failed to disable debug for mappings"
+msgstr ""
+
+msgid "Failed to discard draft"
+msgstr ""
+
+msgid "Failed to download the log."
+msgstr ""
+
+msgid "Failed to enable debug for mappings"
+msgstr ""
+
+msgid "Failed to establish connection!"
+msgstr ""
+
+msgid "Failed to export mappings"
+msgstr ""
+
+msgid "Failed to export the service configuration"
+msgstr ""
+
+msgid "Failed to extract certificate from PKCS12."
+msgstr ""
+
+msgid "Failed to fetch the service log."
+msgstr ""
+
+msgid "Failed to find operation data in the internal memory store. Try again."
+msgstr ""
+
+msgid "Failed to generate a QR code."
+msgstr ""
+
+msgid "Failed to import connectors: {{errorDetail}}"
+msgstr ""
+
+msgid "Failed to import mappings. {{errorCount}} error(s) occurred."
+msgstr ""
+
+msgid "Failed to initialize component"
+msgstr ""
+
+msgid "Failed to load conversations."
+msgstr ""
+
+msgid "Failed to load custom icons."
+msgstr ""
+
+msgid "Failed to load extensions"
+msgstr ""
+
+msgid "Failed to load features. Please refresh the page."
+msgstr ""
+
+msgid "Failed to load inbound mappings."
+msgstr ""
+
+msgid "Failed to load logs."
+msgstr ""
+
+msgid "Failed to load more conversations."
+msgstr ""
+
+msgid "Failed to load outbound mappings."
+msgstr ""
+
+msgid "Failed to load resources from the backend service dynamic-mapper-service. Please check that this service is deployed and try again."
+msgstr ""
+
+msgid "Failed to load the conversation."
+msgstr ""
+
+msgid "Failed to load the mapping tree: the server returned an invalid response. Check the microservice logs."
+msgstr ""
+
+msgid "Failed to load version counts"
+msgstr ""
+
+msgid "Failed to load versions"
+msgstr ""
+
+msgid "Failed to parse JavaScript code from AI response"
+msgstr ""
+
+msgid "Failed to publish draft"
+msgstr ""
+
+msgid "Failed to re-initialize system code templates!"
+msgstr ""
+
+msgid "Failed to read ZIP file."
+msgstr ""
+
+msgid "Failed to reconnect!"
+msgstr ""
+
+msgid "Failed to reload extensions"
+msgstr ""
+
+msgid "Failed to reset deployment cache!"
+msgstr ""
+
+msgid "Failed to reset deployment cache:"
+msgstr ""
+
+msgid "Failed to reset icon."
+msgstr ""
+
+msgid "Failed to reset transformation"
+msgstr ""
+
+msgid "Failed to resync type subscription:"
+msgstr ""
+
+msgid "Failed to rotate GraalVM Engine!"
+msgstr ""
+
+msgid "Failed to save code template"
+msgstr ""
+
+msgid "Failed to save draft for :"
+msgstr ""
+
+msgid "Failed to save draft for {{name}}:"
+msgstr ""
+
+msgid "Failed to save icon override."
+msgstr ""
+
+msgid "Failed to save icon."
+msgstr ""
+
+msgid "Failed to save the conversation."
+msgstr ""
+
+msgid "Failed to save the tool approval mode."
+msgstr ""
+
+msgid "Failed to start explorer session: {{error}}"
+msgstr ""
+
+msgid "Failed to update code template metadata"
+msgstr ""
+
+msgid "Failed to update conversation."
+msgstr ""
+
+msgid "Failed to update domain at the platform."
+msgstr ""
+
+msgid "Failed to update explorer session: {{error}}"
+msgstr ""
+
+msgid "Failed to update note"
+msgstr ""
+
+msgid "Failed to update relations:"
+msgstr ""
+
+msgid "Failed to update service configuration"
+msgstr ""
+
+msgid "Failed to update subscriptions:"
+msgstr ""
+
+msgid "Failed to update test mapping"
+msgstr ""
+
+msgid "Failed to update the conversation title."
+msgstr ""
+
+msgid "Feature changes in release 6.4.0"
+msgstr ""
+
+msgid "Feature preview"
+msgstr ""
+
+msgid "Fetch now"
+msgstr ""
+
+msgid "File entry outside of the target directory: \"{{path}}\"."
+msgstr ""
+
+msgid "File must not be empty, select another one."
+msgstr ""
+
+msgid "Files and folders`icons-category`"
+msgstr ""
+
+msgid "Filter"
+msgstr ""
+
+msgid "Filter Inventory Result [{{ filterInventoryModel.filterExpression.resultType }}]"
+msgstr ""
+
+msgid "Filter Inventory Result [{{resultType}}]"
+msgstr ""
+
+msgid "Filter Result [{{ filterModel.filterExpression?.resultType }}]"
+msgstr ""
+
+msgid "Filter Result [{{resultType}}]"
+msgstr ""
+
+msgid "Filter by"
+msgstr ""
+
+msgid "Filter by Direction"
+msgstr ""
+
+msgid "Filter by date…"
+msgstr ""
+
+msgid "Filter execution mapping"
+msgstr ""
+
+msgid "Filter icons"
+msgstr ""
+
+msgid "Filter inventory"
+msgstr ""
+
+msgid "Filter properties"
+msgstr ""
+
+msgid "Filter text"
+msgstr ""
+
+msgid "Filter this column\\u2026"
+msgstr ""
+
+msgid "Filter\\u2026"
+msgstr ""
+
+msgid "Filtered"
+msgstr ""
+
+msgid "Filtered by mapping"
+msgstr ""
+
+msgid "Filters"
+msgstr ""
+
+msgid "Finance`icons-category`"
+msgstr ""
+
+msgid ""
+"Find out more in the\n"
+"                <a c8y-guide-href=\"/docs/cockpit/working-with-dashboards\">user documentation</a>."
+msgstr ""
+
+msgid ""
+"Find out more in the\n"
+"                <a c8y-guide-href=\"{{ docsUrl }}\">user documentation</a>."
+msgstr ""
+
+msgid ""
+"Find out more in the\n"
+"          <a c8y-guide-href=\"/docs/ai\">user documentation</a>."
+msgstr ""
+
+msgid "Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency."
+msgstr ""
+
+msgid "Firmware"
+msgstr ""
+
+msgid "Firmware update URL"
+msgstr ""
+
+msgid "Firmware update delivery method"
+msgstr ""
+
+msgid "Firmware update reset mechanism"
+msgstr ""
+
+msgid "Firmware update supported device protocol"
+msgstr ""
+
+msgid "First"
+msgstr ""
+
+msgid "First name"
+msgstr ""
+
+msgid "Fit rows to viewport"
+msgstr ""
+
+msgid "Fixed time period for analyzing historical data."
+msgstr ""
+
+msgid "Flow state"
+msgstr ""
+
+msgid "Following mandatory fields should be included: {{fields}}"
+msgstr ""
+
+msgid "For connectors"
+msgstr ""
+
+msgid "For this conversation only"
+msgstr ""
+
+msgid "For this conversation only, unlike the global auto-approve mode"
+msgstr ""
+
+msgid "Forbidden`403 server error`"
+msgstr ""
+
+msgid "Fork this conversation from this message"
+msgstr ""
+
+msgid "Fork: {{ title }}"
+msgstr ""
+
+msgid "Fragment path"
+msgstr ""
+
+msgid "Fragments from inventory to cache"
+msgstr ""
+
+msgid "Free positioning"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "From\\`date\\`"
+msgstr ""
+
+msgid "Full screen"
+msgstr ""
+
+msgid "GB"
+msgstr ""
+
+msgid "General"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "General Settings *"
+msgstr ""
+
+msgid "General settings"
+msgstr ""
+
+msgid "General template"
+msgstr ""
+
+msgid "General, topic, and filter"
+msgstr ""
+
+msgid "Generate Smart Function"
+msgstr ""
+
+msgid "Generate Substitutions"
+msgstr ""
+
+msgid "Generate bootstrap server config"
+msgstr ""
+
+msgid "Generate new Smart Function from scratch"
+msgstr ""
+
+msgid "Generate new substitutions from scratch"
+msgstr ""
+
+msgid "Generate substitutions"
+msgstr ""
+
+msgid "Generate with AI"
+msgstr ""
+
+msgid "Generated {{count}} substitutions."
+msgstr ""
+
+msgid "Generating response…"
+msgstr ""
+
+msgid "Generating substitutions for this mapping based on its source and target templates. This starts automatically — no action needed."
+msgstr ""
+
+msgid "Getting started`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Getting things ready\\u2026"
+msgstr ""
+
+msgid "GiB"
+msgstr ""
+
+msgid "Gives access to bulk operations and Device Management application. This does not include access to any device data."
+msgstr ""
+
+msgid "Global Manager"
+msgstr ""
+
+msgid "Global Reader"
+msgstr ""
+
+msgid "Global User Manager"
+msgstr ""
+
+msgid "Global context sync controls"
+msgstr ""
+
+msgid "Global role \"{{name}}\" updated"
+msgstr ""
+
+msgid "Global role \"{{name}}\" updated: {{updatesList}}"
+msgstr ""
+
+msgid "Global role updated"
+msgstr ""
+
+msgid "Global roles"
+msgstr ""
+
+msgid "Go to problem"
+msgstr ""
+
+msgid "Go to the asset data table"
+msgstr ""
+
+msgid "Google Cloud Pub/Sub connector"
+msgstr ""
+
+msgid "GraalVM Engine rotation triggered."
+msgstr ""
+
+msgid "GraalVM context pool size"
+msgstr ""
+
+msgid "GraalVM engine rotation threshold"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Group"
+msgstr ""
+
+msgid "Group assignment"
+msgstr ""
+
+msgid "Group dashboards can only be copied into a group."
+msgstr ""
+
+msgid "Groups"
+msgstr ""
+
+msgid "Groups measurements into larger time intervals to improve readability and performance. 'None' shows raw data; other options group measurements into minute, hour, or day intervals."
+msgstr ""
+
+msgid "Guides"
+msgstr ""
+
+msgid "HH\\`HOURS\\`"
+msgstr ""
+
+msgid "HTTP connector"
+msgstr ""
+
+msgid "HTTP {{status}}: {{statusText}}"
+msgstr ""
+
+msgid "Handling different Cumulocity API types (measurements, events, alarms, inventory)"
+msgstr ""
+
+msgid "Hands`human hands, icons-category`"
+msgstr ""
+
+msgid "Hardware"
+msgstr ""
+
+msgid "Has full access to all deployed CEP modules and smart rules."
+msgstr ""
+
+msgid "Have at least {{recommendedLength}} characters"
+msgstr ""
+
+msgid "Header"
+msgstr ""
+
+msgid "Help"
+msgstr ""
+
+msgid "Help content"
+msgstr ""
+
+msgid "Help content is only available in English."
+msgstr ""
+
+msgid "Hex"
+msgstr ""
+
+msgid "Hidden`style`"
+msgstr ""
+
+msgid "Hide details"
+msgstr ""
+
+msgid "Hide in widget"
+msgstr ""
+
+msgid "Hide password"
+msgstr ""
+
+msgid "Hide reasoning"
+msgstr ""
+
+msgid "Hierarchy mapping"
+msgstr ""
+
+msgid "Hierarchy mapping inbound"
+msgstr ""
+
+msgid "History"
+msgstr ""
+
+msgid "Home"
+msgstr ""
+
+msgid "Homepage"
+msgstr ""
+
+msgid "Hosted application \"{{appName}}\" activated: activeVersionId \"{{activeVersionId}}\" added"
+msgstr ""
+
+msgid "Hosted application \"{{appName}}\" activated: version \"{{version}}\" added, activeVersionId \"{{activeVersionId}}\" added"
+msgstr ""
+
+msgid "Hosted application \"{{appName}}\" deleted for tenant \"{{tenant}}\""
+msgstr ""
+
+msgid "Hourly"
+msgstr ""
+
+msgid "Hourly aggregation"
+msgstr ""
+
+msgid "Hours (1 to 720). Older lines are deleted."
+msgstr ""
+
+msgid "How long the session stays alive without being polled. Increase for devices that send infrequently."
+msgstr ""
+
+msgid ""
+"How many times a message may fail before the connector drops it instead of asking\n"
+"                    the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar,\n"
+"                    Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST\n"
+"                    polling, a page of polled data that keeps failing is skipped after this many attempts; server\n"
+"                    errors do not count, so an outage never skips data. The default is 3."
+msgstr ""
+
+msgid "How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array."
+msgstr ""
+
+msgid "How to migrate"
+msgstr ""
+
+msgid "How would you rate your experience with this feature?"
+msgstr ""
+
+msgid "I can create, modify or review the shared code that is available to all Smart Functions. Pick an option below, or describe what you need. Nothing is saved until you press Save on the page."
+msgstr ""
+
+msgid "I can generate a Smart Function for this mapping based on its source template. There's no fixed target template — pick an option below, or describe the target payload you'd like it to produce."
+msgstr ""
+
+msgid "I want to provide a sample target payload"
+msgstr ""
+
+msgid "ID"
+msgstr ""
+
+msgid "ID \"{{deviceId}}\" contains invalid character: \"{{invalidCharacter}}\"."
+msgstr ""
+
+msgid ""
+"INFO stores the processing steps, including message payloads. WARN stores warnings and\n"
+"                      errors only."
+msgstr ""
+
+msgid "IP range start, e.g."
+msgstr ""
+
+msgid "I\\u2019m open to being contacted for follow-up about my feedback"
+msgstr ""
+
+msgid "Icon"
+msgstr ""
+
+msgid "Icon SVG"
+msgstr ""
+
+msgid "Icon collection"
+msgstr ""
+
+msgid "Icon grid"
+msgstr ""
+
+msgid "Icon name"
+msgstr ""
+
+msgid "Icon name is required."
+msgstr ""
+
+msgid "Icon type"
+msgstr ""
+
+msgid "Identifier"
+msgstr ""
+
+msgid "If the extracted value is an array, use only its first element. Not applicable when \"Expand as array\" is set."
+msgstr ""
+
+msgid "If the extracted value is an array, use only its last element. Not applicable when \"Expand as array\" is set."
+msgstr ""
+
+msgid "If the extracted value is missing or null, delete the target node from the target template."
+msgstr ""
+
+msgid "If the extracted value is missing or null, skip the substitution and keep whatever the target template defines."
+msgstr ""
+
+msgid "If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type."
+msgstr ""
+
+msgid "Image \"{{imageName}}\" pulled."
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Import Connectors"
+msgstr ""
+
+msgid "Import Mapping"
+msgstr ""
+
+msgid "Import completed: {{successCount}} succeeded, {{errorCount}} failed."
+msgstr ""
+
+msgid "Import completed: {{successCount}} succeeded, {{errorCount}} failed: {{errorDetail}}"
+msgstr ""
+
+msgid "Import connectors"
+msgstr ""
+
+msgid "Import custom icons"
+msgstr ""
+
+msgid "Import failed."
+msgstr ""
+
+msgid "Import failed. Verify the format of the import file!"
+msgstr ""
+
+msgid "Import failed: the service rejected the configuration (HTTP {{status}})."
+msgstr ""
+
+msgid "Import failed: {{message}}"
+msgstr ""
+
+msgid "Import icons from ZIP file"
+msgstr ""
+
+msgid "Import mappings"
+msgstr ""
+
+msgid "Import service configuration"
+msgstr ""
+
+msgid "Import\\`verb, imports icons from a ZIP file\\`"
+msgstr ""
+
+msgid "Imported connectors were disabled because sensitive properties (e.g. passwords, tokens) are not exported. Please edit them and re-enter the real values before enabling."
+msgstr ""
+
+msgid "Imported {{successCount}} connector(s) successfully."
+msgstr ""
+
+msgid "Imported {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Importing icons\\u2026"
+msgstr ""
+
+msgid "In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically."
+msgstr ""
+
+msgid "In case of key loss, please contact your platform administrator."
+msgstr ""
+
+msgid "Inbound"
+msgstr ""
+
+msgid "Inbound (Smart Function JavaScript)"
+msgstr ""
+
+msgid "Include lowercase characters (for example, abcdef)"
+msgstr ""
+
+msgid "Include numbers (for example, 123456)"
+msgstr ""
+
+msgid "Include symbols (for example, !@#$%^)"
+msgstr ""
+
+msgid "Include uppercase characters (for example, ABCDEF)"
+msgstr ""
+
+msgid "Info"
+msgstr ""
+
+msgid "Init internal code templates"
+msgstr ""
+
+msgid "Initial state"
+msgstr ""
+
+msgid "Input tokens: {{ input }}\\\\nOutput tokens: {{ output }}"
+msgstr ""
+
+msgid "Install sample mapping"
+msgstr ""
+
+msgid "Insufficient permissions for this action."
+msgstr ""
+
+msgid "Internal"
+msgstr ""
+
+msgid "Internal server error`50X server error`"
+msgstr ""
+
+msgid "Invalid OPC UA URI."
+msgstr ""
+
+msgid "Invalid ZIP file: missing icons.json"
+msgstr ""
+
+msgid "Invalid color \"{{ currentValue }}\"."
+msgstr ""
+
+msgid "Invalid credentials."
+msgstr ""
+
+msgid "Invalid email address."
+msgstr ""
+
+msgid "Invalid email addresses."
+msgstr ""
+
+msgid "Invalid type, expected integer."
+msgstr ""
+
+msgid "Inventory cache"
+msgstr ""
+
+msgid "Inventory role \"{{name}}\" deleted."
+msgstr ""
+
+msgid "Inventory role \"{{name}}\" updated."
+msgstr ""
+
+msgid "Inventory role removed"
+msgstr ""
+
+msgid "Inventory role updated"
+msgstr ""
+
+msgid "Items"
+msgstr ""
+
+msgid "Items per page"
+msgstr ""
+
+msgid "JSONata"
+msgstr ""
+
+msgid "JSONata AI Agent"
+msgstr ""
+
+msgid "Java Extension"
+msgstr ""
+
+msgid "JavaScript Code Template"
+msgstr ""
+
+msgid "JavaScript callback for Smart functions"
+msgstr ""
+
+msgid "JavaScript callback for creating substitutions"
+msgstr ""
+
+msgid "JavaScript engine (advanced)"
+msgstr ""
+
+msgid "JavaScript for creating complete payloads as Smart Functions."
+msgstr ""
+
+msgid "JavaScript for creating substitutions..."
+msgstr ""
+
+msgid "Kafka connector"
+msgstr ""
+
+msgid "Keep editing"
+msgstr ""
+
+msgid "Keep point count on zoom"
+msgstr ""
+
+msgid "Keep stored lines for"
+msgstr ""
+
+msgid "Keep this on, or stored lines pile up. Runs even when storing is switched off."
+msgstr ""
+
+msgid "Key"
+msgstr ""
+
+msgid "Keywords"
+msgstr ""
+
+msgid "KiB"
+msgstr ""
+
+msgid "LNS connection name can't be empty."
+msgstr ""
+
+msgid "LNS connection named \"{{ connectionName }}\" already exists."
+msgstr ""
+
+msgid "LNS connection named \"{{ connectionName }}\" doesn't exist."
+msgstr ""
+
+msgid "LNS connection to update can't be empty."
+msgstr ""
+
+msgid "LPWAN device"
+msgstr ""
+
+msgid "LWM2M PSK ID"
+msgstr ""
+
+msgid "LWM2M bootstrap short server ID"
+msgstr ""
+
+msgid "LWM2M bulk device removal operation"
+msgstr ""
+
+msgid "LWM2M bulk device upload operation"
+msgstr ""
+
+msgid "LWM2M device registration"
+msgstr ""
+
+msgid "LWM2M device type"
+msgstr ""
+
+msgid "LWM2M pre-shared key"
+msgstr ""
+
+msgid "LWM2M request timeout"
+msgstr ""
+
+msgid "LWM2M server URI"
+msgstr ""
+
+msgid "LWM2M short server ID"
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Label already used. Use a different one."
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid "Largest stored event"
+msgstr ""
+
+msgid "Last"
+msgstr ""
+
+msgid "Last day"
+msgstr ""
+
+msgid "Last error"
+msgstr ""
+
+msgid "Last hour"
+msgstr ""
+
+msgid "Last message"
+msgstr ""
+
+msgid "Last minute"
+msgstr ""
+
+msgid "Last modified"
+msgstr ""
+
+msgid "Last month"
+msgstr ""
+
+msgid "Last name"
+msgstr ""
+
+msgid "Last record"
+msgstr ""
+
+msgid "Last sync time"
+msgstr ""
+
+msgid "Last updated"
+msgstr ""
+
+msgid "Last week"
+msgstr ""
+
+msgid "Layout"
+msgstr ""
+
+msgid "Legal notices"
+msgstr ""
+
+msgid "Let AI propose a target structure"
+msgstr ""
+
+msgid "License"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Light layer"
+msgstr ""
+
+msgid "Light layer SVG"
+msgstr ""
+
+msgid "Light`style`"
+msgstr ""
+
+msgid "Light`theme`"
+msgstr ""
+
+msgid "Limit:"
+msgstr ""
+
+msgid "Lines appear with a short delay (the collection interval): use Fetch now to store the waiting lines right away. Fetch now reaches only the service instance that answers; other instances store their lines at their own interval. Lines logged before the collection was switched on are not included."
+msgstr ""
+
+msgid "Lines collected before this filter existed are not included."
+msgstr ""
+
+msgid "Lines kept in memory"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Listening\\u2026"
+msgstr ""
+
+msgid "Listening…"
+msgstr ""
+
+msgid "Live"
+msgstr ""
+
+msgid "Live Test"
+msgstr ""
+
+msgid "Live Test is not available for this combination of payload type and transformation type"
+msgstr ""
+
+msgid "Live Test needs a mapping that uses an external ID"
+msgstr ""
+
+msgid "Live Test publishes the result to the connected broker and needs a mapping that uses an external id and a Dry Run result."
+msgstr ""
+
+msgid "Live Test sends the result to Cumulocity using a test device registered as \"d11r_liveTest_\" + the external id, so the real device is never touched, and needs a mapping that uses an external id and a Dry Run result."
+msgstr ""
+
+msgid "Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} on device {{deviceId}}{{externalId}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} {{id}} on device {{deviceId}}{{externalId}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} {{id}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}}."
+msgstr ""
+
+msgid "Live test successful: device created or updated."
+msgstr ""
+
+msgid "Live test successful: device {{deviceId}}{{externalId}} created or updated."
+msgstr ""
+
+msgid "Live test successful: published 1 message to topic {{topic}}."
+msgstr ""
+
+msgid "Live test successful: published 1 message."
+msgstr ""
+
+msgid "Live test successful: published {{count}} messages; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "Liveness probe failed: {{requestMethod}} {{uri}}: {{protocol}}: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)."
+msgstr ""
+
+msgid "Load more"
+msgstr ""
+
+msgid "Load more asset properties"
+msgstr ""
+
+msgid "Load more items"
+msgstr ""
+
+msgid "Load more…"
+msgstr ""
+
+msgid "Load page {{ pageNo }}"
+msgstr ""
+
+msgid "Loaded"
+msgstr ""
+
+msgid "Loading Extensions:"
+msgstr ""
+
+msgid "Loading Java extensions..."
+msgstr ""
+
+msgid "Loading asset properties\\u2026"
+msgstr ""
+
+msgid "Loading code templates..."
+msgstr ""
+
+msgid "Loading icons\\u2026"
+msgstr ""
+
+msgid "Loading items…"
+msgstr ""
+
+msgid "Loading service events..."
+msgstr ""
+
+msgid "Loading\\u2026"
+msgstr ""
+
+msgid "Loading…"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Location`icons-category`"
+msgstr ""
+
+msgid "Log connector errors"
+msgstr ""
+
+msgid "Log errors when connecting in microservice log file."
+msgstr ""
+
+msgid "Log file requested."
+msgstr ""
+
+msgid "Log into the management tenant first and enter your phone number."
+msgstr ""
+
+msgid "Log out"
+msgstr ""
+
+msgid "Log payload"
+msgstr ""
+
+msgid "Log payload in microservice log file."
+msgstr ""
+
+msgid "Log substitution"
+msgstr ""
+
+msgid ""
+"Log substitution in microservice log file when applying a\n"
+"                    mapping."
+msgstr ""
+
+msgid "Log verbosity"
+msgstr ""
+
+msgid "Login alias"
+msgstr ""
+
+msgid "Login alias must not contain slashes (\"/\", \"\\\") nor (\"+\"), (\":\"), (\"$\") signs."
+msgstr ""
+
+msgid "Login options"
+msgstr ""
+
+msgid "Logout"
+msgstr ""
+
+msgid "Logout required"
+msgstr ""
+
+msgid "Logs not updated: lifecycle logging disabled."
+msgstr ""
+
+msgid "Longest single message"
+msgstr ""
+
+msgid "Lowercase letters, numbers and hyphens only"
+msgstr ""
+
+msgid "Lowest level stored"
+msgstr ""
+
+msgid "MB"
+msgstr ""
+
+msgid "MM\\`MINUTES\\`"
+msgstr ""
+
+msgid "MQTT connector"
+msgstr ""
+
+msgid "Main navigation"
+msgstr ""
+
+msgid "Major`alarm`"
+msgstr ""
+
+msgid "Manage preview features"
+msgstr ""
+
+msgid "Manage relations"
+msgstr ""
+
+msgid "Manage subscriptions"
+msgstr ""
+
+msgid "Manage subscriptions (by device groups)"
+msgstr ""
+
+msgid "Manage subscriptions (by device type)"
+msgstr ""
+
+msgid "Manage subscriptions (device selection)"
+msgstr ""
+
+msgid "Managed object \"{{name}}\" deleted"
+msgstr ""
+
+msgid "Managed object deleted"
+msgstr ""
+
+msgid "Managing connectors"
+msgstr ""
+
+msgid "Managing permissions"
+msgstr ""
+
+msgid "Mandatory fields template"
+msgstr ""
+
+msgid "Manual"
+msgstr ""
+
+msgid "Mapping"
+msgstr ""
+
+msgid "Mapping  created successfully"
+msgstr ""
+
+msgid "Mapping and transformation type"
+msgstr ""
+
+msgid "Mapping could only activate partially. It failed for the following connectors: {{connectors}}"
+msgstr ""
+
+msgid "Mapping filter uses the collected log; the platform log can only be filtered within the loaded window."
+msgstr ""
+
+msgid ""
+"Mapping handles payloads in CSV format. Any separator can be defined.\\nUse the following expression to return the fields in an array.\\nFor the expression $split(payload, /,\\\\s*/) the result is:\n"
+"      [\n"
+"        \"165\",\n"
+"        \"14.5\",\n"
+"        \"2022-08-06T00:14:50.000+02:00\",\n"
+"        \"c8y_FuelMeasurement\"\n"
+"      ]\n"
+"      ."
+msgstr ""
+
+msgid "Mapping handles payloads in JSON format."
+msgstr ""
+
+msgid ""
+"Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading \"0x\".\n"
+"Use the JSONata function \"$number() to parse an hexadecimal string as a number, e.g. $number(\"0x5a75\") returns 23157."
+msgstr ""
+
+msgid "Mapping name"
+msgstr ""
+
+msgid "Mapping parses payloads in PROTOBUF format by an internal extension."
+msgstr ""
+
+msgid "Mapping processing failures and errors"
+msgstr ""
+
+msgid "Mapping statistic reset successfully."
+msgstr ""
+
+msgid "Mapping topic"
+msgstr ""
+
+msgid "Mapping topic sample"
+msgstr ""
+
+msgid "Mapping {{mappingName}} created successfully"
+msgstr ""
+
+msgid "Mapping {{name}} deleted successfully"
+msgstr ""
+
+msgid "MappingTopic and MappingTopicSample do not have same structure in the Topic Name."
+msgstr ""
+
+msgid "Mappings"
+msgstr ""
+
+msgid "Mappings reloaded"
+msgstr ""
+
+msgid "Mark as provided"
+msgstr ""
+
+msgid "Match UI`theme`"
+msgstr ""
+
+msgid "Match dashboard`style`"
+msgstr ""
+
+msgid "Max failure count"
+msgstr ""
+
+msgid "Max messages to buffer"
+msgstr ""
+
+msgid "Max value: {{ max }}"
+msgstr ""
+
+msgid "Maximum CPU time for Smart Function JavaScript code"
+msgstr ""
+
+msgid ""
+"Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.\n"
+"                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from\n"
+"                    starving the CPU."
+msgstr ""
+
+msgid "Maximum age cannot be bigger than 10 years."
+msgstr ""
+
+msgid "Maximum end-to-end processing time for Smart Functions"
+msgstr ""
+
+msgid "Maximum file size exceeded."
+msgstr ""
+
+msgid ""
+"Maximum number of GraalVM contexts kept idle in the per-mapping context pool.\n"
+"                    Higher values reduce per-message context-creation overhead at high throughput; lower values\n"
+"                    reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system\n"
+"                    code. Default: 20."
+msgstr ""
+
+msgid ""
+"Maximum number of versions kept per mapping. When a new version is published, the\n"
+"                    oldest versions beyond this limit are deleted; the active version is never deleted."
+msgstr ""
+
+msgid "Maximum processing attempts per message"
+msgstr ""
+
+msgid ""
+"Maximum wall-clock time in milliseconds the system waits for a Smart Function to\n"
+"                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API\n"
+"                    calls.\n"
+"                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.\n"
+"                    Must be greater than the CPU time limit above."
+msgstr ""
+
+msgid "May contain lowercase letters, digits, and hyphens. Must start with a letter; hyphens only allowed in the middle; minimum 2 characters."
+msgstr ""
+
+msgid "Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants."
+msgstr ""
+
+msgid "Menu label"
+msgstr ""
+
+msgid "Menu label to display in submenu when dashboard is attached"
+msgstr ""
+
+msgid "Message"
+msgstr ""
+
+msgid "Message Explorer"
+msgstr ""
+
+msgid "Message actions"
+msgstr ""
+
+msgid "Message with ID \"{{messageId}}\" doesn't exist in SmartREST template with ID \"{{templateId}}\""
+msgstr ""
+
+msgid "Messages"
+msgstr ""
+
+msgid "Messages by outcome"
+msgstr ""
+
+msgid "Messaging`icons-category`"
+msgstr ""
+
+msgid "Metadata (JSONata)"
+msgstr ""
+
+msgid "MiB"
+msgstr ""
+
+msgid "Microphone access is blocked. Allow microphone access to use voice input."
+msgstr ""
+
+msgid "Microservice application \"{{appName}}\" activated: version \"{{version}}\" added, activeVersionId \"{{activeVersionId}}\" added"
+msgstr ""
+
+msgid "Microservice application \"{{appName}}\" deleted for tenant \"{{tenant}}\""
+msgstr ""
+
+msgid "Microservice application name is incorrect: only lower case letters, digits and dashes allowed. Maximum length: {{maxLength}}."
+msgstr ""
+
+msgid "Microservice is not available."
+msgstr ""
+
+msgid "Microservice: dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!"
+msgstr ""
+
+msgid "Milliseconds (5000 to 3600000) between two runs that store the waiting lines."
+msgstr ""
+
+msgid "Milliseconds (60000 to 86400000) between two clean-ups."
+msgstr ""
+
+msgid "Min value: {{ min }}"
+msgstr ""
+
+msgid "Minor`alarm`"
+msgstr ""
+
+msgid "Minutely"
+msgstr ""
+
+msgid "Minutely aggregation"
+msgstr ""
+
+msgid "Minutes lifetime flow state"
+msgstr ""
+
+msgid "Missing SVG file"
+msgstr ""
+
+msgid "Mobile"
+msgstr ""
+
+msgid "Modal close error"
+msgstr ""
+
+msgid "Modify the current session parameters. Existing messages will be cleared when the session is restarted."
+msgstr ""
+
+msgid "Monitoring"
+msgstr ""
+
+msgid "Monitoring overview"
+msgstr ""
+
+msgid "More actions"
+msgstr ""
+
+msgid "More approval options"
+msgstr ""
+
+msgid "More save options"
+msgstr ""
+
+msgid "More\\u2026"
+msgstr ""
+
+msgid "Most lines per run"
+msgstr ""
+
+msgid "Most per-message lines are DEBUG: lower the service log level on the Service configuration page to see them."
+msgstr ""
+
+msgid "Move"
+msgstr ""
+
+msgid "Move or add"
+msgstr ""
+
+msgid "MultiLevel wildcard \"#\" can only appear at the end."
+msgstr ""
+
+msgid "Multimedia`icons-category`"
+msgstr ""
+
+msgid "Must be a valid HTTP(S) URL."
+msgstr ""
+
+msgid "Must be a valid JSON object."
+msgstr ""
+
+msgid "Must be a valid JSON path"
+msgstr ""
+
+msgid "Must be a valid hexadecimal number. Must contain only the following characters: 0-9, a-f, A-F, :."
+msgstr ""
+
+msgid "Must be a valid phone number (only digits, spaces, slashes (\"/\"), dashes (\"-\"), and plus (\"+\") allowed, for example: +49 9 876 543 210)."
+msgstr ""
+
+msgid "Must be greater than the CPU time limit — otherwise the CPU limit is never reached."
+msgstr ""
+
+msgid "Must have at least {{length}} characters"
+msgstr ""
+
+msgid "Must not contain any leading or trailing whitespaces."
+msgstr ""
+
+msgid "NOTE: this level is not supported by: {{connectors}}."
+msgstr ""
+
+msgid "NO_SEC template"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Name already used. Use a different one."
+msgstr ""
+
+msgid "Name does not match the required format."
+msgstr ""
+
+msgid "Name of jsonata agent"
+msgstr ""
+
+msgid ""
+"Name of jsonata agent to be used when generating substitutions. The needs to be\n"
+"                    defined in the AI Agent Manager."
+msgstr ""
+
+msgid "Name of smartFunction agent"
+msgstr ""
+
+msgid ""
+"Name of smartFunction agent to be used when generating Cumulocity API payloads as\n"
+"                    JavaScript code.\n"
+"                    The needs to be\n"
+"                    defined in the AI Agent Manager."
+msgstr ""
+
+msgid "Navigation"
+msgstr ""
+
+msgid "Navigator"
+msgstr ""
+
+msgid "Navigator menu item"
+msgstr ""
+
+msgid "Need more filter possibilities?"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Network`icons-category`"
+msgstr ""
+
+msgid "New"
+msgstr ""
+
+msgid "New LNS connection can't be empty."
+msgstr ""
+
+msgid "New client: {{selectedClient.name}}"
+msgstr ""
+
+msgid "New code template"
+msgstr ""
+
+msgid "New conversation"
+msgstr ""
+
+msgid "New dashboard"
+msgstr ""
+
+msgid "New features available"
+msgstr ""
+
+msgid "New report"
+msgstr ""
+
+msgid "Newly created devices of this type will be subscribed automatically."
+msgstr ""
+
+msgid "Newsletter"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid "Next match"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "No Cumulocity IoT manifest found."
+msgstr ""
+
+msgid "No Java extensions available \\u2014 upload one first"
+msgstr ""
+
+msgid "No Java extensions available — upload one first"
+msgstr ""
+
+msgid "No LoRa provider settings are found. Please configure the connectivity settings."
+msgstr ""
+
+msgid "No active session"
+msgstr ""
+
+msgid "No aggregation"
+msgstr ""
+
+msgid "No asset property mappings"
+msgstr ""
+
+msgid "No asset selected"
+msgstr ""
+
+msgid "No code templates available for this transformation type"
+msgstr ""
+
+msgid "No collected log yet"
+msgstr ""
+
+msgid "No communication with device since {{timestamp | absoluteDate}}."
+msgstr ""
+
+msgid "No configuration needed."
+msgstr ""
+
+msgid "No connectors exist."
+msgstr ""
+
+msgid "No connectors found to import."
+msgstr ""
+
+msgid "No console output for this test run"
+msgstr ""
+
+msgid "No conversations to display."
+msgstr ""
+
+msgid "No data received from device within required interval."
+msgstr ""
+
+msgid "No date filter applied \\u2014 every record is returned regardless of when it occurred."
+msgstr ""
+
+msgid "No device type available for this device."
+msgstr ""
+
+msgid "No device types configured."
+msgstr ""
+
+msgid "No device types defined. Saving now removes the type-based subscription."
+msgstr ""
+
+msgid "No entries for this extension, try to reload extensions."
+msgstr ""
+
+msgid "No entries found in uploaded CSV file."
+msgstr ""
+
+msgid "No events available."
+msgstr ""
+
+msgid "No existing collection found."
+msgstr ""
+
+msgid "No extension to display."
+msgstr ""
+
+msgid "No filters"
+msgstr ""
+
+msgid "No group detected for this device — group must be available to use this option."
+msgstr ""
+
+msgid "No icons found"
+msgstr ""
+
+msgid "No icons to import."
+msgstr ""
+
+msgid "No item selected"
+msgstr ""
+
+msgid "No items"
+msgstr ""
+
+msgid "No items to display."
+msgstr ""
+
+msgid "No lines for this mapping in the part of the platform log that is loaded."
+msgstr ""
+
+msgid "No lines for this mapping in this range."
+msgstr ""
+
+msgid "No logs available."
+msgstr ""
+
+msgid "No logs entries for this connectors."
+msgstr ""
+
+msgid "No mappings exist."
+msgstr ""
+
+msgid "No match found."
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "No nodes are available that match all of the predicates: [{{predicates}}]."
+msgstr ""
+
+msgid "No options available."
+msgstr ""
+
+msgid "No output yet"
+msgstr ""
+
+msgid "No permission"
+msgstr ""
+
+msgid "No preview available."
+msgstr ""
+
+msgid "No properties to display"
+msgstr ""
+
+msgid "No relations exist."
+msgstr ""
+
+msgid "No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use \"Live Test\" to get actual responses."
+msgstr ""
+
+msgid "No results found."
+msgstr ""
+
+msgid "No results to display for the current filter."
+msgstr ""
+
+msgid "No results to display."
+msgstr ""
+
+msgid "No selection"
+msgstr ""
+
+msgid "No source template"
+msgstr ""
+
+msgid "No source template \\u2014 this payload type is not editable as JSON. The payload is decoded by the mapper or passed to your code as raw data."
+msgstr ""
+
+msgid "No subscriptions for devices exist."
+msgstr ""
+
+msgid "No substitutions were generated."
+msgstr ""
+
+msgid "No synced widgets"
+msgstr ""
+
+msgid "No target template"
+msgstr ""
+
+msgid "No target template \\u2014 the target payload structure is produced by your code."
+msgstr ""
+
+msgid "No template to edit \\u2014 the payload structure comes from the Protobuf schema in the selected extension."
+msgstr ""
+
+msgid "No template to edit — the payload structure comes from the Protobuf schema in the selected extension."
+msgstr ""
+
+msgid "No test devices exist."
+msgstr ""
+
+msgid "No timing data yet. It appears once a mapping has processed a message."
+msgstr ""
+
+msgid "No type detected for this device — type must be available to use this option."
+msgstr ""
+
+msgid "No valid JavaScript code was generated."
+msgstr ""
+
+msgid "No versions yet."
+msgstr ""
+
+msgid "No widgets found."
+msgstr ""
+
+msgid "No widgets to display."
+msgstr ""
+
+msgid "Node label"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Not Known"
+msgstr ""
+
+msgid "Not Loaded"
+msgstr ""
+
+msgid "Not available on mobile phone"
+msgstr ""
+
+msgid "Not completed and required. Go to the step and fulfill the setup."
+msgstr ""
+
+msgid "Not found`404 server error`"
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Add it under Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Add them under Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "Not the owner"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Nothing has been collected for your tenant. Either the operator has not switched the collection on, or no line at the configured level has been logged for your tenant yet."
+msgstr ""
+
+msgid "Notification connector status events"
+msgstr ""
+
+msgid "Notification storing when disabled or offline"
+msgstr ""
+
+msgid ""
+"Notification subscriptions for a device type only fire for devices created after the type was added. Use\n"
+"          resync to also subscribe devices of a type that already existed beforehand. This rescans the full\n"
+"          inventory for the selected type and can take a while on large inventories."
+msgstr ""
+
+msgid "Notification subscriptions for a device type only fire for devices created after the type was added. Use this to also subscribe devices of a type that already existed beforehand."
+msgstr ""
+
+msgid "Now"
+msgstr ""
+
+msgid "Number events"
+msgstr ""
+
+msgid "Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated."
+msgstr ""
+
+msgid "Number of mapping versions to retain"
+msgstr ""
+
+msgid "Number of status transitions bundled into this session"
+msgstr ""
+
+msgid ""
+"Number of unique JavaScript source compilations after which the GraalVM Engine is\n"
+"                    rotated (replaced) to release the memory it holds for them, about 6 to 50 KB per distinct source.\n"
+"                    Each new or updated mapping code counts once per Engine lifetime; re-executing the same code is a\n"
+"                    cache hit and does not count. Lower values release memory sooner but re-warm all mappings more\n"
+"                    often. Default: 1000."
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Office`icons-category`"
+msgstr ""
+
+msgid "Offloading Administrator"
+msgstr ""
+
+msgid "Offloading task \"{{ taskName }}\" finished erroneously."
+msgstr ""
+
+msgid "Offloading task \"{{ taskName }}\" finished successfully."
+msgstr ""
+
+msgid "Only includes alarms for the parent device."
+msgstr ""
+
+msgid "Only lowercase letters, digits and hyphens allowed in the first part of the URI. Must start with a letter; hyphens only allowed in the middle. Must be a valid URI."
+msgstr ""
+
+msgid "Only lowercase letters, numbers and hyphens are allowed."
+msgstr ""
+
+msgid "Only one MultiLevel wildcard \"#\" is allowed."
+msgstr ""
+
+msgid "Only one substitution defining the DeviceIdentifier can be used."
+msgstr ""
+
+msgid "Only open sessions"
+msgstr ""
+
+msgid "Only rows where value equals to"
+msgstr ""
+
+msgid "Only rows where value is defined"
+msgstr ""
+
+msgid "Only the first selected message is used, because the mapping is not generated with AI."
+msgstr ""
+
+msgid "Only the lines loaded now are searched: use Previous and Next to look further."
+msgstr ""
+
+msgid "Only value"
+msgstr ""
+
+msgid "Only with errors"
+msgstr ""
+
+msgid "Open relay {{number}}."
+msgstr ""
+
+msgid ""
+"Open the\n"
+"            <span>user documentation</span>"
+msgstr ""
+
+msgid "Open the Message Explorer from the mapper navigation menu."
+msgstr ""
+
+msgid "OpenAPI specification"
+msgstr ""
+
+msgid "Opening relay {{number}}."
+msgstr ""
+
+msgid "Operation \"{{operation}}\" succeeded for volume \"{{volume}}\"."
+msgstr ""
+
+msgid "Operation created."
+msgstr ""
+
+msgid "Operation created: status: \"{{ status | translate }}\"."
+msgstr ""
+
+msgid "Operation updated."
+msgstr ""
+
+msgid "Operation updated: {{updatesList}}"
+msgstr ""
+
+msgid "Operations: All"
+msgstr ""
+
+msgid "Operations: Restart Device"
+msgstr ""
+
+msgid "Option \"{{option}}\" created."
+msgstr ""
+
+msgid "Option \"{{option}}\" deleted."
+msgstr ""
+
+msgid "Option created."
+msgstr ""
+
+msgid "Option deleted."
+msgstr ""
+
+msgid "Optional YAML parameter passed to the extension."
+msgstr ""
+
+msgid "Or switch on Collected log to search the whole stored range."
+msgstr ""
+
+msgid "Outbound"
+msgstr ""
+
+msgid "Outbound (Smart Function JavaScript)"
+msgstr ""
+
+msgid "Outbound mapping"
+msgstr ""
+
+msgid "Outbound mappings"
+msgstr ""
+
+msgid ""
+"Outbound mappings enabled. Changing this property require unsubscribing/subscribing\n"
+"                    the Dynamic Mapper microservice to this tenant."
+msgstr ""
+
+msgid ""
+"Outbound mappings require a device subscription so Cumulocity pushes events to the broker.\n"
+"              Would you like to set one up now?"
+msgstr ""
+
+msgid "Outbound subscription"
+msgstr ""
+
+msgid "Overlay`style`"
+msgstr ""
+
+msgid "Overridden icon"
+msgstr ""
+
+msgid "Override"
+msgstr ""
+
+msgid "Override \"{{ iconName }}\""
+msgstr ""
+
+msgid "Overview"
+msgstr ""
+
+msgid "Owner"
+msgstr ""
+
+msgid "PB"
+msgstr ""
+
+msgid "PSK template"
+msgstr ""
+
+msgid "Page {{ pageNo }} is loading\\u2026"
+msgstr ""
+
+msgid "Parent node"
+msgstr ""
+
+msgid "Partially"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Password change is temporarily blocked."
+msgstr ""
+
+msgid "Password cipher does not match."
+msgstr ""
+
+msgid "Password is invalid. It must have at least {{minCharactersCount}} and no more than {{maxCharactersCount}} characters."
+msgstr ""
+
+msgid "Password is not strong enough, use a stronger password."
+msgstr ""
+
+msgid "Password is not strong enough, use a stronger password. Check the requirements listed on the right."
+msgstr ""
+
+msgid "Password must have at least {{ minLength }} characters and no more than {{ maxLength }} and can only contain letters, numbers and following symbols: {{ allowedCharactersList }}"
+msgstr ""
+
+msgid "Password must have at least {{ minLength }} characters and no more than {{ maxLength }}."
+msgstr ""
+
+msgid "Password must meet the requirements below:"
+msgstr ""
+
+msgid "Passwords do not match."
+msgstr ""
+
+msgid "Paste dashboard"
+msgstr ""
+
+msgid "Paste dashboard \"{{ dashboardName }}\""
+msgstr ""
+
+msgid "Pasted from clipboard."
+msgstr ""
+
+msgid "Pause"
+msgstr ""
+
+msgid "Payload"
+msgstr ""
+
+msgid "Payload Format"
+msgstr ""
+
+msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing."
+msgstr ""
+
+msgid "Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and passes a rich JSON object to your Smart Function. For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized to SparkPlug B protobuf binary before publishing. NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent NDATA / DDATA messages can resolve metric aliases. The aliasMap (metric name → alias) is available in the outbound Smart Function via context.getConfig().aliasMap."
+msgstr ""
+
+msgid "Payload types"
+msgstr ""
+
+msgid "People`icons-category`"
+msgstr ""
+
+msgid "PiB"
+msgstr ""
+
+msgid "Platform administration`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Platform application cannot be added to, nor removed from any tenant."
+msgstr ""
+
+msgid "Platform info"
+msgstr ""
+
+msgid "Platform log"
+msgstr ""
+
+msgid "Platform log: live, all lines. Collected log: stored per tenant, can be filtered by mapping over its whole range."
+msgstr ""
+
+msgid "Platform`icons-category`"
+msgstr ""
+
+msgid "Please enter a device type to monitor."
+msgstr ""
+
+msgid "Please enter a topic to listen on."
+msgstr ""
+
+msgid "Please review and adjust the target template to reflect your actual data before generating with AI in the next step."
+msgstr ""
+
+msgid "Please select a connector."
+msgstr ""
+
+msgid "Please select a device or group to monitor."
+msgstr ""
+
+msgid "Please select nodes in both templates to define a substitution."
+msgstr ""
+
+msgid "Plugins"
+msgstr ""
+
+msgid "Pod \"{{imageName}}\" created."
+msgstr ""
+
+msgid "Pod \"{{imageName}}\" deleted."
+msgstr ""
+
+msgid "Pod sandbox creation failed."
+msgstr ""
+
+msgid "Pod synchronization error."
+msgstr ""
+
+msgid "Points per chart"
+msgstr ""
+
+msgid "Position"
+msgstr ""
+
+msgid "Position in navigator"
+msgstr ""
+
+msgid "Position in tabs"
+msgstr ""
+
+msgid "Position in tabs (10000 first, -10000 last)"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Preview features"
+msgstr ""
+
+msgid "Preview not available"
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Previous match"
+msgstr ""
+
+msgid "Private key cipher does not match"
+msgstr ""
+
+msgid "Private key must be provided when \"Public/private keys\" option is selected."
+msgstr ""
+
+msgid "Processed"
+msgstr ""
+
+msgid "Processing"
+msgstr ""
+
+msgid "Processing time per mapping (slowest first)"
+msgstr ""
+
+msgid "Processor extension"
+msgstr ""
+
+msgid "Processor extension uploaded successfully."
+msgstr ""
+
+msgid "Product experience"
+msgstr ""
+
+msgid "Programming`icons-category`"
+msgstr ""
+
+msgid "Progress"
+msgstr ""
+
+msgid "Property"
+msgstr ""
+
+msgid "Property configured for a different asset. Reconfigure to match current asset."
+msgstr ""
+
+msgid "Protocol \"{{protocol}}\" does not support \"{{credentialsType}}\" credentials type."
+msgstr ""
+
+msgid "Provide a file path"
+msgstr ""
+
+msgid "Provided"
+msgstr ""
+
+msgid "Provided password doesn't match your current one."
+msgstr ""
+
+msgid "Provided security token does not match the security token stored for this device \"{{deviceId}}\"."
+msgstr ""
+
+msgid "Provisioned certificate stored in user object: \"{{ userName }}\""
+msgstr ""
+
+msgid "Provisioned certificates removed from user object: \"{{ userName }}\""
+msgstr ""
+
+msgid "Publish"
+msgstr ""
+
+msgid "Publish draft"
+msgstr ""
+
+msgid "Publish topic"
+msgstr ""
+
+msgid "Publish topic sample"
+msgstr ""
+
+msgid "PublishTopic and PublishTopicSample do not have same structure in the Topic Name."
+msgstr ""
+
+msgid "Published and activated version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Published through connector(s): {{connectors}}."
+msgstr ""
+
+msgid "Published version {{version}} of {{name}}. It keeps running {{current}} until you activate the new version."
+msgstr ""
+
+msgid "Published version {{version}} of {{name}}. It stays inactive until you activate it."
+msgstr ""
+
+msgid "Publishes the result to the connected broker"
+msgstr ""
+
+msgid "Pulling image: \"{{imageName}}\"."
+msgstr ""
+
+msgid "Pulsar connector"
+msgstr ""
+
+msgid "Pulsar, Kafka, and MQTT compared"
+msgstr ""
+
+msgid "Push connection: active"
+msgstr ""
+
+msgid "Push connection: inactive"
+msgstr ""
+
+msgid "QoS"
+msgstr ""
+
+msgid "Quickstart inbound"
+msgstr ""
+
+msgid "Quickstart outbound"
+msgstr ""
+
+msgid "REST Polling connector"
+msgstr ""
+
+msgid "RESTART`verb, action` {{service}}"
+msgstr ""
+
+msgid "Raise only while troubleshooting — verbose logging costs throughput."
+msgstr ""
+
+msgid "Re-initialize system code templates"
+msgstr ""
+
+msgid "Read Only"
+msgstr ""
+
+msgid "Read instance"
+msgstr ""
+
+msgid "Read object"
+msgstr ""
+
+msgid "Read timed out"
+msgstr ""
+
+msgid "Reader"
+msgstr ""
+
+msgid "Reader User`role`"
+msgstr ""
+
+msgid "Readiness probe failed: {{requestMethod}} {{uri}}: {{protocol}}: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)."
+msgstr ""
+
+msgid "Real-time event processing is currently overloaded and may stop processing your events. Please contact support."
+msgstr ""
+
+msgid "Realtime"
+msgstr ""
+
+msgid "Rearranged widgets: {{ widgetList }}."
+msgstr ""
+
+msgid "Reasoning"
+msgstr ""
+
+msgid "Reasoning for message number {{ number }}"
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Received at"
+msgstr ""
+
+msgid "Recent search views"
+msgstr ""
+
+msgid "Recently registered devices"
+msgstr ""
+
+msgid "Reconnect Subscription outbound"
+msgstr ""
+
+msgid "Reconnect Subscription outbound endpoint."
+msgstr ""
+
+msgid "Reconnected successfully."
+msgstr ""
+
+msgid "Redo"
+msgstr ""
+
+msgid "Redo: \"{{ changeToRedo }}\""
+msgstr ""
+
+msgid "Reference"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Refresh interval in seconds"
+msgstr ""
+
+msgid "Regenerate this response"
+msgstr ""
+
+msgid "Registration lifetime"
+msgstr ""
+
+msgid "Regular`style`"
+msgstr ""
+
+msgid "Reject all\\`cookies\\`"
+msgstr ""
+
+msgid "Relation for this device deleted successfully"
+msgstr ""
+
+msgid "Relations deleted successfully"
+msgstr ""
+
+msgid "Relations updated successfully"
+msgstr ""
+
+msgid "Reliability settings"
+msgstr ""
+
+msgid "Reload"
+msgstr ""
+
+msgid "Reload later"
+msgstr ""
+
+msgid "Reload mappings in service"
+msgstr ""
+
+msgid "Reload now"
+msgstr ""
+
+msgid "Reload recommended"
+msgstr ""
+
+msgid "Reload required"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Remove SVG preview"
+msgstr ""
+
+msgid "Remove all mappings"
+msgstr ""
+
+msgid "Remove dark layer SVG"
+msgstr ""
+
+msgid "Remove filter"
+msgstr ""
+
+msgid "Remove from selected properties"
+msgstr ""
+
+msgid "Remove icon and use default icon"
+msgstr ""
+
+msgid "Remove light layer SVG"
+msgstr ""
+
+msgid "Remove mapping"
+msgstr ""
+
+msgid "Remove widget"
+msgstr ""
+
+msgid "Remove\\`column,verb\\`"
+msgstr ""
+
+msgid "Removed child device \"{{name}}\" (ID: {{id}})."
+msgstr ""
+
+msgid "Removed in 6.4.0:"
+msgstr ""
+
+msgid "Removed widgets: {{ widgetList }}."
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Rename the template and edit its description"
+msgstr ""
+
+msgid "Repair strategy"
+msgstr ""
+
+msgid "Rephrase your search term."
+msgstr ""
+
+msgid "Replace"
+msgstr ""
+
+msgid "Replace icon"
+msgstr ""
+
+msgid "Replace override for \"{{ iconName }}\""
+msgstr ""
+
+msgid "Replica set \"{{replicaSetName}}\" scaled down to \"{{scaleNumber}}\"."
+msgstr ""
+
+msgid "Replica set \"{{replicaSetName}}\" scaled up to \"{{scaleNumber}}\"."
+msgstr ""
+
+msgid "Report"
+msgstr ""
+
+msgid "Report created."
+msgstr ""
+
+msgid "Report updated: {{ values }}."
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "Request support"
+msgstr ""
+
+msgid "Requests (failed)"
+msgstr ""
+
+msgid "Required availability"
+msgstr ""
+
+msgid "Required platform version"
+msgstr ""
+
+msgid "Requires min. {{ fileCountMin }} file(s)."
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Reset Dry Run"
+msgstr ""
+
+msgid "Reset deployment cache"
+msgstr ""
+
+msgid "Reset deployment cache."
+msgstr ""
+
+msgid "Reset filters"
+msgstr ""
+
+msgid "Reset icon"
+msgstr ""
+
+msgid "Reset mapping statistic"
+msgstr ""
+
+msgid "Reset override for \"{{ iconName }}\""
+msgstr ""
+
+msgid "Reset search"
+msgstr ""
+
+msgid "Reset statistics"
+msgstr ""
+
+msgid "Reset widgets"
+msgstr ""
+
+msgid "Reset`dashboard`"
+msgstr ""
+
+msgid "Resize columns"
+msgstr ""
+
+msgid "Resolution of device external IDs to Cumulocity managed objects."
+msgstr ""
+
+msgid "Response"
+msgstr ""
+
+msgid "Response complete"
+msgstr ""
+
+msgid "Responsive"
+msgstr ""
+
+msgid "Restore"
+msgstr ""
+
+msgid "Restore the dashboard to this status"
+msgstr ""
+
+msgid "Restored dashboard state from {{ restoredStateCreationDate }}"
+msgstr ""
+
+msgid "Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected."
+msgstr ""
+
+msgid "Resume"
+msgstr ""
+
+msgid "Resync existing devices"
+msgstr ""
+
+msgid "Resync existing devices into a type subscription"
+msgstr ""
+
+msgid "Resync of existing devices into a type subscription started/finished"
+msgstr ""
+
+msgid "Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Retention"
+msgstr ""
+
+msgid "Retrieve configuration snapshot from device {{deviceName}}"
+msgstr ""
+
+msgid "Retrieve {{configurationType}} configuration snapshot from device {{deviceName}}"
+msgstr ""
+
+msgid "Retry"
+msgstr ""
+
+msgid "Reused test device {{testDevice}} from an earlier Live Test."
+msgstr ""
+
+msgid "Review / Refine existing Smart Function"
+msgstr ""
+
+msgid "Review / Refine existing substitutions"
+msgstr ""
+
+msgid "Review / Refine with AI"
+msgstr ""
+
+msgid "Review before saving"
+msgstr ""
+
+msgid "Review existing shared code"
+msgstr ""
+
+msgid "Review properties, e.g. client_id must be different across different client connectors to the same broker."
+msgstr ""
+
+msgid "Revoke"
+msgstr ""
+
+msgid "Revoke TOTP secret"
+msgstr ""
+
+msgid "Revoked serials: {{ revokedSerials }}"
+msgstr ""
+
+msgid "Role \"{{ roleName }}\" cannot be deleted because it is assigned to a dynamic access mapping in Single sign-on configuration."
+msgstr ""
+
+msgid "Rotate GraalVM Engine"
+msgstr ""
+
+msgid "Row height scales so all rows fill the screen. Enables percentage-based widget heights."
+msgstr ""
+
+msgid "Rows"
+msgstr ""
+
+msgid "Run a Dry Run first; Live Test needs its result"
+msgstr ""
+
+msgid "Run a Live Test on an inbound mapping to create a test device."
+msgstr ""
+
+msgid "Run tools without asking"
+msgstr ""
+
+msgid "Runs the mapping without writing anything to your tenant"
+msgstr ""
+
+msgid "SIM provider settings"
+msgstr ""
+
+msgid "SMS provider"
+msgstr ""
+
+msgid "SS\\`SECONDS\\`"
+msgstr ""
+
+msgid "START`verb, action` {{service}}"
+msgstr ""
+
+msgid "STOP`verb, action` {{service}}"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save & Activate"
+msgstr ""
+
+msgid "Save and reload"
+msgstr ""
+
+msgid "Save changes"
+msgstr ""
+
+msgid "Save in dashboard configuration"
+msgstr ""
+
+msgid "Save settings"
+msgstr ""
+
+msgid "Saved"
+msgstr ""
+
+msgid "Saved code template"
+msgstr ""
+
+msgid "Saved draft and connector assignments for . It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft and connector assignments for . Publish and activate it (Versions) to apply the changes."
+msgstr ""
+
+msgid "Saved draft and connector assignments for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft for . It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft for . Publish and activate it (Versions) to apply the changes."
+msgstr ""
+
+msgid "Saved draft for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft for {{name}}. It is not live yet: publish and activate it from the mapping list (Versions)."
+msgstr ""
+
+msgid "Saved, but activating the mapping failed"
+msgstr ""
+
+msgid "Saved, but activating the version failed"
+msgstr ""
+
+msgid "Saving\\u2026"
+msgstr ""
+
+msgid "Scaling application \"{{appName}}\" from {{from}} to {{to}} instances"
+msgstr ""
+
+msgid "Scan this QR code with your smartphone using the authenticator application."
+msgstr ""
+
+msgid "Scroll to the left"
+msgstr ""
+
+msgid "Scroll to the right"
+msgstr ""
+
+msgid "Scroll to top"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "Search conversations"
+msgstr ""
+
+msgid "Search documentation…"
+msgstr ""
+
+msgid "Search for clients..."
+msgstr ""
+
+msgid "Search for groups or assets…"
+msgstr ""
+
+msgid "Search message or connector"
+msgstr ""
+
+msgid "Search properties"
+msgstr ""
+
+msgid "Search results"
+msgstr ""
+
+msgid "Search\\u2026"
+msgstr ""
+
+msgid "Searching by exact match. Click for other search options:"
+msgstr ""
+
+msgid "Security instance offset"
+msgstr ""
+
+msgid "Security mode"
+msgstr ""
+
+msgid "Security`icons-category`"
+msgstr ""
+
+msgid "See also our Privacy Notice."
+msgstr ""
+
+msgid "Select"
+msgstr ""
+
+msgid "Select 2 to {{ maxSamples }} messages of the same type, for example only JSON or only binary, to generate one Smart Function with AI from all of them."
+msgstr ""
+
+msgid "Select Payload Format and Transformation Type"
+msgstr ""
+
+msgid "Select a date range"
+msgstr ""
+
+msgid "Select a date\\u2026"
+msgstr ""
+
+msgid "Select a date…"
+msgstr ""
+
+msgid "Select a device or group to create a dedicated Notification 2.0 subscription."
+msgstr ""
+
+msgid "Select a different icon before deleting this one."
+msgstr ""
+
+msgid "Select agent"
+msgstr ""
+
+msgid "Select all {{ count }} items"
+msgstr ""
+
+msgid "Select an asset to see the available properties."
+msgstr ""
+
+msgid "Select an item from the list to view details"
+msgstr ""
+
+msgid "Select any feature to view additional details and documentation. Toggle features on or off using the switches."
+msgstr ""
+
+msgid "Select at least one connector before saving."
+msgstr ""
+
+msgid "Select between 2 and {{max}} messages of the same type, for example only JSON or only binary."
+msgstr ""
+
+msgid "Select date range"
+msgstr ""
+
+msgid "Select devices group to subscribe to all device for outbound mappings"
+msgstr ""
+
+msgid "Select devices to subscribe to for outbound mappings"
+msgstr ""
+
+msgid "Select devices types to subscribe to for outbound mappings"
+msgstr ""
+
+msgid "Select file"
+msgstr ""
+
+msgid "Select filter…"
+msgstr ""
+
+msgid "Select from the list of items matching the device type"
+msgstr ""
+
+msgid "Select group"
+msgstr ""
+
+msgid "Select icon"
+msgstr ""
+
+msgid "Select item"
+msgstr ""
+
+msgid "Select item…"
+msgstr ""
+
+msgid "Select method"
+msgstr ""
+
+msgid "Select or create client name"
+msgstr ""
+
+msgid "Select or enter a collection name"
+msgstr ""
+
+msgid "Select property"
+msgstr ""
+
+msgid "Select source node to define substitution!"
+msgstr ""
+
+msgid "Select target node to define substitution!"
+msgstr ""
+
+msgid "Select template..."
+msgstr ""
+
+msgid "Select templates"
+msgstr ""
+
+msgid "Select the asset, then on the available properties list, select desired property."
+msgstr ""
+
+msgid "Select the connector and topic to inspect incoming messages in real time."
+msgstr ""
+
+msgid "Select the global roles for which the dashboard will be available"
+msgstr ""
+
+msgid "Select widget"
+msgstr ""
+
+msgid "Select widget size by width and height"
+msgstr ""
+
+msgid "Select your option"
+msgstr ""
+
+msgid "Select your option, for example, {{ example }}"
+msgstr ""
+
+msgid "Selected"
+msgstr ""
+
+msgid "Selected asset"
+msgstr ""
+
+msgid "Selected assets"
+msgstr ""
+
+msgid "Selected connectors"
+msgstr ""
+
+msgid "Selected connectors for mapping"
+msgstr ""
+
+msgid "Selected properties"
+msgstr ""
+
+msgid "Selected source node: {{path}}"
+msgstr ""
+
+msgid "Selected substitution is an expression"
+msgstr ""
+
+msgid "Selected target node: {{path}}"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Send configuration snapshot {{snapshotName}} of configuration type {{configurationType}} to device {{deviceName}}"
+msgstr ""
+
+msgid "Send configuration snapshot {{snapshotName}} to device {{deviceName}}"
+msgstr ""
+
+msgid "Send connection status unknown"
+msgstr ""
+
+msgid "Send connection: not monitored"
+msgstr ""
+
+msgid "Send connection: offline"
+msgstr ""
+
+msgid "Send connection: online"
+msgstr ""
+
+msgid "Send connector lifecycle"
+msgstr ""
+
+msgid "Send events on topic subscriptions"
+msgstr ""
+
+msgid ""
+"Send events when status for outbound notifications changes.\n"
+"                    Be aware this can cause additional costs"
+msgstr ""
+
+msgid ""
+"Send events when status of a connector changes. Be aware\n"
+"                    this can cause additional costs"
+msgstr ""
+
+msgid ""
+"Send events when the subscription for a topic changes. Be\n"
+"                    aware this can cause additional costs"
+msgstr ""
+
+msgid "Send mapping statistics"
+msgstr ""
+
+msgid "Send mapping status"
+msgstr ""
+
+msgid "Send me information about outages, maintenance or updates."
+msgstr ""
+
+msgid "Send message \"{{str}}\"."
+msgstr ""
+
+msgid "Send notification lifecycle"
+msgstr ""
+
+msgid ""
+"Send statics about how often a mapping was applied. Be\n"
+"                    aware this can cause additional costs"
+msgstr ""
+
+msgid "Sends the result to Cumulocity using a test device"
+msgstr ""
+
+msgid "Sent with the message and available in your code."
+msgstr ""
+
+msgid "Server public key"
+msgstr ""
+
+msgid "Service configuration"
+msgstr ""
+
+msgid "Service configuration restored from file."
+msgstr ""
+
+msgid "Service events"
+msgstr ""
+
+msgid "Service logs"
+msgstr ""
+
+msgid "Session TTL (minutes)"
+msgstr ""
+
+msgid "Set size"
+msgstr ""
+
+msgid ""
+"Set size inbound Id cache. After changing the size you have\n"
+"                    to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set size inventory cache. After changing the size you have\n"
+"                    to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set size of the outbound external Id cache. Used by outbound mappings\n"
+"                    with \"useExternalId\" enabled to avoid resolving the external Id from Cumulocity on every\n"
+"                    message. After changing the size you have to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set time after which complete cache in cleared. This is\n"
+"                    useful when you plan to delete a device or assign an\n"
+"                    external id to different device"
+msgstr ""
+
+msgid ""
+"Set time after which complete outbound Id cache is cleared. This is\n"
+"                    useful when you plan to delete a device or re-assign an\n"
+"                    external id to a different device"
+msgstr ""
+
+msgid ""
+"Set time in minutes after which the flow state of a Smart Function or Java Extension\n"
+"                    mapping is cleared when that mapping has not written it. Each mapping expires on its own. Set to 0\n"
+"                    to disable TTL."
+msgstr ""
+
+msgid "Set to current time"
+msgstr ""
+
+msgid "Set up two-factor authentication"
+msgstr ""
+
+msgid "Sets a rolling time window relative to the current time. As time progresses, the window automatically shifts to maintain the selected duration, always showing the most recent data."
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Setup completed"
+msgstr ""
+
+msgid "Setup completed with warnings"
+msgstr ""
+
+msgid "Setup not completed"
+msgstr ""
+
+msgid "Severity"
+msgstr ""
+
+msgid "Share your feedback, suggestions, or any issues you\\u2019ve encountered."
+msgstr ""
+
+msgid "Shared User Manager"
+msgstr ""
+
+msgid "Shared code with agent:"
+msgstr ""
+
+msgid "Should have at least {{ minLength }} characters."
+msgstr ""
+
+msgid "Should have at least {{ requiredLength }} characters."
+msgstr ""
+
+msgid "Should have at most {{ maxLength }} characters."
+msgstr ""
+
+msgid "Should have at most {{ requiredLength }} characters."
+msgstr ""
+
+msgid "Show Next Test Result"
+msgstr ""
+
+msgid "Show all paths"
+msgstr ""
+
+msgid "Show details"
+msgstr ""
+
+msgid "Show in navigator"
+msgstr ""
+
+msgid "Show items with identifier"
+msgstr ""
+
+msgid "Show items with tags"
+msgstr ""
+
+msgid "Show items with title"
+msgstr ""
+
+msgid "Show only messages from devices whose C8Y type matches this value."
+msgstr ""
+
+msgid "Show or hide the metadata fields in this template"
+msgstr ""
+
+msgid "Show password"
+msgstr ""
+
+msgid "Show reasoning"
+msgstr ""
+
+msgid "Showing the {{shown}} most recent of {{total}} status transitions in this session"
+msgstr ""
+
+msgid "Simulator state is invalid: {{violations}}"
+msgstr ""
+
+msgid "Single SVG, inherits text color via currentColor."
+msgstr ""
+
+msgid "Single color"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Size inbound Id cache"
+msgstr ""
+
+msgid "Size inventory cache"
+msgstr ""
+
+msgid "Size outbound Id cache"
+msgstr ""
+
+msgid "Skip"
+msgstr ""
+
+msgid "Skip for now"
+msgstr ""
+
+msgid "Skip to content"
+msgstr ""
+
+msgid "Skipped {{skippedCount}} HTTP connector(s): the HTTP connector is created automatically and cannot be imported."
+msgstr ""
+
+msgid "Slash, single or double dots and white space not allowed."
+msgstr ""
+
+msgid "Smart Function"
+msgstr ""
+
+msgid "Smart Function execution limits"
+msgstr ""
+
+msgid "Smart group"
+msgstr ""
+
+msgid "Smart rule \"{{name}}\" activated."
+msgstr ""
+
+msgid "Smart rule \"{{name}}\" created."
+msgstr ""
+
+msgid "Smart rule \"{{name}}\" deactivated."
+msgstr ""
+
+msgid "Smart rule \"{{name}}\" deleted."
+msgstr ""
+
+msgid "Smart rule \"{{name}}\" updated."
+msgstr ""
+
+msgid "Smart rule activated."
+msgstr ""
+
+msgid "Smart rule created."
+msgstr ""
+
+msgid "Smart rule deactivated."
+msgstr ""
+
+msgid "Smart rule deleted."
+msgstr ""
+
+msgid "Smart rule updated."
+msgstr ""
+
+msgid "SmartFunction AI Agent"
+msgstr ""
+
+msgid "SmartREST template with ID \"{{templateId}}\" doesn't exist."
+msgstr ""
+
+msgid "Software"
+msgstr ""
+
+msgid "Some entries might not be shown. Try narrowing search criteria."
+msgstr ""
+
+msgid ""
+"Some of the user settings are not editable here because they are managed via your\n"
+"      authorization server."
+msgstr ""
+
+msgid "Some subscriptions could not be created: {{count}} device(s) failed. Check Service Events for details."
+msgstr ""
+
+msgid "Sort column \"{{ name }}\""
+msgstr ""
+
+msgid "Source"
+msgstr ""
+
+msgid "Source API"
+msgstr ""
+
+msgid "Source Expression"
+msgstr ""
+
+msgid "Source Result"
+msgstr ""
+
+msgid "Source Template - {{ sourceSystem }}"
+msgstr ""
+
+msgid "Source Template - {{system}}"
+msgstr ""
+
+msgid "Source and device"
+msgstr ""
+
+msgid "SourceTemplate must be valid JSON."
+msgstr ""
+
+msgid "SparkPlug B"
+msgstr ""
+
+msgid "Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static)."
+msgstr ""
+
+msgid "Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices."
+msgstr ""
+
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgstr ""
+
+msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
+msgstr ""
+
+msgid "Specify the exact start and end date/time of the time period to analyse. This provides a static view of historical data within the selected timeframe."
+msgstr ""
+
+msgid "Split view interface"
+msgstr ""
+
+msgid "Split view list"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Start date must be before end date."
+msgstr ""
+
+msgid "Start exploring messages…"
+msgstr ""
+
+msgid "Start the setup wizard."
+msgstr ""
+
+msgid "Start typing to search"
+msgstr ""
+
+msgid "Start typing to search, for example, {{ example }}"
+msgstr ""
+
+msgid "Start voice input"
+msgstr ""
+
+msgid "Starts with"
+msgstr ""
+
+msgid "State"
+msgstr ""
+
+msgid "Statistic processed"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Step"
+msgstr ""
+
+msgid "Stop session"
+msgstr ""
+
+msgid "Stop voice input"
+msgstr ""
+
+msgid "Store every"
+msgstr ""
+
+msgid "Store service logs"
+msgstr ""
+
+msgid ""
+"Store this tenant's log lines as events so they can be read without access to the\n"
+"                      microservice. Stored as ordinary events, which can count against your storage."
+msgstr ""
+
+msgid "Store up to {{ versionHistoryLimit }} dashboard versions. Any additional versions will replace/delete older ones"
+msgstr ""
+
+msgid "Streaming Analytics"
+msgstr ""
+
+msgid "Streaming analytics`KEEP_ORIGINAL`"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Subject (connector, mapping, ...)"
+msgstr ""
+
+msgid "Submit feedback"
+msgstr ""
+
+msgid "Submitted the Smart Function"
+msgstr ""
+
+msgid "Submitted the substitutions"
+msgstr ""
+
+msgid "Submitting the Smart Function"
+msgstr ""
+
+msgid "Submitting the substitutions"
+msgstr ""
+
+msgid "Subscribed`application`"
+msgstr ""
+
+msgid "Subscription by"
+msgstr ""
+
+msgid "Subscription dynamic"
+msgstr ""
+
+msgid "Subscription failed"
+msgstr ""
+
+msgid "Subscription for this device deleted successfully"
+msgstr ""
+
+msgid "Subscription lifecycle events for connectors"
+msgstr ""
+
+msgid "Subscription outbound"
+msgstr ""
+
+msgid "Subscription request is still being processed – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Subscription request submitted. Subscriptions are processed asynchronously."
+msgstr ""
+
+msgid "Subscription static"
+msgstr ""
+
+msgid "Subscriptions are processed asynchronously. Verify the result in the list below or"
+msgstr ""
+
+msgid "Substitution as JavaScript (SUBSTITUTION_AS_CODE)"
+msgstr ""
+
+msgid "Substitutions defining the device identifier are marked with an \"*\". Before adding a substitution target and source property in templates have to be selected."
+msgstr ""
+
+msgid "Suggested prompts"
+msgstr ""
+
+msgid "Summary"
+msgstr ""
+
+msgid "Support"
+msgstr ""
+
+msgid "Support ESM modules"
+msgstr ""
+
+msgid "Support user access activated."
+msgstr ""
+
+msgid "Support user access deactivated."
+msgstr ""
+
+msgid "Supported file types:"
+msgstr ""
+
+msgid "Switch to inline editing"
+msgstr ""
+
+msgid "Sync with dashboard settings or set independent time controls for this widget."
+msgstr ""
+
+msgid "Synced to dashboard:"
+msgstr ""
+
+msgid "System"
+msgstr ""
+
+msgid "System ID"
+msgstr ""
+
+msgid "System code templates have been re-initialized"
+msgstr ""
+
+msgid "System code templates re-initialized."
+msgstr ""
+
+msgid "System, shared"
+msgstr ""
+
+msgid "TB"
+msgstr ""
+
+msgid "Tags"
+msgstr ""
+
+msgid "Target"
+msgstr ""
+
+msgid "Target API"
+msgstr ""
+
+msgid "Target Expression"
+msgstr ""
+
+msgid "Target Result"
+msgstr ""
+
+msgid "Target Template - {{ targetSystem }}"
+msgstr ""
+
+msgid "Target Template - {{system}}"
+msgstr ""
+
+msgid "Target URL {{targetUrl}} already used by another connector."
+msgstr ""
+
+msgid "Target and device"
+msgstr ""
+
+msgid "Target asset model"
+msgstr ""
+
+msgid "TargetTemplate must be valid JSON."
+msgstr ""
+
+msgid "Telephone"
+msgstr ""
+
+msgid "Templates"
+msgstr ""
+
+msgid "Tenant \"{{tenant}}\" activated."
+msgstr ""
+
+msgid "Tenant \"{{tenant}}\" created."
+msgstr ""
+
+msgid "Tenant \"{{tenant}}\" deleted."
+msgstr ""
+
+msgid "Tenant \"{{tenant}}\" suspended."
+msgstr ""
+
+msgid "Tenant \"{{tenant}}\" updated: {{properties}}."
+msgstr ""
+
+msgid "Tenant ID"
+msgstr ""
+
+msgid "Tenant Manager"
+msgstr ""
+
+msgid "Tenant activated."
+msgstr ""
+
+msgid "Tenant certificate authority (CA) created for tenant \"{{ tenantId }}\""
+msgstr ""
+
+msgid "Tenant certificate authority (CA) re-signed certificate for device: \"{{ deviceId }}\"."
+msgstr ""
+
+msgid "Tenant certificate authority (CA) renewal for tenant \"{{ tenantId }}\" failed"
+msgstr ""
+
+msgid "Tenant certificate authority (CA) signed certificate for device: \"{{ deviceId }}\"."
+msgstr ""
+
+msgid "Tenant certificate authority (CA) was renewed for tenant \"{{ tenantId }}\""
+msgstr ""
+
+msgid "Tenant created."
+msgstr ""
+
+msgid "Tenant deleted."
+msgstr ""
+
+msgid "Tenant suspended"
+msgstr ""
+
+msgid "Tenant updated."
+msgstr ""
+
+msgid "Test connection"
+msgstr ""
+
+msgid "Test device"
+msgstr ""
+
+msgid "Test device deleted."
+msgstr ""
+
+msgid "Test device {{testDevice}} created; remove it under Monitoring > Test device."
+msgstr ""
+
+msgid "Test devices are listed under Monitoring > Test device."
+msgstr ""
+
+msgid "Test execution failed"
+msgstr ""
+
+msgid "Test mapping"
+msgstr ""
+
+msgid "Tested a JSONata expression"
+msgstr ""
+
+msgid "Testing"
+msgstr ""
+
+msgid "Testing a JSONata expression"
+msgstr ""
+
+msgid "Testing a mapping needs the Dynamic Mapper admin or create role."
+msgstr ""
+
+msgid "Testing is not available for this combination of payload type and transformation type."
+msgstr ""
+
+msgid "Text"
+msgstr ""
+
+msgid "Thank you for the feedback!"
+msgstr ""
+
+msgid "Thank you for your feedback."
+msgstr ""
+
+msgid "The CA certificate has not been renewed; however, it may still have sufficient validity remaining."
+msgstr ""
+
+msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
+msgstr ""
+
+msgid "The JSON path in the target template where the value extracted from the source is written to."
+msgstr ""
+
+msgid "The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name"
+msgstr ""
+
+msgid "The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name"
+msgstr ""
+
+msgid "The collected log is not available."
+msgstr ""
+
+msgid "The column header name is too similar to \"{{ value }}\"."
+msgstr ""
+
+msgid "The complete log of the selected microservice instance, including the lines of every tenant that shares it."
+msgstr ""
+
+msgid "The counter for the total number of items might be inaccurate."
+msgstr ""
+
+msgid ""
+"The current application is not owned by this tenant. Clone the application before\n"
+"                  running the setup."
+msgstr ""
+
+msgid "The dashboard appearance matches the UI appearance."
+msgstr ""
+
+msgid "The dashboard has dark appearance, that is, light text on dark background."
+msgstr ""
+
+msgid "The dashboard has light appearance, that is, dark text on light background."
+msgstr ""
+
+msgid "The dashboard is styled using the brand palette."
+msgstr ""
+
+msgid "The data cannot be retrieved because the fragment and series combination <code>{{ seriesParam }}</code> has an invalid format. Please verify your fragment and series selections in the data point configuration. The correct format should be <code>{{ validFormat }}</code>."
+msgstr ""
+
+msgid "The expression extracts an array. To create one request per element, add the substitution and then switch on \"Expand as array\" in the substitution table."
+msgstr ""
+
+msgid "The extension {{extensionName}} with event {{eventName}} is not loaded..."
+msgstr ""
+
+msgid "The filename exceeds limit of {{ limit }} characters."
+msgstr ""
+
+msgid "The filename is too long."
+msgstr ""
+
+msgid "The filter expression must evaluate to a boolean value: either true or false"
+msgstr ""
+
+msgid "The filter expression must return of boolean type"
+msgstr ""
+
+msgid "The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = \"lora-device-type\"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "The following icons will be imported:"
+msgstr ""
+
+msgid "The following icons will be skipped:"
+msgstr ""
+
+msgid "The following operations are supported:"
+msgstr ""
+
+msgid "The last saved status of the dashboard"
+msgstr ""
+
+msgid ""
+"The layout and configuration of this dashboard is used by all other assets of model type\n"
+"  <strong>{{ dashboardType }}</strong>. Any changes made to this dashboard instance will be applied to all\n"
+"  other instances."
+msgstr ""
+
+msgid "The list shows only lines written while the selected mapping processed a payload. Connector lines belong to no mapping."
+msgstr ""
+
+msgid ""
+"The listed fragments will be cached and can be referenced in\n"
+"                    'filterInventory'. Each entry can be an exact fragment name (e.g. <code>type</code>,\n"
+"                    <code>c8y_Hardware</code>) or a glob pattern using <code>*</code> (any sequence of\n"
+"                    characters) and <code>?</code> (single character), e.g.\n"
+"                    <code>sparkPlugB_DBIRTH_*</code> to cache all fragments whose name starts with\n"
+"                    <code>sparkPlugB_DBIRTH_</code>."
+msgstr ""
+
+msgid "The mapping could not be saved"
+msgstr ""
+
+msgid "The mapping from the link was not found. Showing all lines."
+msgstr ""
+
+msgid "The mapping produced no request for this payload."
+msgstr ""
+
+msgid "The mapping produced no request, so nothing was sent."
+msgstr ""
+
+msgid "The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally."
+msgstr ""
+
+msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgstr ""
+
+msgid "The mapping was saved, but checking the device subscriptions failed."
+msgstr ""
+
+msgid "The max failure count must not be negative."
+msgstr ""
+
+msgid "The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once."
+msgstr ""
+
+msgid "The message recording (formerly “snooping”) feature has been removed. It is replaced by the"
+msgstr ""
+
+msgid "The microservice log lines of this tenant that its administrators can read under Monitoring &gt; Service logs."
+msgstr ""
+
+msgid "The name of the LNS connection to update can't be empty."
+msgstr ""
+
+msgid "The password of the user that you are currently logged in with."
+msgstr ""
+
+msgid "The platform log is not available to your tenant."
+msgstr ""
+
+msgid "The processing timeout must be greater than the CPU time limit."
+msgstr ""
+
+msgid "The provided security token does not match the token stored for device \"{{deviceId}}\". You have reached the maximum number of failed attempts while trying to register this device. The request will now be blocked and must be removed manually to restart the process."
+msgstr ""
+
+msgid "The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgstr ""
+
+msgid "The referenced device does not exist and createNonExistingDevice is disabled for this mapping. Do you want to assume for this test that the device exists?"
+msgstr ""
+
+msgid "The required and optional properties to register and setup LWM2M devices"
+msgstr ""
+
+msgid "The response was truncated because the maximum output tokens limit ({{ maxOutputTokens }}) configured by this application for a single assistant response was reached."
+msgstr ""
+
+msgid "The response was truncated because the maximum output tokens limit configured by this application for a single assistant response was reached."
+msgstr ""
+
+msgid "The selected asset has no children."
+msgstr ""
+
+msgid "The selected file is not of a supported type. Supported file types are: {{ accept }}."
+msgstr ""
+
+msgid "The selected file is not supported."
+msgstr ""
+
+msgid "The selected file is too large. The size limit is {{ limit }}."
+msgstr ""
+
+msgid "The selected name is too long. Please try a shorter one."
+msgstr ""
+
+msgid "The template contains the dummy field <code>_TOPIC_LEVEL_</code>..."
+msgstr ""
+
+msgid "The templates below are the ones currently available in your tenant. Each one demonstrates:"
+msgstr ""
+
+msgid "The time context can be configured in the widget view mode."
+msgstr ""
+
+msgid "The time context can only get changed in the configuration."
+msgstr ""
+
+msgid "The transformation type"
+msgstr ""
+
+msgid "The update method is determined by the widget type. Some widgets support real-time updates via WebSocket connection, while others use periodic refreshes."
+msgstr ""
+
+msgid "The uploaded file appears to be binary. Switching to inline editing will discard it. Do you want to continue?"
+msgstr ""
+
+msgid "The uploaded image cannot be bigger than 4 MB. Please upload a smaller one."
+msgstr ""
+
+msgid "The widget appearance matches the dashboard appearance."
+msgstr ""
+
+msgid "The widget content overlays the header."
+msgstr ""
+
+msgid "The widget has a small separation border between header and content."
+msgstr ""
+
+msgid "The widget has dark appearance, that is, light text on dark background."
+msgstr ""
+
+msgid "The widget has light appearance, that is, dark text on light background."
+msgstr ""
+
+msgid "The widget has no background."
+msgstr ""
+
+msgid "The widget has no border between header and content."
+msgstr ""
+
+msgid "The widget header is not shown."
+msgstr ""
+
+msgid "The widget is bound to the global time context."
+msgstr ""
+
+msgid "The widget is styled with the main brand color."
+msgstr ""
+
+msgid "Theme"
+msgstr ""
+
+msgid "There are no assets matching the filter."
+msgstr ""
+
+msgid "There was an error processing the AI response."
+msgstr ""
+
+msgid "These beta capabilities may change or be removed before final release. We value your feedback. The descriptions for the features below are available only in English."
+msgstr ""
+
+msgid "These cookies are required to enable core site functionality. They perform a task or operation without which a site's functionality would not be possible."
+msgstr ""
+
+msgid "These cookies are used to support you during your first steps with the product, to deliver content tailored to your needs, and to collect usage statistics."
+msgstr ""
+
+msgid "These cookies are used to target advertising to a user."
+msgstr ""
+
+msgid "This action will revoke the user's stored TOTP secret which will require a new setup."
+msgstr ""
+
+msgid ""
+"This application (or any plugin that you added recently) has pre-requirements that\n"
+"                needs to be configured first. This wizard will guide you through the steps that are\n"
+"                necessary to get your customized application up and running."
+msgstr ""
+
+msgid "This application is already assigned to tenant \"{{tenant}}\"."
+msgstr ""
+
+msgid "This command can be used to migrate LWM2M devices which are created in a non-standard way. It can take comma-separated device managed object IDs as parameters. If the IDs are specified then the migration will be done only for those devices. If the command is sent without any parameters then the agent will look up for possible LWM2M devices that are not created in a standard way and try to migrate them. Usage: migrateLwm2mDevices 1122,3344 or migrateLwm2mDevices"
+msgstr ""
+
+msgid "This command returns a list of shell commands with description that can be created for the LWM2M device connector."
+msgstr ""
+
+msgid "This connector is currently enabled. Disable it first to edit its configuration."
+msgstr ""
+
+msgid "This conversation is too large to save. To keep saving, start a new conversation."
+msgstr ""
+
+msgid "This date is after the latest allowed date."
+msgstr ""
+
+msgid "This date is before the earliest allowed date."
+msgstr ""
+
+msgid "This date is invalid."
+msgstr ""
+
+msgid "This expression is required..."
+msgstr ""
+
+msgid "This field is required."
+msgstr ""
+
+msgid "This field must contain a number."
+msgstr ""
+
+msgid "This field must not contain only whitespaces"
+msgstr ""
+
+msgid "This is a default dashboard."
+msgstr ""
+
+msgid "This is not useful"
+msgstr ""
+
+msgid "This is useful"
+msgstr ""
+
+msgid "This login mode was already set by another administrator. Refresh the page to update the data."
+msgstr ""
+
+msgid "This mapping already has a Smart Function. I can review the existing code and suggest improvements, or generate a new one from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+msgstr ""
+
+msgid "This mapping already has substitutions defined. I can review them and suggest improvements, or generate a new set from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+msgstr ""
+
+msgid "This mapping has changes that have not been saved. Leaving now discards them."
+msgstr ""
+
+msgid "This mapping has unpublished draft changes"
+msgstr ""
+
+msgid "This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>."
+msgstr ""
+
+msgid "This name conflicts with a built-in icon. Use the Override option instead, or choose a different name."
+msgstr ""
+
+msgid "This operation is only triggered by the agent when user uploads a CSV file with a list of endpoint IDs to delete from the platform. The source of the operation is the LWM2M device connector. Users are not able to trigger this operation using the shell command."
+msgstr ""
+
+msgid "This operation is only triggered by the agent when user uploads a CSV file with all required information to register new LWM2M devices. The source of the operation is the LWM2M device connector. Users are not able to trigger this operation using the shell command."
+msgstr ""
+
+msgid "This password has already been used earlier. Use a different one."
+msgstr ""
+
+msgid "This payload format requires the Smart Function transformation type."
+msgstr ""
+
+msgid "This payload type is not edited as JSON. The mapper decodes it, or your code receives the raw data."
+msgstr ""
+
+msgid "This replaces the current service configuration."
+msgstr ""
+
+msgid "This rescans the full inventory for type \"{{type}}\" and subscribes any existing device not already covered. This can take a while on large inventories. Continue?"
+msgstr ""
+
+msgid "This session had an error-driven transition (unexpected disconnect, retry, or failure)"
+msgstr ""
+
+msgid "This step was not completed but it is also not required."
+msgstr ""
+
+msgid "This tenant does not have the {{agentManager}} microservice. Please contact your administrator."
+msgstr ""
+
+msgid "This widget cannot be rendered because the current application does not support the following component:"
+msgstr ""
+
+msgid "This widget does not need any specific configuration."
+msgstr ""
+
+msgid "This widget does not provide any preview."
+msgstr ""
+
+msgid "This widget is in sync with the dashboard auto refresh context."
+msgstr ""
+
+msgid "This widget is in sync with the dashboard realtime context."
+msgstr ""
+
+msgid "This widget is in sync with the dashboard time range."
+msgstr ""
+
+msgid ""
+"This widget is used within a dashboard template, so the asset selector is unavailable. The\n"
+"          widget automatically inherits the asset from the context in which the dashboard is\n"
+"          displayed."
+msgstr ""
+
+msgid "This will remove your custom override and restore the original icon."
+msgstr ""
+
+msgid "This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. Your shared code will NOT be affected. Any customizations made to system templates will be lost. Do you want to proceed?"
+msgstr ""
+
+msgid "TiB"
+msgstr ""
+
+msgid "Time avg / max"
+msgstr ""
+
+msgid "Time context"
+msgstr ""
+
+msgid "Time interval"
+msgstr ""
+
+msgid "Time mode"
+msgstr ""
+
+msgid "Time since previous transition"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "To change the language in the entire application, we recommend you to reload the page. If you have any unsaved changes, you can reload later. How would you like to proceed?"
+msgstr ""
+
+msgid "To change the tracking option in the entire application, you need to reload the page. If you have any unsaved changes, you can reload later. How would you like to proceed?"
+msgstr ""
+
+msgid "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+msgstr ""
+
+msgid "To\\`date\\`"
+msgstr ""
+
+msgid "Toggle"
+msgstr ""
+
+msgid "Toggle collapse of the reasoning section"
+msgstr ""
+
+msgid "Toggle connection activation"
+msgstr ""
+
+msgid "Toggle display of the reasoning section"
+msgstr ""
+
+msgid "Toggle mapping activation"
+msgstr ""
+
+msgid "Toggle navigation bar"
+msgstr ""
+
+msgid "Toggle realtime"
+msgstr ""
+
+msgid "Too many files selected."
+msgstr ""
+
+msgid "Too many files selected. Limit: {{ fileCountMax }}."
+msgstr ""
+
+msgid "Too many requests. Try again later."
+msgstr ""
+
+msgid "Tool approval actions"
+msgstr ""
+
+msgid "Tool approval mode"
+msgstr ""
+
+msgid "Tool call: {{toolName}}"
+msgstr ""
+
+msgid "Tool calls will run without asking for approval, in this and every future chat, until you turn this off again. Tools requiring explicit approval will still ask."
+msgstr ""
+
+msgid "Tool calls will run without asking for approval, in this and every future chat, until you turn this off again. Tools that always need approval will still ask."
+msgstr ""
+
+msgid "Tool input"
+msgstr ""
+
+msgid "Tool output"
+msgstr ""
+
+msgid "Tool request: {{toolName}}"
+msgstr ""
+
+msgid "Tool {{toolName}} requires approval"
+msgstr ""
+
+msgid "Top"
+msgstr ""
+
+msgid "Topic"
+msgstr ""
+
+msgid "Transformation"
+msgstr ""
+
+msgid "Transformation Type"
+msgstr ""
+
+msgid "Transformation type is required"
+msgstr ""
+
+msgid "Transformation types"
+msgstr ""
+
+msgid "Translate dashboard title if possible"
+msgstr ""
+
+msgid "Translate widget titles if possible"
+msgstr ""
+
+msgid "Translates dashboard or widget titles if they are written in English and their translations are available in the loaded standard or custom translation resources."
+msgstr ""
+
+msgid "Translations"
+msgstr ""
+
+msgid "Transparent`style`"
+msgstr ""
+
+msgid "Transport fields"
+msgstr ""
+
+msgid "Transport`icons-category`"
+msgstr ""
+
+msgid "Tree node toggle"
+msgstr ""
+
+msgid "Troubleshooting"
+msgstr ""
+
+msgid "Trusted certificate deleted from tenant \"{{ tenantId }}\""
+msgstr ""
+
+msgid "Trusted certificate updated on tenant \"{{ tenantId }}\""
+msgstr ""
+
+msgid "Try adjusting your search or filter to find what you\\'re looking for."
+msgstr ""
+
+msgid "Try to filter or open the asset grid to show all devices and groups."
+msgstr ""
+
+msgid "Try to rephrase your search word."
+msgstr ""
+
+msgid "Two SVGs required: a dark layer and a light accent layer."
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Type here"
+msgstr ""
+
+msgid "Type to filter icons\\u2026"
+msgstr ""
+
+msgid "Type your message here..."
+msgstr ""
+
+msgid "Type your message..."
+msgstr ""
+
+msgid "UI settings"
+msgstr ""
+
+msgid "UTC"
+msgstr ""
+
+msgid "Unable to add the column because the property definition could not be found."
+msgstr ""
+
+msgid "Unable to find option by given key: sigfox-agent/provider.token"
+msgstr ""
+
+msgid "Unable to get system option: \"{{option}}\"."
+msgstr ""
+
+msgid "Unable to get tenant option: \"{{option}}\"."
+msgstr ""
+
+msgid "Unable to load asset properties. Please try again later."
+msgstr ""
+
+msgid "Unable to migrate devices"
+msgstr ""
+
+msgid "Unable to retrieve the following managed object for data point \"{{datapointLabel}}\": \"{{deviceName}}\" ({{deviceId}})."
+msgstr ""
+
+msgid "Unable to retrieve the following managed object: \"{{entityName}}\" ({{entityId}})."
+msgstr ""
+
+msgid "Unassigned devices"
+msgstr ""
+
+msgid "Unavailable while real-time or auto-refresh is on."
+msgstr ""
+
+msgid "Undo"
+msgstr ""
+
+msgid "Undo: \"{{ changeToUndo }}\""
+msgstr ""
+
+msgid "Unexpected error occurred while accessing the cached LNS connections map with key \"{{ connectionName }}\"."
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Unknown error occurred"
+msgstr ""
+
+msgid "Unpacked`application`"
+msgstr ""
+
+msgid "Unsafe content was removed from the uploaded SVG:"
+msgstr ""
+
+msgid "Unsaved Changes"
+msgstr ""
+
+msgid "Update Filter Execution Mapping"
+msgstr ""
+
+msgid "Update bulk operation"
+msgstr ""
+
+msgid "Update bulk operation: {{updatesList}}"
+msgstr ""
+
+msgid "Update configuration"
+msgstr ""
+
+msgid "Update configuration to: {{ name }}."
+msgstr ""
+
+msgid "Update connector"
+msgstr ""
+
+msgid "Update existing device"
+msgstr ""
+
+msgid "Update firmware to: \"{{ name }}\""
+msgstr ""
+
+msgid "Update firmware to: \"{{ name }}\" (version: {{ version }})"
+msgstr ""
+
+msgid "Update substitution"
+msgstr ""
+
+msgid "Update successful"
+msgstr ""
+
+msgid "Update the managed object of the device if it already exists."
+msgstr ""
+
+msgid "Updated"
+msgstr ""
+
+msgid "Updated child device of \"{{parentDeviceName}}\" (ID: {{parentDeviceId}})."
+msgstr ""
+
+msgid "Updated code template metadata"
+msgstr ""
+
+msgid "Updated widgets: {{ widgetList }}."
+msgstr ""
+
+msgid "Upload SVG icon"
+msgstr ""
+
+msgid "Upload ZIP file"
+msgstr ""
+
+msgid "Upload a *.jar file"
+msgstr ""
+
+msgid "Upload a JSON file"
+msgstr ""
+
+msgid ""
+"Upload a ZIP file previously exported from the icon selector to import custom icons into\n"
+"        this tenant."
+msgstr ""
+
+msgid "Upload a binary"
+msgstr ""
+
+msgid "Upload a custom SVG icon and assign it to a collection to keep your icons organized."
+msgstr ""
+
+msgid "Upload an SVG file."
+msgstr ""
+
+msgid "Upload dark layer SVG"
+msgstr ""
+
+msgid "Upload file"
+msgstr ""
+
+msgid "Upload in progress"
+msgstr ""
+
+msgid "Upload light layer SVG"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Use * as a wildcard character"
+msgstr ""
+
+msgid "Use Previous or Next to keep looking."
+msgstr ""
+
+msgid "Use Previous to look further back."
+msgstr ""
+
+msgid "Use Reset Dry Run to run it again"
+msgstr ""
+
+msgid "Use common timestamp resources 5518 and 6050 or object specific timestamp for object 6 reported by the device if available"
+msgstr ""
+
+msgid "Use context asset \"{{ deviceName }}\""
+msgstr ""
+
+msgid "Use external id"
+msgstr ""
+
+msgid "Use the Collected log switch to change to the live platform log."
+msgstr ""
+
+msgid "Use the Collected log switch to search by mapping over the whole stored range."
+msgstr ""
+
+msgid "Use the captured payload directly as the source template when creating or editing a mapping."
+msgstr ""
+
+msgid "Use this option if the device will resolve the binary itself. No file is uploaded."
+msgstr ""
+
+msgid "Use without asset \"{{ deviceName }}\""
+msgstr ""
+
+msgid "Used as a filter to select which mappings apply when a notification arrives."
+msgstr ""
+
+msgid "Used tool {{toolName}}"
+msgstr ""
+
+msgid "User \"{{name}}\" created"
+msgstr ""
+
+msgid "User \"{{name}}\" deleted"
+msgstr ""
+
+msgid "User \"{{name}}\" updated: {{updatesList}}"
+msgstr ""
+
+msgid "User \"{{userName}}\" is managed by a remote identity management service defined by an administrator, direct update is forbidden."
+msgstr ""
+
+msgid "User \"{{username}}\" already exists."
+msgstr ""
+
+msgid "User TOTP secret revoked."
+msgstr ""
+
+msgid "User created"
+msgstr ""
+
+msgid "User deleted"
+msgstr ""
+
+msgid "User interface`icons-category`"
+msgstr ""
+
+msgid "User logout"
+msgstr ""
+
+msgid "User menu"
+msgstr ""
+
+msgid "User message"
+msgstr ""
+
+msgid "User message at {{ time }}"
+msgstr ""
+
+msgid "User password update"
+msgstr ""
+
+msgid "User saved."
+msgstr ""
+
+msgid "User settings"
+msgstr ""
+
+msgid "User to work in Cockpit application. This does not include the access to any device data."
+msgstr ""
+
+msgid "User updated"
+msgstr ""
+
+msgid "User with email \"{{email}}\" already exists."
+msgstr ""
+
+msgid "User with username or login alias \"{{usernameOrAlias}}\" already exists."
+msgstr ""
+
+msgid "Username"
+msgstr ""
+
+msgid "Username and login alias must be different."
+msgstr ""
+
+msgid "Username must contain at least 3 characters."
+msgstr ""
+
+msgid "Username must not contain spaces nor slashes (\"/\", \"\\\") nor (\"+\"), (\":\"), (\"$\") signs."
+msgstr ""
+
+msgid "Using widget custom time settings"
+msgstr ""
+
+msgid "Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results."
+msgstr ""
+
+msgid "Value"
+msgstr ""
+
+msgid "Value and unit"
+msgstr ""
+
+msgid "Value must be a full or relative URL."
+msgstr ""
+
+msgid "Value must be defined."
+msgstr ""
+
+msgid "Value must be greater than respective minimum."
+msgstr ""
+
+msgid "Value must be greater than scale minimum."
+msgstr ""
+
+msgid "Value must be less than respective maximum."
+msgstr ""
+
+msgid "Value must be less than scale maximum."
+msgstr ""
+
+msgid "Value, unit and time"
+msgstr ""
+
+msgid "Verification code"
+msgstr ""
+
+msgid "Verify"
+msgstr ""
+
+msgid ""
+"Verify the setup result. If any step is not finished but required, you need to ensure that\n"
+"        you have finished the step."
+msgstr ""
+
+msgid "Verifying\\u2026"
+msgstr ""
+
+msgid "Version"
+msgstr ""
+
+msgid "Version history"
+msgstr ""
+
+msgid "Version {{version}} of {{name}} is saved, but the mapping was not activated."
+msgstr ""
+
+msgid "Version/Status"
+msgstr ""
+
+msgid "Versioning mappings"
+msgstr ""
+
+msgid "Versions"
+msgstr ""
+
+msgid "Versions of"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "View (deprecated)"
+msgstr ""
+
+msgid "View Code"
+msgstr ""
+
+msgid "View configuration"
+msgstr ""
+
+msgid "View connector"
+msgstr ""
+
+msgid "Voice input failed. Try again."
+msgstr ""
+
+msgid "Waiting for messages on <code>{{ sessionTopic }}</code>…"
+msgstr ""
+
+msgid "Warning"
+msgstr ""
+
+msgid "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
+msgstr ""
+
+msgid "Warning`alarm`"
+msgstr ""
+
+msgid "We recommend you to meet these conditions for a stronger password:"
+msgstr ""
+
+msgid "We value your feedback."
+msgstr ""
+
+msgid "We want to hear from you. Share your feedback on the <strong>{{featurePreviewName}}</strong> feature preview to help us improve Cumulocity."
+msgstr ""
+
+msgid "Weather`icons-category`"
+msgstr ""
+
+msgid "Webhook connector"
+msgstr ""
+
+msgid "Welcome to Device Management"
+msgstr ""
+
+msgid "Welcome to {{ appName }}"
+msgstr ""
+
+msgid "Welcome!"
+msgstr ""
+
+msgid "What can I help you with?"
+msgstr ""
+
+msgid "What the mapper reports into the platform event log."
+msgstr ""
+
+msgid "When checked, saves these settings as the default configuration for this dashboard. If unchecked, changes will only apply for the current session and will reset when you reload the page."
+msgstr ""
+
+msgid ""
+"When device isolation for Cumulocity MQTT Service is enabled only registered MQTT\n"
+"                    clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the\n"
+"                    Dynamic Mapper microservice to this tenant."
+msgstr ""
+
+msgid ""
+"When enabled, the SparkPlug B BIRTH fragments (sparkPlugB_NBIRTH,\n"
+"                    sparkPlugB_DBIRTH) are automatically included in the inventory cache for all cached\n"
+"                    managed objects. This removes the need to add these fragments manually to the list\n"
+"                    above."
+msgstr ""
+
+msgid "When enabled, the chart reloads data at a finer or coarser interval as you zoom in or out, so it always shows the number of points you set. When disabled, it reuses the already loaded data."
+msgstr ""
+
+msgid "When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function."
+msgstr ""
+
+msgid "When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings."
+msgstr ""
+
+msgid "Widget"
+msgstr ""
+
+msgid "Widget added"
+msgstr ""
+
+msgid "Widget configuration changed"
+msgstr ""
+
+msgid "Widget gap"
+msgstr ""
+
+msgid "Widget header style"
+msgstr ""
+
+msgid "Widget removed"
+msgstr ""
+
+msgid "Widget time context"
+msgstr ""
+
+msgid "Widget title"
+msgstr ""
+
+msgid "Widget titles"
+msgstr ""
+
+msgid "Widgets rearranged"
+msgstr ""
+
+msgid "Widgets snap to a fixed grid. Resize and reposition them freely."
+msgstr ""
+
+msgid "Widgets stay where placed. Empty space is not filled automatically."
+msgstr ""
+
+msgid "Width"
+msgstr ""
+
+msgid "Width / Height"
+msgstr ""
+
+msgid "Width presets"
+msgstr ""
+
+msgid "Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path."
+msgstr ""
+
+msgid "Working"
+msgstr ""
+
+msgid "Working with device identifiers and external IDs"
+msgstr ""
+
+msgid "Write"
+msgstr ""
+
+msgid "Write the extracted value to the target path as-is. The path must already exist in the target template."
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "You are about to allow a support user from {{companyName}} to access your tenant to help you with your issue."
+msgstr ""
+
+msgid "You are about to allow a support user to access your tenant to help you with your issue."
+msgstr ""
+
+msgid "You are about to block a support user from accessing your tenant to help you with your issue."
+msgstr ""
+
+msgid "You are about to block a support user from {{companyName}} from accessing your tenant to help you with your issue."
+msgstr ""
+
+msgid "You are about to delete a connector. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a mapping extension. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a relation. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a substitution. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete all relations. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid "You are about to delete conversation \"{{ title }}\". This action is irreversible."
+msgstr ""
+
+msgid "You are about to delete multiple {{itemName}}s. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid "You are about to delete relations. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid ""
+"You are about to delete the dashboard \"{{ dashboardName }}\" from all devices of the type \"{{ deviceType }}\".\n"
+"           Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete the dashboard \"{{ dashboardName }}\". Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete the mapping statistic. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete this {{itemName}}. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to permanently delete {{version}} of {{name}}. This cannot be undone. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to permanently discard the draft of {{name}}. All unsaved changes will be lost. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to reset the widgets of this dashboard. All changes to the dashboard widgets will get lost and cannot be recovered. Do you want to proceed?"
+msgstr ""
+
+msgid "You are viewing a read-only dashboard because you don’t have the necessary permissions to modify it."
+msgstr ""
+
+msgid "You can skip the setup now. It will be shown again as soon as you restart the application."
+msgstr ""
+
+msgid "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+msgstr ""
+
+msgid "You don't have permission to change global roles."
+msgstr ""
+
+msgid ""
+"You don't have sufficient rights to setup this application. Contact an application\n"
+"                  administrator to setup the required steps."
+msgstr ""
+
+msgid "You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator."
+msgstr ""
+
+msgid "You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator."
+msgstr ""
+
+msgid "You have unsaved changes. Do you want to save before leaving?"
+msgstr ""
+
+msgid "You must log out in order to apply your changes"
+msgstr ""
+
+msgid "You must log out to apply your changes. Do you want to proceed?"
+msgstr ""
+
+msgid "You reached devices limit. No more devices can be registered."
+msgstr ""
+
+msgid "Your code produces the structure of the target payload."
+msgstr ""
+
+msgid "Your insights and suggestions directly influence the future of the platform."
+msgstr ""
+
+msgid "Your rating: {{ starCount }} star(s)"
+msgstr ""
+
+msgid "Your session has expired. Sign in again and repeat the test."
+msgstr ""
+
+msgid "Your tenant's lines only, at the configured level, kept for a limited time."
+msgstr ""
+
+msgid "Your tenant's lines only."
+msgstr ""
+
+msgid ""
+"\\r\n"
+"            Enter the password of the user that you are currently logged in with.\\r"
+msgstr ""
+
+msgid "a day"
+msgstr ""
+
+msgid "a day ago"
+msgstr ""
+
+msgid "a few seconds"
+msgstr ""
+
+msgid "a few seconds ago"
+msgstr ""
+
+msgid "a minute"
+msgstr ""
+
+msgid "a minute ago"
+msgstr ""
+
+msgid "a month"
+msgstr ""
+
+msgid "a month ago"
+msgstr ""
+
+msgid "a year"
+msgstr ""
+
+msgid "a year ago"
+msgstr ""
+
+msgid "active"
+msgstr ""
+
+msgid "advanced setting(s) hidden. Enable \"Expert settings\" to show them."
+msgstr ""
+
+msgid "after {{date}}"
+msgstr ""
+
+msgid "aggregation"
+msgstr ""
+
+msgid "alarm"
+msgstr ""
+
+msgid "alarms"
+msgstr ""
+
+msgid "align view height"
+msgstr ""
+
+msgid "an hour"
+msgstr ""
+
+msgid "an hour ago"
+msgstr ""
+
+msgid "and"
+msgstr ""
+
+msgid "applicable for LWM2M 1.0"
+msgstr ""
+
+msgid "applications"
+msgstr ""
+
+msgid "applications [{{applicationsList}}] added"
+msgstr ""
+
+msgid "applications [{{applicationsList}}] removed"
+msgstr ""
+
+msgid "applications {{list}} added"
+msgstr ""
+
+msgid "applications {{list}} removed"
+msgstr ""
+
+msgid "are currently defined."
+msgstr ""
+
+msgid "assets"
+msgstr ""
+
+msgid "auto refresh"
+msgstr ""
+
+msgid "available in code as"
+msgstr ""
+
+msgid "before {{date}}"
+msgstr ""
+
+msgid "by\\`user\\`"
+msgstr ""
+
+msgid "bytes"
+msgstr ""
+
+msgid "cancel"
+msgstr ""
+
+msgid "check Service Events"
+msgstr ""
+
+msgid "choose connector ..."
+msgstr ""
+
+msgid "close"
+msgstr ""
+
+msgid "coaps://<LWM2M-server-domain>:<coaps-port>"
+msgstr ""
+
+msgid "code template(s)"
+msgstr ""
+
+msgid "collected log"
+msgstr ""
+
+msgid "columns"
+msgstr ""
+
+msgid "connector:"
+msgstr ""
+
+msgid "connectors"
+msgstr ""
+
+msgid "date/time"
+msgstr ""
+
+msgid "debug"
+msgstr ""
+
+msgid "delegated by: \"{{delegate}}\""
+msgstr ""
+
+msgid "delete \"{{ softwareName }}\""
+msgstr ""
+
+msgid "delete \"{{ softwareName }}\" (version: {{ softwareVersion }})"
+msgstr ""
+
+msgid "description"
+msgstr ""
+
+msgid "description: \"{{ description | translate }}\""
+msgstr ""
+
+msgid "device groups"
+msgstr ""
+
+msgid "device name: \"{{ deviceName }}\""
+msgstr ""
+
+msgid "device type:"
+msgstr ""
+
+msgid "devices"
+msgstr ""
+
+msgid "draft"
+msgstr ""
+
+msgid "e-commerce`icons-category`"
+msgstr ""
+
+msgid "e.g."
+msgstr ""
+
+msgid "e.g. +49 9 876 543 210\\`LOCALIZE\\`"
+msgstr ""
+
+msgid "e.g. Agent name"
+msgstr ""
+
+msgid "e.g. Doe\\`LOCALIZE\\`"
+msgstr ""
+
+msgid "e.g. Joe\\`LOCALIZE\\`"
+msgstr ""
+
+msgid "e.g. My dashboard"
+msgstr ""
+
+msgid "e.g. My report"
+msgstr ""
+
+msgid "e.g. c8y_MQTTDevice"
+msgstr ""
+
+msgid "e.g. joe.doe@example.com\\`LOCALIZE\\`"
+msgstr ""
+
+msgid "e.g. joe.doe\\`LOCALIZE\\`"
+msgstr ""
+
+msgid "e.g. placeholder"
+msgstr ""
+
+msgid "e.g. sensors/#  or  devices/+/data"
+msgstr ""
+
+msgid "e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
+msgstr ""
+
+msgid "e.g. {{ example }}"
+msgstr ""
+
+msgid "event"
+msgstr ""
+
+msgid "events"
+msgstr ""
+
+msgid "external IDs"
+msgstr ""
+
+msgid "failure reason: \"{{ failureReason | translate }}\""
+msgstr ""
+
+msgid "for subscription and deduplication details."
+msgstr ""
+
+msgid "free positioning"
+msgstr ""
+
+msgid "general status: \"{{ generalStatus | translate }}\""
+msgstr ""
+
+msgid "global roles"
+msgstr ""
+
+msgid "global roles [{{globalRolesList}}] added"
+msgstr ""
+
+msgid "global roles [{{globalRolesList}}] removed"
+msgstr ""
+
+msgid "header key"
+msgstr ""
+
+msgid "icon"
+msgstr ""
+
+msgid "in a day"
+msgstr ""
+
+msgid "in a few seconds"
+msgstr ""
+
+msgid "in a minute"
+msgstr ""
+
+msgid "in a month"
+msgstr ""
+
+msgid "in a year"
+msgstr ""
+
+msgid "in an hour"
+msgstr ""
+
+msgid "in milliseconds"
+msgstr ""
+
+msgid "in milliseconds, 0 means device is always online"
+msgstr ""
+
+msgid "in seconds"
+msgstr ""
+
+msgid "in {{ count }} days"
+msgstr ""
+
+msgid "in {{ count }} hours"
+msgstr ""
+
+msgid "in {{ count }} minutes"
+msgstr ""
+
+msgid "in {{ count }} months"
+msgstr ""
+
+msgid "in {{ count }} years"
+msgstr ""
+
+msgid "inbound"
+msgstr ""
+
+msgid "install \"{{ softwareName }}\""
+msgstr ""
+
+msgid "install \"{{ softwareName }}\" (version: {{ softwareVersion }})"
+msgstr ""
+
+msgid "invalid file"
+msgstr ""
+
+msgid "inventory assignment [{{inventoryAssignment}}] added"
+msgstr ""
+
+msgid "inventory assignment [{{inventoryAssignment}}] removed"
+msgstr ""
+
+msgid "inventory objects"
+msgstr ""
+
+msgid "kB"
+msgstr ""
+
+msgid "key: {{key}}"
+msgstr ""
+
+msgid "layout"
+msgstr ""
+
+msgid "line(s) were left out because of the collection limit."
+msgstr ""
+
+msgid "mappings are currently defined."
+msgstr ""
+
+msgid "measurement"
+msgstr ""
+
+msgid "measurements"
+msgstr ""
+
+msgid "medium"
+msgstr ""
+
+msgid "name"
+msgstr ""
+
+msgid "navigator item"
+msgstr ""
+
+msgid "note: \"{{ note }}\""
+msgstr ""
+
+msgid "object"
+msgstr ""
+
+msgid "of {{ allItemsCount }} items"
+msgstr ""
+
+msgid "on"
+msgstr ""
+
+msgid "only Internal"
+msgstr ""
+
+msgid "open"
+msgstr ""
+
+msgid "operation"
+msgstr ""
+
+msgid "operations"
+msgstr ""
+
+msgid "outbound"
+msgstr ""
+
+msgid "owner: \"{{owner}}\""
+msgstr ""
+
+msgid "polling suspended, session still alive on broker"
+msgstr ""
+
+msgid "priority"
+msgstr ""
+
+msgid "problems must be fixed before this mapping can be saved. Your edits are kept."
+msgstr ""
+
+msgid "progress: \"{{ progress }}\""
+msgstr ""
+
+msgid "published"
+msgstr ""
+
+msgid "required"
+msgstr ""
+
+msgid "roles {{list}} added"
+msgstr ""
+
+msgid "roles {{list}} removed"
+msgstr ""
+
+msgid "rows"
+msgstr ""
+
+msgid "search"
+msgstr ""
+
+msgid "setting(s)"
+msgstr ""
+
+msgid "show less"
+msgstr ""
+
+msgid "show more"
+msgstr ""
+
+msgid "source:"
+msgstr ""
+
+msgid "status: \"{{ status | translate }}\""
+msgstr ""
+
+msgid "strong"
+msgstr ""
+
+msgid "the session is active, but the broker rejected the subscribe request, so no messages will arrive:"
+msgstr ""
+
+msgid "theme"
+msgstr ""
+
+msgid "topic:"
+msgstr ""
+
+msgid "total"
+msgstr ""
+
+msgid "transformation type, and delete the originals."
+msgstr ""
+
+msgid "translate dashboard title"
+msgstr ""
+
+msgid "translate widget title"
+msgstr ""
+
+msgid "unknown error"
+msgstr ""
+
+msgid "users"
+msgstr ""
+
+msgid "value"
+msgstr ""
+
+msgid "was removed in release 6.3. Affected mappings are no longer executed. Export them, recreate them using the"
+msgstr ""
+
+msgid "was removed in release 6.3. If you still have affected mappings, export them, recreate them using the"
+msgstr ""
+
+msgid "weak"
+msgstr ""
+
+msgid "widget gap"
+msgstr ""
+
+msgid "widget header style"
+msgstr ""
+
+msgid "widgets"
+msgstr ""
+
+msgid "{{ 'Select Payload Format and Transformation Type' | translate }}"
+msgstr ""
+
+msgid "{{ appName | translate }} (public)"
+msgstr ""
+
+msgid "{{ count }} days"
+msgstr ""
+
+msgid "{{ count }} days ago"
+msgstr ""
+
+msgid "{{ count }} hours"
+msgstr ""
+
+msgid "{{ count }} hours ago"
+msgstr ""
+
+msgid "{{ count }} minutes"
+msgstr ""
+
+msgid "{{ count }} minutes ago"
+msgstr ""
+
+msgid "{{ count }} months"
+msgstr ""
+
+msgid "{{ count }} months ago"
+msgstr ""
+
+msgid "{{ count }} selected"
+msgstr ""
+
+msgid "{{ count }} selected items."
+msgstr ""
+
+msgid "{{ count }} years"
+msgstr ""
+
+msgid "{{ count }} years ago"
+msgstr ""
+
+msgid "{{ dashboardName }} (copy)"
+msgstr ""
+
+msgid "{{ editMode ? 'Edit explorer session' : 'Start exploring messages' }}"
+msgstr ""
+
+msgid "{{ editMode ? 'Update' : 'Start' }}"
+msgstr ""
+
+msgid "{{ filteredItemsCount }} of {{ allItemsCount }} items"
+msgstr ""
+
+msgid "{{ pageFirstItemIdx }} - {{ pageLastItemIdx }} of {{ itemsTotal }}"
+msgstr ""
+
+msgid "{{ seconds }} s`until refresh`"
+msgstr ""
+
+msgid "{{ secondsLeft }} s / {{ interval }} s"
+msgstr ""
+
+msgid "{{ sourceSystem }} Payload&nbsp;"
+msgstr ""
+
+msgid "{{ targetSystem }} Request&nbsp;"
+msgstr ""
+
+msgid "{{ targetSystem }} Response"
+msgstr ""
+
+msgid "{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}"
+msgstr ""
+
+msgid ""
+"{{assetPropertyType}}\n"
+"(temporary)"
+msgstr ""
+
+msgid "{{count}} icon(s) imported."
+msgstr ""
+
+msgid "{{count}} more requests sent; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "{{count}} test devices deleted."
+msgstr ""
+
+msgid "{{failed}} of {{total}} test devices could not be deleted"
+msgstr ""
+
+msgid "{{mapping.name}}"
+msgstr ""
+
+msgid "{{mode}} connector"
+msgstr ""
+
+msgid "{{name}} (handled as {{level}})"
+msgstr ""
+
+msgid "{{name}} has no unpublished changes."
+msgstr ""
+
+msgid "{{title}} with agent:"
+msgstr ""
+
+msgid "· Editing"
+msgstr ""
+
+msgid "… {{count}} earlier entries omitted …"
+msgstr ""
+
+msgid "… {{count}} earlier entry omitted …"
+msgstr ""

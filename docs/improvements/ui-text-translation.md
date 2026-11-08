@@ -1,6 +1,6 @@
 # Translate all UI texts through .po files
 
-Status: Phase 0 done (2026-11-08), Phases 1 and 2 in progress. Affects `dynamic-mapper-ui` only.
+Status: Phases 0 and 1 done (2026-11-08). Phase 2 tooling done; the German catalog is empty and waits for a translator. Affects `dynamic-mapper-ui` only.
 
 ## Summary
 
@@ -103,6 +103,14 @@ Work in this order, one commit per area, so each change is small to review:
 
 Done when: the Phase 0 script reports no unmarked text, and the existing UI tests pass without changes, because English remains the source.
 
+#### Phase 1 results
+
+- The finder reports no unmarked text. It now also flags `gettext(`...${x}...`)` and assignments such as `this.errorMessage = `...``. Allowlisted: log level names, date formats, JSON field names, CSS, and messages sent to the AI agent.
+- Texts with values use `translateService.instant(gettext('... {{x}}'), { x })`. Pure helper functions take a translate function or `TranslateService` as a parameter: `translateValidationErrorCode`, `buildBackendErrorMessage`, `commitSuccessMessage`.
+- Display sites now translate: validation messages, QoS labels, mapping type labels and descriptions, polling intervals.
+- Known gap: validation errors set by the Formly validators in `validation.util.ts` carry an English `message` and are not translated at the field. Check in Phase 4 whether the form field shows them.
+- Error details are still appended to a translated prefix, for example `instant(gettext('Failed to delete relation:')) + error`. That is one message plus a technical detail.
+
 ### Phase 2: extract and add catalogs (half a day plus translation time)
 
 1. Run the extraction and commit `locales/locales.pot`.
@@ -111,6 +119,14 @@ Done when: the Phase 0 script reports no unmarked text, and the existing UI test
 4. Check the size of the bundle before and after. The catalogs add to the download of the app.
 
 Done when: switching the user language in Cumulocity shows translated texts on every page, and an untranslated text shows its English source.
+
+#### Phase 2 results
+
+- `extract-i18n` finds 2,597 messages. It also writes `locales/<language>.po` for 12 languages with the platform translations merged in, so those files are ignored by git (`locales/.gitignore`). Only `locales/locales.pot` is committed.
+- The app must not ship the platform translations again. `scripts/sync-app-catalogs.js` writes `src/locales/<language>.po` with the 1,033 messages the platform catalog does not contain, and keeps translations that already exist. `--check` exits with code 1 when a catalog is out of date, for Phase 3.
+- `src/i18n.ts` imports `src/locales/de.po`. The build produces the app's messages inside `de.json`. An empty `msgstr` is left out, so that text shows English.
+- To add a language: add it to `LANGUAGES` in the script, run it, import the file in `src/i18n.ts`.
+- Open: the languages, the translator, and the review. German is the only catalog, and it has no translations yet.
 
 ### Phase 3: guardrails (half a day)
 

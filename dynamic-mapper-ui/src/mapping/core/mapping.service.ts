@@ -205,7 +205,7 @@ export class MappingService {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw toBackendError(error, buildBackendErrorMessage(error, 'Could not create mapping'));
+      throw toBackendError(error, buildBackendErrorMessage(error, this.translateService.instant(gettext('Could not create mapping')), (t) => this.translateService.instant(t)));
     }
     const m = await response.json();
     this.refreshAfterMutation(mapping.direction);
@@ -255,7 +255,7 @@ export class MappingService {
     }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
+      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText, (t) => this.translateService.instant(t)));
     }
     return response.json();
   }
@@ -285,7 +285,7 @@ export class MappingService {
     );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
+      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText, (t) => this.translateService.instant(t)));
     }
     const mv = await response.json();
     this.clearVersionsCache(id);

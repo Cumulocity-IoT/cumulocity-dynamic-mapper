@@ -381,7 +381,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       return; // the alert has already been raised
     }
 
-    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence);
+    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence, this.translateService);
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
     // Skipped for Save & Activate: its "publish and activate" instruction is carried out below.
@@ -436,7 +436,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         const outcome = await this.publishService.publishDraft(this.mapping);
         if (outcome.cancelled) {
           this.alertService.add({
-            text: gettext(`Saved draft for ${name}. It is not live yet: publish and activate it from the mapping list (Versions).`),
+            text: this.translateService.instant(gettext('Saved draft for {{name}}. It is not live yet: publish and activate it from the mapping list (Versions).'), { name }),
             type: 'success',
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
           });
@@ -445,7 +445,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         // Connector-only change: no draft to publish, but an inactive mapping can still be switched on.
         await this.publishService.activate(this.mapping, this.mapping.version);
       } else {
-        this.alertService.info(gettext(`${name} has no unpublished changes.`));
+        this.alertService.info(this.translateService.instant(gettext('{{name}} has no unpublished changes.'), { name }));
       }
     } catch (error) {
       this.alertService.danger(gettext('Saved, but activating the mapping failed'), (error as Error).message);

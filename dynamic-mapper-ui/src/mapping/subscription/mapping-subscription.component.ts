@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { TranslateService } from '@ngx-translate/core';
 import {
   Component,
   inject,
@@ -97,6 +98,7 @@ export class MappingSubscriptionComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly confirmationService = inject(ConfirmationModalService);
   private readonly router = inject(Router);
+  private readonly translateService = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
 
   showConfigSubscription1 = false;
@@ -438,8 +440,10 @@ export class MappingSubscriptionComponent implements OnInit {
     if (response?.status === SubscriptionStatus.ERROR) {
       const failed = response.failedDeviceIds ?? [];
       this.alertService.warning(
-        gettext('Some subscriptions could not be created:') + ` ${failed.length} ` +
-        gettext('device(s) failed. Check Service Events for details.'),
+        this.translateService.instant(
+          gettext('Some subscriptions could not be created: {{count}} device(s) failed. Check Service Events for details.'),
+          { count: failed.length }
+        ),
         failed.join(', ')
       );
       return;
@@ -516,8 +520,10 @@ export class MappingSubscriptionComponent implements OnInit {
   async resyncType(type: string): Promise<void> {
     const confirmed = await this.confirmationService.confirmWarning(
       gettext('Resync existing devices'),
-      gettext('This rescans the full inventory for type') + ` "${type}" ` +
-      gettext('and subscribes any existing device not already covered. This can take a while on large inventories. Continue?')
+      this.translateService.instant(
+        gettext('This rescans the full inventory for type "{{type}}" and subscribes any existing device not already covered. This can take a while on large inventories. Continue?'),
+        { type }
+      )
     );
     if (!confirmed) {
       return;

@@ -20,13 +20,15 @@
 import { AlertService } from '@c8y/ngx-components';
 import { ImportServiceConfigurationComponent } from './import-service-configuration.component';
 import { SharedService } from '../../shared';
+import { TestBed } from '@angular/core/testing';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 
 /**
  * Restoring an exported service configuration.
  *
  * <p>The import replaces the tenant's settings, so the two properties that matter are: nothing
  * is applied before the user confirms, and a failed apply is never reported as a restore.
- * Exercised without TestBed — the modal template pulls in the c8y app-shell DI graph.
+ * Exercised without rendering — the modal template pulls in the c8y app-shell DI graph.
  */
 describe('ImportServiceConfigurationComponent', () => {
   let sharedService: jasmine.SpyObj<SharedService>;
@@ -45,7 +47,10 @@ describe('ImportServiceConfigurationComponent', () => {
     // NgZone/ApplicationRef are only used to re-enter change detection.
     const ngZone = { run: (fn: () => void) => fn() } as any;
     const appRef = { tick: () => undefined } as any;
-    component = new ImportServiceConfigurationComponent(sharedService, alertService, ngZone, appRef);
+    TestBed.configureTestingModule({ providers: [provideTranslateStub()] });
+    component = TestBed.runInInjectionContext(
+      () => new ImportServiceConfigurationComponent(sharedService, alertService, ngZone, appRef)
+    );
   });
 
   describe('reading the file', () => {

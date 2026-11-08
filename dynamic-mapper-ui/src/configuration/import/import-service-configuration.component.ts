@@ -17,7 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
+import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation, inject } from '@angular/core';
 import { AlertService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { ServiceConfiguration } from '../../shared/configuration/configuration.model';
@@ -40,6 +41,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   imports: [CoreModule]
 })
 export class ImportServiceConfigurationComponent implements OnDestroy {
+  private readonly translateService = inject(TranslateService);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   isLoading = false;
   isImported = false;
@@ -99,7 +101,7 @@ export class ImportServiceConfigurationComponent implements OnDestroy {
       this.fileName = file.name;
       this.pendingConfiguration = parsed as Partial<ServiceConfiguration>;
     } catch (error) {
-      this.errorMessage = `Import failed: ${error?.message ?? 'invalid file'}`;
+      this.errorMessage = this.translateService.instant(gettext('Import failed: {{message}}'), { message: error?.message ?? this.translateService.instant(gettext('invalid file')) });
     } finally {
       this.ngZone.run(() => {
         this.isLoading = false;
@@ -120,13 +122,13 @@ export class ImportServiceConfigurationComponent implements OnDestroy {
     try {
       const response = await this.sharedService.updateServiceConfiguration(this.pendingConfiguration);
       if (response.status < 200 || response.status >= 300) {
-        this.errorMessage = `Import failed: the service rejected the configuration (HTTP ${response.status}).`;
+        this.errorMessage = this.translateService.instant(gettext('Import failed: the service rejected the configuration (HTTP {{status}}).'), { status: response.status });
         return false;
       }
       this.alertService.success(gettext('Service configuration restored from file.'));
       return true;
     } catch (error) {
-      this.errorMessage = `Import failed: ${error?.message ?? 'unknown error'}`;
+      this.errorMessage = this.translateService.instant(gettext('Import failed: {{message}}'), { message: error?.message ?? this.translateService.instant(gettext('unknown error')) });
       return false;
     }
   }
