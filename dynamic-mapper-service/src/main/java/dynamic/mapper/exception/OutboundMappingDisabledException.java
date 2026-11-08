@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,11 +17,6 @@
  *
  *  @authors Christof Strack, Stefan Witschel
  *
- */
-
-/*
- * Copyright (c) 2025 Cumulocity GmbH.
- * SPDX-License-Identifier: Apache-2.0
  */
 
 package dynamic.mapper.exception;
