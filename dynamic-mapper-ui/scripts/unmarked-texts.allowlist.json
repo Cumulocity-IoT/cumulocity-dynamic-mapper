@@ -1,0 +1,78 @@
+[
+  {
+    "file": "src/shared/mapping/mapping.constants.ts",
+    "reason": "Code-editor completion help for the Smart Function API. Technical English, like the API names."
+  },
+  {
+    "file": "src/shared/mapping/stepper.model.ts",
+    "reason": "Code-editor completion help for the Smart Function API. Technical English, like the API names."
+  },
+  {
+    "file": "src/mapping/prompt/ai-prompt.component.ts",
+    "kind": "missingContextHint",
+    "reason": "Instructions sent to the AI agent, not UI text."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "plant1/+/+",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "measurements/+",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "device/110",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "lora_device_type",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/service/editor-session.forms.ts",
+    "text": "$exists(c8y_TemperatureMeasurement)",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/step-transformation/mapping-substitution-step.component.ts",
+    "text": "$join(",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/editor-base/mapping-extension-selector.component.html",
+    "text": "parameter: key: value",
+    "reason": "Example YAML."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.html",
+    "text": "parameter: key: value",
+    "reason": "Example YAML."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.ts",
+    "text": "Smart Function",
+    "kind": "typeLabel",
+    "reason": "Product name."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.ts",
+    "text": "JSONata",
+    "kind": "typeLabel",
+    "reason": "Product name."
+  },
+  {
+    "file": "src/mapping/message-explorer/message-explorer.component.ts",
+    "text": "externalId",
+    "kind": "externalIdLabel",
+    "reason": "Name of a Cumulocity concept shown as code."
+  },
+  {
+    "file": "src/shared/component/formly/custom-form-field-wrapper.component.html",
+    "text": "customMessage",
+    "reason": "A props key (props['customMessage']), not UI text."
+  }
+]
