@@ -43,7 +43,8 @@ import {
 import { STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../../shared/mapping/stepper.model';
 import { isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
-import { CommitEditorState, MappingStepperService } from '../service/mapping-stepper.service';
+import { MappingStepperService } from '../service/mapping-stepper.service';
+import { CommitEditorState } from '../service/mapping-commit.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
@@ -67,12 +68,13 @@ interface StepperStepChange {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
+  // `deploymentMapEntry` is an accessor on MappingEditorBase.
+  inputs: ['deploymentMapEntry'],
   imports: [CoreModule, CommonModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, MappingTemplateStepComponent, MappingExtensionSelectorComponent, MappingCodeEditorSectionComponent]
 })
 export class MappingStepperComponent extends MappingEditorBase implements OnInit {
   @Input() mapping!: Mapping;
   @Input() stepperConfiguration!: StepperConfiguration;
-  @Input() deploymentMapEntry!: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<CommitEditorState>();
 

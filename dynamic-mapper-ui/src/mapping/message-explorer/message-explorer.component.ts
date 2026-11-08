@@ -18,15 +18,8 @@
  * @authors Christof Strack
  */
 
-import {
-  AfterViewInit,
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -77,6 +70,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   imports: [CoreModule, CommonModule, ReactiveFormsModule]
 })
 export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly injector = inject(Injector);
 
   // ---- state ----------------------------------------------------------------
   sessionId: string | null = null;
@@ -238,7 +232,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       .subscribe(value => {
         this.currentPollingInterval = value;
         this.connectorConfigService.setPollingInterval(value);
-        setTimeout(() => {
+        // After the render that hands the new interval to the countdown component.
+        afterNextRenderInZone(this.injector, () => {
           this.nextTriggerCountdown$.next(this.currentPollingInterval);
           this.resetCountdown();
         });
@@ -248,7 +243,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.startCountdown());
+    afterNextRenderInZone(this.injector, () => this.startCountdown());
   }
 
   private persistSession(): void {
@@ -304,8 +299,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         return { ...m, id: seqNo, seqNo };
       });
       this.setMessages(indexed.slice().reverse());
-      // Defer countdown start — @ViewChild is not available until ngAfterViewInit
-      setTimeout(() => {
+      // The countdown component (@ViewChild) exists only after the first render.
+      afterNextRenderInZone(this.injector, () => {
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
         if (this.shouldRefreshAutomatic) {
           this.countdownIntervalComponent?.start();

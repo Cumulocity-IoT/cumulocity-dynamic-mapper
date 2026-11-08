@@ -17,19 +17,8 @@
  *
  * @authors Christof Strack
  */
-import {
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  EventEmitter,
-  inject,
-  Input,
-  OnChanges,
-  OnDestroy,
-  Output,
-  SimpleChanges,
-  ViewChild
-} from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
@@ -97,6 +86,7 @@ const NO_TEMPLATE_ISSUES: TemplateIssues = { protectedFieldsChanged: false, arra
   imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })
 export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
+  private readonly injector = inject(Injector);
   // ─── Inputs ───────────────────────────────────────────────────────────────
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
@@ -359,10 +349,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       this.filterFormly.get('filterMapping')?.markAsTouched();
     }
     this.filterModel = { ...this.filterModel };
-    queueMicrotask(() => {
-      this.manualResize();
-      this.cdr.markForCheck();
-    });
+    afterNextRenderInZone(this.injector, () => this.manualResize());
   }
 
   private manualResize(): void {

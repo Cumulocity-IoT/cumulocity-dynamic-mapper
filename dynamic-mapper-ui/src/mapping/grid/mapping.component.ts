@@ -32,7 +32,6 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
-  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DisplayOptions,
@@ -40,26 +39,20 @@ import {
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
-  API,
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
   ExtensionEntry,
   Feature,
   isSubstitutionsAsCode,
-  LabelTaggedRendererComponent,
   Mapping,
   MappingEnriched,
   MappingType,
   MappingTypeDescriptionMap,
-  nextIdAndPad,
   Operation,
-  Qos,
-  SAMPLE_TEMPLATES_C8Y,
   SharedModule,
   SharedService,
   StepperConfiguration,
-  Substitution,
   TransformationType
 } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
@@ -67,7 +60,6 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from '../../shared/mapping/stepper-configuration.strategy';
-
 import { HttpStatusCode } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
@@ -78,7 +70,9 @@ import { CodeTemplate } from '../../shared/configuration/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
-import { ExplorerMappingHandoffService, ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
+import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
+import { buildMappingColumns } from './mapping-grid.columns';
+import { buildNewMapping, ExplorerPreFill } from './new-mapping.factory';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-mappings.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
@@ -86,27 +80,21 @@ import { MappingPublishService } from '../versions/mapping-publish.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
-import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
-import { MappingStatusActivationRendererComponent } from '../renderer/mapping-status-activation.renderer.component';
-import { StatusRendererComponent } from '../renderer/status.renderer.component';
-import {
-  PayloadWrapper,
-  SamplePayloadType
-} from '../../shared/mapping/mapping.model';
 import { MappingPersistence } from '../../shared/mapping/stepper.model';
-import { applyCodeTemplateSample, serializeMappingsForExport, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation, stringToBase64 } from '../../shared/mapping/util';
-import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
+import { serializeMappingsForExport } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
 import { isRawPayload } from '../message-explorer/message-explorer.service';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
+import { MappingStepperService } from '../service/mapping-stepper.service';
 import {
   CommitEditorState,
   commitSuccessMessage,
-  MappingStepperService,
+  MappingCommitService,
   snapshotConnectors
-} from '../service/mapping-stepper.service';
+} from '../service/mapping-commit.service';
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
+
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -158,7 +146,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; payloadType?: SamplePayloadType; binaryFormat?: string | null; payloadSize?: number; clientId?: string; connectorType?: string; key?: string; metadata?: Record<string, string>; additionalMessages?: ExplorerSampleMessage[]; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: ExplorerPreFill | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -179,6 +167,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly mappingService = inject(MappingService);
   private readonly stepperService = inject(MappingStepperService);
+  private readonly commitService = inject(MappingCommitService);
   private readonly mappingBulkOpsService = inject(MappingBulkOperationsService);
   private readonly sharedService = inject(SharedService);
   private readonly alertService = inject(AlertService);
@@ -276,23 +265,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.isLoading = false;
     }
 
-  }
-
-  /** Shapes a captured payload like the primary sample (see addMapping): Any Payload gets the
-   *  Base64 wrapper, other non-JSON raw payloads the plain {"payload": ...} wrapper. */
-  private toSourceSample(payload: string, binary: boolean, mappingType: MappingType, isInbound: boolean): string {
-    if (isInbound && mappingType === MappingType.ANY_PAYLOAD) {
-      const base64 = binary ? payload : stringToBase64(payload);
-      return JSON.stringify({ payload: base64 } as PayloadWrapper);
-    }
-    if (binary || [MappingType.ANY_PAYLOAD, MappingType.HEX, MappingType.FLAT_FILE].includes(mappingType)) {
-      try {
-        JSON.parse(payload);
-      } catch {
-        return JSON.stringify({ payload } as PayloadWrapper);
-      }
-    }
-    return payload;
   }
 
   /** Default row order for the grid; see the 'name' column in {@link getColumnsMappings}. */
@@ -435,96 +407,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   getColumnsMappings(): Column[] {
-    const cols: (Column | undefined)[] = [
-      {
-        name: 'name',
-        header: 'Name',
-        path: 'mapping.name',
-        filterable: true,
-        sortable: true,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: MappingIdCellRendererComponent,
-        // No sortOrder here: the grid sorts by *every* column that carries one, in column
-        // order, and clicking a header only changes that one column. A pre-set 'asc' on the
-        // first column therefore stays the primary key forever and makes sorting by API or
-        // Activate look broken. The default alphabetical order is produced by sorting the
-        // rows below instead.
-        visible: true,
-        gridTrackSize: '10%'
-      },
-      {
-        name: 'identifier',
-        header: 'Identifier',
-        path: 'mapping.identifier',
-        filterable: false,
-        dataType: ColumnDataType.TextShort,
-        visible: false,
-        gridTrackSize: '0%'
-      },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? undefined
-        : {
-          header: 'Publish topic',
-          name: 'publishTopic',
-          path: 'mapping.publishTopic',
-          dataType: ColumnDataType.TextShort,
-          filterable: true,
-          sortable: true
-        },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          header: 'Mapping topic',
-          name: 'mappingTopic',
-          path: 'mapping.mappingTopic',
-          dataType: ColumnDataType.TextShort,
-          filterable: true,
-          sortable: true
-        }
-        : undefined,
-      {
-        name: 'targetAPI',
-        header: 'API',
-        path: 'mapping.targetAPI',
-        filterable: true,
-        sortable: true,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: LabelTaggedRendererComponent,
-        gridTrackSize: '9%'
-      },
-      {
-        header: 'For connectors',
-        name: 'connectors',
-        path: 'connectors',
-        filterable: true,
-        sortable: false,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: MappingDeploymentRendererComponent
-      },
-      {
-        header: 'Version/Status',
-        name: 'status',
-        path: 'mapping',
-        filterable: false,
-        sortable: false,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: StatusRendererComponent,
-        // Makes the cell a link that opens the version drawer for this row. Read by
-        // StatusRendererComponent as context.property['callback'] — 'callback' is not part of
-        // the Column interface, hence the cast, matching how the connector grid does it.
-        callback: this.openVersions.bind(this),
-        gridTrackSize: '16%'
-      } as Column,
-      {
-        header: 'Activate',
-        name: 'active',
-        path: 'mapping.active',
-        filterable: false,
-        sortable: true,
-        cellRendererComponent: MappingStatusActivationRendererComponent,
-        gridTrackSize: '9%'
-      }
-    ];
-    return cols.filter((c): c is Column => !!c);
+    return buildMappingColumns(this.stepperConfiguration.direction, row => this.openVersions(row));
   }
 
   async onAddMapping() {
@@ -561,236 +444,27 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.generateSmartFunctionWithAI = false;
     }
 
-    const identifier = createCustomUuid();
-    const sub: Substitution[] = [];
     const direction = this.stepperConfiguration.direction;
-
-    // Only the Cumulocity-side field has a well-known, schema-valid sample (SAMPLE_TEMPLATES_C8Y)
-    // — the broker/external-side field is always blank, since no generic schema exists for an
-    // arbitrary device payload. Which physical field ("sourceTemplate" vs "targetTemplate") is
-    // the Cumulocity side flips with direction: target for INBOUND, source for OUTBOUND — matching
-    // the "Source/Target Template - Cumulocity/Broker" panel labels and
-    // MappingStepperService.expandTemplates()'s direction-aware swap.
-    // Code/extension-based transformations (Smart Function, Java extension) get '{}' even on the
-    // Cumulocity side: the actual shape is produced by code, not a template, and seeding a generic
-    // sample there previously misled both users and the AI generation flow.
-    const cumulocitySample = isCodeOrExtensionTransformation(this.transformationType)
-      ? '{}'
-      : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name];
-    const defaultSourceTemplate = direction === Direction.OUTBOUND ? cumulocitySample : '{}';
-    const defaultTargetTemplate = direction === Direction.OUTBOUND ? '{}' : cumulocitySample;
-
-    let mapping: Mapping;
-    if (direction == Direction.INBOUND) {
-      let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
-      mapping = {
-        // name: `Mapping - ${identifier.substring(0, 7)}`,
-        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
-        id: 'any',
-        identifier: identifier,
-        mappingTopic: '',
-        mappingTopicSample: '',
-        targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: defaultSourceTemplate,
-        targetTemplate: defaultTargetTemplate,
-        active: false,
-        maxFailureCount: 0,
-        qos: Qos.AT_LEAST_ONCE,
-        substitutions: sub,
-        useExternalId: false,
-        createNonExistingDevice: false,
-        mappingType: this.mappingType,
-        transformationType: this.transformationType,
-        updateExistingDevice: false,
-        externalIdType: 'c8y_Serial',
-        code,
-        direction: direction,
-        autoAckOperation: true,
-        debug: false,
-        filterMapping: 'true',
-        lastUpdate: Date.now()
-      };
-    } else {
-      let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
-      mapping = {
-        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
-        id: identifier,
-        identifier: identifier,
-        // publishTopic: '',
-        // publishTopicSample: '',
-        targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: defaultSourceTemplate,
-        targetTemplate: defaultTargetTemplate,
-        active: false,
-        maxFailureCount: 0,
-        qos: Qos.AT_LEAST_ONCE,
-        substitutions: sub,
-        useExternalId: false,
-        createNonExistingDevice: false,
-        mappingType: this.mappingType,
-        transformationType: this.transformationType,
-        updateExistingDevice: false,
-        externalIdType: 'c8y_Serial',
-        code,
-        direction: direction,
-        autoAckOperation: true,
-        debug: false,
-        filterMapping: 'true',
-        lastUpdate: Date.now()
-      };
-    }
+    const { mapping, sampleMessageInfo, sampleTransportFields, additionalSamples } = buildNewMapping({
+      direction,
+      mappingType: this.mappingType,
+      transformationType: this.transformationType,
+      substitutionsAsCode: this.substitutionsAsCode,
+      codeTemplate: this.codeTemplate,
+      extension: this.extension,
+      mappingsCount: this.mappingsCount,
+      preFill: this.explorerPreFill
+    });
     // Bump optimistically so a second "Add mapping" click before this one's save + list
     // refresh round-trips still gets a distinct name, instead of reading the same
     // not-yet-updated mappingsCount and generating a duplicate "Mapping - NN" name.
     this.mappingsCount++;
-    if (this.mappingType == MappingType.FLAT_FILE) {
-      const sampleSource = JSON.stringify({
-        payload: '10,temp,1666963367'
-      } as PayloadWrapper);
-      mapping = {
-        ...mapping,
-        sourceTemplate: sampleSource
-      };
-    }
-
-    // Seed the sample from the chosen code template (see applyCodeTemplateSample); the Message
-    // Explorer pre-fill below still takes precedence.
-    if (this.substitutionsAsCode) {
-      applyCodeTemplateSample(mapping, this.codeTemplate, this.mappingType, direction);
-    }
-
-    // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
-    if (this.explorerPreFill) {
-      const isInbound = direction === Direction.INBOUND;
-      if (isInbound) {
-        // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
-        // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
-        // mappingTopic so wildcards are preserved, and the concrete topic as sample.
-        mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
-        mapping.mappingTopicSample = this.explorerPreFill.topic;
-      }
-      // The Message Explorer always captures the "source" side of the mapping — the broker/
-      // device payload for INBOUND sessions, or the real Cumulocity event for OUTBOUND
-      // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
-      // So the captured payload always belongs on sourceTemplate, regardless of direction.
-      mapping.sourceTemplate = this.explorerPreFill.payload;
-      // Raw-payload mapping types keep their sample as {"payload": "<text or base64>"}; the
-      // captured payload is not JSON in that case, so wrap it instead of storing it as is.
-      if (isInbound && mapping.mappingType === MappingType.ANY_PAYLOAD) {
-        // At runtime an Any Payload mapping always receives the raw bytes as Base64, text and JSON
-        // included, so the sample must be the Base64 of the bytes too. Binary payloads already
-        // arrive Base64-encoded; text ones are encoded here (as UTF-8, as the broker sent them).
-        const base64 = this.explorerPreFill.binary
-          ? this.explorerPreFill.payload
-          : stringToBase64(this.explorerPreFill.payload);
-        mapping.sourceTemplate = JSON.stringify({ payload: base64 } as PayloadWrapper);
-      } else if (
-        this.explorerPreFill.binary ||
-        [MappingType.ANY_PAYLOAD, MappingType.HEX, MappingType.FLAT_FILE].includes(mapping.mappingType)
-      ) {
-        let isJson = true;
-        try {
-          JSON.parse(mapping.sourceTemplate);
-        } catch {
-          isJson = false;
-        }
-        if (!isJson) {
-          mapping.sourceTemplate = JSON.stringify({ payload: this.explorerPreFill.payload } as PayloadWrapper);
-        }
-      }
-      // Remember what is known about the captured message (type, size, format, sender) so AI
-      // generation does not have to guess how to read it. Stepper state only, never persisted.
-      this.stepperConfiguration.sampleMessageInfo = {
-        payloadType: this.explorerPreFill.payloadType,
-        binaryFormat: this.explorerPreFill.binaryFormat ?? undefined,
-        payloadSize: this.explorerPreFill.payloadSize,
-        clientId: this.explorerPreFill.clientId,
-        topic: this.explorerPreFill.topic,
-        connectorType: this.explorerPreFill.connectorType
-      };
-      // Seed the captured broker message key (e.g. a Kafka record key) so the sample mirrors what
-      // the mapping actually sees at runtime. Only for JSONata-style transformations, where the
-      // backend injects the key into the payload as _CONTEXT_DATA_.key: Smart Functions and Java
-      // extensions instead receive it out-of-band via the message's transport fields, so putting
-      // it in the payload sample there would misrepresent the input (and mislead AI generation).
-      // Other broker metadata (Kafka headers, Pulsar properties, AMQP routing key, ...) reaches
-      // Smart Functions and Java extensions as transport fields next to the key, so it is carried
-      // the same way. JSONata mappings do not receive it, so it is not seeded there.
-      if (this.explorerPreFill.metadata && Object.keys(this.explorerPreFill.metadata).length > 0
-          && isCodeOrExtensionTransformation(mapping.transformationType)) {
-        this.stepperConfiguration.sampleTransportFields = { ...this.explorerPreFill.metadata };
-      }
-      if (this.explorerPreFill.key) {
-        if (isCodeOrExtensionTransformation(mapping.transformationType)) {
-          // Code/extension transformations read the key from msg.transportFields, which is not part
-          // of the payload — carry it as stepper state so AI generation still sees a real example.
-          this.stepperConfiguration.sampleTransportFields = {
-            ...this.stepperConfiguration.sampleTransportFields,
-            [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
-          };
-        } else {
-          try {
-            const parsed = JSON.parse(mapping.sourceTemplate);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-              parsed[MappingTokens.CONTEXT_DATA] = {
-                ...(parsed[MappingTokens.CONTEXT_DATA] ?? {}),
-                [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
-              };
-              mapping.sourceTemplate = JSON.stringify(parsed);
-            }
-          } catch {
-            // sample is not a JSON object — nothing to attach the key to, leave it untouched
-          }
-        }
-      }
-      // Extra messages of the same payload type (Message Explorer multi-select): shaped like the
-      // primary sample so AI generation sees consistent examples. Stepper state only.
-      if (this.explorerPreFill.additionalMessages?.length) {
-        this.stepperConfiguration.additionalSamples = this.explorerPreFill.additionalMessages.map(m => {
-          const transportFields: Record<string, string> = {};
-          if (isCodeOrExtensionTransformation(mapping.transformationType)) {
-            Object.assign(transportFields, m.metadata ?? {});
-            if (m.key) transportFields[CONTEXT_DATA_KEY_NAME] = m.key;
-          }
-          return {
-            topic: m.topic,
-            payload: this.toSourceSample(m.payload, !!m.binary, mapping.mappingType, isInbound),
-            transportFields: Object.keys(transportFields).length ? transportFields : undefined
-          };
-        });
-      }
-      if (this.explorerPreFill.targetAPI) {
-        mapping.targetAPI = this.explorerPreFill.targetAPI;
-        // Only INBOUND's target side (Cumulocity) has a generic schema sample to seed with.
-        // OUTBOUND's target side (Broker) has no generic schema, and its source already holds
-        // the real captured Cumulocity payload — nothing further needs seeding there.
-        if (isInbound) {
-          const sample = isCodeOrExtensionTransformation(mapping.transformationType)
-            ? '{}'
-            : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
-          mapping.targetTemplate = sample ?? mapping.targetTemplate;
-        }
-      }
-      if (this.explorerPreFill.publishTopic) {
-        mapping.publishTopic = this.explorerPreFill.publishTopic;
-        mapping.useExternalId = true;
-      }
-      if (this.explorerPreFill.publishTopicSample) {
-        mapping.publishTopicSample = this.explorerPreFill.publishTopicSample;
-      }
-      // For OUTBOUND, pre-fill filterMapping with 'true' so at least one execution filter is set
-      if (this.stepperConfiguration.direction === Direction.OUTBOUND && !mapping.filterMapping) {
-        mapping.filterMapping = 'true';
-      }
-      this.explorerPreFill = null;
-    }
-
-    if (this.extension) {
-      mapping.extension = this.extension as ExtensionEntry;
-      this.extension = undefined;
-    }
+    this.explorerPreFill = null;
+    this.extension = undefined;
+    // Stepper state about the captured message; never persisted with the mapping.
+    if (sampleMessageInfo) this.stepperConfiguration.sampleMessageInfo = sampleMessageInfo;
+    if (sampleTransportFields) this.stepperConfiguration.sampleTransportFields = sampleTransportFields;
+    if (additionalSamples) this.stepperConfiguration.additionalSamples = additionalSamples;
 
     this.mappingToUpdate = mapping;
     this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
@@ -917,7 +591,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onCommitMapping(editorState: CommitEditorState): Promise<void> {
-    const result = await this.stepperService.commitMapping({
+    const result = await this.commitService.commitMapping({
       ...editorState,
       deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors

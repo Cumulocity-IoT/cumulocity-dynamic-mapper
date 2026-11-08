@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -38,6 +39,7 @@ import { handleDocLinkClick, scrollToDocElement } from './doc-links';
   encapsulation: ViewEncapsulation.None
 })
 export class DocPageComponent implements OnInit {
+  private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
   title = '';
@@ -56,10 +58,9 @@ export class DocPageComponent implements OnInit {
       const rendered = await this.markdownService.loadAndRender(docPath);
       this.title = rendered.title;
       this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
-      // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
-      // committed the new [innerHTML] to the DOM, so docBodyRef.nativeElement actually
-      // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
-      setTimeout(() => this.decorate());
+      // After the render that commits the new [innerHTML], docBodyRef.nativeElement contains the
+      // <pre class="mermaid"> nodes mermaid.run() needs to find.
+      afterNextRenderInZone(this.injector, () => this.decorate());
     } catch (error) {
       console.error(error);
       this.title = 'Documentation unavailable';

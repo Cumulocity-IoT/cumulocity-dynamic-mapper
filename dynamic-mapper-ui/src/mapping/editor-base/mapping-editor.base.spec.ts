@@ -1,7 +1,7 @@
 // Side-effect import first: shared/mapping/* have a circular import that only resolves when the
 // `shared` barrel is evaluated before them (see mapping-stepper.component.ts).
 import '../../shared';
-import { Component } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -22,7 +22,6 @@ class TestEditorHostComponent extends MappingEditorBase {
     targetTemplate: '{}'
   } as unknown as Mapping;
   stepperConfiguration = { direction: Direction.INBOUND, persistence: 'create' } as StepperConfiguration;
-  deploymentMapEntry = {} as DeploymentMapEntry;
   templateStepRef = undefined as any;
   codeEditor = undefined as any;
   currentStepIndex = 0;
@@ -59,6 +58,23 @@ describe('MappingEditorBase', () => {
       }
     });
     host = TestBed.createComponent(TestEditorHostComponent).componentInstance;
+  });
+
+  describe('connectorSelectionEmpty', () => {
+    it('is true before a deployment entry exists and while no connector is selected', () => {
+      expect(host.connectorSelectionEmpty()).toBeTrue();
+
+      host.deploymentMapEntry = { identifier: 'x', connectors: [] };
+      expect(host.connectorSelectionEmpty()).toBeTrue();
+    });
+
+    it('follows the entry the host holds, whichever way it was set', () => {
+      host.deploymentMapEntry = { identifier: 'x', connectors: ['c1'] };
+      expect(host.connectorSelectionEmpty()).toBeFalse();
+
+      host.deploymentMapEntryChange({ identifier: 'x', connectors: [] });
+      expect(host.connectorSelectionEmpty()).toBeTrue();
+    });
   });
 
   describe('seedMappingCode', () => {
@@ -193,5 +209,59 @@ describe('MappingEditorBase', () => {
       await host.enqueue(async () => { ran = true; });
       expect(ran).toBeTrue();
     });
+  });
+});
+
+
+/**
+ * The connector step reports its selection while the host's view is being checked, after a
+ * binding that reads the state was already evaluated (the tab label in the unified editor). A
+ * state held in a subject and published from a microtask was needed to avoid
+ * ExpressionChangedAfterItHasBeenChecked; a derived signal needs no deferral. These specs run the
+ * real change detection, which checks for that error in development mode.
+ */
+@Component({ selector: 'd11r-test-reporting-child', template: '', standalone: true })
+class ReportingChildComponent implements OnInit {
+  @Output() reported = new EventEmitter<DeploymentMapEntry>();
+  ngOnInit(): void {
+    this.reported.emit({ identifier: 'x', connectors: ['c1'] });
+  }
+}
+
+@Component({
+  selector: 'd11r-test-label-host',
+  standalone: true,
+  imports: [ReportingChildComponent],
+  template: `<span id="label">{{ connectorSelectionEmpty() ? 'Connector *' : 'Connector' }}</span>
+    <d11r-test-reporting-child (reported)="deploymentMapEntryChange($event)" />`
+})
+class LabelHostComponent extends TestEditorHostComponent {}
+
+describe('MappingEditorBase connector selection during change detection', () => {
+  beforeEach(() => {
+    TestBed.overrideComponent(LabelHostComponent, {
+      set: {
+        providers: [
+          {
+            provide: MappingStepperService,
+            useValue: jasmine.createSpyObj('MappingStepperService', [
+              'cleanup', 'registerCompletionProvider', 'loadExtensions', 'computeExtensionItems', 'refreshSubstitutionValidity'
+            ])
+          },
+          { provide: SubstitutionManagementService, useValue: {} },
+          { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['warning', 'add']) },
+          { provide: BottomDrawerService, useValue: {} },
+          { provide: BsModalService, useValue: {} }
+        ]
+      }
+    });
+  });
+
+  it('shows the reported selection without ExpressionChangedAfterItHasBeenChecked', () => {
+    const fixture = TestBed.createComponent(LabelHostComponent);
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    expect(fixture.nativeElement.querySelector('#label').textContent).toBe('Connector');
   });
 });

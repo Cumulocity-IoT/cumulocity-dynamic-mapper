@@ -22,13 +22,8 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from './stepper-configuration.strategy';
-import {
-  Direction,
-  MappingType,
-  MappingTypeDescriptionMap,
-  StepperConfiguration,
-  TransformationType
-} from './mapping.model';
+import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
+import { MappingTypeDescriptionMap } from './mapping-type-config';
 
 describe('StepperConfigurationResolver', () => {
   describe('resolve', () => {

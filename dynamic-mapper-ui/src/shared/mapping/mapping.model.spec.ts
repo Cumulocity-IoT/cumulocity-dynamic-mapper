@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { clampQos, definesDeviceIdentifier, QOS_DEFAULT, QOS_OPTIONS, qosLabel, qosLevel } from './mapping.model';
+import { clampQos, QOS_DEFAULT, QOS_OPTIONS, qosLabel, qosLevel } from './qos';
+import { definesDeviceIdentifier } from './mapping-helpers';
 import { Direction, Mapping, Qos, RepairStrategy, Substitution } from '../../shared';
 
 // ---------------------------------------------------------------------------

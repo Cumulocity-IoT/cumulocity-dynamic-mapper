@@ -29,7 +29,7 @@
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(TAB_CONNECTOR)) {
   <c8y-tab [icon]="'c8y-device-management'"
-    [label]="(isButtonDisabled$ | async) ? 'Connector *' : 'Connector'"
+    [label]="connectorSelectionEmpty() ? 'Connector *' : 'Connector'"
     [priority]="50" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }

@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
@@ -42,6 +43,7 @@ import { handleDocLinkClick, scrollToDocElement } from './doc-links';
   encapsulation: ViewEncapsulation.None
 })
 export class DocOverviewComponent implements OnInit {
+  private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
@@ -109,12 +111,11 @@ export class DocOverviewComponent implements OnInit {
     ]);
     this.htmlIntro = this.sanitizer.bypassSecurityTrustHtml(intro.html);
     this.htmlNextSteps = this.sanitizer.bypassSecurityTrustHtml(nextSteps.html);
-    // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
-    // committed the [innerHTML] bindings to the DOM, so docBodyRef.nativeElement actually
-    // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
-    setTimeout(() => {
+    // After the render that commits the [innerHTML] bindings, docBodyRef.nativeElement contains
+    // the <pre class="mermaid"> nodes mermaid.run() needs to find.
+    afterNextRenderInZone(this.injector, () => {
       const body = this.docBodyRef?.nativeElement;
-      if (!body) return; // navigated away before the macrotask ran
+      if (!body) return; // navigated away before the render happened
       this.markdownService.highlightCodeBlocks(body);
       this.markdownService.renderMermaidDiagrams(body);
     });

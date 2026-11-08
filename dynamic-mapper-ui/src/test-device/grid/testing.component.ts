@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, OnInit, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ActionControl,
   BulkActionControl,
@@ -52,8 +53,9 @@ export class TestingComponent implements OnInit {
   ) {
     // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
-    this.service.refreshData$.subscribe(() => {
-      this.deviceGrid.reload();
+    // refreshData$ lives on a root service: without this, every grid ever created keeps reloading.
+    this.service.refreshData$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.deviceGrid?.reload();
     });
     this.columns = this.getColumns();
     this.pagination = this.service.getPagination();

@@ -58,7 +58,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Device, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/mapping.model';
+import { Device, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';

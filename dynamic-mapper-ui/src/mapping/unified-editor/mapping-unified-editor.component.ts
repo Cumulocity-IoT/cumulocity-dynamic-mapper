@@ -63,12 +63,13 @@ import { MappingValidationError } from '../../shared/mapping/mapping-validation-
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
+import { MappingStepperService } from '../service/mapping-stepper.service';
 import {
   CommitBlocker,
   commitSuccessMessage,
-  MappingStepperService,
+  MappingCommitService,
   snapshotConnectors
-} from '../service/mapping-stepper.service';
+} from '../service/mapping-commit.service';
 import { MappingPublishService } from '../versions/mapping-publish.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
@@ -126,7 +127,6 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
 export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
-  deploymentMapEntry!: DeploymentMapEntry;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
@@ -135,6 +135,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
   private readonly mappingService = inject(MappingService);
+  private readonly commitService = inject(MappingCommitService);
   private readonly publishService = inject(MappingPublishService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly route = inject(ActivatedRoute);
@@ -173,8 +174,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
     this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
-    // Initialize the Save-button gate: a mapping requires at least one selected connector
-    this.stepperService.setButtonDisabled(isConnectorSelectionEmpty(this.deploymentMapEntry));
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
@@ -332,7 +331,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
-    const result = await this.stepperService.commitMapping({
+    const result = await this.commitService.commitMapping({
       mapping: this.mapping,
       deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors,

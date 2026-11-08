@@ -30,7 +30,6 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { MappingTabFactory } from './mapping-tab.factory';
 import { SubstitutionManagementService } from './service/substitution-management.service';
-import { MappingStepperService } from './service/mapping-stepper.service';
 import { MappingUnifiedEditorComponent } from './unified-editor';
 import { mappingEditResolver } from './core/mapping-edit.resolver';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
@@ -40,7 +39,6 @@ import { MessageExplorerComponent } from './message-explorer/message-explorer.co
   providers: [
     DeviceGridService,
     SubstitutionManagementService,
-    MappingStepperService,
 
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`,

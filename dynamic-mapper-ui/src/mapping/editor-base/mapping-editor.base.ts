@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, computed, signal } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService } from '@c8y/ngx-components';
@@ -69,9 +70,24 @@ import { StepperViewModel } from './stepper-view.model';
 // declares lifecycle hooks (ngAfterViewInit/ngOnDestroy), even when it is abstract.
 @Directive()
 export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
+  private readonly injector = inject(Injector);
   abstract mapping: Mapping;
   abstract stepperConfiguration: StepperConfiguration;
-  abstract deploymentMapEntry: DeploymentMapEntry;
+  /**
+   * The connectors this mapping is deployed to. Held in a signal so what is derived from it, such
+   * as {@link connectorSelectionEmpty}, is always current, even when the connector step reports
+   * its selection while the view is being checked. Hosts declare the `deploymentMapEntry` input
+   * through `inputs: [...]` in their `@Component`, not with a field of their own.
+   */
+  private readonly deploymentMapEntrySignal = signal<DeploymentMapEntry | undefined>(undefined);
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this.deploymentMapEntrySignal()!;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this.deploymentMapEntrySignal.set(value);
+  }
+  /** True while no connector is selected; a mapping needs one to be saved. Derived, never set. */
+  readonly connectorSelectionEmpty = computed(() => isConnectorSelectionEmpty(this.deploymentMapEntrySignal()));
   /** The rendered template step, if any; the base only needs what {@link TemplateEditorRef} offers. */
   abstract templateStepRef: TemplateEditorRef | undefined;
   abstract codeEditor: EditorComponent;
@@ -124,7 +140,6 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   // Use service observables
   get isSubstitutionValid$() { return this.stepperService.isSubstitutionValid$; }
   get extensionEvents$() { return this.stepperService.extensionEvents$; }
-  get isButtonDisabled$() { return this.stepperService.isButtonDisabled$; }
   get sourceCustomMessage$() { return this.stepperService.sourceCustomMessage$; }
   get targetCustomMessage$() { return this.stepperService.targetCustomMessage$; }
 
@@ -334,11 +349,6 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
     this.deploymentMapEntry = deploymentMapEntry;
-    // Use queueMicrotask for change detection cycle completion
-    queueMicrotask(() => {
-      this.stepperService.setButtonDisabled(isConnectorSelectionEmpty(this.deploymentMapEntry));
-      this.cdr.markForCheck();
-    });
   }
 
   /** The host owns the mapping: children report changes, only the host writes them. */
@@ -492,8 +502,8 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
           this.mappingCode = result;
 
           if (this.codeEditor) {
-            // Use queueMicrotask for view update cycle completion
-            queueMicrotask(() => {
+            // After the render that applies the new `mappingCode` to the editor's input.
+            afterNextRenderInZone(this.injector, () => {
               this.codeEditor.writeValue(result);
               this.cdr.markForCheck();
             });

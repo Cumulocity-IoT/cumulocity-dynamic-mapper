@@ -29,11 +29,7 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   SharedService
 } from '../../shared';
-import {
-  NotificationSubscriptionRequest,
-  NotificationSubscriptionResponse,
-  SubscriptionStatus
-} from '../../shared/mapping/mapping.model';
+import { NotificationSubscriptionRequest, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 
 // Custom error types for better error handling
 export class SubscriptionError extends Error {

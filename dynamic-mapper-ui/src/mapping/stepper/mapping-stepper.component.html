@@ -38,7 +38,7 @@
         (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
     </div>
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-connector" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
-      [disabled]="isButtonDisabled$ | async" (onCancel)="cancel.emit()" (onNext)="onNextStep($event)"
+      [disabled]="connectorSelectionEmpty()" (onCancel)="cancel.emit()" (onNext)="onNextStep($event)"
       [labels]="labels"></c8y-stepper-buttons>
   </cdk-step>
 
