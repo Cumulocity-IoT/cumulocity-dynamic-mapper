@@ -84,8 +84,6 @@ export class MappingService {
 
   mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
   mappingsInboundEnriched$: Observable<MappingEnriched[]>;
-  readonly reloadInbound$: Subject<void>;
-  readonly reloadOutbound$: Subject<void>;
 
   // Cache
   private _agentId: string;
@@ -102,8 +100,6 @@ export class MappingService {
     const realtimeSubjectService = inject(RealtimeSubjectService);
     this.eventRealtimeService = new EventRealtimeService(realtimeSubjectService);
     this.managedObjectRealtimeService = new ManagedObjectRealtimeService(realtimeSubjectService);
-    this.reloadInbound$ = this.sharedService.reloadInbound$;
-    this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
   }
 
@@ -219,14 +215,7 @@ export class MappingService {
    * untouched direction too (doubling API calls) whenever the caller does know which one changed.
    */
   private refreshAfterMutation(direction?: Direction): void {
-    if (direction === Direction.INBOUND) {
-      this.reloadInbound$.next();
-    } else if (direction === Direction.OUTBOUND) {
-      this.reloadOutbound$.next();
-    } else {
-      this.reloadInbound$.next();
-      this.reloadOutbound$.next();
-    }
+    this.sharedService.reloadMappings(direction);
   }
 
   // ===== VERSION & DRAFT OPERATIONS =====
@@ -507,11 +496,7 @@ export class MappingService {
 
 
   refreshMappings(direction: Direction) {
-    if (direction == Direction.INBOUND) {
-      this.reloadInbound$.next();
-    } else {
-      this.reloadOutbound$.next();
-    }
+    this.sharedService.reloadMappings(direction === Direction.INBOUND ? Direction.INBOUND : Direction.OUTBOUND);
   }
 
   /**
@@ -546,12 +531,12 @@ export class MappingService {
   // ===== PRIVATE METHODS =====
 
   private initializeMappingsEnriched(): void {
-    this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
+    this.mappingsInboundEnriched$ = this.sharedService.reloadInbound$.pipe(
       switchMap(() => this.loadMappingsEnriched(Direction.INBOUND)),
       shareReplay(1)
     );
 
-    this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
+    this.mappingsOutboundEnriched$ = this.sharedService.reloadOutbound$.pipe(
       switchMap(() => this.loadMappingsEnriched(Direction.OUTBOUND)),
       shareReplay(1)
     );
@@ -559,12 +544,11 @@ export class MappingService {
     // Initialize subscriptions. No error callback needed: loadMappingsEnriched() never lets an
     // error reach this subscription (see its own catchError) — without that, a single transient
     // fetch failure would permanently cache an error in the shareReplay(1) buffer above, and
-    // every later reloadInbound$/reloadOutbound$.next() (Refresh button, CRUD ops, bulk actions,
+    // every later reloadMappings() (Refresh button, CRUD ops, bulk actions,
     // a freshly (re)created MappingComponent) would silently become a no-op forever.
     this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
     this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
+    this.sharedService.reloadMappings();
   }
 
   private loadMappingsEnriched(direction: Direction): Observable<MappingEnriched[]> {
@@ -597,8 +581,7 @@ export class MappingService {
     if (active) {
       this.eventRealtimeService.start();
       this.managedObjectRealtimeService.start();
-      this.reloadInbound$.next();
-      this.reloadOutbound$.next();
+      this.sharedService.reloadMappings();
     } else {
       this.eventRealtimeService.stop();
       this.managedObjectRealtimeService.stop();
@@ -653,8 +636,7 @@ export class MappingService {
     merge(mappingChanged$, deploymentChanged$, reconnected$)
       .pipe(debounceTime(200), takeUntil(this.unsubscribe$))
       .subscribe(() => {
-        this.reloadInbound$.next();
-        this.reloadOutbound$.next();
+        this.sharedService.reloadMappings();
       });
   }
 }

@@ -108,7 +108,18 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   imports: [CoreModule, SharedModule]
 })
 export class MappingVersionDrawerComponent implements OnInit {
-  @Input() mapping: Mapping;
+  /**
+   * The mapping to show versions of. The drawer keeps a copy: it records the activated version
+   * and the active flag on it to render the rows, and must not change the opener's mapping,
+   * which the opener reloads from the server when `closeSubject` reports a change.
+   */
+  @Input() set mapping(value: Mapping) {
+    this.workingMapping = value ? { ...value } : value;
+  }
+  get mapping(): Mapping {
+    return this.workingMapping;
+  }
+  private workingMapping: Mapping;
   /** Whether the current user may change versions (activate/publish/delete). */
   @Input() canManage = true;
 

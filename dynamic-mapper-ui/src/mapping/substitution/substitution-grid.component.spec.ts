@@ -104,22 +104,13 @@ describe('SubstitutionGridComponent', () => {
     });
   });
 
-  it('emits the selected index and records it in settings on select', (done) => {
+  it('emits the selected index and leaves the settings to the host', (done) => {
     component.selectSub.subscribe((i) => {
       expect(i).toBe(2);
-      expect(component.settings.selectedSubstitutionIndex).toBe(2);
+      expect(component.settings.selectedSubstitutionIndex).toBe(-1); // the host owns it
       done();
     });
     component.onSubstitutionSelect(2);
-  });
-
-  it('emits the index and records it in settings on edit', (done) => {
-    component.editSub.subscribe((i) => {
-      expect(i).toBe(1);
-      expect(component.settings.selectedSubstitutionIndex).toBe(1);
-      done();
-    });
-    component.onSubstitutionEdit(1);
   });
 
   it('emits deleteSub only after the confirmation modal is confirmed', () => {
@@ -132,7 +123,7 @@ describe('SubstitutionGridComponent', () => {
 
     closeSubject.next(true); // user confirms
     expect(deleted).toEqual([3]);
-    expect(component.settings.selectedSubstitutionIndex).toBe(3);
+    expect(component.settings.selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
     expect(modalHide).toHaveBeenCalled();
   });
 

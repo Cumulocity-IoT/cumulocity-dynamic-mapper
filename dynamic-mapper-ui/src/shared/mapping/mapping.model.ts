@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { MappingTokens } from './processor/processor.model';
+import { MappingTokens } from './processor/processor.constants';
 // `import type`, deliberately: MappingPersistence is only ever used in type position here, while
 // stepper.model.ts imports Direction from this file as a *value*. A value import in both
 // directions is a runtime cycle — and because this module builds objects with computed keys like

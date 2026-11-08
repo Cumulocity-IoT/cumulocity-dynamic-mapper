@@ -64,13 +64,12 @@ export class DeviceSelectorTableComponent implements OnInit {
   clickedUpdateSubscription() {
     const existingIds = new Set(this.deviceList.map(device => device.id));
 
-    // Only add new IDs that don't already exist
-    this.selectedItemIds?.forEach((id) => {
-      if (!existingIds.has(id)) {
-        this.deviceList.push({ id });
-      }
-    });
-    this.commit.emit(this.deviceList);
+    // Only add new IDs that don't already exist. The host's list is not changed: it receives
+    // the combined list and decides what to keep.
+    const added = (this.selectedItemIds ?? [])
+      .filter(id => !existingIds.has(id))
+      .map(id => ({ id }));
+    this.commit.emit([...this.deviceList, ...added]);
   }
 
   clickedCancel() {

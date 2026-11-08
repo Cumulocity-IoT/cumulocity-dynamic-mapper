@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { randomIdAsString } from '../util';
+import { randomIdAsString } from '../random-id';
 import { API, Mapping, RepairStrategy } from '../mapping.model';
 import { ContentChanges } from '../../component/json-editor/json-editor.component';
 import { Content } from 'vanilla-jsoneditor';

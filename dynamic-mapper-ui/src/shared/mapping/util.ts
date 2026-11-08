@@ -22,16 +22,19 @@ import * as _ from 'lodash';
 import * as jsYaml from 'js-yaml';
 import {
   API,
-  CodeTemplate,
   DeploymentMapEntry,
   Direction,
-  JsonEditorComponent,
   Mapping,
   MappingType,
-  TransformationType
-} from '../../shared';
-import { ValidationFormlyError } from './mapping.model';
-import { MappingTokens, PROTECTED_TOKENS } from './processor/processor.model';
+  TransformationType,
+  ValidationFormlyError
+} from './mapping.model';
+import type { CodeTemplate } from '../configuration/configuration.model';
+import type { JsonEditorComponent } from '../component/json-editor/json-editor.component';
+import { MappingTokens, PROTECTED_TOKENS } from './processor/processor.constants';
+// Lives in its own file so processor.model can use it without importing this module back.
+import { randomIdAsString } from './random-id';
+export { randomIdAsString };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -633,10 +636,6 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
 }
 
 // ─── Template testing ─────────────────────────────────────────────────────────
-
-export function randomIdAsString() {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();

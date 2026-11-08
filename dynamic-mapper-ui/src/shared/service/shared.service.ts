@@ -55,8 +55,22 @@ export class SharedService {
   private _agentId: string;
   private _featurePromise: Promise<Feature> | null = null;
   private _featureCache: Feature | null = null;
-  reloadInbound$: Subject<void> = new Subject<void>();
-  reloadOutbound$: Subject<void> = new Subject<void>();
+  private readonly reloadInbound = new Subject<void>();
+  private readonly reloadOutbound = new Subject<void>();
+  /** Emits when the inbound mappings have to be reloaded. Trigger it with {@link reloadMappings}. */
+  readonly reloadInbound$ = this.reloadInbound.asObservable();
+  /** Emits when the outbound mappings have to be reloaded. Trigger it with {@link reloadMappings}. */
+  readonly reloadOutbound$ = this.reloadOutbound.asObservable();
+
+  /** Reloads the mappings of one direction now, or of both when no direction is given. */
+  reloadMappings(direction?: Direction): void {
+    if (direction !== Direction.OUTBOUND) {
+      this.reloadInbound.next();
+    }
+    if (direction !== Direction.INBOUND) {
+      this.reloadOutbound.next();
+    }
+  }
   private _serviceConfiguration: ServiceConfiguration;
 
   async getDynamicMappingServiceAgent(): Promise<string> {
@@ -126,16 +140,14 @@ export class SharedService {
       timer(2000)
         .pipe(takeUntil(this.reloadInbound$))
         .subscribe(() => {
-          this.reloadInbound$.next();
+          this.reloadMappings(Direction.INBOUND);
         });
-      // this.reloadInbound$.next();
     } else {
       timer(2000)
         .pipe(takeUntil(this.reloadOutbound$))
         .subscribe(() => {
-          this.reloadOutbound$.next();
+          this.reloadMappings(Direction.OUTBOUND);
         });
-      // this.reloadOutbound$.next();
     }
   }
 

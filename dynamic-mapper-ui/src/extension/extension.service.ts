@@ -25,7 +25,7 @@ import {
   InventoryService,
   FetchClient
 } from '@c8y/client';
-import { BehaviorSubject, forkJoin, from, map, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
 
 import {
   BASE_URL,
@@ -44,9 +44,6 @@ interface ExtensionFilter {
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
-  // Private subjects
-  readonly appDeleted$ = new Subject<IManagedObject>();
-
   // Configuration
   private readonly CONFIG = {
     PAGE_SIZE: 100,

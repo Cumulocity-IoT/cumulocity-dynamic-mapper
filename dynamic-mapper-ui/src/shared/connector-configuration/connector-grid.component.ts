@@ -317,8 +317,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private updateDeploymentMapEntry(selected: string[]): void {
     if (!this.deploymentMapEntry) return;
 
-    this.deploymentMapEntry.connectors = selected;
-    this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
+    // A new object: the host owns the entry and hands the new one back through the input.
+    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry, connectors: selected });
 
     if (this.readOnly) {
       this.updateReadOnlyConfigurations(selected);

@@ -161,6 +161,20 @@ describe('MappingVersionDrawerComponent', () => {
       expect(component.busy).toBeFalse();
     });
 
+    it('does not change the mapping object the opener passed in', async () => {
+      const opener = buildMapping();
+      opener.active = false;
+      const before = { version: opener.version, active: opener.active };
+      component.mapping = opener;
+      mockMappingService.activateVersion.and.resolveTo({} as any);
+
+      await component.activate({ version: '2.0.0' } as any);
+
+      expect(component.mapping.version).toBe('2.0.0'); // the drawer's own copy shows it
+      expect(component.mapping.active).toBeTrue();
+      expect({ version: opener.version, active: opener.active }).toEqual(before);
+    });
+
     it('shows a danger alert and clears busy when activation fails', async () => {
       mockMappingService.activateVersion.and.rejectWith(new Error('locked'));
 

@@ -69,7 +69,6 @@ export class SubstitutionGridComponent implements OnDestroy {
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
-  @Output() editSub = new EventEmitter<number>();
   /** An in-grid edit of expandArray/repairStrategy. The grid never changes the mapping itself. */
   @Output() substitutionPatch = new EventEmitter<{ index: number; patch: Partial<Substitution> }>();
   /** Fired from the "Cancel / New substitution" control in the header, next to the selection count. */
@@ -125,13 +124,8 @@ export class SubstitutionGridComponent implements OnDestroy {
   }
 
   onSubstitutionSelect(index: number): void {
-    this.settings.selectedSubstitutionIndex = index;
+    // The host owns the selected index and hands it back through `settings`.
     this.selectSub.emit(index);
-  }
-
-  onSubstitutionEdit(index: number): void {
-    this.settings.selectedSubstitutionIndex = index;
-    this.editSub.emit(index);
   }
 
   /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
@@ -190,7 +184,6 @@ export class SubstitutionGridComponent implements OnDestroy {
     confirmDeletionModalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(
       (result: boolean) => {
         if (result) {
-          this.settings.selectedSubstitutionIndex = index;
           this.deleteSub.emit(index);
         }
         confirmDeletionModalRef.hide();
