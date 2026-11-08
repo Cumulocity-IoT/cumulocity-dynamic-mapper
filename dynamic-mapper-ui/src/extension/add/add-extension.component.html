@@ -18,7 +18,7 @@
 ~  @authors Christof Strack, Stefan Witschel
 ~
 -->
-<c8y-modal title="Add Processor Extension" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'"
+<c8y-modal [title]="'Add Processor Extension' | translate" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'"
   [disabled]="false">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plugin'"></span>

@@ -24,6 +24,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from '../shared/service/shared.service';
 import { NODE2} from '../shared/mapping/mapping.constants';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class StatisticTabFactory implements TabFactory {
@@ -41,21 +42,21 @@ export class StatisticTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
         priority: 930,
-        label: 'Inbound',
+        label: gettext('Inbound'),
         icon: 'swipe-right',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/outbound`,
         priority: 920,
-        label: 'Outbound',
+        label: gettext('Outbound'),
         icon: 'swipe-left',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/chart`,
         priority: 910,
-        label: 'Chart',
+        label: gettext('Chart'),
         icon: 'pie-chart',
         orientation: 'horizontal',
       } as Tab);

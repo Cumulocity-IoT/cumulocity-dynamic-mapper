@@ -10,6 +10,7 @@ import { stringToBase64 } from '../../shared/mapping/util';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingEditorBase } from './mapping-editor.base';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 
 @Component({ selector: 'd11r-test-editor-host', template: '', standalone: true })
 class TestEditorHostComponent extends MappingEditorBase {
@@ -53,7 +54,8 @@ describe('MappingEditorBase', () => {
           { provide: SubstitutionManagementService, useValue: {} },
           { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['warning', 'add']) },
           { provide: BottomDrawerService, useValue: {} },
-          { provide: BsModalService, useValue: {} }
+          { provide: BsModalService, useValue: {} },
+          provideTranslateStub()
         ]
       }
     });
@@ -251,7 +253,8 @@ describe('MappingEditorBase connector selection during change detection', () => 
           { provide: SubstitutionManagementService, useValue: {} },
           { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['warning', 'add']) },
           { provide: BottomDrawerService, useValue: {} },
-          { provide: BsModalService, useValue: {} }
+          { provide: BsModalService, useValue: {} },
+          provideTranslateStub()
         ]
       }
     });

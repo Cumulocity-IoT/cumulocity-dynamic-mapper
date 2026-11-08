@@ -24,6 +24,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from '../shared/service/shared.service';
 import { NODE3} from '../shared/mapping/mapping.constants';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class ConfigurationTabFactory implements TabFactory {
@@ -42,35 +43,35 @@ export class ConfigurationTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`,
         priority: 930,
-        label: 'General',
+        label: gettext('General'),
         icon: 'settings',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/processing`,
         priority: 925,
-        label: 'Processing',
+        label: gettext('Processing'),
         icon: 'rocket',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/caching`,
         priority: 920,
-        label: 'Caching',
+        label: gettext('Caching'),
         icon: 'database',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/monitoring`,
         priority: 915,
-        label: 'Monitoring',
+        label: gettext('Monitoring'),
         icon: 'system-report',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/ai`,
         priority: 910,
-        label: 'AI Agent',
+        label: gettext('AI Agent'),
         icon: 'bot',
         orientation: 'horizontal',
       } as Tab);

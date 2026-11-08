@@ -22,6 +22,7 @@ import { AlertService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { ServiceConfiguration } from '../../shared/configuration/configuration.model';
 import { SharedService } from '../../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 /**
  * Restores a previously exported service configuration.
@@ -67,7 +68,7 @@ export class ImportServiceConfigurationComponent implements OnDestroy {
         await this.onFile(event[0].file);
       }
     } catch (error) {
-      this.alertService.warning('Import failed. Verify the format of the import file!');
+      this.alertService.warning(gettext('Import failed. Verify the format of the import file!'));
     }
   }
 
@@ -122,7 +123,7 @@ export class ImportServiceConfigurationComponent implements OnDestroy {
         this.errorMessage = `Import failed: the service rejected the configuration (HTTP ${response.status}).`;
         return false;
       }
-      this.alertService.success('Service configuration restored from file.');
+      this.alertService.success(gettext('Service configuration restored from file.'));
       return true;
     } catch (error) {
       this.errorMessage = `Import failed: ${error?.message ?? 'unknown error'}`;

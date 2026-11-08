@@ -23,7 +23,11 @@
   @if (history?.historyTruncated) {
   <div class="text-muted text-10 m-b-4">
     <i c8yIcon="info-circle"></i>
-    {{ '… ' + history.historyOmittedCount + ' earlier ' + (history.historyOmittedCount === 1 ? 'entry' : 'entries') + ' omitted …' }}
+    @if (history.historyOmittedCount === 1) {
+    <span [textContent]="'… {{count}} earlier entry omitted …' | translate: { count: history.historyOmittedCount }"></span>
+    } @else {
+    <span [textContent]="'… {{count}} earlier entries omitted …' | translate: { count: history.historyOmittedCount }"></span>
+    }
   </div>
   }
   <!-- ONE continuous line for the whole list, not a per-row segment: a per-row line can only ever

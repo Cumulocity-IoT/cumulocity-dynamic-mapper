@@ -23,6 +23,8 @@ import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
@@ -98,6 +100,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   protected readonly cdr = inject(ChangeDetectorRef);
   protected readonly bsModalService = inject(BsModalService);
   protected readonly alertService = inject(AlertService);
+  protected readonly translateService = inject(TranslateService);
   protected readonly bottomDrawerService = inject(BottomDrawerService);
   protected readonly stepperService = inject(MappingStepperService);
   protected readonly substitutionService = inject(SubstitutionManagementService);
@@ -320,7 +323,10 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       if (warnIfMissing) {
         this.raiseAlert({
           type: 'warning',
-          text: `The extension ${extension.extensionName} with event ${extension.eventName} is not loaded...`
+          text: this.translateService.instant(gettext('The extension {{extensionName}} with event {{eventName}} is not loaded...'), {
+            extensionName: extension.extensionName,
+            eventName: extension.eventName
+          })
         });
       }
       return !warnIfMissing;
@@ -422,7 +428,10 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     const templateType = tryToTemplateType(this.stepperConfiguration.direction!, this.mapping.transformationType);
     if (!templateType) {
       this.alertService.warning(
-        `Code templates are only available for Smart Function mappings, not ${this.mapping.transformationType}.`
+        this.translateService.instant(
+          gettext('Code templates are only available for Smart Function mappings, not {{transformationType}}.'),
+          { transformationType: this.mapping.transformationType }
+        )
       );
       return;
     }
@@ -489,7 +498,11 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     } catch (error) {
       // Without this the click handler's promise rejects silently and the button just does nothing.
       console.error('Could not open the AI assistant:', error);
-      this.alertService.danger(`Could not open the AI assistant: ${(error as Error)?.message ?? error}`);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Could not open the AI assistant: {{message}}'), {
+          message: (error as Error)?.message ?? error
+        })
+      );
       this.isGenerateSubstitutionOpen = false;
       return;
     }
@@ -509,17 +522,19 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
             });
           }
         } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
+          this.alertService.warning(gettext('No valid JavaScript code was generated.'));
         }
       } else {
         if (Array.isArray(result) && result.length > 0) {
-          this.alertService.success(`Generated ${result.length} substitutions.`);
+          this.alertService.success(
+            this.translateService.instant(gettext('Generated {{count}} substitutions.'), { count: result.length })
+          );
           // Same bulk replace as the transformation step: the generated set replaces the whole
           // list atomically, with one validity refresh instead of one per item.
           this.onSubstitutionsChange(this.substitutionService.replaceAllSubstitutions(result));
           this.refreshSubstitutionValidity();
         } else {
-          this.alertService.warning('No substitutions were generated.');
+          this.alertService.warning(gettext('No substitutions were generated.'));
         }
       }
     } catch (error) {
@@ -527,7 +542,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       // failure, so it shouldn't surface as an error to the user.
       if (error !== 'User canceled') {
         console.error('AI generation error:', error);
-        this.alertService.danger('AI generation failed. Please try again.');
+        this.alertService.danger(gettext('AI generation failed. Please try again.'));
       }
     }
 

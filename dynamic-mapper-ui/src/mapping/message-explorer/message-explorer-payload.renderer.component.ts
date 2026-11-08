@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '../../shared/component/json-editor/json-editor.component';
@@ -106,9 +107,9 @@ export class MessageExplorerPayloadRendererComponent {
   expanded = false;
   view: 'text' | 'hex' | 'base64' = 'text';
   readonly views = [
-    { id: 'text' as const, label: 'Text' },
-    { id: 'hex' as const, label: 'Hex' },
-    { id: 'base64' as const, label: 'Base64' }
+    { id: 'text' as const, label: gettext('Text') },
+    { id: 'hex' as const, label: gettext('Hex') },
+    { id: 'base64' as const, label: gettext('Base64') }
   ];
   parsedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
 

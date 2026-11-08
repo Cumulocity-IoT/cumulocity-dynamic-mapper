@@ -19,6 +19,7 @@
  */
 
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
@@ -57,7 +58,7 @@ describe('SubstitutionGridComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [SubstitutionGridComponent],
-      providers: [{ provide: BsModalService, useValue: mockBsModalService }]
+      providers: [{ provide: BsModalService, useValue: mockBsModalService }, provideTranslateStub()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SubstitutionGridComponent);

@@ -149,7 +149,7 @@
                 <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
                   {{ c.name }}
                   @if (isConnectorDisabled(c)) {
-                  (disabled)
+                  <span translate>(disabled)</span>
                   }
                 </option>
                 }

@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Qos } from './mapping.model';
 
 /** Default applied when a mapping carries no explicit QoS — mirrors `Qos.DEFAULT` in the backend. */
@@ -36,24 +37,24 @@ export const QOS_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: Qos.AT_MOST_ONCE,
-    label: 'At most once',
+    label: gettext('At most once'),
     level: 0,
     description:
-      'Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency.'
+      gettext('Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency.')
   },
   {
     value: Qos.AT_LEAST_ONCE,
-    label: 'At least once',
+    label: gettext('At least once'),
     level: 1,
     description:
-      'The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once.'
+      gettext('The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once.')
   },
   {
     value: Qos.EXACTLY_ONCE,
-    label: 'Exactly once',
+    label: gettext('Exactly once'),
     level: 2,
     description:
-      'As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once.'
+      gettext('As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once.')
   }
 ];
 

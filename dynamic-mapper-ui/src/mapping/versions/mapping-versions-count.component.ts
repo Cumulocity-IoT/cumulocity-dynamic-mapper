@@ -35,6 +35,7 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, firstValueFrom, Subject, takeUntil } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Direction, Feature, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
@@ -139,7 +140,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
 
       this.rows$.next(rows);
     } catch (err) {
-      this.alertService.danger('Failed to load version counts', (err as Error).message);
+      this.alertService.danger(gettext('Failed to load version counts'), (err as Error).message);
     } finally {
       this.isLoading$.next(false);
     }
@@ -161,7 +162,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
   private setupActionControls(): void {
     this.actionControls = [
       {
-        text: 'Versions',
+        text: gettext('Versions'),
         type: 'VERSIONS',
         icon: 'list',
         callback: this.openVersions.bind(this)
@@ -173,7 +174,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
     this.columns = [
       {
         name: 'name',
-        header: 'Name',
+        header: gettext('Name'),
         path: 'name',
         filterable: false,
         sortable: true,
@@ -189,7 +190,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
       },
       {
         name: 'topic',
-        header: this.direction === Direction.INBOUND ? 'Mapping topic' : 'Publish topic',
+        header: this.direction === Direction.INBOUND ? gettext('Mapping topic') : gettext('Publish topic'),
         path: 'topic',
         filterable: false,
         sortable: true,
@@ -197,7 +198,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
       },
       {
         name: 'activeVersion',
-        header: 'Active version',
+        header: gettext('Active version'),
         path: 'activeVersion',
         filterable: false,
         sortable: true,
@@ -207,7 +208,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
       },
       {
         name: 'versionCount',
-        header: 'Versions',
+        header: gettext('Versions'),
         path: 'versionCount',
         filterable: false,
         sortable: true,
@@ -217,7 +218,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
       },
       {
         name: 'draftExists',
-        header: 'Status',
+        header: gettext('Status'),
         path: 'draftExists',
         filterable: false,
         sortable: true,

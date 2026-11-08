@@ -29,7 +29,7 @@
     </div>
     <div class="card-inner-scroll flex-grow">
       <div class="card-block">
-        <c8y-device-grid [title]="'Devices'" [columns]="columns" [actionControls]="[]"
+        <c8y-device-grid [title]="'Devices' | translate" [columns]="columns" [actionControls]="[]"
           (itemsSelect)="onItemsSelect($event)" [selectable]="true"
           data-cy="dm-device-table-grid"></c8y-device-grid>
       </div>

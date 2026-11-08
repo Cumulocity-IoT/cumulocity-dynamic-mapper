@@ -22,6 +22,7 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { SharedService } from '../shared/service/shared.service';
 import { NODE1 } from '../shared/mapping/mapping.constants';
 
@@ -41,14 +42,14 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/dynamic`,
         priority: 920,
-        label: 'Subscription dynamic',
+        label: gettext('Subscription dynamic'),
         icon: 'automatic',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
         priority: 930,
-        label: 'Subscription static',
+        label: gettext('Subscription static'),
         icon: 'check-box',
         orientation: 'horizontal',
       } as Tab);

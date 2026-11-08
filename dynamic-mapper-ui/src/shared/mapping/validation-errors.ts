@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Extension, TransformationType } from './mapping.model';
 
 /**
@@ -30,64 +31,64 @@ import { Extension, TransformationType } from './mapping.model';
  */
 export const ValidationFormlyError = {
   Only_One_Multi_Level_Wildcard: {
-    message: 'Only one MultiLevel wildcard "#" is allowed.'
+    message: gettext('Only one MultiLevel wildcard "#" is allowed.')
   },
   Multi_Level_Wildcard_Only_At_End: {
-    message: 'MultiLevel wildcard "#" can only appear at the end.'
+    message: gettext('MultiLevel wildcard "#" can only appear at the end.')
   },
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
-    message: 'Only one substitution defining the DeviceIdentifier can be used.'
+    message: gettext('Only one substitution defining the DeviceIdentifier can be used.')
   },
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
-    message: 'A substitution defining the DeviceIdentifier must be used.'
+    message: gettext('A substitution defining the DeviceIdentifier must be used.')
   },
   Target_Template_Must_Be_Valid_JSON: {
-    message: 'TargetTemplate must be valid JSON.'
+    message: gettext('TargetTemplate must be valid JSON.')
   },
   Source_Template_Must_Be_Valid_JSON: {
-    message: 'SourceTemplate must be valid JSON.'
+    message: gettext('SourceTemplate must be valid JSON.')
   },
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
       message:
-        'The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name'
+        gettext('The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name')
     },
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
     {
       message:
-        'MappingTopic and MappingTopicSample do not have same structure in the Topic Name.'
+        gettext('MappingTopic and MappingTopicSample do not have same structure in the Topic Name.')
     },
   PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
       message:
-        'The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name'
+        gettext('The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name')
     },
   PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
     {
       message:
-        'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
+        gettext('PublishTopic and PublishTopicSample do not have same structure in the Topic Name.')
     },
   Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function:
     {
       message:
-        'When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function.'
+        gettext('When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function.')
     },
   Extension_Must_Be_Defined_For_Extension_Java_Mapping: {
-    message: 'An extension must be selected for an Extension (Java) mapping.'
+    message: gettext('An extension must be selected for an Extension (Java) mapping.')
   },
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type: {
-    message: 'This payload format requires the Smart Function transformation type.'
+    message: gettext('This payload format requires the Smart Function transformation type.')
   },
   Substitution_Source_Expression_Must_Be_Valid_JSONata: {
     message:
-      'At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression.'
+      gettext('At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression.')
   },
   Substitution_Paths_Must_Not_Be_Empty: {
     message:
-      'At least one substitution has an empty source or target path. Both must be set.'
+      gettext('At least one substitution has an empty source or target path. Both must be set.')
   },
   Substitution_Expand_Array_Not_Supported_For_Outbound: {
     message:
-      'At least one substitution of this outbound mapping has "Expand as array" set. Outbound mappings produce exactly one message, so switch it off.'
+      gettext('At least one substitution of this outbound mapping has "Expand as array" set. Outbound mappings produce exactly one message, so switch it off.')
   }
 };

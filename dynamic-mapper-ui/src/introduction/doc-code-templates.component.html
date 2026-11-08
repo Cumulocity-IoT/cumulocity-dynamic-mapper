@@ -22,8 +22,8 @@
   <c8y-title>{{ title }}</c8y-title>
   <a id="top"></a>
   <div class="text-right m-b-16">
-    <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top">
-      <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+    <a (click)="scrollToElement('top')" class="to-the-top" role="button" [attr.aria-label]="'Scroll to top' | translate">
+      <i class="dlt-c8y-icon-chevron-up m-r-4"></i> <span translate>Top</span>
     </a>
   </div>
 
@@ -32,23 +32,23 @@
 
     <!-- Live gallery of the code templates present in this tenant. Real Angular template rather
          than markdown: it iterates live data and opens the code drawer. -->
-    <h3 id="code-template-gallery">Code template gallery</h3>
-    <p>The templates below are the ones currently available in your tenant. Each one demonstrates:</p>
+    <h3 id="code-template-gallery" translate>Code template gallery</h3>
+    <p translate>The templates below are the ones currently available in your tenant. Each one demonstrates:</p>
     <ul>
-      <li>Accessing and transforming payload data</li>
-      <li>Working with device identifiers and external IDs</li>
-      <li>Enriching data with device inventory information</li>
-      <li>Handling different Cumulocity API types (measurements, events, alarms, inventory)</li>
-      <li>Error handling and logging</li>
+      <li translate>Accessing and transforming payload data</li>
+      <li translate>Working with device identifiers and external IDs</li>
+      <li translate>Enriching data with device inventory information</li>
+      <li translate>Handling different Cumulocity API types (measurements, events, alarms, inventory)</li>
+      <li translate>Error handling and logging</li>
     </ul>
     <div class="table-responsive table-width-100">
       <table class="table table-layout-fixed">
         <thead class="thead-light">
           <tr>
-            <th style="width: 20%;">Transformation Type</th>
-            <th style="width: 10%;">Direction</th>
-            <th style="width: 55%;">Description</th>
-            <th style="width: 15%;">View Code</th>
+            <th style="width: 20%;" translate>Transformation Type</th>
+            <th style="width: 10%;" translate>Direction</th>
+            <th style="width: 55%;" translate>Description</th>
+            <th style="width: 15%;" translate>View Code</th>
           </tr>
         </thead>
         <tbody>
@@ -57,7 +57,7 @@
             <td>{{ getTransformationTypeName(template.templateType) }}</td>
             <td>{{ template.direction }}</td>
             <td>{{ template.description }}</td>
-            <td><a (click)="openCodeExplorer(template)">View</a></td>
+            <td><a (click)="openCodeExplorer(template)" translate>View</a></td>
           </tr>
           }
         </tbody>

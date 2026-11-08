@@ -20,6 +20,8 @@
 
 import { Injectable, inject } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { take } from 'rxjs/operators';
 
@@ -51,6 +53,7 @@ export class MappingPublishService {
   private readonly mappingService = inject(MappingService);
   private readonly bsModalService = inject(BsModalService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly subscriptionService = inject(SubscriptionService);
 
   async publishDraft(mapping: Mapping): Promise<PublishOutcome> {
@@ -62,14 +65,18 @@ export class MappingPublishService {
       const mv = await this.mappingService.publishDraft(mapping.id, version.version, version.note || undefined);
       publishedVersion = mv.version;
     } catch (e) {
-      this.alertService.danger('Failed to publish draft', (e as Error).message);
+      this.alertService.danger(gettext('Failed to publish draft'), (e as Error).message);
       return { published: false, activated: false };
     }
 
     if (!version.activate) {
       this.alertService.success(mapping.active
-        ? `Published version ${publishedVersion} of ${mapping.name}. It keeps running ${mapping.version} until you activate the new version.`
-        : `Published version ${publishedVersion} of ${mapping.name}. It stays inactive until you activate it.`);
+        ? this.translateService.instant(
+          gettext('Published version {{version}} of {{name}}. It keeps running {{current}} until you activate the new version.'),
+          { version: publishedVersion, name: mapping.name, current: mapping.version })
+        : this.translateService.instant(
+          gettext('Published version {{version}} of {{name}}. It stays inactive until you activate it.'),
+          { version: publishedVersion, name: mapping.name }));
       return { published: true, activated: false };
     }
 
@@ -113,7 +120,10 @@ export class MappingPublishService {
     if (mapping.direction === Direction.OUTBOUND) {
       const subscribed = await this.subscriptionService.validateSubscriptionOutbound(Direction.OUTBOUND);
       if (!subscribed) {
-        this.alertService.warning(`Version ${version} of ${mapping.name} is saved, but the mapping was not activated.`);
+        this.alertService.warning(this.translateService.instant(
+          gettext('Version {{version}} of {{name}} is saved, but the mapping was not activated.'),
+          { version, name: mapping.name }
+        ));
         return false;
       }
     }
@@ -121,10 +131,13 @@ export class MappingPublishService {
       await this.mappingService.activateVersion(mapping.id, version);
       mapping.active = true;
       mapping.version = version;
-      this.alertService.success(`Published and activated version ${version} of ${mapping.name}`);
+      this.alertService.success(this.translateService.instant(
+        gettext('Published and activated version {{version}} of {{name}}'),
+        { version, name: mapping.name }
+      ));
       return true;
     } catch (e) {
-      this.alertService.danger('Saved, but activating the version failed', (e as Error).message);
+      this.alertService.danger(gettext('Saved, but activating the version failed'), (e as Error).message);
       return false;
     }
   }

@@ -23,6 +23,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { Observable, merge, mergeAll, of, toArray } from 'rxjs';
 import { NODE3 } from '../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 @Injectable()
 export class CodeTemplateTabFactory implements TabFactory {
   constructor(
@@ -35,21 +36,21 @@ export class CodeTemplateTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
         priority: 980,
-        label: 'Inbound (Smart Function JavaScript)',
+        label: gettext('Inbound (Smart Function JavaScript)'),
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
         priority: 970,
-        label: 'Outbound (Smart Function JavaScript)',
+        label: gettext('Outbound (Smart Function JavaScript)'),
         icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/others`,
         priority: 960,
-        label: 'System, shared',
+        label: gettext('System, shared'),
         icon: 'processor',
         orientation: 'horizontal'
       } as Tab);

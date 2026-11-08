@@ -22,8 +22,8 @@
   <c8y-title>{{ title }}</c8y-title>
   <a id="top"></a>
   <div class="text-right m-b-16">
-    <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top">
-      <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+    <a (click)="scrollToElement('top')" class="to-the-top" role="button" [attr.aria-label]="'Scroll to top' | translate">
+      <i class="dlt-c8y-icon-chevron-up m-r-4"></i> <span translate>Top</span>
     </a>
   </div>
   <div class="doc-content" #docBody [innerHTML]="html"></div>

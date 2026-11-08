@@ -47,6 +47,7 @@ import {
   STEP_TEST_MAPPING
 } from '../../shared/mapping/stepper.model';
 import { configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 
 /**
  * Unit tests for {@link MappingStepperComponent}.
@@ -249,7 +250,8 @@ describe('MappingStepperComponent', () => {
         { provide: SharedService, useValue: mockSharedService },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BottomDrawerService, useValue: mockBottomDrawerService },
-        { provide: BsModalService, useValue: mockBsModalService }
+        { provide: BsModalService, useValue: mockBsModalService },
+        provideTranslateStub()
       ]
     }).compileComponents();
 

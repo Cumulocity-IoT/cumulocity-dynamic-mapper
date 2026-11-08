@@ -23,7 +23,7 @@
 
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form">
   <div class="d-flex">
-    <label>Direction</label>
+    <label translate>Direction</label>
     <div class="c8y-select-wrapper">
       <select class="form-control" [(ngModel)]="directionFilter" [attr.aria-label]="'Direction filter' | translate">
         <option value="ANY" translate>Any direction</option>
@@ -85,9 +85,7 @@
         @if (
         !filteredEntries || filteredEntries.length === 0
         ) {
-        <c8y-ui-empty-state [icon]="'plugin'" [title]="
-                'No entries for this extension, try to reload extensions.'
-              " [horizontal]="true"></c8y-ui-empty-state>
+        <c8y-ui-empty-state [icon]="'plugin'" [title]="'No entries for this extension, try to reload extensions.' | translate" [horizontal]="true"></c8y-ui-empty-state>
         }
       </c8y-list-group>
     </div>

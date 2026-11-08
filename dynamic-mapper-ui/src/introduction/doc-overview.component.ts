@@ -30,6 +30,7 @@ import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DocMarkdownService } from './doc-markdown.service';
 import { handleDocLinkClick, scrollToDocElement } from './doc-links';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-doc-overview',
@@ -91,15 +92,15 @@ export class DocOverviewComponent implements OnInit {
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+        gettext("You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator.")
       );
     } else if (!this.feature?.userHasMappingAdminRole) {
       this.alertService.warning(
-        "You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator."
+        gettext("You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator.")
       );
     } else if (!this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator."
+        gettext("You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator.")
       );
     }
   }

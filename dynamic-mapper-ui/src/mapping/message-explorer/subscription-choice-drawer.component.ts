@@ -20,6 +20,8 @@
 
 import { AfterViewInit, ChangeDetectorRef, Component, inject, Input, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { ALERT_INFO_TIMEOUT, API } from '../../shared';
@@ -155,6 +157,7 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   ngAfterViewInit(): void {
@@ -184,7 +187,7 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
     try {
       if (this.choice === 'type') {
         if (!this.deviceType) {
-          this.alertService.warning('No device type available for this device.');
+          this.alertService.warning(gettext('No device type available for this device.'));
           this.submitting = false;
           return;
         }
@@ -213,7 +216,7 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
             );
           }
         }
-        this.alertService.add({ text: 'Subscription request submitted. Subscriptions are processed asynchronously.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+        this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
         this._resolve('type');
       } else if (this.choice === 'group' && this.selectedGroupId) {
         const group = this.deviceGroups.find(g => g.id === this.selectedGroupId);
@@ -228,12 +231,12 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
           api: API.ALL.name,
           devices: mergedDevices
         });
-        this.alertService.add({ text: 'Subscription request submitted. Subscriptions are processed asynchronously.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+        this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
         this._resolve('group');
       }
       this.bottomDrawerRef.close();
     } catch (e: any) {
-      this.alertService.danger('Failed to create subscription: ' + e?.message);
+      this.alertService.danger(this.translateService.instant(gettext('Failed to create subscription:')) + ' ' + e?.message);
     } finally {
       this.submitting = false;
     }

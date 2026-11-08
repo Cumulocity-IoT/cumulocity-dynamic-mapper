@@ -189,7 +189,7 @@
                 {{ metadata.componentDisplayName }}
               </span>
               } @else {
-              <span class="text-10 label label-default">Unknown</span>
+              <span class="text-10 label label-default" translate>Unknown</span>
               }
             </div>
             <div class="col-md-1">
@@ -208,12 +208,17 @@
               <span class="text-muted">–</span>
               }
               @if (getConnectorStatusHistory(event); as connectorStatusHistory) {
+              @if (connectorStatusHistory.historyTruncated) {
               <span class="text-10 label label-default m-l-4"
-                title="{{ connectorStatusHistory.historyTruncated
-                  ? ('Showing the ' + connectorStatusHistory.history.length + ' most recent of ' + (connectorStatusHistory.history.length + connectorStatusHistory.historyOmittedCount) + ' status transitions in this session')
-                  : ('Number of status transitions bundled into this session' | translate) }}">
+                [title]="'Showing the {{shown}} most recent of {{total}} status transitions in this session' | translate: { shown: connectorStatusHistory.history.length, total: connectorStatusHistory.history.length + connectorStatusHistory.historyOmittedCount }">
                 {{ connectorStatusHistory.history.length }}{{ connectorStatusHistory.historyTruncated ? '+' : '' }} {{ connectorStatusHistory.history.length === 1 && !connectorStatusHistory.historyTruncated ? 'event' : 'events' }}
               </span>
+              } @else {
+              <span class="text-10 label label-default m-l-4"
+                [title]="'Number of status transitions bundled into this session' | translate">
+                {{ connectorStatusHistory.history.length }}{{ connectorStatusHistory.historyTruncated ? '+' : '' }} {{ connectorStatusHistory.history.length === 1 && !connectorStatusHistory.historyTruncated ? 'event' : 'events' }}
+              </span>
+              }
               @if (!connectorStatusHistory.sessionClosed) {
               <span class="text-10 label label-info m-l-4" translate>open</span>
               }
@@ -239,7 +244,7 @@
     <div class="c8y-empty-state">
       <div c8yIcon="c8y-events" class="c8y-icon-duocolor icon-32"></div>
       <p>
-        <strong>No events available.</strong><br />
+        <strong translate>No events available.</strong><br />
       </p>
     </div>
     }

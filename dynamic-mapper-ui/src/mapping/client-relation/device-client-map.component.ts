@@ -103,14 +103,14 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   columnsRelations: Column[] = [
     {
       name: 'Id',
-      header: 'Device ID',
+      header: gettext('Device ID'),
       path: 'id',
       filterable: false,
       sortable: true,
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Client',
+      header: gettext('Client'),
       name: 'client',
       path: 'client',
       filterable: true,
@@ -168,8 +168,8 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   async onDeleteAllClientRelations() {
     let result: boolean = false;
     const initialState = {
-      title: 'Delete all relations ',
-      message: 'You are about to delete all relations. Do you want to proceed to delete ALL?'
+      title: gettext('Delete all relations'),
+      message: gettext('You are about to delete all relations. Do you want to proceed to delete ALL?')
       ,
       labels: {
         ok: 'Delete',
@@ -251,10 +251,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     let result: boolean = false;
     if (confirmation) {
       const initialState = {
-        title: multiple ? 'Delete relations' : 'Delete relation',
+        title: multiple ? gettext('Delete relations') : gettext('Delete relation'),
         message: multiple
-          ? 'You are about to delete relations. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a relation. Do you want to proceed?',
+          ? gettext('You are about to delete relations. Do you want to proceed to delete ALL?')
+          : gettext('You are about to delete a relation. Do you want to proceed?'),
         labels: {
           ok: 'Delete',
           cancel: 'Cancel'

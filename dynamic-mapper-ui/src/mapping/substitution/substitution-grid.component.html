@@ -41,10 +41,10 @@
         <tr>
           <th class="bg-level-1"></th>
           <th class="bg-level-1">#</th>
-          <th class="bg-level-1">Source</th>
-          <th class="bg-level-1">Target</th>
-          <th class="bg-level-1">Expand as array</th>
-          <th class="bg-level-1">Repair strategy</th>
+          <th class="bg-level-1" translate>Source</th>
+          <th class="bg-level-1" translate>Target</th>
+          <th class="bg-level-1" translate>Expand as array</th>
+          <th class="bg-level-1" translate>Repair strategy</th>
           <th class="bg-level-1 text-right">
             <button type="button" class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate"
               [popover]="columnsHelp" placement="top" triggers="focus" container="body"></button>
@@ -72,7 +72,7 @@
           <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
             [class.active]="settings.selectedSubstitutionIndex === i">
             <td>
-              <label class="c8y-radio" title="Checkbox">
+              <label class="c8y-radio" [title]="'Checkbox' | translate">
                 <input type="radio" (click)="onSubstitutionSelect(i)"
                   [attr.data-cy]="'dm-substitution-select-' + i"
                   [checked]="settings.selectedSubstitutionIndex == i" />

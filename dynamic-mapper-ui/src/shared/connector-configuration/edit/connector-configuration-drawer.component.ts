@@ -41,6 +41,7 @@ import { FormatStringPipe } from '../../misc/format-string.pipe';
 import { SharedModule } from '../../shared.module';
 import { Action } from '../types';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface PropertyEntry {
   key: string;
@@ -153,7 +154,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       id: 'connectorType',
       wrappers: ['c8y-form-field'],
       props: {
-        label: 'Connector type',
+        label: gettext('Connector type'),
         options: filteredSpecs
           .map(sp => {
             const singletonSuffix = !this.allowedConnectors.includes(sp.connectorType) ? ' - Only one instance per tenant allowed' : '';
@@ -300,7 +301,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           type: 'input',
           wrappers: ['c8y-form-field'],
           props: {
-            label: 'Name',
+            label: gettext('Name'),
             required: true,
             disabled: this.readOnly,
           }
@@ -311,8 +312,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           key: 'description',
           wrappers: ['c8y-form-field'],
           props: {
-            label: 'Description',
-            placeholder: 'choose connector ...',
+            label: gettext('Description'),
+            placeholder: gettext('choose connector ...'),
             disabled: this.readOnly,
           },
         }

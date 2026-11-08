@@ -7,7 +7,7 @@
       <!-- Label row: both cells are in the same CSS grid row, so they are always the same height -->
       <div class="d-grid grid__col--6-6 gap-4 m-b-4">
         <div class="p-r-2 d-flex j-c-between a-i-center">
-          <label translate class="m-b-0">Source Template - {{ sourceSystem }}</label>
+          <label class="m-b-0" [textContent]="'Source Template - {{system}}' | translate: { system: sourceSystem }"></label>
           <div>
             @if (hasSourceMetadata) {
             <button type="button" name="toggleSourceMetadata" class="btn btn-default btn-xs"
@@ -18,12 +18,12 @@
             </button>
             }
             <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
-              class="btn-help" aria-label="Help content">
+              class="btn-help" [attr.aria-label]="'Help content' | translate">
             </button>
           </div>
         </div>
         <div class="p-l-2 d-flex j-c-between a-i-center">
-          <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
+          <label class="m-b-0" [textContent]="'Target Template - {{system}}' | translate: { system: targetSystem }"></label>
           <div>
             @if (hasTargetMetadata) {
             <button type="button" name="toggleTargetMetadata" class="btn btn-default btn-xs"
@@ -34,7 +34,7 @@
             </button>
             }
             <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
-              class="btn-help" aria-label="Help content">
+              class="btn-help" [attr.aria-label]="'Help content' | translate">
             </button>
             @if (stepperViewModel.showTargetContent) {
             <button type="button" name="sample" class="btn btn-default btn-xs" data-cy="dm-mapping-template-reset-target"
@@ -108,11 +108,10 @@
       <div class="p-b-16">
         <span class="text-warning text-12 p-l-8 p-b-12" style="display: block;">
           @if (sourceIssues.protectedFieldsChanged) {
-          Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
-          directly in templates is not supported. Use substitutions instead. Changes are reverted!
+          <span [innerHTML]="'Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code> directly in templates is not supported. Use substitutions instead. Changes are reverted!' | translate"></span>
           }
           @if (sourceIssues.arrayNeedsSmartFunction) {
-          Array templates require transformation type <code>SMART_FUNCTION</code>.
+          <span [innerHTML]="'Array templates require transformation type <code>SMART_FUNCTION</code>.' | translate"></span>
           }
         </span>
       </div>
@@ -120,8 +119,7 @@
       @if (stepperViewModel.showFilterControls) {
       <div class="row">
         <div class="col-lg-6 d-col g-8">
-          <div class="legend form-block">
-            Filter execution mapping</div>
+          <div class="legend form-block" translate>Filter execution mapping</div>
           <div>
             <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4 m-t-8"
               data-cy="dm-mapping-template-update-filter" (click)="onOverwriteFilterMapping()" translate
@@ -131,7 +129,7 @@
           </div>
           <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
           <div class="form-group m-l-0 m-b-4">
-            <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType }}]</label>
+            <label class="p-l-8" [textContent]="'Filter Result [{{resultType}}]' | translate: { resultType: filterModel.filterExpression?.resultType }"></label>
             <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize
               data-cy="dm-mapping-template-filter-result"
               [readonly]="true">{{ filterModel.filterExpression?.result }}</textarea>

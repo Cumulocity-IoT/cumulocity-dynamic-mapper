@@ -1,4 +1,5 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -78,7 +79,8 @@ describe('MappingVersionDrawerComponent', () => {
         { provide: SubscriptionService, useValue: jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']) },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BsModalService, useValue: mockBsModalService },
-        { provide: BottomDrawerRef, useValue: mockDrawerRef }
+        { provide: BottomDrawerRef, useValue: mockDrawerRef },
+        provideTranslateStub()
       ]
     }).compileComponents();
 

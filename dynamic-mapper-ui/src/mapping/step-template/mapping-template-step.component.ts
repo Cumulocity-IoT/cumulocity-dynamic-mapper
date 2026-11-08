@@ -21,6 +21,7 @@ import { ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, 
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { Subject, takeUntil } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
@@ -422,7 +423,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     this.contentChangeValid = isValid;
 
     if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
-      this.raiseAlert({ type: 'warning', text: 'Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.' });
+      this.raiseAlert({ type: 'warning', text: gettext('Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.') });
     }
     return { protectedFieldsChanged: hasProtectedChanges, arrayNeedsSmartFunction: !isTransformationTypeValid };
   }

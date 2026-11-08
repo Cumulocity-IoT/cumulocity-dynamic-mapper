@@ -74,5 +74,44 @@
     "file": "src/shared/component/formly/custom-form-field-wrapper.component.html",
     "text": "customMessage",
     "reason": "A props key (props['customMessage']), not UI text."
+  },
+  {
+    "file": "src/configuration/service-configuration.component.html",
+    "reason": "Log level identifiers"
+  },
+  {
+    "file": "src/extension/card/extension-card.component.html",
+    "reason": "Property name, not text",
+    "text": "extensionEntries"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "Date format",
+    "text": "MMM d, y"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "JSON field name",
+    "text": "creationTime"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "JSON field name",
+    "text": "lastUpdated"
+  },
+  {
+    "file": "src/shared/connector-details/connector-details.component.html",
+    "reason": "JSON field name",
+    "text": "creationTime"
+  },
+  {
+    "file": "src/shared/connector-details/connector-details.component.html",
+    "reason": "JSON field name",
+    "text": "lastUpdated"
+  },
+  {
+    "file": "src/shared/service/connector-configuration.service.ts",
+    "reason": "Only logged to the console",
+    "text": "Unknown error occurred"
   }
 ]

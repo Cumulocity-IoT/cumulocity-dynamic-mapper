@@ -15,7 +15,7 @@
     [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
     <label translate>Java Extension</label>
     <c8y-select [attr.data-cy]="dataCyPrefix + '-extension-' + side + '-name-select'" [items]="extensionItems"
-      formControlName="extensionName" [filterItems]="true" aria-label="Extension Name">
+      formControlName="extensionName" [filterItems]="true" [attr.aria-label]="'Extension Name' | translate">
     </c8y-select>
     @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
     <span class="help-block"><small translate>Extension name is required.</small></span>
@@ -24,7 +24,7 @@
   <div class="form-group m-b-16" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
     <label translate>Event</label>
     <c8y-select [attr.data-cy]="dataCyPrefix + '-extension-' + side + '-event-select'"
-      [items]="extensionEvents | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      [items]="extensionEvents | async" formControlName="eventName" [filterItems]="true" [attr.aria-label]="'Event Name' | translate">
       <!-- the list shows "name — description"; the closed dropdown shows only the name -->
       <ng-template c8ySelectedItems let-item>{{ item.value }}</ng-template>
     </c8y-select>

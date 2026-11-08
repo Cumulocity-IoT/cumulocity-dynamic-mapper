@@ -256,7 +256,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     this.bulkActionControls = [
       {
         type: 'EXPORT',
-        text: 'Export connector(s)',
+        text: gettext('Export connector(s)'),
         icon: 'export',
         callback: this.exportConnectorBulk.bind(this)
       }
@@ -496,8 +496,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private showConfirmationModal(): BsModalRef {
     return this.bsModalService.show(ConfirmationModalComponent, {
       initialState: {
-        title: 'Delete connector',
-        message: 'You are about to delete a connector. Do you want to proceed?',
+        title: gettext('Delete connector'),
+        message: gettext('You are about to delete a connector. Do you want to proceed?'),
         labels: { ok: 'Delete', cancel: 'Cancel' }
       }
     });

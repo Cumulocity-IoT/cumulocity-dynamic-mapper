@@ -38,6 +38,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Feature } from '../../shared';
 
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-testing-grid',
@@ -80,7 +81,7 @@ export class TestingComponent implements OnInit {
       },
       {
         name: 'name',
-        header: 'Name',
+        header: gettext('Name'),
         path: 'name',
         filterable: true,
         sortable: true,
@@ -88,7 +89,7 @@ export class TestingComponent implements OnInit {
       },
       {
         name: 'creationTime',
-        header: 'Date Created',
+        header: gettext('Date Created'),
         path: 'creationTime',
         filterable: false,
         sortable: true,
@@ -96,7 +97,7 @@ export class TestingComponent implements OnInit {
       },
       {
         name: 'type',
-        header: 'Type',
+        header: gettext('Type'),
         path: 'type',
         filterable: true,
         sortable: true,

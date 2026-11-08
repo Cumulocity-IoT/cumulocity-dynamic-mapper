@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
@@ -107,7 +108,8 @@ describe('MappingStepPropertiesComponent', () => {
         { provide: MappingStepperService, useValue: mockStepperService },
         { provide: AlertService, useValue: mockAlertService },
         { provide: ConnectorConfigurationService, useValue: mockConnectorConfigurationService },
-        FormatStringPipe
+        FormatStringPipe,
+        provideTranslateStub()
       ]
     });
 

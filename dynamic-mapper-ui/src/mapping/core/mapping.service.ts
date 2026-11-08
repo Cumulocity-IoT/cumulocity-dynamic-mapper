@@ -43,6 +43,8 @@ import {
   firstValueFrom
 } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import {
   BASE_URL,
   Direction,
@@ -92,6 +94,7 @@ export class MappingService {
   private readonly versionsCache = new Map<string, MappingVersion[]>();
 
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
 
   constructor(
     private readonly sharedService: SharedService,
@@ -565,7 +568,13 @@ export class MappingService {
       ),
       catchError(error => {
         console.error(`Failed to load ${direction} mappings:`, error);
-        this.alertService.danger(`Failed to load ${direction.toLowerCase()} mappings.`);
+        this.alertService.danger(
+          this.translateService.instant(
+            direction === Direction.INBOUND
+              ? gettext('Failed to load inbound mappings.')
+              : gettext('Failed to load outbound mappings.')
+          )
+        );
         return of([]);
       })
     );

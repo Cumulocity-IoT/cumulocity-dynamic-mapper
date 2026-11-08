@@ -24,6 +24,7 @@ import * as jsYaml from 'js-yaml';
 
 import { CoreModule, PropertiesListItem } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface ExtensionEntry {
   eventName: string;
@@ -86,18 +87,18 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   getEntryProperties(entry: ExtensionEntry): PropertiesListItem[] {
     const properties: PropertiesListItem[] = [
-      { label: 'Event Name', key: 'eventName' },
-      { label: 'Event Implementation', key: 'fqnClassName' }
+      { label: gettext('Event Name'), key: 'eventName' },
+      { label: gettext('Event Implementation'), key: 'fqnClassName' }
     ];
 
     if (entry.version) {
-      properties.push({ label: 'Version', key: 'version' });
+      properties.push({ label: gettext('Version'), key: 'version' });
     }
 
     properties.push(
-      { label: 'Message', key: 'message' },
-      { label: 'Type', key: 'extensionType' },
-      { label: 'Direction', key: 'direction' }
+      { label: gettext('Message'), key: 'message' },
+      { label: gettext('Type'), key: 'extensionType' },
+      { label: gettext('Direction'), key: 'direction' }
     );
 
     return properties;

@@ -18,7 +18,7 @@
 ~  @authors Christof Strack, Stefan Witschel
 ~
 -->
-<c8y-modal title="Import Mapping" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
+<c8y-modal [title]="'Import Mapping' | translate" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
   [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'data-import'"></span>
@@ -33,7 +33,7 @@
         </div>
         @if (failedMappings.length) {
           <div class="m-t-16 text-center" data-cy="dm-import-failed">
-            <p class="text-muted m-b-4">Failed mappings:</p>
+            <p class="text-muted m-b-4" translate>Failed mappings:</p>
             @for (name of failedMappings; track $index) {
               <div class="text-danger">{{ name }}</div>
             }

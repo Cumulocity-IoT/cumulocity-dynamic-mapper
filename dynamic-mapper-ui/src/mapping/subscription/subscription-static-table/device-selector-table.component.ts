@@ -27,6 +27,7 @@ import {
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { Column, ColumnDataType, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
@@ -85,7 +86,7 @@ export class DeviceSelectorTableComponent implements OnInit {
     const cols: Column[] = [
       // Plain text instead of NameDeviceGridColumn, whose renderer turns the name into a link to the device page
       {
-        header: 'Name',
+        header: gettext('Name'),
         name: 'name',
         path: 'name',
         filterable: true,
@@ -96,7 +97,7 @@ export class DeviceSelectorTableComponent implements OnInit {
       new RegistrationDateDeviceGridColumn(),
       new SystemIdDeviceGridColumn(),
       {
-        header: 'Type',
+        header: gettext('Type'),
         name: 'type',
         path: 'type',
         filterable: true,

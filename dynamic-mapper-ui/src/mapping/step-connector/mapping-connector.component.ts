@@ -26,6 +26,7 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
+import { C8yTranslateDirective } from '@c8y/ngx-components';
 import {
   ConnectorGridComponent,
   DeploymentMapEntry,
@@ -39,7 +40,7 @@ import {
   styleUrls: ['../../shared/mapping/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [ConnectorGridComponent]
+  imports: [ConnectorGridComponent, C8yTranslateDirective]
 })
 export class MappingConnectorComponent implements OnInit {
   @Input() showHeader: boolean = false;

@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
 import {
@@ -77,6 +79,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   editorTargetStepSubstitution!: JsonEditorComponent;
 
   private alertService = inject(AlertService);
+  private translateService = inject(TranslateService);
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
   private substitutionService = inject(SubstitutionManagementService);
@@ -99,7 +102,14 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   substitutionModel: SubstitutionModel = {};
   selectedSubstitution: number = -1;
   expertMode: boolean = false;
-  targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code>...';
+  targetTemplateHelp = gettext('The template contains the dummy field <code>_TOPIC_LEVEL_</code>...');
+
+  /** Help shown next to the disabled AI button. */
+  get aiDisabledHelp(): string {
+    return this.aiCapabilitiesDisabled
+      ? gettext('AI capabilities are disabled in this tenant.')
+      : gettext('AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.');
+  }
 
   isSubstitutionValid$: Observable<boolean>;
   sourceCustomMessage$: Observable<string>;
@@ -176,7 +186,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         wrappers: ['c8y-form-field'],
 
         templateOptions: {
-          label: 'Source Expression',
+          label: gettext('Source Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -202,7 +212,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
         templateOptions: {
-          label: 'Target Expression',
+          label: gettext('Target Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -275,7 +285,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
       if (path == '$') {
         this.stepperService.setTargetCustomMessage(
-          'By specifying "$" you selected the root of the target template...'
+          this.translateService.instant(gettext('By specifying "$" you selected the root of the target template...'))
         );
       }
     } catch (error) {
@@ -304,7 +314,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   onAddSubstitution(): void {
     if (!this.isSubstitutionValid()) {
-      this.alertService.warning('Please select nodes in both templates to define a substitution.');
+      this.alertService.warning(gettext('Please select nodes in both templates to define a substitution.'));
       return;
     }
 
@@ -444,18 +454,20 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
         } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
+          this.alertService.warning(gettext('No valid JavaScript code was generated.'));
         }
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
-          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+          this.alertService.success(
+            this.translateService.instant(gettext('Generated {{count}} substitutions.'), { count: resultOf.length })
+          );
           this.selectedSubstitution = -1;
           // Bulk-replace rather than looping addSubstitution(): that method collapses duplicate
           // targets and raises an info alert per hit, which is noise when applying a
           // freshly-generated set wholesale.
           this.applySubstitutions(this.substitutionService.replaceAllSubstitutions(resultOf));
         } else {
-          this.alertService.warning('No substitutions were generated.');
+          this.alertService.warning(gettext('No substitutions were generated.'));
         }
       }
     } catch (ex) {

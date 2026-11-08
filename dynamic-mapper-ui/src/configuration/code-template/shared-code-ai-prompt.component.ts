@@ -107,12 +107,12 @@ export class SharedCodeAiPromptComponent implements OnInit {
     this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
     this.suggestions = [
       {
-        label: 'Review existing shared code',
+        label: this.translateService.instant(gettext('Review existing shared code')),
         prompt: 'Review the existing shared code and suggest improvements.\n',
         icon: 'search'
       },
       {
-        label: 'Create new shared code',
+        label: this.translateService.instant(gettext('Create new shared code')),
         prompt:
           'I want to create new shared code. Ask me what helper functions or constants I need, ' +
           'then wait for my answer before generating anything.\n',

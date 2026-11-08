@@ -36,7 +36,7 @@
 <div class="card-header separator" style="justify-content: center">
   <h4 class="card-title d-flex">
     <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
-    <span class="m-t-8">{{ drawerTitle }} with agent:</span>
+    <span class="m-t-8" [textContent]="'{{title}} with agent:' | translate: { title: drawerTitle }"></span>
     <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
   </h4>
 </div>
@@ -63,7 +63,7 @@
 
 @if (valid) {
 <div class="ai-preview-splitter" role="separator" aria-orientation="horizontal" tabindex="0"
-  [attr.aria-valuenow]="previewHeight" title="Drag to resize (double-click to reset)"
+  [attr.aria-valuenow]="previewHeight" [title]="'Drag to resize (double-click to reset)' | translate"
   (pointerdown)="startPreviewResize($event)" (dblclick)="previewHeight = 240"
   (keydown.arrowUp)="previewHeight = clampPreviewHeight(previewHeight + 40)"
   (keydown.arrowDown)="previewHeight = clampPreviewHeight(previewHeight - 40)"
@@ -98,7 +98,13 @@
         <tr>
           <td class="text-13">{{ sub.pathSource }}</td>
           <td class="text-13">{{ sub.pathTarget }}</td>
-          <td class="text-13">{{ sub.expandArray ? 'Yes' : 'No' }}</td>
+          <td class="text-13">
+            @if (sub.expandArray) {
+            <span translate>Yes</span>
+            } @else {
+            <span translate>No</span>
+            }
+          </td>
           <td class="text-13">{{ sub.repairStrategy }}</td>
         </tr>
         }

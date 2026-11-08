@@ -27,6 +27,8 @@ import {
   CoreModule,
   Pagination
 } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, take } from 'rxjs';
 import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared';
@@ -126,6 +128,7 @@ export class MappingVersionDrawerComponent implements OnInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly bsModalService = inject(BsModalService);
   private readonly publishService = inject(MappingPublishService);
 
@@ -202,7 +205,7 @@ export class MappingVersionDrawerComponent implements OnInit {
 
       this.rows$.next([...draftRow, ...versionRows]);
     } catch (e) {
-      this.alertService.danger('Failed to load versions', (e as Error).message);
+      this.alertService.danger(gettext('Failed to load versions'), (e as Error).message);
     } finally {
       this.loading = false;
     }
@@ -219,7 +222,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         this.rows$.next([...rows]);
       }
     } catch (e) {
-      this.alertService.danger('Failed to update note', (e as Error).message);
+      this.alertService.danger(gettext('Failed to update note'), (e as Error).message);
     }
   }
 
@@ -235,7 +238,7 @@ export class MappingVersionDrawerComponent implements OnInit {
     this.busy = true;
     try {
       await this.mappingService.activateVersion(this.mapping.id, row.version);
-      this.alertService.success(`Activated version ${row.version} of ${this.mapping.name}`);
+      this.alertService.success(this.translateService.instant(gettext('Activated version {{version}} of {{name}}'), { version: row.version, name: this.mapping.name }));
       this.mapping.version = row.version;
       this.mapping.active = true; // activating a version also activates an inactive mapping
       this.changed = true;
@@ -245,7 +248,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       // comes with it) is unnecessary here.
       this.applyActivation(row.version);
     } catch (e) {
-      this.alertService.danger('Failed to activate version', (e as Error).message);
+      this.alertService.danger(gettext('Failed to activate version'), (e as Error).message);
     } finally {
       this.busy = false;
     }
@@ -277,11 +280,11 @@ export class MappingVersionDrawerComponent implements OnInit {
     this.busy = true;
     try {
       await this.mappingService.deleteVersion(this.mapping.id, row.version);
-      this.alertService.success(`Deleted version ${row.version} of ${this.mapping.name}`);
+      this.alertService.success(this.translateService.instant(gettext('Deleted version {{version}} of {{name}}'), { version: row.version, name: this.mapping.name }));
       this.changed = true;
       await this.reload();
     } catch (e) {
-      this.alertService.danger('Failed to delete version', (e as Error).message);
+      this.alertService.danger(gettext('Failed to delete version'), (e as Error).message);
     } finally {
       this.busy = false;
     }
@@ -293,11 +296,17 @@ export class MappingVersionDrawerComponent implements OnInit {
     return new Promise(resolve => {
       const ref = this.bsModalService.show(ConfirmationModalComponent, {
         initialState: {
-          title: isDraft ? 'Discard draft' : `Delete version ${row.versionDisplay}`,
+          title: isDraft
+            ? gettext('Discard draft')
+            : this.translateService.instant(gettext('Delete version {{version}}'), { version: row.versionDisplay }),
           message: isDraft
-            ? `You are about to permanently discard the draft of ${this.mapping.name}. All unsaved changes will be lost. Do you want to proceed?`
-            : `You are about to permanently delete ${row.versionDisplay} of ${this.mapping.name}. This cannot be undone. Do you want to proceed?`,
-          labels: { ok: isDraft ? 'Discard' : 'Delete', cancel: 'Cancel' }
+            ? this.translateService.instant(
+              gettext('You are about to permanently discard the draft of {{name}}. All unsaved changes will be lost. Do you want to proceed?'),
+              { name: this.mapping.name })
+            : this.translateService.instant(
+              gettext('You are about to permanently delete {{version}} of {{name}}. This cannot be undone. Do you want to proceed?'),
+              { version: row.versionDisplay, name: this.mapping.name }),
+          labels: { ok: isDraft ? gettext('Discard') : gettext('Delete'), cancel: gettext('Cancel') }
         }
       });
       ref.content.closeSubject.pipe(take(1)).subscribe((result: boolean) => {
@@ -313,11 +322,11 @@ export class MappingVersionDrawerComponent implements OnInit {
     this.busy = true;
     try {
       await this.mappingService.deleteDraft(this.mapping.id);
-      this.alertService.success(`Discarded draft of ${this.mapping.name}`);
+      this.alertService.success(this.translateService.instant(gettext('Discarded draft of {{name}}'), { name: this.mapping.name }));
       this.changed = true;
       await this.reload();
     } catch (e) {
-      this.alertService.danger('Failed to discard draft', (e as Error).message);
+      this.alertService.danger(gettext('Failed to discard draft'), (e as Error).message);
     } finally {
       this.busy = false;
     }
@@ -348,7 +357,7 @@ export class MappingVersionDrawerComponent implements OnInit {
     return [
       {
         name: 'versionDisplay',
-        header: 'Version',
+        header: gettext('Version'),
         path: 'versionDisplay',
         gridTrackSize: '7%',
         // No sortOrder: the default (newest first, draft pinned to the top) comes from
@@ -359,7 +368,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       },
       {
         name: 'note',
-        header: 'Note',
+        header: gettext('Note'),
         path: 'note',
         gridTrackSize: '40%',
         sortable: true,
@@ -368,7 +377,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       },
       {
         name: 'updatedDisplay',
-        header: 'Updated',
+        header: gettext('Updated'),
         path: 'updatedDisplay',
         gridTrackSize: '17.5%',
         sortable: true,
@@ -376,7 +385,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       },
       {
         name: 'createdBy',
-        header: 'By',
+        header: gettext('By'),
         path: 'createdBy',
         gridTrackSize: '21.5%',
         sortable: true,
@@ -387,7 +396,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         // activation toggle reads as the last real decision a user makes about a row before
         // any destructive action, not as identifying metadata to scan first.
         name: 'state',
-        header: 'State',
+        header: gettext('State'),
         path: 'state',
         sortable: true,
         dataType: ColumnDataType.TextShort,
@@ -401,21 +410,21 @@ export class MappingVersionDrawerComponent implements OnInit {
     return [
       {
         type: 'PUBLISH',
-        text: 'Publish',
+        text: gettext('Publish'),
         icon: 'upload',
         callback: () => this.publish(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
       },
       {
         type: 'DISCARD_DRAFT',
-        text: 'Discard',
+        text: gettext('Discard'),
         icon: 'trash-o',
         callback: () => this.removeDraft(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
       },
       {
         type: 'DELETE_VERSION',
-        text: 'Delete',
+        text: gettext('Delete'),
         icon: 'trash-o',
         callback: (row: VersionRow) => this.remove(row),
         showIf: (row: VersionRow) => this.canManage && !row.isDraft && row.state !== 'active' && !this.busy

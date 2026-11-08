@@ -2,6 +2,7 @@ import '../../shared';
 import { MappingSubstitutionStepComponent } from './mapping-substitution-step.component';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { RepairStrategy, Substitution } from '../../shared';
+import { interpolateMessage } from '../../shared/testing/translate-stub';
 
 describe('MappingSubstitutionStepComponent showExpandArrayHint', () => {
   // The getter only reads substitutionModel, so no TestBed (and no CoreModule DI graph) is needed.
@@ -53,6 +54,7 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     step.mapping = mapping;
     step.substitutionService = new SubstitutionManagementService();
     step.alertService = alertService;
+    step.translateService = { instant: interpolateMessage };
     step.refreshSubstitutionValidity = refresh;
     step.substitutionsChange = { emit: (s: Substitution[]) => emitted.push(s) };
     step.selectedSubstitution = -1;

@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
 import { API, Direction, Extension, Mapping, MappingType, StepperConfiguration, Substitution, TransformationType } from './mapping.model';
 
 export const TransformationTypeLabels = {
@@ -115,7 +116,7 @@ export const MappingTypeDescriptionMap: Record<
 > = {
   [MappingType.JSON]: {
     enabled: true,
-    description: 'Mapping handles payloads in JSON format.',
+    description: gettext('Mapping handles payloads in JSON format.'),
     transformationTypes: {
       [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
       [Direction.OUTBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
@@ -125,14 +126,14 @@ export const MappingTypeDescriptionMap: Record<
   },
   [MappingType.FLAT_FILE]: {
     enabled: true,
-    description: `Mapping handles payloads in CSV format. Any separator can be defined.\nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
+    description: gettext(`Mapping handles payloads in CSV format. Any separator can be defined.\nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
       [
         "165",
         "14.5",
         "2022-08-06T00:14:50.000+02:00",
         "c8y_FuelMeasurement"
       ]
-      .`,
+      .`),
     transformationTypes: {
       [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
       // Direction not supported
@@ -143,8 +144,8 @@ export const MappingTypeDescriptionMap: Record<
   },
   [MappingType.HEX]: {
     enabled: true,
-    description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x".
-Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
+    description: gettext(`Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x".
+Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`),
     transformationTypes: {
       [Direction.INBOUND]: [TransformationType.JSONATA, TransformationType.SMART_FUNCTION],
       // Direction not supported
@@ -157,7 +158,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   [MappingType.PROTOBUF_INTERNAL]: {
     // Deprecated: not offered when creating a mapping, but still rendered for existing ones.
     enabled: false,
-    description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
+    description: gettext('Mapping parses payloads in PROTOBUF format by an internal extension.'),
     transformationTypes: {
       // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
       // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -177,7 +178,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   [MappingType.EXTENSION_JAVA]: {
     // Hidden from the creation UI — existing mappings are migrated to ANY_PAYLOAD on load.
     enabled: false,
-    description: 'Deprecated — use Any Payload with Java Extension transformation type instead.',
+    description: gettext('Deprecated — use Any Payload with Java Extension transformation type instead.'),
     transformationTypes: {
       [Direction.INBOUND]: [TransformationType.EXTENSION_JAVA],
       // Direction not supported
@@ -190,9 +191,9 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.ANY_PAYLOAD]: {
     enabled: true,
-    description:
+    description: gettext(
       'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). ' +
-      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
+      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.'),
     transformationTypes: {
       // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
       [Direction.INBOUND]: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
@@ -205,7 +206,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.SPARKPLUGB]: {
     enabled: true,
-    description:
+    description: gettext(
       'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
       'For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
       'passes a rich JSON object to your Smart Function. ' +
@@ -214,7 +215,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       'NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent ' +
       'NDATA / DDATA messages can resolve metric aliases. ' +
       'The aliasMap (metric name → alias) is available in the outbound Smart Function via ' +
-      'context.getConfig().aliasMap.',
+      'context.getConfig().aliasMap.'),
     transformationTypes: {
       // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
       [Direction.INBOUND]: [TransformationType.SMART_FUNCTION],

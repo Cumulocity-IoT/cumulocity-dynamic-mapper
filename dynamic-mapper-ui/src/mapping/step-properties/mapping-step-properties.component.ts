@@ -30,7 +30,9 @@ import {
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { FormlyFieldConfig } from '@ngx-formly/core';
+import { TranslateService } from '@ngx-translate/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { debounceTime, distinctUntilChanged, firstValueFrom, Subject, takeUntil } from 'rxjs';
 import {
@@ -129,8 +131,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     filterExpression: { result: '', resultType: 'empty', valid: false }
   };
 
-  private static readonly FILTER_INVENTORY_DESCRIPTION =
-    'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.';
+  private static readonly FILTER_INVENTORY_DESCRIPTION = gettext(
+    'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.'
+  );
 
   /** The Filter Inventory field, kept so its help text can carry the "not cached" warning. */
   private filterInventoryField?: FormlyFieldConfig;
@@ -142,6 +145,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly sharedService = inject(SharedService);
   private readonly mappingService = inject(MappingService);
   private readonly stepperService = inject(MappingStepperService);
@@ -176,7 +180,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.propertyFormlyFields = [
       {
         type: 'template',
-        template: '<div class="legend form-block">General, topic, and filter</div>'
+        expressions: {
+          template: () =>
+            `<div class="legend form-block">${this.translateService.instant(gettext('General, topic, and filter'))}</div>`
+        }
       },
       {
         fieldGroupClassName: 'row',
@@ -188,7 +195,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Mapping name',
+              label: gettext('Mapping name'),
               disabled: this.isFieldDisabled,
               required: true
             }
@@ -200,7 +207,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'template',
             expressions: {
               template: (field: FormlyFieldConfig) =>
-                `<div class="form-group"><label>Mapping and transformation type</label>` +
+                `<div class="form-group"><label>${this.translateService.instant(gettext('Mapping and transformation type'))}</label>` +
                 `<div class="m-t-4"><span class="label label-default m-r-8" data-cy="dm-mapping-properties-mapping-type">${this.mapping.mappingType ?? ''}</span>` +
                 `<span class="label label-default" data-cy="dm-mapping-properties-transformation-type">${this.mapping.transformationType ?? ''}</span></div></div>`
             }
@@ -220,11 +227,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Mapping topic',
+              label: gettext('Mapping topic'),
               placeholder: 'plant1/+/+',
               disabled: this.isFieldDisabled,
               description:
-                'The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally.',
+                gettext('The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally.'),
               change: () => {
                 const newTopic = this.propertyFormly.get('mappingTopic').value;
                 const sampleControl = this.propertyFormly.get('mappingTopicSample');
@@ -243,7 +250,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Publish topic',
+              label: gettext('Publish topic'),
               placeholder: 'measurements/+',
               disabled: this.isFieldDisabled,
               change: () => {
@@ -265,12 +272,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Mapping topic sample',
+              label: gettext('Mapping topic sample'),
               placeholder: 'e.g. device/110',
               disabled: this.isFieldDisabled,
-              description: `The mapping topic sample
-              must have the same structure and number of
-              levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              description: gettext(
+                'The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
+              ),
               required: true
             },
             hideExpression: isOutbound
@@ -281,12 +288,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Publish topic sample',
+              label: gettext('Publish topic sample'),
               placeholder: 'e.g. device/110',
               disabled: this.isFieldDisabled,
-              description: `The publish topic sample
-              must have the same structure and number of
-              levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              description: gettext(
+                'The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
+              ),
               required: true
             },
             hideExpression: !isOutbound
@@ -304,7 +311,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             // cache" warning under the input (props.warning).
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
-              label: 'Filter inventory',
+              label: gettext('Filter inventory'),
               placeholder: 'type = "lora_device_type"',
               disabled: this.isFieldDisabled,
               description: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
@@ -346,7 +353,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       },
       {
         type: 'template',
-        template: `<div class="legend form-block">${isInbound ? 'Target' : 'Source'} and device</div>`
+        expressions: {
+          template: () =>
+            `<div class="legend form-block">${this.translateService.instant(
+              isInbound ? gettext('Target and device') : gettext('Source and device')
+            )}</div>`
+        }
       },
       {
         // The API select takes the left half; the option that applies to the chosen API sits in
@@ -359,14 +371,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: isInbound ? 'Target API' : 'Source API',
+              label: isInbound ? gettext('Target API') : gettext('Source API'),
               description: isOutbound
-                ? 'Used as a filter to select which mappings apply when a notification arrives.'
+                ? gettext('Used as a filter to select which mappings apply when a notification arrives.')
                 : undefined,
               options: Object.keys(API)
                 .filter((key) => key !== API.ALL.name)
                 .map((key) => {
-                  return { label: this.formatStringPipe.transform(key), value: key };
+                  return { label: this.translateService.instant(this.formatStringPipe.transform(key)), value: key };
                 }),
               disabled: this.isFieldDisabled,
               change: () => {
@@ -383,8 +395,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: switchProps(
-              'Create device',
-              'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
+              gettext('Create device'),
+              gettext(
+                'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
+              )
             ),
             hideExpression: () => isOutbound || this.model.targetAPI === API.INVENTORY.name
           },
@@ -394,8 +408,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: switchProps(
-              'Update existing device',
-              'Update the managed object of the device if it already exists.'
+              gettext('Update existing device'),
+              gettext('Update the managed object of the device if it already exists.')
             ),
             hideExpression: () => isOutbound || this.model.targetAPI !== API.INVENTORY.name
           },
@@ -405,8 +419,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: switchProps(
-              'Event contains attachment',
-              'Event contains attachment, e.g. image, ... that is stored separately.'
+              gettext('Event contains attachment'),
+              gettext('Event contains attachment, e.g. image, ... that is stored separately.')
             ),
             hideExpression: () => isOutbound || this.model.targetAPI !== API.EVENT.name
           },
@@ -416,8 +430,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: switchProps(
-              'Auto acknowledge',
-              'Auto acknowledge outbound operation.'
+              gettext('Auto acknowledge'),
+              gettext('Auto acknowledge outbound operation.')
             ),
             hideExpression: () => isInbound || this.model.targetAPI !== API.OPERATION.name
           }
@@ -433,8 +447,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               ...switchProps(
-                'Use external id',
-                'If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type.'
+                gettext('Use external id'),
+                gettext(
+                  'If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type.'
+                )
               ),
               change: () => {
                 this.model.useExternalId = !!this.propertyFormly.get('useExternalId').value;
@@ -450,7 +466,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             defaultValue: 'c8y_Serial',
             templateOptions: {
-              label: 'External id type',
+              label: gettext('External id type'),
               disabled: this.isFieldDisabled
             },
             hideExpression: (model) => !model.useExternalId
@@ -459,7 +475,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       },
       {
         type: 'template',
-        template: '<div class="legend form-block">Delivery</div>'
+        expressions: {
+          template: () => `<div class="legend form-block">${this.translateService.instant(gettext('Delivery'))}</div>`
+        }
       },
       {
         fieldGroupClassName: 'row',
@@ -470,7 +488,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'QoS',
+              label: gettext('QoS'),
               // Labels and the per-level explanation come from the shared QoS metadata, so the
               // grid renderer and this picker can never describe a level differently.
               options: QOS_OPTIONS
@@ -480,7 +498,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                     !isOutbound ||
                     option.value !== Qos.EXACTLY_ONCE
                 )
-                .map((option) => ({ label: option.label, value: option.value })),
+                .map((option) => ({ label: this.translateService.instant(option.label), value: option.value })),
               disabled: this.isFieldDisabled,
               required: true
             },
@@ -496,12 +514,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Max failure count',
+              label: gettext('Max failure count'),
               type: 'number',
               min: 0,
               disabled: this.isFieldDisabled,
               description:
-                'Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated.'
+                gettext(
+                  'Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated.'
+                )
             },
             validators: {
               // A negative threshold would silently behave like 0 (check disabled) instead of
@@ -510,7 +530,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 expression: (control) =>
                   control.value === null || control.value === undefined || control.value === '' ||
                   Number(control.value) >= 0,
-                message: 'The max failure count must not be negative.'
+                message: () => this.translateService.instant(gettext('The max failure count must not be negative.'))
               }
             }
           }
@@ -528,7 +548,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     const { resultType, result } = this.filterInventoryModel.filterExpression;
     const text = this.escapeHtml(String(result ?? ''));
     return (
-      `<div class="form-group"><label>Filter Inventory Result [${this.escapeHtml(String(resultType))}]</label>` +
+      `<div class="form-group"><label>${this.escapeHtml(
+        this.translateService.instant(gettext('Filter Inventory Result [{{resultType}}]'), { resultType: String(resultType) })
+      )}</label>` +
       `<div class="filter-result font-smaller" ` +
       `data-cy="dm-mapping-properties-filter-inventory-result">${text}</div></div>`
     );
@@ -556,7 +578,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
+      if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error(
+          this.translateService.instant(gettext('The filter expression must return of boolean type'))
+        );
       this.model.filterInventory = path;
       this.commitModel();
       await this.refreshFilterInventoryWarning(path);
@@ -608,12 +632,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private uncachedWarningText(attributes: string[]): string {
-    const single = attributes.length === 1;
-    return (
-      `Not in the inventory cache: ${attributes.join(', ')}. ` +
-      `The filter evaluates as if the device did not have ${single ? 'it' : 'them'}. ` +
-      `Add ${single ? 'it' : 'them'} under Configuration > Service Configuration > Fragments from inventory to cache.`
-    );
+    const message =
+      attributes.length === 1
+        ? gettext(
+            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Add it under Configuration > Service Configuration > Fragments from inventory to cache.'
+          )
+        : gettext(
+            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Add them under Configuration > Service Configuration > Fragments from inventory to cache.'
+          );
+    return this.translateService.instant(message, { attributes: attributes.join(', ') });
   }
 
   onTargetAPIChanged(targetAPI: string): void {
@@ -663,19 +690,24 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
    * level they support).
    */
   describeQos(qos: Qos): string {
-    const description = QOS_OPTIONS.find((option) => option.value === qos)?.description;
+    const rawDescription = QOS_OPTIONS.find((option) => option.value === qos)?.description;
+    const description = rawDescription ? this.translateService.instant(rawDescription) : rawDescription;
     if (!description) {
       // Nothing selected yet (or an unknown value) — there is no level to warn about.
       return '';
     }
     const clamped = this.qosCapabilityPerConnector
       .filter((connector) => clampQos(qos, connector.supportedQos) !== qos)
-      .map(
-        (connector) =>
-          `${connector.name} (handled as ${qosLabel(clampQos(qos, connector.supportedQos)).toLowerCase()})`
+      .map((connector) =>
+        this.translateService.instant(gettext('{{name}} (handled as {{level}})'), {
+          name: connector.name,
+          level: this.translateService.instant(qosLabel(clampQos(qos, connector.supportedQos))).toLowerCase()
+        })
       );
     return clamped.length
-      ? `${description} NOTE: this level is not supported by: ${clamped.join(', ')}.`
+      ? `${description} ${this.translateService.instant(gettext('NOTE: this level is not supported by: {{connectors}}.'), {
+          connectors: clamped.join(', ')
+        })}`
       : description;
   }
 

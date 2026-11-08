@@ -19,7 +19,9 @@
  */
 
 import { HttpStatusCode } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
@@ -54,6 +56,7 @@ import { SubscriptionService } from '../core/subscription.service';
   imports: [CoreModule]
 })
 export class MappingStatusActivationRendererComponent implements OnInit {
+  private readonly translateService = inject(TranslateService);
   feature: Feature;
   isCheckingValidity = false;
 
@@ -82,7 +85,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Error loading features in component', error);
-      this.alertService.danger('Failed to load features. Please refresh the page.');
+      this.alertService.danger(gettext('Failed to load features. Please refresh the page.'));
     }
   }
 
@@ -138,7 +141,10 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     const failedMap: Record<string, string> = await response.json();
     const failedList = Object.values(failedMap).join(', ');
     this.alertService.warning(
-      `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
+      this.translateService.instant(
+        gettext('Mapping could only activate partially. It failed for the following connectors: {{connectors}}'),
+        { connectors: failedList }
+      )
     );
   }
 

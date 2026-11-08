@@ -76,7 +76,7 @@
 <!-- Auto-refresh toggle with inline refresh button -->
 <c8y-action-bar-item [placement]="'right'" itemClass="navbar-form min-width-fit">
   <form [formGroup]="toggleIntervalForm" class="d-flex a-i-center">
-    <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px">
+    <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px" translate>
       Auto refresh
     </label>
     <div class="input-group">
@@ -119,13 +119,13 @@
           <i [c8yIcon]="sessionDirection === 'OUTBOUND' ? 'arrow-up' : 'arrow-down'"></i>
           {{ sessionDirection | translate }}
         </span>
-        connector: <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>,
-        topic: <code>{{ sessionTopic }}</code>
+        <span translate>connector:</span> <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>,
+        , <span translate>topic:</span> <code>{{ sessionTopic }}</code>
         @if (sessionDirection === 'OUTBOUND' && sessionSourceId) {
-          , source: <strong>{{ sessionDeviceName ?? sessionSourceId }}</strong>
+          , <span translate>source:</span> <strong>{{ sessionDeviceName ?? sessionSourceId }}</strong>
         }
         @if (sessionDirection === 'OUTBOUND' && sessionDeviceTypeFilter) {
-          , device type: <strong>{{ sessionDeviceTypeFilter }}</strong>
+          , <span translate>device type:</span> <strong>{{ sessionDeviceTypeFilter }}</strong>
         }
         @if (paused) {
           &mdash; <span class="text-muted" translate>polling suspended, session still alive on broker</span>

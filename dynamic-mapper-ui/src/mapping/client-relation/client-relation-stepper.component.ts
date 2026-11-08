@@ -31,6 +31,7 @@ import { IIdentified } from '@c8y/client';
 import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { ClientRelationService } from '../core/client-relation.service';
 import { Subject } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface StepperLabels {
   next: string;
@@ -68,9 +69,10 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   stepLabel: any;
   labels: StepperLabels = {
-    next: 'Next',
-    cancel: 'Cancel'
+    next: gettext('Next'),
+    cancel: gettext('Cancel')
   };
+  readonly confirmLabels = { custom: gettext('Confirm') };
 
   feature: Feature;
 

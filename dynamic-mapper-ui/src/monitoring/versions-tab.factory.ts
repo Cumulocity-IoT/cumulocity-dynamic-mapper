@@ -22,6 +22,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { NODE2 } from '../shared/mapping/mapping.constants';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class VersionsTabFactory implements TabFactory {
@@ -33,14 +34,14 @@ export class VersionsTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/versions/inbound`,
         priority: 930,
-        label: 'Inbound',
+        label: gettext('Inbound'),
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/versions/outbound`,
         priority: 920,
-        label: 'Outbound',
+        label: gettext('Outbound'),
         icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);

@@ -16,7 +16,7 @@
       type="button"
       class="btn-help m-l-8"
       data-cy="service-logs-help"
-      aria-label="Help content"
+      [attr.aria-label]="'Help content' | translate"
       placement="bottom"
       triggers="focus"
       container="body"
@@ -139,7 +139,7 @@
               [canDeselect]="true"
               [disabled]="isLoading"
               placeholder="{{ 'All lines' | translate }}"
-              aria-label="Mapping"
+              [attr.aria-label]="'Mapping' | translate"
               (onSelect)="onMappingSelect($event)"
               (onDeselect)="onMappingDeselect()"
             ></c8y-select>
@@ -150,7 +150,7 @@
           <div class="d-flex a-i-center">
             <label class="m-r-8 m-b-0" for="dateFrom" translate>From</label>
             <input id="dateFrom" type="datetime-local" step="1" class="form-control" [(ngModel)]="dateFromInput" />
-            <span class="m-l-4 m-r-8">UTC</span>
+            <span class="m-l-4 m-r-8" translate>UTC</span>
             <button type="button" class="btn btn-primary" (click)="applyDateFrom()" [disabled]="isLoading || !dateFromInput">
               {{ 'Apply' | translate }}
             </button>

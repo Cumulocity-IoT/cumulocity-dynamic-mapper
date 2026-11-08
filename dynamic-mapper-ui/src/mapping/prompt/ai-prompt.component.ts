@@ -202,7 +202,7 @@ export class AiPromptComponent implements OnInit {
   }
 
   /** Exposed for the template header */
-  drawerTitle = 'AI Mapping Assistant';
+  drawerTitle = this.translateService.instant(gettext('AI Mapping Assistant'));
   /**
    * UPDATE mode: clickable suggestion chips rendered inside the chat (via #agentChat's
    * own `suggestions` input) so the user can pick review-vs-generate without a separate
@@ -278,7 +278,9 @@ export class AiPromptComponent implements OnInit {
       // The restored transcript already holds the earlier turns, so no suggestion chips and no
       // automatic first message — either would start the conversation again on top of it.
       if (!this.existingMapping) {
-        this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+        this.drawerTitle = this.translateService.instant(
+          this.isCodeMapping ? gettext('Generate Smart Function') : gettext('Generate Substitutions')
+        );
       }
       return;
     }
@@ -286,20 +288,27 @@ export class AiPromptComponent implements OnInit {
     if (this.existingMapping) {
       // Existing code/substitutions to review — offer both as suggestion chips inside
       // the chat itself and let the user pick, instead of auto-sending anything.
-      const label = this.isCodeMapping ? 'Smart Function' : 'substitutions';
+      const reviewLabel = this.isCodeMapping
+        ? gettext('Review / Refine existing Smart Function')
+        : gettext('Review / Refine existing substitutions');
+      const generateLabel = this.isCodeMapping
+        ? gettext('Generate new Smart Function from scratch')
+        : gettext('Generate new substitutions from scratch');
       this.suggestions = [
-        { label: `Review / Refine existing ${label}`, prompt: this.buildReviewMessage(), icon: 'search' },
-        { label: `Generate new ${label} from scratch`, prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
+        { label: this.translateService.instant(reviewLabel), prompt: this.buildReviewMessage(), icon: 'search' },
+        { label: this.translateService.instant(generateLabel), prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
       ];
       this.chatConfig = {
         ...this.chatConfig,
-        welcomeText: this.isCodeMapping
-          ? "This mapping already has a Smart Function. I can review the existing code and suggest " +
-            "improvements, or generate a new one from scratch based on the mapping's source and target " +
-            "templates. Pick an option below, or describe what you'd like changed."
-          : "This mapping already has substitutions defined. I can review them and suggest improvements, " +
-            "or generate a new set from scratch based on the mapping's source and target templates. " +
-            "Pick an option below, or describe what you'd like changed."
+        welcomeText: this.translateService.instant(
+          this.isCodeMapping
+            ? gettext(
+                "This mapping already has a Smart Function. I can review the existing code and suggest improvements, or generate a new one from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+              )
+            : gettext(
+                "This mapping already has substitutions defined. I can review them and suggest improvements, or generate a new set from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+              )
+        )
       };
       this.cdr.detectChanges();
       return;
@@ -310,17 +319,19 @@ export class AiPromptComponent implements OnInit {
     // design for code mappings (see buildGenerateMessage()), so a sample payload is the only
     // way the user can hand the AI concrete context beyond the source template/targetAPI.
     if (this.isCodeMapping) {
-      this.drawerTitle = 'Generate Smart Function';
+      this.drawerTitle = this.translateService.instant(gettext('Generate Smart Function'));
       this.suggestions = [
-        { label: 'Let AI propose a target structure', prompt: this.buildGenerateMessage(), icon: 'magic' },
-        { label: 'I want to provide a sample target payload', prompt: this.buildProvideSampleMessage(), icon: 'code' }
+        { label: this.translateService.instant(gettext('Let AI propose a target structure')), prompt: this.buildGenerateMessage(), icon: 'magic' },
+        { label: this.translateService.instant(gettext('I want to provide a sample target payload')), prompt: this.buildProvideSampleMessage(), icon: 'code' }
       ];
       this.chatConfig = {
         ...this.chatConfig,
         title: this.drawerTitle,
-        welcomeText: "I can generate a Smart Function for this mapping based on its source template. " +
-          "There's no fixed target template — pick an option below, or describe the target payload" +
-          " you'd like it to produce."
+        welcomeText: this.translateService.instant(
+          gettext(
+            "I can generate a Smart Function for this mapping based on its source template. There's no fixed target template — pick an option below, or describe the target payload you'd like it to produce."
+          )
+        )
       };
       this.cdr.detectChanges();
       return;
@@ -328,12 +339,15 @@ export class AiPromptComponent implements OnInit {
 
     // CREATE mode, JSONata — nothing to review yet, so always generate immediately with no
     // user interaction.
-    this.drawerTitle = 'Generate Substitutions';
+    this.drawerTitle = this.translateService.instant(gettext('Generate Substitutions'));
     this.chatConfig = {
       ...this.chatConfig,
       title: this.drawerTitle,
-      welcomeText: "Generating substitutions for this mapping based on its source and target templates. " +
-        "This starts automatically — no action needed."
+      welcomeText: this.translateService.instant(
+        gettext(
+          'Generating substitutions for this mapping based on its source and target templates. This starts automatically — no action needed.'
+        )
+      )
     };
     this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
@@ -625,7 +639,7 @@ export class AiPromptComponent implements OnInit {
       // previous generatedCode/valid state untouched rather than disabling Save.
     } catch (error) {
       console.error('Error parsing JavaScript from response:', error);
-      this.alertService.danger('Failed to parse JavaScript code from AI response');
+      this.alertService.danger(gettext('Failed to parse JavaScript code from AI response'));
     }
   }
 

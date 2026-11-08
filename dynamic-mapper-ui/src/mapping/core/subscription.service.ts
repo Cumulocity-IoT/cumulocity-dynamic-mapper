@@ -22,6 +22,7 @@ import { Injectable, inject } from '@angular/core';
 import { FetchClient, IIdentified } from '@c8y/client';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import {
   ALERT_INFO_TIMEOUT,
   BASE_URL,
@@ -100,7 +101,9 @@ export class SubscriptionService {
 
     if (!hasSubscription) {
       this.alertService.add({
-        text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.",
+        text: gettext(
+          "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+        ),
         type: 'info',
         timeout: ALERT_INFO_TIMEOUT
       });

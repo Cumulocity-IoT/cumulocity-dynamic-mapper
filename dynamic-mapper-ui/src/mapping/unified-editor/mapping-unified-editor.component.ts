@@ -125,6 +125,17 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
   ]
 })
 export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
+  /** Tab labels with a trailing `*` while the tab still misses required input. */
+  connectorTabLabel(): string {
+    return this.connectorSelectionEmpty() ? gettext('Connector *') : gettext('Connector');
+  }
+
+  generalSettingsTabLabel(): string {
+    return this.stepperConfiguration.direction === this.Direction.INBOUND && !this.mapping.mappingTopic?.trim()
+      ? gettext('General Settings *')
+      : gettext('General Settings');
+  }
+
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
 

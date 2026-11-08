@@ -17,7 +17,7 @@
   ~
   ~ @authors Christof Strack
 -->
-<c8y-modal title="Import service configuration" (onClose)="onConfirm()" (onDismiss)="onDismiss()" [labels]="labels"
+<c8y-modal [title]="'Import service configuration' | translate" (onClose)="onConfirm()" (onDismiss)="onDismiss()" [labels]="labels"
   [disabled]="!pendingConfiguration || isLoading" [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'data-import'"></span>

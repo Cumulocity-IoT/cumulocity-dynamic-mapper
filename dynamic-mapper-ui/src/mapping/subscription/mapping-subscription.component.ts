@@ -126,7 +126,7 @@ export class MappingSubscriptionComponent implements OnInit {
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
-      header: 'System ID',
+      header: gettext('System ID'),
       path: 'id',
       filterable: true,
       sortable: true,
@@ -134,7 +134,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.Numeric,
     },
     {
-      header: 'Name',
+      header: gettext('Name'),
       name: 'name',
       path: 'name',
       filterable: true,
@@ -142,7 +142,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Type',
+      header: gettext('Type'),
       name: 'type',
       path: 'type',
       filterable: true,
@@ -150,7 +150,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Groups',
+      header: gettext('Groups'),
       name: 'groupNames',
       path: 'groupNames',
       filterable: true,
@@ -158,7 +158,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Subscription by',
+      header: gettext('Subscription by'),
       name: 'subscriptionSource',
       path: 'subscriptionSource',
       filterable: true,

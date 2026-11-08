@@ -31,6 +31,7 @@ import { CollectedServiceLogsService } from './collected-service-logs.service';
 import { MAPPING_IDENTIFIER } from './mapping-log-filter';
 import { NativeServiceLogsService } from './native-service-logs.service';
 import { LogRequest, LogsUnavailableError, LogWindow, ServiceLogsSource } from './service-logs.model';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 type MappingDirectionFilter = 'INBOUND' | 'OUTBOUND';
 
@@ -236,7 +237,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
         this.errorHint = previous.errorHint;
         // Not available: stay on the current source, and make the switch say so (Angular would not redraw an unchanged binding).
         if (checkbox) checkbox.checked = this.isCollected;
-        this.alertService.warning(collected ? 'The collected log is not available.' : 'The platform log is not available to your tenant.');
+        this.alertService.warning(collected ? gettext('The collected log is not available.') : gettext('The platform log is not available to your tenant.'));
       }
     } finally {
       this.isLoading = false;
@@ -314,7 +315,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       await this.source.flush();
     } catch (e) {
       console.error(e);
-      this.alertService.danger('Failed to fetch the service log.');
+      this.alertService.danger(gettext('Failed to fetch the service log.'));
     } finally {
       this.isLoading = false;
     }
@@ -363,7 +364,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       saveAs(new Blob(parts, { type: 'text/plain' }), `${instance || 'service-log'}${mapping ? `-${mapping}` : ''}.log`);
     } catch (e) {
       console.error(e);
-      this.alertService.danger('Failed to download the log.');
+      this.alertService.danger(gettext('Failed to download the log.'));
     }
   }
 
@@ -422,7 +423,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       this.selectedMapping = requested;
       this.directionFilter = 'ALL';
     } else {
-      this.alertService.info('The mapping from the link was not found. Showing all lines.');
+      this.alertService.info(gettext('The mapping from the link was not found. Showing all lines.'));
     }
   }
 
@@ -473,7 +474,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       if (ticket !== this.requestSeq) return; // a newer request was started meanwhile: this answer is out of date
       // With a mapping an empty window is an answer, not a failure: show it (and its cursors) so paging keeps working.
       if (!window.logs && !window.empty && !this.selectedMapping) {
-        if (!silent) this.alertService.info('No logs available.');
+        if (!silent) this.alertService.info(gettext('No logs available.'));
         return;
       }
       this.show(window);
@@ -485,7 +486,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
         this.error = 'The service log is not available to you.';
         this.errorHint = e.message;
       } else if (!silent) {
-        this.alertService.danger('Failed to load logs.');
+        this.alertService.danger(gettext('Failed to load logs.'));
       }
       console.error(e);
     } finally {

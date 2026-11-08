@@ -46,6 +46,7 @@ import {
   Feature,
   Qos
 } from '../../shared';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
@@ -286,7 +287,8 @@ describe('MappingUnifiedEditorComponent', () => {
         // The component injects SubscriptionService, whose real constructor takes a
         // FetchClient the test injector cannot provide (NG0201). It is only used for
         // validateSubscriptionOutbound(), so a spy is enough.
-        { provide: SubscriptionService, useValue: mockSubscriptionService }
+        { provide: SubscriptionService, useValue: mockSubscriptionService },
+        provideTranslateStub()
       ]
     }).compileComponents();
 

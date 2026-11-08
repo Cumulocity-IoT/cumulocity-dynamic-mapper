@@ -20,6 +20,8 @@
 
 import { inject, Injectable } from '@angular/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmationModalComponent } from '../component/confirmation/confirmation-modal.component';
 
@@ -47,6 +49,7 @@ export interface ConfirmationConfig {
 })
 export class ConfirmationModalService {
   private readonly bsModalService = inject(BsModalService);
+  private readonly translateService = inject(TranslateService);
 
   /**
    * Show a confirmation modal and wait for user response
@@ -85,10 +88,16 @@ export class ConfirmationModalService {
    */
   async confirmDeletion(itemName: string, multiple: boolean = false): Promise<boolean> {
     return this.confirm({
-      title: multiple ? `Delete ${itemName}s` : `Delete ${itemName}`,
-      message: multiple
-        ? `You are about to delete multiple ${itemName}s. Do you want to proceed to delete ALL?`
-        : `You are about to delete this ${itemName}. Do you want to proceed?`,
+      title: this.translateService.instant(
+        multiple ? gettext('Delete {{itemName}}s') : gettext('Delete {{itemName}}'),
+        { itemName }
+      ),
+      message: this.translateService.instant(
+        multiple
+          ? gettext('You are about to delete multiple {{itemName}}s. Do you want to proceed to delete ALL?')
+          : gettext('You are about to delete this {{itemName}}. Do you want to proceed?'),
+        { itemName }
+      ),
       labels: {
         ok: 'Delete',
         cancel: 'Cancel'
@@ -119,8 +128,8 @@ export class ConfirmationModalService {
    */
   async confirmUnsavedChanges(): Promise<boolean> {
     return this.confirm({
-      title: 'Unsaved Changes',
-      message: 'You have unsaved changes. Do you want to save before leaving?',
+      title: gettext('Unsaved Changes'),
+      message: gettext('You have unsaved changes. Do you want to save before leaving?'),
       labels: {
         ok: 'Save',
         cancel: 'Discard'

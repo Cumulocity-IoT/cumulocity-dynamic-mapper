@@ -19,6 +19,7 @@
  */
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { FormlyFieldConfig } from '@ngx-formly/core';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
 import { Direction, Feature, Mapping, StepperConfiguration } from '../../shared';
 import { StepperViewModel } from '../editor-base/stepper-view.model';
@@ -58,13 +59,13 @@ export function buildFilterFormlyFields(
                     type: 'd11r-input',
                     wrappers: ['c8y-form-field'],
                     templateOptions: {
-                        label: 'Filter execution mapping',
+                        label: gettext('Filter execution mapping'),
                         class: 'input-sm',
                         disabled: stepperConfiguration.readOnly ||
                             !stepperConfiguration.allowDefiningSubstitutions ||
                             (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole),
                         placeholder: '$exists(c8y_TemperatureMeasurement)',
-                        description: 'This expression is required...',
+                        description: gettext('This expression is required...'),
                         required: mapping.direction === Direction.OUTBOUND,
                         customMessage: sourceCustomMessage$
                     },

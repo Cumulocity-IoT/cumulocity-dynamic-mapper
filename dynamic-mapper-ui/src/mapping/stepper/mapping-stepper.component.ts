@@ -30,6 +30,7 @@ import {
 } from '@angular/core';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { C8yStepper, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 // Side-effect import, kept first: the type-only imports below are elided at build time, and
 // shared/mapping/* have a circular import (mapping.model <-> processor.model) that only resolves
 // when the `shared` barrel is evaluated before them. Without this the spec dies with
@@ -87,7 +88,8 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   protected readonly substitutionStepIndex = STEP_DEFINE_SUBSTITUTIONS;
   readonly STEP_DEFINE_SUBSTITUTIONS = STEP_DEFINE_SUBSTITUTIONS;
 
-  labels: any = { next: 'Next', cancel: 'Cancel' };
+  labels: any = { next: gettext('Next'), cancel: gettext('Cancel') };
+  readonly labelsFinal = { custom: gettext('Confirm') };
 
   stepperForward = true;
   currentStepIndex = 0;
@@ -247,7 +249,9 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
     if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.aiReviewBaseline !== undefined) {
       if (!this.hasReviewedAITemplate()) {
         this.alertService.warning(
-          'Please review and adjust the target template to reflect your actual data before generating with AI in the next step.'
+          gettext(
+            'Please review and adjust the target template to reflect your actual data before generating with AI in the next step.'
+          )
         );
         return;
       }

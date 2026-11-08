@@ -2,13 +2,13 @@
   <div class="row p-b-8">
     <div class="col-lg-5">
       <div class="d-flex">
-        <label translate class="m-t-4">{{ label }}</label>
+        <label class="m-t-4" [textContent]="label | translate"></label>
         <span class="hidden-xs hidden-sm">
           <ng-template #popupTemplateCodeHelp>
-            <div [innerHtml]="help"></div>
+            <div [innerHtml]="help | translate"></div>
           </ng-template>
           <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus" class="btn-help"
-            aria-label="Help content"></button>
+            [attr.aria-label]="'Help content' | translate"></button>
         </span>
       </div>
     </div>
@@ -29,7 +29,7 @@
       <div class="input-group">
         <c8y-select [attr.data-cy]="dataCyPrefix + '-code-template-select'" [items]="codeTemplateItems" [ngModel]="templateId"
           (ngModelChange)="templateSelected.emit($event)" name="templateSelect" [filterItems]="true" labelProperty="label"
-          placeholder="{{ 'Select template...' | translate }}" aria-label="Code Template" class="select-template">
+          placeholder="{{ 'Select template...' | translate }}" [attr.aria-label]="'Code Template' | translate" class="select-template">
         </c8y-select>
         <div class="input-group-btn">
           <button type="button" name="update" [attr.data-cy]="dataCyPrefix + '-code-template-create'" class="btn btn-default btn-sm"

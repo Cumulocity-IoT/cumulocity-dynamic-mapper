@@ -18,7 +18,7 @@
 ~  @authors Christof Strack
 ~
 -->
-<c8y-modal title="Import Connectors" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
+<c8y-modal [title]="'Import Connectors' | translate" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
   [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'data-import'"></span>

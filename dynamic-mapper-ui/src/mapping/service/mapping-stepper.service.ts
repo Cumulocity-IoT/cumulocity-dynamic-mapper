@@ -21,6 +21,7 @@
 import { ChangeDetectorRef, Injectable, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { FormlyFieldConfig } from '@ngx-formly/core';
+import { TranslateService } from '@ngx-translate/core';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { BehaviorSubject, map, Observable, shareReplay, Subject } from 'rxjs';
 import { Alert, AlertService } from '@c8y/ngx-components';
@@ -61,6 +62,7 @@ export class MappingStepperService {
     private extensionService = inject(ExtensionService);
     private aiAgentService = inject(AiAgentService);
     private alertService = inject(AlertService);
+    private translateService = inject(TranslateService);
 
     // State shared with the host and its steps. Read-only observables: the subjects stay private
     // so there is one place per value that writes it (the methods named next to each).
@@ -164,7 +166,9 @@ export class MappingStepperService {
                 resultType,
                 result,
                 valid: false,
-                message: 'The filter expression must evaluate to a boolean value: either true or false'
+                message: this.translateService.instant(
+                    gettext('The filter expression must evaluate to a boolean value: either true or false')
+                )
             };
         }
 
@@ -685,11 +689,11 @@ export class MappingStepperService {
         // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
         const isDeprecatedSubstitutionAsCode = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
         const codeEditorHelp = isDeprecatedSubstitutionAsCode
-            ? 'JavaScript for creating substitutions...'
-            : 'JavaScript for creating complete payloads as Smart Functions.';
+            ? gettext('JavaScript for creating substitutions...')
+            : gettext('JavaScript for creating complete payloads as Smart Functions.');
         const codeEditorLabel = isDeprecatedSubstitutionAsCode
-            ? 'JavaScript callback for creating substitutions'
-            : 'JavaScript callback for Smart functions';
+            ? gettext('JavaScript callback for creating substitutions')
+            : gettext('JavaScript callback for Smart functions');
 
         const schemaSource = getSchema(mapping.targetAPI, mapping.direction, false, false);
         const schemaTarget = getSchema(mapping.targetAPI, mapping.direction, true, false);

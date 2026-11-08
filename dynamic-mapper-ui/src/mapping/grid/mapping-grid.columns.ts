@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import { Column, ColumnDataType } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { API, Direction, LabelTaggedRendererComponent, Mapping } from '../../shared';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
@@ -32,7 +33,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
   const cols: (Column | undefined)[] = [
     {
       name: 'name',
-      header: 'Name',
+      header: gettext('Name'),
       path: 'mapping.name',
       filterable: true,
       sortable: true,
@@ -48,7 +49,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
     },
     {
       name: 'identifier',
-      header: 'Identifier',
+      header: gettext('Identifier'),
       path: 'mapping.identifier',
       filterable: false,
       dataType: ColumnDataType.TextShort,
@@ -58,7 +59,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
     direction === Direction.INBOUND
       ? undefined
       : {
-        header: 'Publish topic',
+        header: gettext('Publish topic'),
         name: 'publishTopic',
         path: 'mapping.publishTopic',
         dataType: ColumnDataType.TextShort,
@@ -67,7 +68,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
       },
     direction === Direction.INBOUND
       ? {
-        header: 'Mapping topic',
+        header: gettext('Mapping topic'),
         name: 'mappingTopic',
         path: 'mapping.mappingTopic',
         dataType: ColumnDataType.TextShort,
@@ -86,7 +87,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
       gridTrackSize: '9%'
     },
     {
-      header: 'For connectors',
+      header: gettext('For connectors'),
       name: 'connectors',
       path: 'connectors',
       filterable: true,
@@ -95,7 +96,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
       cellRendererComponent: MappingDeploymentRendererComponent
     },
     {
-      header: 'Version/Status',
+      header: gettext('Version/Status'),
       name: 'status',
       path: 'mapping',
       filterable: false,
@@ -109,7 +110,7 @@ export function buildMappingColumns(direction: Direction, openVersions: (row: an
       gridTrackSize: '16%'
     } as Column,
     {
-      header: 'Activate',
+      header: gettext('Activate'),
       name: 'active',
       path: 'mapping.active',
       filterable: false,

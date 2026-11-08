@@ -29,24 +29,24 @@
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(TAB_CONNECTOR)) {
   <c8y-tab [icon]="'c8y-device-management'"
-    [label]="connectorSelectionEmpty() ? 'Connector *' : 'Connector'"
+    [label]="connectorTabLabel() | translate"
     [priority]="50" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_CONNECTOR" (onSelect)="onTabSelected(TAB_CONNECTOR)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(TAB_GENERAL_SETTINGS)) {
-  <c8y-tab [icon]="'settings'" [label]="(stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? 'General Settings *' : 'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'settings'" [label]="generalSettingsTabLabel() | translate" [priority]="40" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
   @if (isTabVisible(TAB_SELECT_TEMPLATES)) {
-  <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'document-body'" [label]="'Templates' | translate" [priority]="30" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
   }
   @if (isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
-  <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'code'" [label]="'Transformation' | translate" [priority]="20" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_DEFINE_TRANSFORMATION" (onSelect)="onTabSelected(TAB_DEFINE_TRANSFORMATION)" data-cy="dm-unified-editor-tab-transformation"></c8y-tab>
   }
   @if (isTabVisible(TAB_TEST_MAPPING)) {
-  <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'play-arrow'" [label]="'Testing' | translate" [priority]="10" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
   }
 
@@ -156,14 +156,15 @@
       @if (mapping.version || mapping.debug || mapping.draftDirty) {
         <i c8yIcon="info-circle" class="text-muted"></i>
         @if (mapping.version) {
-          <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.version }}</span>
+          <span translate class="text-muted">Active </span><span class="text-12 label label-default" [title]="'Active version' | translate">v{{ mapping.version }}</span>
         }
         @if (mapping.debug) {
           <span class="text-12 label label-success"
-            title="Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs">debug</span>
+            [title]="'Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs' | translate"
+            translate>debug</span>
         }
         @if (mapping.draftDirty) {
-          <span translate class="text-muted">· Editing </span><span class="text-12 label label-warning" title="This mapping has unpublished draft changes">draft</span>
+          <span translate class="text-muted">· Editing </span><span class="text-12 label label-warning" [title]="'This mapping has unpublished draft changes' | translate" translate>draft</span>
         }
       }
     </div>

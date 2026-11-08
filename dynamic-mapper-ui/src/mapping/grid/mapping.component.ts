@@ -64,6 +64,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, finalize, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
@@ -171,6 +172,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private readonly mappingBulkOpsService = inject(MappingBulkOperationsService);
   private readonly sharedService = inject(SharedService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly bsModalService = inject(BsModalService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly confirmationService = inject(ConfirmationModalService);
@@ -296,13 +298,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'VIEW_DEPRECATED',
-        text: 'View (deprecated)',
+        text: gettext('View (deprecated)'),
         icon: 'eye',
         callback: this.updateMapping.bind(this),
         showIf: item => this.isDeprecatedMapping(item)
       },
       {
-        text: 'Duplicate',
+        text: gettext('Duplicate'),
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
@@ -312,7 +314,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         // Only offered when there is actually something to publish. Publishing otherwise lives
         // inside the version drawer, which makes the required follow-up after editing a mapping
         // easy to miss — this brings it one click from the grid.
-        text: 'Publish draft',
+        text: gettext('Publish draft'),
         type: 'PUBLISH_DRAFT',
         icon: 'upload',
         callback: this.publishDraft.bind(this),
@@ -320,7 +322,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           && !this.isDeprecatedMapping(item)
       },
       {
-        text: 'Versions',
+        text: gettext('Versions'),
         type: 'VERSIONS',
         icon: 'list',
         callback: this.openVersions.bind(this),
@@ -333,21 +335,21 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ENABLE_DEBUG',
-        text: 'Enable debugging',
+        text: gettext('Enable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
         showIf: item => !item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_DEBUG',
-        text: 'Disable debugging',
+        text: gettext('Disable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
         showIf: item => item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'EXPORT',
-        text: 'Export mapping',
+        text: gettext('Export mapping'),
         icon: 'export',
         callback: this.exportSingle.bind(this)
       }
@@ -371,35 +373,35 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Activate',
+        text: gettext('Activate'),
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEACTIVATE',
-        text: 'Deactivate',
+        text: gettext('Deactivate'),
         icon: 'toggle-off',
         callback: this.deactivateMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEBUG_ENABLE',
-        text: 'Enable debug',
+        text: gettext('Enable debug'),
         icon: 'bug',
         callback: this.enableDebugMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEBUG_DISABLE',
-        text: 'Disable debug',
+        text: gettext('Disable debug'),
         icon: 'ban',
         callback: this.disableDebugMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'EXPORT',
-        text: 'Export mapping',
+        text: gettext('Export mapping'),
         icon: 'export',
         callback: this.exportMappingBulk.bind(this)
       }
@@ -738,11 +740,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     try {
       const response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
       if (response.status == HttpStatusCode.Created) {
-        this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+        this.alertService.success(
+          this.translateService.instant(gettext('Added sample mappings for {{direction}}'), { direction: this.stepperConfiguration.direction })
+        );
         this.mappingService.refreshMappings(this.stepperConfiguration.direction);
       }
     } catch (error) {
-      this.alertService.danger('Failed to add sample mappings', error);
+      this.alertService.danger(gettext('Failed to add sample mappings'), error);
     } finally {
       this.isLoading = false;
     }
@@ -763,7 +767,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           const mappings2Export = ms.map((me) => me.mapping);
           this.exportMappings(mappings2Export);
         } catch (error) {
-          this.alertService.danger('Failed to export mappings', error);
+          this.alertService.danger(gettext('Failed to export mappings'), error);
         }
       });
   }

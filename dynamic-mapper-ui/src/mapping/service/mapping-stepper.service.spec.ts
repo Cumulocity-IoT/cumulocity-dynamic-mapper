@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ChangeDetectorRef } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
@@ -143,7 +144,8 @@ describe('MappingStepperService', () => {
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
         { provide: AiAgentService, useValue: mockAIAgentService },
-        { provide: AlertService, useValue: mockAlertService }
+        { provide: AlertService, useValue: mockAlertService },
+        provideTranslateStub()
       ]
     });
 

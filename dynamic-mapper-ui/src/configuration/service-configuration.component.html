@@ -175,7 +175,7 @@
           @if (section == 'processing') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Smart Function execution limits
+              <span translate>Smart Function execution limits</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -251,9 +251,8 @@
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              JavaScript engine (advanced)
-              <small class="text-muted">Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most
-                tenants.</small>
+              <span translate>JavaScript engine (advanced)</span>
+              <small class="text-muted" translate>Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -323,8 +322,8 @@
           @if (section == 'caching') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              External ID caches
-              <small class="text-muted">Resolution of device external IDs to Cumulocity managed objects.</small>
+              <span translate>External ID caches</span>
+              <small class="text-muted" translate>Resolution of device external IDs to Cumulocity managed objects.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -408,8 +407,8 @@
           </c8y-li>
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Inventory cache
-              <small class="text-muted">Device metadata made available to mappings.</small>
+              <span translate>Inventory cache</span>
+              <small class="text-muted" translate>Device metadata made available to mappings.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -472,7 +471,7 @@
                     <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)"
                       [minus]="inventoryFragmentsList.length > 0">
                       <div class="fragment-input">
-                        <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
+                        <input class="form-control" [placeholder]="'e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*' | translate"
                           type="text" [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
                       </div>
                     </c8y-input-group-list>
@@ -485,7 +484,7 @@
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Retention
+              <span translate>Retention</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -512,7 +511,7 @@
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Advanced
+              <span translate>Advanced</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -541,8 +540,8 @@
           @if (section == 'monitoring') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Events published to Cumulocity
-              <small class="text-muted">What the mapper reports into the platform event log.</small>
+              <span translate>Events published to Cumulocity</span>
+              <small class="text-muted" translate>What the mapper reports into the platform event log.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -620,8 +619,8 @@
           </c8y-li>
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Log verbosity
-              <small class="text-muted">Raise only while troubleshooting — verbose logging costs throughput.</small>
+              <span translate>Log verbosity</span>
+              <small class="text-muted" translate>Raise only while troubleshooting — verbose logging costs throughput.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -683,9 +682,8 @@
           <ng-container formGroupName="serviceLogs">
             <c8y-li class="p-t-16">
               <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-                Service logs
-                <small class="text-muted">The microservice log lines of this tenant that its administrators can read under
-                  Monitoring &gt; Service logs.</small>
+                <span translate>Service logs</span>
+                <small class="text-muted" translate>The microservice log lines of this tenant that its administrators can read under Monitoring &gt; Service logs.</small>
               </div>
             </c8y-li>
             <c8y-li>

@@ -22,7 +22,7 @@
 
 <ng-template #autoRefreshTemplate>
   <form class="d-flex a-i-center" [formGroup]="toggleIntervalForm">
-    <label class="text-normal text-muted flex-no-shrink m-r-8 m-b-0" id="listLabel">Auto refresh</label>
+    <label class="text-normal text-muted flex-no-shrink m-r-8 m-b-0" id="listLabel" translate>Auto refresh</label>
     <div class="input-group">
       <label class="toggle-countdown" placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
         <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
@@ -61,7 +61,7 @@
 </div>
 }
 
-<c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'"
+<c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors' | translate"
   [selectable]="(selectable || bulkActionControls.length > 0) && !readOnly"
   [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
   [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls"
@@ -77,7 +77,7 @@
 
 @if (selectable) {
 <div>
-  <label>Selected connectors for mapping</label>
+  <label translate>Selected connectors for mapping</label>
   <div class="bg-level-1 p-t-2 p-b-2">
     @for (identifier of deploymentMapEntry?.connectors; track identifier; let i = $index) {
     <span class="text-12 label label-primary m-r-8">
