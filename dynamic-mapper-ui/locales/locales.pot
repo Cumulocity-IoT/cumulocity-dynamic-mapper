@@ -1213,6 +1213,33 @@ msgstr ""
 msgid "Filter execution mapping"
 msgstr ""
 
+msgid "Execution filter"
+msgstr ""
+
+msgid "Filter by type"
+msgstr ""
+
+msgid "Filter by fragment"
+msgstr ""
+
+msgid "Custom filter"
+msgstr ""
+
+msgid "Fragment"
+msgstr ""
+
+msgid "Writes the \"Filter execution mapping\" of the Templates step: by type (<code>type = '...'</code>), by fragment (<code>$exists(...)</code>), or custom (empty, enter the expression there)."
+msgstr ""
+
+msgid "Filter expression"
+msgstr ""
+
+msgid "Enter it in the Templates step"
+msgstr ""
+
+msgid "Select a filter"
+msgstr ""
+
 msgid "Filter inventory"
 msgstr ""
 

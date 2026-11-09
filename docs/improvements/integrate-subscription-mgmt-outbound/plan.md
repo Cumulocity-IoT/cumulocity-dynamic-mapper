@@ -7,7 +7,7 @@ Status: implemented 2026-11-09. See [Implementation notes](#implementation-notes
 Today a user can only manage outbound subscriptions in two places:
 
 - The **Subscription outbound** page, with the tabs *static* and *dynamic* (`OutboundSubscription_static.png`, `OutboundSubscription_dynamic.png`).
-- A small choice drawer that opens only from the **Message Explorer** when a mapping is created from an outbound message (`OutboundSubscription.png`, `SubscriptionChoiceDrawerComponent`).
+- A small choice drawer that opens only from the **Message Explorer** when a mapping is created from an outbound message (`OutboundSubscription_drawer.png`, `SubscriptionChoiceDrawerComponent`).
 
 Both are far from where the user defines an outbound mapping. This plan adds a **Subscription** step to the stepper and a **Subscription** tab to the unified editor, directly after *General settings* and before *Templates*, and removes the Message Explorer drawer.
 

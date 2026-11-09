@@ -42,6 +42,7 @@ import {
 } from '../../shared/mapping/util';
 import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
+import { toFilterMapping } from '../step-properties/execution-filter.model';
 import { ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
 
 /** What the Message Explorer hands over when the user turns a captured message into a mapping. */
@@ -108,6 +109,16 @@ export function toSourceSample(payload: string, binary: boolean, mappingType: Ma
  * Explorer, the captured topic, payload and metadata. It changes nothing outside its result; the
  * caller applies the stepper state and bumps its own mapping counter.
  */
+/** The top-level string `type` of a JSON payload, or undefined (not JSON, no type, not a string). */
+function payloadType(payload: string): string | undefined {
+  try {
+    const type = JSON.parse(payload)?.type;
+    return typeof type === 'string' && type.trim() ? type : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
   const { direction, mappingType, transformationType, substitutionsAsCode, codeTemplate, extension, preFill } = req;
   let sampleMessageInfo: SampleMessageInfo | undefined;
@@ -209,6 +220,11 @@ export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
   }
 
   // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
+  // OUTBOUND: the user has to choose the execution filter (General Settings step); there is no default.
+  if (direction === Direction.OUTBOUND) {
+    mapping.filterMapping = '';
+  }
+
   if (preFill) {
     const isInbound = direction === Direction.INBOUND;
     if (isInbound) {
@@ -327,9 +343,12 @@ export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
     if (preFill.publishTopicSample) {
       mapping.publishTopicSample = preFill.publishTopicSample;
     }
-    // For OUTBOUND, pre-fill filterMapping with 'true' so at least one execution filter is set
-    if (direction === Direction.OUTBOUND && !mapping.filterMapping) {
-      mapping.filterMapping = 'true';
+    // OUTBOUND: the captured message's own `type` becomes the execution filter (option "Filter by
+    // type" of the General Settings step). Without one, the 'true' default below applies.
+    // It replaces the 'true' default set above.
+    const capturedType = direction === Direction.OUTBOUND ? payloadType(preFill.payload) : undefined;
+    if (capturedType) {
+      mapping.filterMapping = toFilterMapping({ mode: 'type', value: capturedType });
     }
   }
 

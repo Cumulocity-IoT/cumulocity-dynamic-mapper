@@ -55,6 +55,7 @@ import {
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
+import { ExecutionFilterMode, fromFilterMapping, toFilterMapping } from './execution-filter.model';
 import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../../shared/mapping/util';
 
 interface FilterExpressionModel {
@@ -109,13 +110,17 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   /** The properties this step edits. Anything else on the mapping is not copied, so a stale copy can never overwrite it. */
   static readonly PROPERTY_KEYS: (keyof Mapping)[] = [
     'name', 'mappingTopic', 'publishTopic', 'mappingTopicSample', 'publishTopicSample',
-    'filterInventory', 'targetAPI', 'createNonExistingDevice', 'updateExistingDevice',
+    'filterInventory', 'filterMapping', 'targetAPI', 'createNonExistingDevice', 'updateExistingDevice',
     'eventWithAttachment', 'autoAckOperation', 'useExternalId', 'externalIdType', 'qos',
     'maxFailureCount'
   ];
 
-  /** Formly's model: a working copy of the properties in PROPERTY_KEYS. */
-  model: Partial<Mapping> = {};
+  /**
+   * Formly's model: a working copy of the properties in PROPERTY_KEYS, plus the two helper keys of
+   * the execution-filter control (outbound). Those are a view over `filterMapping` and are never
+   * committed.
+   */
+  model: Partial<Mapping> & { executionFilterMode?: ExecutionFilterMode; executionFilterValue?: string } = {};
 
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
@@ -387,6 +392,65 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 );
               },
               required: true
+            }
+          },
+          // Outbound only: a structured way to write "Filter execution mapping". Second column of
+          // the Source API row; the expression itself is edited in the Templates step.
+          {
+            className: 'col-lg-2',
+            key: 'executionFilterMode',
+            type: 'select',
+            wrappers: ['c8y-form-field'],
+            props: {
+              label: gettext('Execution filter'),
+              description: gettext(
+                'Writes the "Filter execution mapping" of the Templates step: by type (<code>type = \'...\'</code>), by fragment (<code>$exists(...)</code>), or custom (empty, enter the expression there).'
+              ),
+              options: [
+                { label: gettext('Filter by type'), value: 'type' },
+                { label: gettext('Filter by fragment'), value: 'fragment' },
+                { label: gettext('Custom filter'), value: 'custom' }
+              ],
+              placeholder: gettext('Select a filter'),
+              disabled: this.isFieldDisabled,
+              required: true,
+              change: () => this.onExecutionFilterChanged()
+            },
+            hide: !isOutbound
+          },
+          {
+            className: 'col-lg-4',
+            key: 'executionFilterValue',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            props: {
+              disabled: this.isFieldDisabled,
+              required: true,
+              change: () => this.onExecutionFilterChanged()
+            },
+            expressions: {
+              // Undefined mode: nothing chosen yet, the value field would have no meaning.
+              hide: () => !isOutbound || !this.model.executionFilterMode || this.model.executionFilterMode === 'custom',
+              'props.label': () =>
+                this.translateService.instant(
+                  this.model.executionFilterMode === 'fragment' ? gettext('Fragment') : gettext('Type')
+                )
+            }
+          },
+          // Custom filter: the expression as it is, read-only. It is edited in the Templates step.
+          {
+            className: 'col-lg-4',
+            key: 'filterMapping',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            props: {
+              label: gettext('Filter expression'),
+              placeholder: gettext('Enter it in the Templates step'),
+              readonly: true,
+              required: false
+            },
+            expressions: {
+              hide: () => !isOutbound || this.model.executionFilterMode !== 'custom'
             }
           },
           {
@@ -725,7 +789,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     }
     // The field's own defaultValue would only reach this copy, so apply it here and commit it.
     model['externalIdType'] ??= 'c8y_Serial';
+    // Show the stored filter expression as one of the three options (an unknown expression is "custom").
+    // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
+    const choice = fromFilterMapping(this.mapping.filterMapping);
+    model['executionFilterMode'] = this.mapping.filterMapping?.trim() ? choice.mode : undefined;
+    model['executionFilterValue'] = choice.value ?? '';
     this.model = model as Partial<Mapping>;
+    this.commitModel();
+  }
+
+  /** Writes the execution-filter control to `filterMapping`. Only runs on user input, never on load. */
+  onExecutionFilterChanged(): void {
+    const mode = (this.propertyFormly.get('executionFilterMode')?.value ?? this.model.executionFilterMode) as ExecutionFilterMode;
+    const value = this.propertyFormly.get('executionFilterValue')?.value ?? this.model.executionFilterValue;
+    this.model.executionFilterMode = mode;
+    this.model.executionFilterValue = value;
+    this.model.filterMapping = toFilterMapping({ mode, value });
     this.commitModel();
   }
 

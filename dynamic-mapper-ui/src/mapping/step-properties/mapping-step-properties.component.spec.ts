@@ -122,6 +122,86 @@ describe('MappingStepPropertiesComponent', () => {
     });
   });
 
+  describe('execution filter control (outbound)', () => {
+    async function outboundComponent(filterMapping?: string) {
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const component = fixture.componentInstance;
+      component.mapping = { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterMapping } as unknown as Mapping;
+      component.stepperConfiguration = { direction: Direction.OUTBOUND, persistence: 'create' };
+      component.propertyFormly = new FormGroup({});
+      component.propertiesChange.subscribe(patch => Object.assign(component.mapping, patch));
+      await component.ngOnInit();
+      return component;
+    }
+
+    it('opens a new mapping with nothing chosen, and requires the choice and its value', async () => {
+      const component = await outboundComponent('');
+      expect(component.model.executionFilterMode).toBeUndefined();
+      const fields = (component.propertyFormlyFields as any[]).flatMap(f => f.fieldGroup ?? []);
+      const mode = fields.find(f => f.key === 'executionFilterMode');
+      const value = fields.find(f => f.key === 'executionFilterValue');
+      expect(mode.props.required).toBeTrue();
+      expect(value.props.required).toBeTrue();
+      // no value field until an option is chosen, and none for the custom option
+      expect(value.expressions.hide()).toBeTrue();
+      component.model.executionFilterMode = 'type';
+      expect(value.expressions.hide()).toBeFalse();
+      component.model.executionFilterMode = 'custom';
+      expect(value.expressions.hide()).toBeTrue();
+    });
+
+    it('opens a stored type expression as "type" with its value', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      expect(component.model.executionFilterMode).toBe('type');
+      expect(component.model.executionFilterValue).toBe('lora');
+    });
+
+    it('opens a stored $exists expression as "fragment"', async () => {
+      const component = await outboundComponent('$exists(c8y_Temperature)');
+      expect(component.model.executionFilterMode).toBe('fragment');
+      expect(component.model.executionFilterValue).toBe('c8y_Temperature');
+    });
+
+    it('opens any other expression as "custom" and leaves it untouched', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      expect(component.model.executionFilterMode).toBe('custom');
+      expect(component.mapping.filterMapping).toBe("type = 'a' and $exists(b)");
+    });
+
+    it('writes the expression to filterMapping when the user changes the control', async () => {
+      const component = await outboundComponent('true');
+      component.model.executionFilterMode = 'fragment';
+      component.model.executionFilterValue = 'c8y_Temperature';
+      component.onExecutionFilterChanged();
+      expect(component.mapping.filterMapping).toBe('$exists(c8y_Temperature)');
+
+      component.model.executionFilterMode = 'type';
+      component.model.executionFilterValue = 'lora';
+      component.onExecutionFilterChanged();
+      expect(component.mapping.filterMapping).toBe("type = 'lora'");
+    });
+
+    it('shows the custom expression read-only in the value column', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      const field = (component.propertyFormlyFields as any[])
+        .flatMap(f => f.fieldGroup ?? [])
+        .find(f => f.key === 'filterMapping');
+      expect(field.props.readonly).toBeTrue();
+      expect(field.expressions.hide()).toBeFalse();
+      expect(component.model.filterMapping).toBe("type = 'a' and $exists(b)");
+
+      component.model.executionFilterMode = 'type';
+      expect(field.expressions.hide()).toBeTrue();
+    });
+
+    it('clears filterMapping for the custom option', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      component.model.executionFilterMode = 'custom';
+      component.onExecutionFilterChanged();
+      expect(component.mapping.filterMapping).toBe('');
+    });
+  });
+
   describe('filter inventory: attributes missing from the inventory cache', () => {
     /** A stand-in for the formly field, which is not rendered in these template-less specs. */
     async function componentWithField() {

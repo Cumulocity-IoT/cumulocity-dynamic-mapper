@@ -202,6 +202,15 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       ).subscribe(path => {
         if (path) this.updateFilterExpressionResult(path);
       });
+      // A filter that was set before this step opened (Message Explorer prefill, existing
+      // mapping) is not announced by valueChanges. If the evaluations above ran before the
+      // source template had content they left no result, so try once more after first render.
+      afterNextRenderInZone(this.injector, () => {
+        const prefilled = this.mapping?.filterMapping;
+        if (prefilled && !this.filterModel.filterExpression?.resultType) {
+          void this.updateFilterExpressionResult(prefilled, this.sourceTemplate);
+        }
+      });
     }
 
     // When the parent expands templates and propagates a non-null sourceTemplate, evaluate
@@ -209,7 +218,9 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     // templateStepRef is null when handleSelectTemplatesStep fires, so the parent's direct
     // call was a no-op and the debounced subscription hadn't fired yet.
     if (changes['sourceTemplate'] && this.sourceTemplate && this.mapping?.filterMapping) {
-      this.updateFilterExpressionResult(this.mapping.filterMapping);
+      // Pass the new input explicitly: the editor, if it exists already, still holds the previous
+      // content here, so reading it would evaluate against a stale (possibly empty) template.
+      this.updateFilterExpressionResult(this.mapping.filterMapping, this.sourceTemplate);
     }
 
     if (changes['sourceTemplate']) {
