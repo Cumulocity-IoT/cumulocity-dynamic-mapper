@@ -95,14 +95,14 @@ export class SubscriptionSelectionService {
       try {
         await this.subscriptionService.updateSubscriptionByDeviceType({ api: API.ALL.name, types: selection.types! });
         result.applied = true;
-        if (selection.resyncNewTypes) {
-          // One after another: each call starts a background rescan of the inventory.
-          for (const type of addedTypes(selection)) {
-            try {
-              await this.subscriptionService.resyncTypeSubscription(type);
-            } catch (error) {
-              fail(error);
-            }
+        // Only types that are new in this selection can be resynced, and only the ones ticked.
+        const resync = addedTypes(selection).filter(type => selection.resyncTypes.includes(type));
+        // One after another: each call starts a background rescan of the inventory.
+        for (const type of resync) {
+          try {
+            await this.subscriptionService.resyncTypeSubscription(type);
+          } catch (error) {
+            fail(error);
           }
         }
       } catch (error) {

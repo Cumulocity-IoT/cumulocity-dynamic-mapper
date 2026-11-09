@@ -41,10 +41,10 @@ nothing changes. The lists start from the current subscriptions, so you can also
 removal is applied on save. If the saving of the subscription fails, the mapping stays saved, a warning explains
 the failure, and the unified editor stays open so you can save again.
 
-With **Dynamic**, the option **Also subscribe existing devices of these types** is off by default. A device type
-rule only subscribes devices that are created afterward. Select the option to also subscribe the devices of the
-added types that already exist. This rescans the inventory in the background and can take a while on large
-inventories.
+With **Dynamic**, the type list has a second column, **Also subscribe existing devices**. It is off by default and
+shows a checkbox in the row of each new type. A device type rule only subscribes devices that are created afterward.
+Tick the box of a type to also subscribe the devices of that type that already exist. This rescans the inventory in
+the background and can take a while on large inventories. Types that are already subscribed show "subscribed already".
 
 When you create a mapping from the [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer), the
 step offers the type, the groups, and the device of the selected message as one-click suggestions.

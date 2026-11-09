@@ -41,7 +41,6 @@ import { DeviceSelectorTableComponent } from '../subscription/subscription-stati
 import { GroupSelectorComponent } from '../subscription/subscription-dynamic-group/group-selector.component';
 import { TypeSelectorComponent } from '../subscription/subscription-dynamic-type/type-selector.component';
 import {
-  addedTypes,
   changedDevices,
   changedGroups,
   changedTypes,
@@ -50,14 +49,12 @@ import {
   SubscriptionSuggestions
 } from './outbound-subscription-selection.model';
 
-const MAX_LISTED_DEVICES = 5;
-
 /**
  * The Subscription step of an outbound mapping (stepper) and its tab (unified editor).
  *
  * It only edits an {@link OutboundSubscriptionSelection}; the host owns that object, because the
  * unified editor destroys this component on every tab switch. The selection is written when the
- * mapping is saved. The four selector drawers are the ones of the Subscription outbound page.
+ * mapping is saved. The four selectors are the ones of the Subscription outbound page. Three are embedded inline; the device table opens as a drawer.
  */
 @Component({
   selector: 'd11r-mapping-step-subscription',
@@ -86,14 +83,44 @@ export class MappingStepSubscriptionComponent implements OnInit {
   private readonly selectionService = inject(SubscriptionSelectionService);
   private readonly alertService = inject(AlertService);
 
-  loading = false;
-  loadFailed = false;
-  showTypeSelector = false;
-  showGroupSelector = false;
-  showDeviceTree = false;
+  /**
+   * Which option of the chosen mode is selected, and therefore expanded. The options are radio
+   * buttons: choosing Dynamic selects "by device type", choosing Static selects "device selection".
+   */
+  expanded = { types: false, groups: false, devices: false, table: false };
+
+  private expandFor(mode: SubscriptionMode): void {
+    this.expanded = {
+      types: mode === 'dynamic',
+      groups: false,
+      devices: mode === 'static',
+      table: false
+    };
+  }
+
+  /**
+   * Selects one option of the chosen mode; the others collapse. The device table has no room in the
+   * page, so selecting it opens its drawer; the option then offers a link to open it again.
+   */
+  selectSub(key: keyof typeof this.expanded): void {
+    this.expanded = {
+      types: key === 'types',
+      groups: key === 'groups',
+      devices: key === 'devices',
+      table: key === 'table'
+    };
+    if (key === 'table') this.showDeviceTable = true;
+  }
+
+  /** The device table is the one selector that opens as a drawer (when its option is selected): it needs too much room for the page. */
   showDeviceTable = false;
 
+  loading = false;
+  loadFailed = false;
+
   async ngOnInit(): Promise<void> {
+    // The host recreates this component on a tab switch; an already chosen mode opens as chosen.
+    this.expandFor(this.selection.mode);
     if (this.selection.baseline) return;
     this.loading = true;
     try {
@@ -120,12 +147,9 @@ export class MappingStepSubscriptionComponent implements OnInit {
     return !!this.selection.baseline && !this.selection.baseline.available;
   }
 
-  get actionsDisabled(): boolean {
-    return !this.canEdit || !this.ready;
-  }
-
   setMode(mode: SubscriptionMode): void {
     if (this.selection.mode === mode) return;
+    this.expandFor(mode);
     this.update({ mode });
   }
 
@@ -139,20 +163,6 @@ export class MappingStepSubscriptionComponent implements OnInit {
   get groupsPending(): boolean { return changedGroups({ ...this.selection, mode: 'dynamic' }); }
   get devicesPending(): boolean { return changedDevices({ ...this.selection, mode: 'static' }); }
 
-  get removedTypes(): string[] {
-    return (this.selection.baseline?.types ?? []).filter(t => !this.types.includes(t));
-  }
-  get removedGroups(): Device[] {
-    return (this.selection.baseline?.groups ?? []).filter(g => !this.groups.some(x => x.id === g.id));
-  }
-  get removedDevicesCount(): number {
-    return (this.selection.baseline?.devices ?? []).filter(d => !this.devices.some(x => x.id === d.id)).length;
-  }
-
-  get listedDevices(): Device[] { return this.devices.slice(0, MAX_LISTED_DEVICES); }
-  get moreDevices(): number { return Math.max(0, this.devices.length - MAX_LISTED_DEVICES); }
-
-  get canResync(): boolean { return addedTypes({ ...this.selection, types: this.types }).length > 0; }
 
   // ----- device context from the Message Explorer -----
 
@@ -203,7 +213,7 @@ export class MappingStepSubscriptionComponent implements OnInit {
   setContextChoice(choice: 'skip' | 'type' | 'group' | 'device'): void {
     switch (choice) {
       case 'skip':
-        this.update({ mode: 'skip', types: null, groups: null, devices: null, resyncNewTypes: false });
+        this.update({ mode: 'skip', types: null, groups: null, devices: null, resyncTypes: [] });
         break;
       case 'type': {
         const type = this.contextType;
@@ -240,24 +250,19 @@ export class MappingStepSubscriptionComponent implements OnInit {
     this.setContextChoice('group');
   }
 
-  // ----- drawers -----
+  // ----- inline selectors: every edit updates the selection; it is written when the mapping is saved -----
 
-  onCommitTypes(types: string[]): void {
-    this.showTypeSelector = false;
-    this.update({ types });
-  }
-  onCommitGroups(groups: IIdentified[]): void {
-    this.showGroupSelector = false;
-    this.update({ groups: groups as Device[] });
-  }
+  onTypesChange(types: string[]): void { this.update({ types }); }
+  onGroupsChange(groups: IIdentified[]): void { this.update({ groups: groups as Device[] }); }
+  onDevicesChange(devices: IIdentified[]): void { this.update({ devices: devices as Device[] }); }
+
   onCommitDevices(devices: IIdentified[]): void {
-    this.showDeviceTree = false;
     this.showDeviceTable = false;
-    this.update({ devices: devices as Device[] });
+    this.onDevicesChange(devices);
   }
 
-  setResync(resyncNewTypes: boolean): void {
-    this.update({ resyncNewTypes });
+  setResyncTypes(resyncTypes: string[]): void {
+    this.update({ resyncTypes });
   }
 
   private update(patch: Partial<OutboundSubscriptionSelection>): void {

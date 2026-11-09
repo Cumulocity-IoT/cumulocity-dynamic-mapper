@@ -40,8 +40,17 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 export class DeviceSelectorTreeComponent {
   @Input() deviceList: IIdentified[];
 
+  /** Embedded in a page instead of a drawer: no header or buttons; every edit is emitted as `selectionChange`. */
+  @Input() inline = false;
+
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
+  @Output() selectionChange = new EventEmitter<IIdentified[]>();
+
+  onSelectionChange(list: IIdentified[]) {
+    this.deviceList = list;
+    if (this.inline) this.selectionChange.emit(list);
+  }
 
   clickedUpdateSubscription() {
     this.commit.emit(this.deviceList);

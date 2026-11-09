@@ -48,8 +48,8 @@ export interface OutboundSubscriptionSelection {
   types: string[] | null;
   groups: Device[] | null;
   devices: Device[] | null;
-  /** Dynamic mode: also subscribe the existing devices of the types added in this selection. */
-  resyncNewTypes: boolean;
+  /** Dynamic mode: types added in this selection whose existing devices are subscribed as well. */
+  resyncTypes: string[];
   /** Set by the step once it has loaded the current subscriptions. */
   baseline?: SubscriptionBaseline;
 }
@@ -63,7 +63,7 @@ export interface SubscriptionSuggestions {
 }
 
 export function emptySelection(): OutboundSubscriptionSelection {
-  return { mode: 'skip', types: null, groups: null, devices: null, resyncNewTypes: false };
+  return { mode: 'skip', types: null, groups: null, devices: null, resyncTypes: [] };
 }
 
 const sameIds = (a: { id: string }[], b: { id: string }[]): boolean => {

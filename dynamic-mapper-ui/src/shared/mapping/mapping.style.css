@@ -247,3 +247,9 @@ d11r-mapping-mapping-grid .table.table-data-grid .cdk-column-actions .btn-dot {
 .d11r-flush-field .form-group {
   margin-bottom: 0;
 }
+
+/* Inline subscription selectors for users who may not edit. */
+.selector-readonly {
+  pointer-events: none;
+  opacity: 0.6;
+}

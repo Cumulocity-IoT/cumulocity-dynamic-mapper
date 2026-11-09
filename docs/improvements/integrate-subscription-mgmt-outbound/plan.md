@@ -19,7 +19,7 @@ Both are far from where the user defines an outbound mapping. This plan adds a *
 | Options in the step | **Skip for now**, **Dynamic**, **Static**. |
 | Visibility | Every outbound mapping, new or existing. Inbound mappings never see the step. |
 | Old UI | Delete `SubscriptionChoiceDrawerComponent` and its call in the Message Explorer. The Subscription outbound page stays (overview, resync, bulk management). |
-| Existing devices of a type | The Dynamic mode has a checkbox "Also subscribe existing devices of these types", default off. On save it calls the resync endpoint for the selected types. The standalone *Resync existing devices* action stays on the page only. |
+| Existing devices of a type | The Dynamic mode has a checkbox per new type in the type list ("Also subscribe existing devices"), default off. On save it calls the resync endpoint for the ticked types. The standalone *Resync existing devices* action stays on the page only. |
 | Removing subscriptions | Allowed in the step, as on the page. Removals show in the pending summary and are applied on save. |
 | Explorer device context | Included in this work. The Message Explorer passes the sampled device's type and groups to the step as one-click suggestions. |
 | Untouched selection | Nothing is written and no alert is shown. |
@@ -39,16 +39,16 @@ Content of the step:
    | Option | Behavior |
    |--------|----------|
    | Skip for now (default) | No change on save. Text: "Continue without a subscription. Add one later from the Subscription outbound page." |
-   | Dynamic | Shows the actions of the **dynamic** page: *Manage subscriptions (by device type)* opens `d11r-type-selector`, *Manage subscriptions (by device groups)* opens `d11r-group-selector`. Each has the same help popover as the page. |
-   | Static | Shows the actions of the **static** page: *Manage subscriptions (device selection)* opens `d11r-device-selector-tree`, *Add subscriptions (device table)* opens `d11r-device-selector-table`. |
+   | Dynamic | Two nested radio options, as on the **dynamic** page: *Manage subscriptions (by device type)* shows `d11r-type-selector` inline, *Manage subscriptions (by device groups)* shows `d11r-group-selector` inline. Only the selected option is expanded; choosing Dynamic selects the first. Each has the help popover of the page. |
+   | Static | Two options, as on the **static** page: *Manage subscriptions (device selection)* is a radio option that shows `d11r-device-selector-tree` inline. *Add subscriptions (device table)* is a radio option too, but the table needs too much room for the page: selecting it opens `d11r-device-selector-table` in a drawer. The option stays selected after the drawer closes (Save or Cancel) and shows an **Open device table** link to reopen it. |
 
-3. In Dynamic mode, below the actions: the checkbox **Also subscribe existing devices of these types** (default off) with the hint "A device type rule only subscribes devices created afterward. Select this to also subscribe devices of these types that already exist." It is enabled only when the pending type list contains at least one type that is new compared with the loaded list.
-4. A summary under the actions: the current subscriptions of the selected mode, plus pending changes marked as "not saved yet". Types and groups show as badges, devices as a count with the first few names.
+3. Under the *by device type* option, the type list has a second column, **Also subscribe existing devices**: a checkbox in the row of each type that the server does not have yet (existing types show "subscribed already"). A short hint explains that a type rule only subscribes devices created afterward. The ticked types are kept in `OutboundSubscriptionSelection.resyncTypes`; on save, only added types that are ticked are resynced (`resyncTypeSubscription`), one after another.
+4. Each option shows a one-line summary ("n selected" or "None") and a "not saved yet" label while its list differs from the loaded one. The lists themselves are the inline editors: they show what is subscribed on the tenant, not something specific to this mapping or device.
 5. The info text from the page: "Subscriptions are processed asynchronously. Verify the result on the Subscription outbound page or in Service Events."
 
 The mode radio only chooses which actions and summary are shown. It never deletes subscriptions of the other mode, because both kinds can coexist on a tenant (`validateSubscriptionOutbound` already treats them as additive).
 
-The four selectors are existing bottom-drawer components with the inputs `deviceList` or `typeList` and the outputs `commit` and `cancel`. The step reuses them unchanged and only changes what `commit` does (see below).
+The four selectors are existing bottom-drawer components with the inputs `deviceList` or `typeList` and the outputs `commit` and `cancel`. The step reuses them. Three get an `inline` input (see "Selectors in the step" below); the device table is still used as a drawer.
 
 ## Design
 
@@ -58,9 +58,9 @@ New standalone component `d11r-mapping-step-subscription` in `src/mapping/step-s
 
 - Input: `selection: OutboundSubscriptionSelection` (see model below).
 - Output: `selectionChange`.
-- Hosts the four drawers with the same `drawerOpen` / `bottom-drawer` markup as `mapping-subscription.component.html`.
+- Hosts one drawer, for the device table, with the same `drawerOpen` / `bottom-drawer` markup as `mapping-subscription.component.html`. The other three selectors are embedded inline.
 - Loads the current subscriptions when it first renders (see "Shared loading" below).
-- Respects roles: actions are disabled without the Mapping Admin or Mapping Create role, same `feature?.userHasMapping...` check as the page.
+- Respects roles: without the Mapping Admin or Mapping Create role the buttons are disabled and the inline selectors are dimmed and not clickable (`.selector-readonly`), same `feature?.userHasMapping...` check as the page.
 
 ### 2. Selection model
 
@@ -75,7 +75,7 @@ export interface OutboundSubscriptionSelection {
   types: string[] | null;          // dynamic, by device type
   groups: Device[] | null;         // dynamic, by device group
   devices: Device[] | null;        // static, tree or table
-  resyncNewTypes: boolean;         // dynamic only, default false
+  resyncTypes: string[];           // dynamic only, added types to resync, default []
 }
 ```
 
@@ -93,7 +93,7 @@ On save, in `MappingCommitService.commitMapping` (shared by both editors), after
    - `updateSubscriptionByDeviceGroup({ api: API.ALL.name, devices: groups })`
    - `updateSubscriptionDevice({ api: API.ALL.name, devices }, STATIC_DEVICE_SUBSCRIPTION)`
 3. If a subscription call fails, the mapping stays saved. Show a warning ("The mapping was saved, but updating the subscriptions failed: ...") and keep the editor open so the user can retry. This mirrors the existing post-save handling in `mapping-unified-editor.component.ts` around line 402.
-4. If `resyncNewTypes` is true, call `resyncTypeSubscription(type)` for each type that is in the saved list but was not in the loaded list. Run it after the type subscription was written, and run the types one after another, because each call rescans the inventory in a background job. The confirmation dialog from the page is not repeated, because the checkbox is the explicit opt-in and its hint names the cost. A failure shows a warning and does not undo the saved subscriptions.
+4. For each type that is in `resyncTypes`, is in the saved list, and was not in the loaded list, call `resyncTypeSubscription(type)`. Run it after the type subscription was written, and run the types one after another, because each call rescans the inventory in a background job. The confirmation dialog from the page is not repeated, because the ticked checkbox is the explicit opt-in and its hint names the cost. A failure shows a warning and does not undo the saved subscriptions.
 5. Show the existing info alert "Subscription request submitted. Subscriptions are processed asynchronously."
 
 Order matters: the mapping is saved first, so a rejected mapping never creates subscriptions. The selector components submit complete lists (they receive the current list as input and return the edited list), so the calls are replace-style, same as on the Subscription outbound page. The drawer being removed used merge-style writes only because it started from a single device.
@@ -205,3 +205,12 @@ Implemented as planned, with these differences:
 - **Message Explorer.** The device context travels in `ExplorerMappingHandoff.subscriptionSuggestions` and `StepperConfiguration.subscriptionSuggestions`. The drawer `SubscriptionChoiceDrawerComponent` is deleted.
 - **Translations.** The catalogs were edited by hand. Running `npm run i18n:extract` on this machine rewrites thousands of platform lines in `locales/locales.pot`, so its output was discarded.
 - **Not done.** Screenshots in the user guide are not replaced. Cypress tests for the new step are not written (the test ids exist).
+
+## Selectors in the step (2026-11-09)
+
+- **Inline mode.** `d11r-type-selector`, `d11r-group-selector`, and `d11r-device-selector-tree` have an `inline` input. Inline, they drop the card header and the Save and Cancel buttons and report every edit (`typesChange` / `selectionChange`). The step writes each edit into its selection, which is saved with the mapping. The Subscription outbound page keeps using all four as drawers.
+- **Type list.** Inline, the type selector owns its rows after the first value, so a row the user has just added and not yet typed is not wiped when the host echoes back only the non-blank types. Blank rows are never emitted.
+- **Device table stays a drawer.** `d11r-device-selector-table` showed a full device grid, which pushed the page content out of view. It opens when its radio option under Static is selected, with its own Save and Cancel; the option then shows an **Open device table** link to open it again. Its `inline` input remains in the component but the step does not use it.
+- **Only the selected option is expanded.** The options of the chosen mode are radio options (`expanded` in the step component); selecting one collapses the other. Switching only changes the view: an edit made in the option left is kept and saved.
+- **Menu icon.** The Subscription outbound menu entry uses the `subscription` icon, the same as the step and tab (it was `mail`).
+- **Not done.** The Cypress tests that used the former button test ids of the step are not updated (none existed for the step); the user guide screenshots still show the old layout.

@@ -99,17 +99,21 @@ describe('SubscriptionSelectionService', () => {
       expect(subs.updateSubscriptionDevice).toHaveBeenCalledOnceWith({ api: 'ALL', devices: [{ id: 'd2' }] as any }, 'STATIC');
     });
 
-    it('resyncs only the added types, one after another, and only when asked to', async () => {
-      await service.apply(select({ mode: 'dynamic', types: ['a', 'b', 'c'], resyncNewTypes: true }));
+    it('resyncs only the added types that are ticked, one after another', async () => {
+      await service.apply(select({ mode: 'dynamic', types: ['a', 'b', 'c'], resyncTypes: ['b', 'c'] }));
       expect(subs.resyncTypeSubscription.calls.allArgs()).toEqual([['b'], ['c']]);
 
       subs.resyncTypeSubscription.calls.reset();
-      await service.apply(select({ mode: 'dynamic', types: ['a', 'd'], resyncNewTypes: false }));
+      await service.apply(select({ mode: 'dynamic', types: ['a', 'd'], resyncTypes: [] }));
       expect(subs.resyncTypeSubscription).not.toHaveBeenCalled();
+
+      // a type that is new but not ticked is not resynced; a ticked type that already existed is ignored
+      await service.apply(select({ mode: 'dynamic', types: ['a', 'b', 'c'], resyncTypes: ['c', 'a'] }));
+      expect(subs.resyncTypeSubscription.calls.allArgs()).toEqual([['c']]);
     });
 
     it('does not resync for a type that was only removed', async () => {
-      await service.apply(select({ mode: 'dynamic', types: [], resyncNewTypes: true }));
+      await service.apply(select({ mode: 'dynamic', types: [], resyncTypes: ['b'] }));
       expect(subs.resyncTypeSubscription).not.toHaveBeenCalled();
     });
 
@@ -125,7 +129,7 @@ describe('SubscriptionSelectionService', () => {
 
     it('does not resync when the type write failed', async () => {
       subs.updateSubscriptionByDeviceType.and.rejectWith(new Error('nope'));
-      await service.apply(select({ mode: 'dynamic', types: ['b'], resyncNewTypes: true }));
+      await service.apply(select({ mode: 'dynamic', types: ['b'], resyncTypes: ['b'] }));
       expect(subs.resyncTypeSubscription).not.toHaveBeenCalled();
     });
 

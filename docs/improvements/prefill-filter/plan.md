@@ -116,3 +116,11 @@ Round-trip property test: `fromFilterMapping(toFilterMapping(c))` equals `c` for
 - The execution filter is mandatory on the General Settings step. A new outbound mapping starts with nothing selected and an empty `filterMapping` (the former `'true'` default is gone for outbound). The user picks an option and, for type or fragment, enters the value; the step cannot be left until then.
 - Explorer prefill without a payload `type` leaves the control unselected (this replaces the earlier fallback to option 3 with `'true'`).
 - Custom filter shows the current expression read-only next to the dropdown; it is edited in the Templates step.
+
+## Implementation notes
+
+- **Where.** `execution-filter.model.ts` (translation helper), `mapping-step-properties.component.ts` (control), `new-mapping.factory.ts` (Explorer prefill from the payload `type`; the Explorer hand-off is unchanged).
+- **Layout.** The control sits in the Source API row, right half: the dropdown takes one third (`col-lg-2`), the value field two thirds (`col-lg-4`). For "Custom filter" the same space shows the current expression as a read-only field ("Filter expression"); it is edited in the Templates step.
+- **Required.** The dropdown is required, and so is the value for type and fragment. Opening an existing mapping with an empty expression shows nothing selected; any other expression that is not a plain type or fragment filter opens as "Custom filter".
+- **Templates step fix.** A prefilled filter was not evaluated when the Templates step opened for the first time: on a changed `sourceTemplate` the step read the source editor, which still held the previous content, and skipped the empty template without an error. It now evaluates against the new `sourceTemplate` input. A regression test is in `mapping-template-step.initial-filter.spec.ts`.
+- **Translations and docs.** German and template catalogs edited by hand; `define-mapping.md` has a row for the control.

@@ -264,7 +264,7 @@ describe('MappingCommitService', () => {
         types: ['c8y_SensorPhone'],
         groups: null,
         devices: null,
-        resyncNewTypes: false,
+        resyncTypes: [],
         baseline: { available: true, types: [], groups: [], devices: [] },
         ...over
       });

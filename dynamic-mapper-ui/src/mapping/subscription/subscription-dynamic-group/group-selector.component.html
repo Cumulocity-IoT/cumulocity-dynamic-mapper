@@ -19,16 +19,8 @@
   ~
   -->
 
-<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage d-col flex-grow">
-    <div class="card-header separator j-c-center">
-      <h4 id="drawerTitle" class="card-title d-flex">
-        <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8" translate>Select devices group to subscribe to all device for outbound mappings</span>
-      </h4>
-    </div>
-    <div class="card-block flex-grow">
-      <c8y-asset-selector-miller [(ngModel)]="deviceList" data-cy="dm-group-selector-selector" [config]="{
+<ng-template #selectorBody>
+  <c8y-asset-selector-miller [ngModel]="deviceList" (ngModelChange)="onSelectionChange($event)" data-cy="dm-group-selector-selector" [config]="{
             groupsSelectable: true,
             groupsOnly: true,
             columnHeaders: true,
@@ -39,6 +31,23 @@
             multi: true,
             showSelected: true
           }" class="bg-component"></c8y-asset-selector-miller>
+</ng-template>
+
+@if (inline) {
+<div class="inline-selector" style="height: 420px;">
+  <ng-container *ngTemplateOutlet="selectorBody"></ng-container>
+</div>
+} @else {
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
+    <div class="card-header separator j-c-center">
+      <h4 id="drawerTitle" class="card-title d-flex">
+        <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8" translate>Select devices group to subscribe to all device for outbound mappings</span>
+      </h4>
+    </div>
+    <div class="card-block flex-grow">
+      <ng-container *ngTemplateOutlet="selectorBody"></ng-container>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" data-cy="dm-group-selector-cancel" translate>
@@ -50,3 +59,4 @@
     </div>
   </div>
 </div>
+}

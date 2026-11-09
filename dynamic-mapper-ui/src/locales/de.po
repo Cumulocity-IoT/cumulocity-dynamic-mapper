@@ -13,7 +13,7 @@ msgstr ""
 msgid ", which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads."
 msgstr ""
 
-msgid "A device type rule only subscribes devices created afterward. Select this to also subscribe devices of the added types that already exist. This rescans the inventory in the background and can take a while on large inventories."
+msgid "A device type rule only subscribes devices created afterward. Tick the box of a new type to also subscribe the devices of that type that already exist. This rescans the inventory in the background and can take a while on large inventories."
 msgstr ""
 
 msgid "Add a device type first."
@@ -76,7 +76,7 @@ msgstr ""
 msgid "Specific devices are subscribed. Devices added to a group later are not subscribed."
 msgstr ""
 
-msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; tick the box of the type to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
 msgstr ""
 
 msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices. To unsubscribe a device, use the device selection (tree) view instead."
@@ -1229,6 +1229,33 @@ msgstr "In „Templates“ eingeben"
 
 msgid "Select a filter"
 msgstr "Filter auswählen"
+
+msgid "Already subscribed device types:"
+msgstr "Bereits abonnierte Gerätetypen:"
+
+msgid "Already subscribed device groups:"
+msgstr "Bereits abonnierte Gerätegruppen:"
+
+msgid "Already subscribed devices:"
+msgstr "Bereits abonnierte Geräte:"
+
+msgid "selected"
+msgstr "ausgewählt"
+
+msgid "Open device table"
+msgstr "Gerätetabelle öffnen"
+
+msgid "Device type"
+msgstr "Gerätetyp"
+
+msgid "Also subscribe existing devices"
+msgstr "Auch vorhandene Geräte abonnieren"
+
+msgid "subscribed already"
+msgstr "bereits abonniert"
+
+msgid "Subscribe the devices of this type that already exist, in addition to the ones created afterward"
+msgstr "Auch die bereits vorhandenen Geräte dieses Typs abonnieren, zusätzlich zu den später angelegten"
 
 msgid "Filter inventory"
 msgstr ""

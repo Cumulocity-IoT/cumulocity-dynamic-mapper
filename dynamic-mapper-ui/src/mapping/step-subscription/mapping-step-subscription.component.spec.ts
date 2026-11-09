@@ -102,7 +102,6 @@ describe('MappingStepSubscriptionComponent', () => {
       selectionService.loadBaseline.and.rejectWith(new Error('down'));
       await create();
       expect(component.ready).toBe(false);
-      expect(component.actionsDisabled).toBe(true);
       expect(alerts.danger).toHaveBeenCalled();
       expect(emitted).toEqual([]);
     });
@@ -130,26 +129,31 @@ describe('MappingStepSubscriptionComponent', () => {
       await create();
       component.setMode('dynamic');
       fixture.detectChanges();
-      expect(q('dm-mapping-stepper-subscription-manage-by-type')).not.toBeNull();
-      expect(q('dm-mapping-stepper-subscription-manage-by-group')).not.toBeNull();
-      expect(q('dm-mapping-stepper-subscription-manage-device-selection')).toBeNull();
+      expect(q('dm-mapping-stepper-subscription-sub-types')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-sub-groups')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-types')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-groups')).toBeNull(); // not selected, so collapsed
+      expect(q('dm-mapping-stepper-subscription-device-tree')).toBeNull();
     });
 
     it('shows the device selection and table actions for static', async () => {
       await create();
       component.setMode('static');
       fixture.detectChanges();
-      expect(q('dm-mapping-stepper-subscription-manage-device-selection')).not.toBeNull();
-      expect(q('dm-mapping-stepper-subscription-manage-device-table')).not.toBeNull();
-      expect(q('dm-mapping-stepper-subscription-manage-by-type')).toBeNull();
+      expect(q('dm-mapping-stepper-subscription-sub-device-tree')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-sub-device-table')).not.toBeNull(); // opens a drawer
+      expect(q('dm-mapping-stepper-subscription-device-tree')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-types')).toBeNull();
     });
 
-    it('disables the actions without the Mapping Admin or Mapping Create role', async () => {
+    it('makes the inline selectors read-only without the Mapping Admin or Mapping Create role', async () => {
       await create(emptySelection(), { userHasMappingAdminRole: false, userHasMappingCreateRole: false });
       component.setMode('dynamic');
       fixture.detectChanges();
-      expect(component.actionsDisabled).toBe(true);
-      expect((q('dm-mapping-stepper-subscription-manage-by-type') as HTMLButtonElement).disabled).toBe(true);
+      expect(q('dm-mapping-stepper-subscription-types')!.classList).toContain('selector-readonly');
+      component.selectSub('groups');
+      fixture.detectChanges();
+      expect(q('dm-mapping-stepper-subscription-groups')!.classList).toContain('selector-readonly');
     });
 
     it('uses the data-cy prefix of its host', async () => {
@@ -160,71 +164,83 @@ describe('MappingStepSubscriptionComponent', () => {
     });
   });
 
-  describe('selector drawers', () => {
+  describe('inline selectors', () => {
     beforeEach(async () => {
       await create();
       component.setMode('dynamic');
     });
 
-    it('collects the type list without writing anything and closes the drawer', () => {
-      component.showTypeSelector = true;
-      component.onCommitTypes(['c8y_Old', 'c8y_New']);
-      expect(component.showTypeSelector).toBe(false);
+    it('collects the type list without writing anything', () => {
+      component.onTypesChange(['c8y_Old', 'c8y_New']);
       expect(emitted.at(-1)!.types).toEqual(['c8y_Old', 'c8y_New']);
       expect(selectionService.loadBaseline).toHaveBeenCalledTimes(1);
     });
 
     it('collects groups and devices', () => {
-      component.onCommitGroups([{ id: 'g2', name: 'Tablets' } as any]);
+      component.onGroupsChange([{ id: 'g2', name: 'Tablets' } as any]);
       expect(emitted.at(-1)!.groups).toEqual([{ id: 'g2', name: 'Tablets' } as any]);
 
-      component.showDeviceTree = true;
-      component.showDeviceTable = true;
-      component.onCommitDevices([{ id: 'd2' }]);
-      expect(component.showDeviceTree).toBe(false);
-      expect(component.showDeviceTable).toBe(false);
+      component.onDevicesChange([{ id: 'd2' }]);
       expect(emitted.at(-1)!.devices).toEqual([{ id: 'd2' } as any]);
     });
 
-    it('shows pending and removed entries', () => {
-      component.onCommitTypes(['c8y_New']);
+    it('marks edited lists as pending', () => {
+      component.onTypesChange(['c8y_New']);
       expect(component.typesPending).toBe(true);
-      expect(component.removedTypes).toEqual(['c8y_Old']);
-
-      component.onCommitGroups([]);
-      expect(component.removedGroups.map(g => g.id)).toEqual(['g1']);
-
-      component.setMode('static');
-      component.onCommitDevices([]);
-      expect(component.removedDevicesCount).toBe(1);
     });
 
-    it('lists at most five devices and counts the rest', () => {
+    it('opens the device table as a drawer when its option is selected, and offers a link to reopen it', () => {
       component.setMode('static');
-      component.onCommitDevices(Array.from({ length: 8 }, (_, i) => ({ id: String(i) })));
-      expect(component.listedDevices.length).toBe(5);
-      expect(component.moreDevices).toBe(3);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.bottom-drawer')).toBeNull();
+
+      component.selectSub('table');
+      fixture.detectChanges();
+      expect(component.showDeviceTable).toBe(true);
+      expect(fixture.nativeElement.querySelector('.bottom-drawer')).not.toBeNull();
+
+      component.onCommitDevices([{ id: 'd9' }]);
+      fixture.detectChanges();
+      expect(component.showDeviceTable).toBe(false);
+      expect(emitted.at(-1)!.devices).toEqual([{ id: 'd9' } as any]);
+      expect(component.expanded.table).toBe(true); // the option stays selected
+      expect(fixture.nativeElement.querySelector('.bottom-drawer')).toBeNull();
+
+      (q('dm-mapping-stepper-subscription-open-device-table') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.showDeviceTable).toBe(true);
+      expect(fixture.nativeElement.querySelector('.bottom-drawer')).not.toBeNull();
+    });
+
+    it('expands only the selected option, and shows no drawer for the inline selectors', () => {
+      fixture.detectChanges();
+      expect(q('dm-mapping-stepper-subscription-types')).not.toBeNull();
+      expect(q('dm-mapping-stepper-subscription-groups')).toBeNull();
+
+      component.selectSub('groups');
+      fixture.detectChanges();
+      expect(q('dm-mapping-stepper-subscription-types')).toBeNull();
+      expect(q('dm-mapping-stepper-subscription-groups')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.bottom-drawer')).toBeNull();
     });
   });
 
-  describe('resync option', () => {
+  describe('resync per type', () => {
     beforeEach(async () => {
       await create();
       component.setMode('dynamic');
     });
 
-    it('is only possible once a new type is in the selection', () => {
-      expect(component.canResync).toBe(false);
-      component.onCommitTypes(['c8y_Old']);
-      expect(component.canResync).toBe(false);
-      component.onCommitTypes(['c8y_Old', 'c8y_New']);
-      expect(component.canResync).toBe(true);
+    it('is off by default and is set per type', () => {
+      expect(component.selection.resyncTypes).toEqual([]);
+      component.setResyncTypes(['c8y_New']);
+      expect(emitted.at(-1)!.resyncTypes).toEqual(['c8y_New']);
     });
 
-    it('is off by default and can be switched on', () => {
-      expect(component.selection.resyncNewTypes).toBe(false);
-      component.setResync(true);
-      expect(emitted.at(-1)!.resyncNewTypes).toBe(true);
+    it('is reset when the selection is skipped', () => {
+      component.setResyncTypes(['c8y_New']);
+      component.setContextChoice('skip');
+      expect(emitted.at(-1)!.resyncTypes).toEqual([]);
     });
   });
 

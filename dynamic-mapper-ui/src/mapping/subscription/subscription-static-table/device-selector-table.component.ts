@@ -45,8 +45,12 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, Registratio
 export class DeviceSelectorTableComponent implements OnInit {
   @Input() deviceList: IIdentified[];
 
+  /** Embedded in a page instead of a drawer: no header or buttons; every selection change is emitted as `selectionChange`. */
+  @Input() inline = false;
+
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
+  @Output() selectionChange = new EventEmitter<IIdentified[]>();
   columns: Column[];
   selectedItemIds: string[] = [];
 
@@ -79,7 +83,24 @@ export class DeviceSelectorTableComponent implements OnInit {
 
   /** Executes an action on selected items, whenever the selection changes. */
   onItemsSelect(selectedItemIds: string[]) {
+    const previous = new Set(this.selectedItemIds);
     this.selectedItemIds = selectedItemIds;
+    if (this.inline) {
+      this.emitInline(previous);
+    }
+  }
+
+  /**
+   * Inline mode: the host's list is also edited elsewhere (the device tree), so only what this
+   * table itself added is toggled. A row ticked here is added; a row unticked here is removed
+   * again; devices that were subscribed before are never touched.
+   */
+  private emitInline(previous: Set<string>) {
+    const selected = new Set(this.selectedItemIds ?? []);
+    const base = (this.deviceList ?? []).filter(d => !(previous.has(String(d.id)) && !selected.has(String(d.id))));
+    const existingIds = new Set(base.map(d => String(d.id)));
+    const added = [...selected].filter(id => !existingIds.has(id)).map(id => ({ id }));
+    this.selectionChange.emit([...base, ...added]);
   }
 
   getColumns(): Column[] {

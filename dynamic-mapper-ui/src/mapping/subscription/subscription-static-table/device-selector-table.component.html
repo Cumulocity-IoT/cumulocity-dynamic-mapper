@@ -19,6 +19,15 @@
   ~
   -->
 
+<ng-template #gridBody>
+  <c8y-device-grid [title]="'Devices' | translate" [columns]="columns" [actionControls]="[]"
+          (itemsSelect)="onItemsSelect($event)" [selectable]="true"
+          data-cy="dm-device-table-grid"></c8y-device-grid>
+</ng-template>
+
+@if (inline) {
+<ng-container *ngTemplateOutlet="gridBody"></ng-container>
+} @else {
 <div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage d-col flex-grow">
     <div class="card-header separator j-c-center">
@@ -29,9 +38,7 @@
     </div>
     <div class="card-inner-scroll flex-grow">
       <div class="card-block">
-        <c8y-device-grid [title]="'Devices' | translate" [columns]="columns" [actionControls]="[]"
-          (itemsSelect)="onItemsSelect($event)" [selectable]="true"
-          data-cy="dm-device-table-grid"></c8y-device-grid>
+        <ng-container *ngTemplateOutlet="gridBody"></ng-container>
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
@@ -44,3 +51,4 @@
     </div>
   </div>
 </div>
+}

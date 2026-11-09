@@ -61,6 +61,67 @@
         <p class="text-muted m-b-0 m-t-4 text-12" translate>
           Devices are subscribed by device type or device group. Newly created devices of a chosen type, and devices added to a chosen group, are subscribed automatically.
         </p>
+        @if (selection.mode === 'dynamic' && ready) {
+        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix + '-subscription-dynamic-panel'">
+          <c8y-li role="listitem">
+            <c8y-li-radio name="dynamicSub" [selected]="expanded.types" (onSelect)="$event && selectSub('types')"
+              [attr.data-cy]="dataCyPrefix + '-subscription-sub-types'"></c8y-li-radio>
+            <c8y-li-icon icon="subscription"></c8y-li-icon>
+            <c8y-li-body>
+              <div class="d-flex a-i-center flex-wrap">
+                <strong translate>Manage subscriptions (by device type)</strong>
+                @if (types.length) {
+                <span class="text-muted text-12 m-l-8">{{ types.length }} {{ 'selected' | translate }}</span>
+                } @else {
+                <span class="text-muted text-12 m-l-8" translate>None</span>
+                }
+                @if (typesPending) {
+                <span class="label label-warning m-l-8" translate>not saved yet</span>
+                }
+                <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
+                  'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+                    | translate }}" placement="bottom" triggers="focus" type="button"></button>
+              </div>
+              @if (expanded.types) {
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-types'">
+                <d11r-type-selector [inline]="true" [typeList]="types" (typesChange)="onTypesChange($event)"
+                  [showResync]="true" [knownTypes]="selection.baseline?.types ?? []" [resyncTypes]="selection.resyncTypes"
+                  (resyncTypesChange)="setResyncTypes($event)"></d11r-type-selector>
+                <p class="text-muted text-12 m-b-0 m-t-4" translate>
+                  A device type rule only subscribes devices created afterward. Tick the box of a new type to also subscribe the devices of that type that already exist. This rescans the inventory in the background and can take a while on large inventories.
+                </p>
+              </div>
+              }
+            </c8y-li-body>
+          </c8y-li>
+          <c8y-li role="listitem">
+            <c8y-li-radio name="dynamicSub" [selected]="expanded.groups" (onSelect)="$event && selectSub('groups')"
+              [attr.data-cy]="dataCyPrefix + '-subscription-sub-groups'"></c8y-li-radio>
+            <c8y-li-icon icon="subscription"></c8y-li-icon>
+            <c8y-li-body>
+              <div class="d-flex a-i-center flex-wrap">
+                <strong translate>Manage subscriptions (by device groups)</strong>
+                @if (groups.length) {
+                <span class="text-muted text-12 m-l-8">{{ groups.length }} {{ 'selected' | translate }}</span>
+                } @else {
+                <span class="text-muted text-12 m-l-8" translate>None</span>
+                }
+                @if (groupsPending) {
+                <span class="label label-warning m-l-8" translate>not saved yet</span>
+                }
+                <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
+                  'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices.'
+                    | translate }}" placement="bottom" triggers="focus" type="button"></button>
+              </div>
+              @if (expanded.groups) {
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-groups'">
+                <d11r-group-selector [inline]="true" [deviceList]="groups" (selectionChange)="onGroupsChange($event)"></d11r-group-selector>
+              </div>
+              }
+            </c8y-li-body>
+          </c8y-li>
+        </c8y-list-group>
+        }
       </c8y-li-body>
     </c8y-li>
 
@@ -74,6 +135,55 @@
         <p class="text-muted m-b-0 m-t-4 text-12" translate>
           Specific devices are subscribed. Devices added to a group later are not subscribed.
         </p>
+        @if (selection.mode === 'static' && ready) {
+        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix + '-subscription-static-panel'">
+          <c8y-li role="listitem">
+            <c8y-li-radio name="staticSub" [selected]="expanded.devices" (onSelect)="$event && selectSub('devices')"
+              [attr.data-cy]="dataCyPrefix + '-subscription-sub-device-tree'"></c8y-li-radio>
+            <c8y-li-icon icon="subscription"></c8y-li-icon>
+            <c8y-li-body>
+              <div class="d-flex a-i-center flex-wrap">
+                <strong translate>Manage subscriptions (device selection)</strong>
+                @if (devices.length) {
+                <span class="text-muted text-12 m-l-8">{{ devices.length }} {{ 'selected' | translate }}</span>
+                } @else {
+                <span class="text-muted text-12 m-l-8" translate>None</span>
+                }
+                @if (devicesPending) {
+                <span class="label label-warning m-l-8" translate>not saved yet</span>
+                }
+                <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
+                  'Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
+                    | translate }}" placement="bottom" triggers="focus" type="button"></button>
+              </div>
+              @if (expanded.devices) {
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-device-tree'">
+                <d11r-device-selector-tree [inline]="true" [deviceList]="devices" (selectionChange)="onDevicesChange($event)"></d11r-device-selector-tree>
+              </div>
+              }
+            </c8y-li-body>
+          </c8y-li>
+          <c8y-li role="listitem">
+            <c8y-li-radio name="staticSub" [selected]="expanded.table" (onSelect)="$event && selectSub('table')"
+              [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-sub-device-table'"></c8y-li-radio>
+            <c8y-li-icon icon="subscription"></c8y-li-icon>
+            <c8y-li-body>
+              <div class="d-flex a-i-center flex-wrap">
+                <strong translate>Add subscriptions (device table)</strong>
+                <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
+                  'Specify devices using filters in the device table to add them to the subscription. This can only add devices. To unsubscribe a device, use the device selection (tree) view instead.'
+                    | translate }}" placement="bottom" triggers="focus" type="button"></button>
+              </div>
+              @if (expanded.table) {
+              <button type="button" class="btn btn-link p-l-0 m-t-4" [disabled]="!canEdit" (click)="showDeviceTable = true"
+                [attr.data-cy]="dataCyPrefix + '-subscription-open-device-table'">
+                <i c8yIcon="subscription" class="m-r-4"></i>{{ 'Open device table' | translate }}
+              </button>
+              }
+            </c8y-li-body>
+          </c8y-li>
+        </c8y-list-group>
+        }
       </c8y-li-body>
     </c8y-li>
   </c8y-list-group>
@@ -156,115 +266,6 @@
   </c8y-list-group>
   }
 
-  <!-- Dynamic: actions and summary -->
-  @if (!contextMode && selection.mode === 'dynamic' && ready) {
-  <div class="m-t-16" [attr.data-cy]="dataCyPrefix + '-subscription-dynamic-panel'">
-    <div class="d-flex a-i-center flex-wrap">
-      <button type="button" class="btn btn-link" [disabled]="actionsDisabled" (click)="showTypeSelector = true"
-        [attr.data-cy]="dataCyPrefix + '-subscription-manage-by-type'">
-        <i c8yIcon="subscription"></i>
-        {{ 'Manage subscriptions (by device type)' | translate }}
-      </button>
-      <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-        'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
-          | translate }}" placement="bottom" triggers="focus" type="button"></button>
-      <button type="button" class="btn btn-link" [disabled]="actionsDisabled" (click)="showGroupSelector = true"
-        [attr.data-cy]="dataCyPrefix + '-subscription-manage-by-group'">
-        <i c8yIcon="subscription"></i>
-        {{ 'Manage subscriptions (by device groups)' | translate }}
-      </button>
-      <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-        'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices.'
-          | translate }}" placement="bottom" triggers="focus" type="button"></button>
-    </div>
-
-    <dl class="m-t-8">
-      <dt translate>Device types</dt>
-      <dd>
-        @for (type of types; track type) {
-        <span class="badge badge--primary m-r-4">{{ type }}</span>
-        } @empty {
-        <span class="text-muted" translate>None</span>
-        }
-        @if (typesPending) {
-        <span class="label label-warning m-l-4" translate>not saved yet</span>
-        }
-        @for (type of removedTypes; track type) {
-        <span class="badge badge--danger m-l-4" title="{{ 'Removed, applied on save' | translate }}"><s>{{ type }}</s></span>
-        }
-      </dd>
-      <dt translate>Device groups</dt>
-      <dd>
-        @for (group of groups; track group.id) {
-        <span class="badge badge--primary m-r-4">{{ group.name || group.id }}</span>
-        } @empty {
-        <span class="text-muted" translate>None</span>
-        }
-        @if (groupsPending) {
-        <span class="label label-warning m-l-4" translate>not saved yet</span>
-        }
-        @for (group of removedGroups; track group.id) {
-        <span class="badge badge--danger m-l-4" title="{{ 'Removed, applied on save' | translate }}"><s>{{ group.name || group.id }}</s></span>
-        }
-      </dd>
-    </dl>
-
-    <label class="c8y-checkbox m-t-8" [attr.title]="(canResync ? '' : ('Add a device type first.' | translate))">
-      <input type="checkbox" [ngModel]="selection.resyncNewTypes" (ngModelChange)="setResync($event)"
-        [disabled]="!canResync || !canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-resync'" />
-      <span></span>
-      <span translate>Also subscribe existing devices of these types</span>
-    </label>
-    <p class="text-muted text-12 m-b-0" translate>
-      A device type rule only subscribes devices created afterward. Select this to also subscribe devices of the added types that already exist. This rescans the inventory in the background and can take a while on large inventories.
-    </p>
-  </div>
-  }
-
-  <!-- Static: actions and summary -->
-  @if (!contextMode && selection.mode === 'static' && ready) {
-  <div class="m-t-16" [attr.data-cy]="dataCyPrefix + '-subscription-static-panel'">
-    <div class="d-flex a-i-center flex-wrap">
-      <button type="button" class="btn btn-link" [disabled]="actionsDisabled" (click)="showDeviceTree = true"
-        [attr.data-cy]="dataCyPrefix + '-subscription-manage-device-selection'">
-        <i c8yIcon="subscription"></i>
-        {{ 'Manage subscriptions (device selection)' | translate }}
-      </button>
-      <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-        'Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
-          | translate }}" placement="bottom" triggers="focus" type="button"></button>
-      <button type="button" class="btn btn-link" [disabled]="actionsDisabled" (click)="showDeviceTable = true"
-        [attr.data-cy]="dataCyPrefix + '-subscription-manage-device-table'">
-        <i c8yIcon="subscription"></i>
-        {{ 'Add subscriptions (device table)' | translate }}
-      </button>
-      <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-        'Specify devices using filters in the device table to add them to the subscription. This can only add devices. To unsubscribe a device, use the device selection (tree) view instead.'
-          | translate }}" placement="bottom" triggers="focus" type="button"></button>
-    </div>
-
-    <dl class="m-t-8">
-      <dt translate>Devices</dt>
-      <dd>
-        @for (device of listedDevices; track device.id) {
-        <span class="badge badge--primary m-r-4">{{ device.name || device.id }}</span>
-        } @empty {
-        <span class="text-muted" translate>None</span>
-        }
-        @if (moreDevices > 0) {
-        <span class="text-muted">+ {{ moreDevices }} {{ 'more' | translate }}</span>
-        }
-        @if (devicesPending) {
-        <span class="label label-warning m-l-4" translate>not saved yet</span>
-        }
-        @if (removedDevicesCount > 0) {
-        <span class="badge badge--danger m-l-4" title="{{ 'Removed, applied on save' | translate }}">{{ removedDevicesCount }} {{ 'removed' | translate }}</span>
-        }
-      </dd>
-    </dl>
-  </div>
-  }
-
   @if (!contextMode) {
   <p class="text-muted text-12 m-t-16" translate>
     Subscriptions are processed asynchronously. Verify the result on the Subscription outbound page or in the Service Events.
@@ -272,40 +273,13 @@
   }
 </div>
 
-<!-- The selector drawers of the Subscription outbound page. The whole shell is rendered only while
-     open: a closed nested .bottom-drawer inside the stepper's own open drawer would slide in too and cover it. -->
-@if (showDeviceTree) {
-<div class="drawerOpen">
-  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-      <d11r-device-selector-tree (cancel)="showDeviceTree = false" (commit)="onCommitDevices($event)" [deviceList]="devices">
-      </d11r-device-selector-tree>
-  </div>
-</div>
-}
-
+<!-- The device table needs too much room to sit in the page: selecting its option opens it as a drawer. The whole shell is
+     rendered only while open: a closed nested .bottom-drawer inside the stepper's own open drawer would slide in too and cover it. -->
 @if (showDeviceTable) {
 <div class="drawerOpen">
   <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
       <d11r-device-selector-table (cancel)="showDeviceTable = false" (commit)="onCommitDevices($event)" [deviceList]="devices">
       </d11r-device-selector-table>
-  </div>
-</div>
-}
-
-@if (showGroupSelector) {
-<div class="drawerOpen">
-  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-      <d11r-group-selector (cancel)="showGroupSelector = false" (commit)="onCommitGroups($event)" [deviceList]="groups">
-      </d11r-group-selector>
-  </div>
-</div>
-}
-
-@if (showTypeSelector) {
-<div class="drawerOpen">
-  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-      <d11r-type-selector (cancel)="showTypeSelector = false" (commit)="onCommitTypes($event)" [typeList]="types">
-      </d11r-type-selector>
   </div>
 </div>
 }
