@@ -1,7 +1,7 @@
 import { Direction, TransformationType } from '../mapping/mapping.model';
 
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -42,6 +42,7 @@ export interface ServiceConfiguration {
   codeTemplates?: any;
   maxCPUTimeMS: number;
   pipelineTimeoutMS?: number;
+  maxProcessingAttempts?: number;
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;
@@ -50,7 +51,6 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
-  explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
   contextPoolSize?: number;
   serviceLogs?: ServiceLogsConfiguration;

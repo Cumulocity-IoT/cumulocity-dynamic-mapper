@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,6 +32,11 @@ export * from './connector-details/connector-log.model';
 export * from './connector-details/connector-status-history.component';
 export * from './configuration/configuration.model';
 export * from './mapping/mapping.model';
+export * from './mapping/qos';
+export * from './mapping/mapping-type-config';
+export * from './mapping/mapping-helpers';
+export * from './mapping/validation-errors';
+export * from './mapping/notification-subscription.model';
 export * from './mapping/mapping.constants';
 export * from './misc/admin.guard';
 export * from './misc/base64-decode.pipe';

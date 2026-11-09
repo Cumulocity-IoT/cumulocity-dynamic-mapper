@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -52,11 +52,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.CodeTemplateHeaderService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
+import dynamic.mapper.configuration.CodeTemplateService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConnectorClientFactory;
-import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.mapping.MappingService;
 
@@ -95,11 +97,12 @@ class ConfigurationControllerCodeTemplateTest {
 
         controller = new ConfigurationController(
                 mock(ConnectorRegistry.class),
-                mock(ConnectorClientFactory.class),
                 mock(MappingService.class),
                 mock(ConnectorConfigurationService.class),
                 serviceConfigurationService,
-                mock(BootstrapService.class),
+                new CodeTemplateService(serviceConfigurationService, mock(CodeTemplateLoader.class),
+                        new CodeTemplateHeaderService(new ObjectMapper()), serviceRegistry),
+                mock(ConnectorLifecycleService.class),
                 contextService,
                 serviceRegistry,
                 new ObjectMapper());
@@ -145,6 +148,18 @@ class ConfigurationControllerCodeTemplateTest {
     }
 
     @Test
+    void deleteReturns406ForTheSharedTemplateAndKeepsIt() {
+        // SHARED is customer-editable (not internal) but every GraalVM engine loads it.
+        codeTemplates.put(TemplateType.SHARED.name(), template(TemplateType.SHARED.name(), false, false));
+
+        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
+                () -> controller.deleteCodeTemplate(TemplateType.SHARED.name()));
+
+        assertEquals(HttpStatus.NOT_ACCEPTABLE, thrown.getStatusCode());
+        assertNotNull(codeTemplates.get(TemplateType.SHARED.name()), "the template must not be removed");
+    }
+
+    @Test
     void deleteRemovesACustomTemplateAndReturnsIt() throws Exception {
         codeTemplates.put("custom", template("custom", false, false));
 
@@ -185,7 +200,9 @@ class ConfigurationControllerCodeTemplateTest {
         ResponseEntity<HttpStatus> response = controller.updateCodeTemplate("custom", replacement);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("b3RoZXI=", codeTemplates.get("custom").code);
+        // the real header service now runs, so the stored code is the new body under a regenerated header
+        String stored = new String(java.util.Base64.getDecoder().decode(codeTemplates.get("custom").code));
+        assertTrue(stored.endsWith("other"), stored);
     }
 
     @Test

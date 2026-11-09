@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -119,9 +119,8 @@ class InboundPipelineIntegrationTest {
 
         // Setup ServiceRegistry mocks
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(connectorClient.getMappingService()).thenReturn(mappingService);
         when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
-        when(serviceRegistry.getInboundMessageRouter()).thenReturn(inboundMessageRouter);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -146,7 +145,7 @@ class InboundPipelineIntegrationTest {
         // the dispatcher entry point.
 
         // Create dispatcher
-        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient);
+        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient, inboundMessageRouter);
 
         log.info("Dispatcher pipeline test setup completed");
     }
@@ -171,7 +170,7 @@ class InboundPipelineIntegrationTest {
             Mapping mapping = findMappingByName(inboundMappings, "Mapping - 01");
             when(mappingService.resolveMappingInbound(TEST_TENANT, "fleet/bus_amsterdam"))
                     .thenReturn(List.of(mapping));
-            when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+            when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
             byte[] payload = "{\"fuel\":365,\"mea\":\"c8y_FuelMeasurement\"}".getBytes();
 
             dispatcher.onTestMessage(createConnectorMessage("fleet/bus_amsterdam", payload), mapping)
@@ -201,7 +200,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Setup QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create connector message
         String payload = "{\"fuel\":365,\"mea\":\"c8y_FuelMeasurement\"}";
@@ -487,7 +486,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create message with realistic payload from sample
         String payload = """
@@ -529,7 +528,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create flat file message (CSV-like format)
         String payload = "365,c8y_FuelMeasurement,2022-08-05T00:14:49.389+02:00";
@@ -565,7 +564,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create message with array that should be expanded
         String payload = """
@@ -609,7 +608,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create message with weight measurements
         String payload = """
@@ -649,7 +648,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create message with multiple measurement values
         String payload = """
@@ -697,7 +696,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create message with deeply nested structure
         String payload = """
@@ -749,7 +748,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Test 1: Empty JSON object
         String emptyPayload = "{}";
@@ -791,7 +790,7 @@ class InboundPipelineIntegrationTest {
                 .thenReturn(List.of(mapping));
 
         // Mock QoS determination
-        when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+        when(connectorClient.determineMaxQos(any())).thenReturn(mapping.getQos());
 
         // Create large payload with many fields
         StringBuilder largePayloadBuilder = new StringBuilder("{");

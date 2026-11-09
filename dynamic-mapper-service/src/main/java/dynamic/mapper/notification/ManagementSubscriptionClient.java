@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -50,14 +50,15 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     private final String tenant;
     private final ExecutorService virtualThreadPool;
     private final ServiceRegistry serviceRegistry;
-    private final NotificationSubscriber notificationSubscriber;
+    private final NotificationClientOperations notificationSubscriber;
     private final GroupCacheManager groupCacheManager;
     
-    public ManagementSubscriptionClient(ServiceRegistry serviceRegistry, String tenant) {
+    public ManagementSubscriptionClient(ServiceRegistry serviceRegistry, NotificationClientOperations notificationSubscriber,
+            String tenant) {
         this.tenant = tenant;
         this.serviceRegistry = serviceRegistry;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
-        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
+        this.notificationSubscriber = notificationSubscriber;
         this.groupCacheManager = new GroupCacheManager(tenant);
         
         log.info("{} - ManagementSubscriptionClient initialized", tenant);
@@ -106,6 +107,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
                 serviceRegistry,
+                notificationSubscriber,
                 message,
                 groupCacheManager
             )
@@ -121,7 +123,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         log.debug("{} - Handling device creation for: {}", notificationTenant, message.getSourceId());
 
         virtualThreadPool.submit(
-            new UpdateSubscriptionDeviceTypeTask(serviceRegistry, message)
+            new UpdateSubscriptionDeviceTypeTask(serviceRegistry, notificationSubscriber, message)
         );
 
         return ProcessingResultWrapper.builder()

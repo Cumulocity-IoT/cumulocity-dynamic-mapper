@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,7 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { qosLabel } from '../../shared';
 
@@ -27,10 +28,12 @@ import { qosLabel } from '../../shared';
   standalone: true
 })
 export class QosRendererComponent {
+  private readonly translateService = inject(TranslateService);
+
   constructor(public context: CellRendererContext) {}
 
   /** Labels come from the shared QoS metadata so grid and editor never drift apart. */
   get qosLabel(): string {
-    return qosLabel(this.context.value);
+    return this.translateService.instant(qosLabel(this.context.value));
   }
 }

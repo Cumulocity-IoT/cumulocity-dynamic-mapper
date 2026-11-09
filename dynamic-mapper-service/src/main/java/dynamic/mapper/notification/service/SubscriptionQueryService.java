@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -38,7 +38,6 @@ import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -63,7 +62,7 @@ public class SubscriptionQueryService {
 
     public SubscriptionQueryService(NotificationSubscriptionApi subscriptionAPI,
                                      MicroserviceSubscriptionsService subscriptionsService,
-                                     @Lazy ServiceRegistry serviceRegistry,
+                                     ServiceRegistry serviceRegistry,
                                      @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool) {
         this.subscriptionAPI = subscriptionAPI;
         this.subscriptionsService = subscriptionsService;

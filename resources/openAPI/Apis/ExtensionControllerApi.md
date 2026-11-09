@@ -1,6 +1,6 @@
 # ExtensionControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|

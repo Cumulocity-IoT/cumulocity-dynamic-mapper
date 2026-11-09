@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -35,7 +35,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
-import dynamic.mapper.notification.NotificationSubscriber;
+import org.springframework.context.ApplicationEventPublisher;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
@@ -46,13 +46,13 @@ public class InventoryCacheEnrichmentService {
 
     private final CacheManager cacheManager;
     private final TenantRegistry tenantRegistry;
-    private final NotificationSubscriber notificationSubscriber;
+    private final ApplicationEventPublisher eventPublisher;
 
     public InventoryCacheEnrichmentService(CacheManager cacheManager, TenantRegistry tenantRegistry,
-            NotificationSubscriber notificationSubscriber) {
+            ApplicationEventPublisher eventPublisher) {
         this.cacheManager = cacheManager;
         this.tenantRegistry = tenantRegistry;
-        this.notificationSubscriber = notificationSubscriber;
+        this.eventPublisher = eventPublisher;
     }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
@@ -132,7 +132,8 @@ public class InventoryCacheEnrichmentService {
         if (!isTesting) {
             ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
             mor.setId(new GId(sourceId));
-            notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
+            eventPublisher.publishEvent(new InventoryCacheSubscriptionRequest(
+                    InventoryCacheSubscriptionRequest.Action.SUBSCRIBE, tenant, mor));
         }
 
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);

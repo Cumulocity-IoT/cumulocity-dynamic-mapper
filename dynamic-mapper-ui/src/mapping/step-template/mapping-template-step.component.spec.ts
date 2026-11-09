@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,7 +22,6 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import { MappingTemplateStepComponent } from './mapping-template-step.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
@@ -49,8 +48,6 @@ describe('MappingTemplateStepComponent', () => {
   let fixture: ComponentFixture<MappingTemplateStepComponent>;
   let mockStepperService: jasmine.SpyObj<MappingStepperService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
-  let isContentChangeValid$: Subject<boolean>;
-  let contentValidEmissions: boolean[];
 
   const buildMapping = (overrides: Partial<Mapping> = {}): Mapping => ({
     id: '1',
@@ -87,13 +84,7 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   beforeEach(async () => {
-    isContentChangeValid$ = new Subject<boolean>();
-    contentValidEmissions = [];
-    isContentChangeValid$.subscribe((v) => contentValidEmissions.push(v));
-
-    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression'], {
-      isContentChangeValid$: isContentChangeValid$
-    });
+    mockStepperService = jasmine.createSpyObj('MappingStepperService', ['evaluateFilterExpression', 'computeSampleTargetTemplate']);
     mockAlertService = jasmine.createSpyObj('AlertService', ['add', 'remove'], { state: [] });
 
     TestBed.overrideComponent(MappingTemplateStepComponent, {
@@ -118,35 +109,35 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('onSourceTemplateChanged', () => {
-    it('captures JSON content as the updated source template and flags the change valid', () => {
+    it('flags an ordinary JSON change valid and reports no issues', () => {
       const changes: ContentChanges = {
         previousContent: { json: { a: 1 } } as Content,
         updatedContent: { json: { a: 2 } } as Content
       };
       component.onSourceTemplateChanged(changes);
 
-      expect(component.sourceTemplateUpdated).toEqual({ a: 2 });
-      expect(contentValidEmissions).toContain(true);
+      expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
+      expect(component.contentChangeValid).toBeTrue();
     });
 
-    it('parses valid text content into JSON', () => {
-      const changes: ContentChanges = {
-        previousContent: { json: { a: 1 } } as Content,
-        updatedContent: { text: '{"a":3}' } as Content
-      };
-      component.onSourceTemplateChanged(changes);
-      expect(component.sourceTemplateUpdated).toEqual({ a: 3 });
+    it('parses valid text content into JSON before judging it', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      component.onSourceTemplateChanged({
+        previousContent: { json: {} } as Content,
+        updatedContent: { text: '[1,2]' } as Content
+      });
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeTrue();
     });
 
-    it('tolerates invalid JSON while the user is mid-edit (keeps raw content, stays valid)', () => {
+    it('tolerates invalid JSON while the user is mid-edit (stays valid, no issues)', () => {
       const changes: ContentChanges = {
         previousContent: { json: { a: 1 } } as Content,
         updatedContent: { text: '{ broken' } as Content
       };
       component.onSourceTemplateChanged(changes);
 
-      expect(component.sourceTemplateUpdated).toEqual({ text: '{ broken' } as any);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.sourceIssues).toEqual({ protectedFieldsChanged: false, arrayNeedsSmartFunction: false });
+      expect(component.contentChangeValid).toBe(true);
     });
 
     it('flags an invalid change and warns when a protected field is altered (with expansion on)', () => {
@@ -162,7 +153,8 @@ describe('MappingTemplateStepComponent', () => {
 
       component.onSourceTemplateChanged(changes);
 
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.contentChangeValid).toBe(false);
+      expect(component.sourceIssues.protectedFieldsChanged).toBeTrue();
       expect(mockAlertService.add).toHaveBeenCalled();
     });
 
@@ -173,7 +165,15 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { json: [1, 2, 3] } as Content
       };
       component.onSourceTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(false);
+      expect(component.contentChangeValid).toBe(false);
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeTrue();
+    });
+
+    it('does not record target edits as source issues', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      component.onTargetTemplateChanged({ previousContent: { json: {} } as Content, updatedContent: { json: [1] } as Content });
+
+      expect(component.sourceIssues.arrayNeedsSmartFunction).toBeFalse();
     });
   });
 
@@ -184,7 +184,7 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { json: { c8y_Temperature: { T: { value: 1 } } } } as Content
       };
       component.onTargetTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.contentChangeValid).toBe(true);
     });
 
     it('returns early (valid) on un-parseable text', () => {
@@ -193,20 +193,23 @@ describe('MappingTemplateStepComponent', () => {
         updatedContent: { text: 'not json' } as Content
       };
       component.onTargetTemplateChanged(changes);
-      expect(contentValidEmissions[contentValidEmissions.length - 1]).toBe(true);
+      expect(component.contentChangeValid).toBe(true);
     });
   });
 
   describe('updateFilterExpressionResult', () => {
-    it('stores the evaluated expression and writes the path back to the mapping', async () => {
+    it('stores the evaluated expression and announces the path to the host', async () => {
       const evaluated = { result: 'true', resultType: 'boolean', valid: true };
       mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(evaluated));
+      const announced: string[] = [];
+      component.filterMappingChange.subscribe(p => announced.push(p));
 
       await component.updateFilterExpressionResult('$exists(foo)', { foo: 1 });
 
       expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalledWith({ foo: 1 }, '$exists(foo)');
       expect(component.filterModel.filterExpression).toEqual(evaluated);
-      expect(component.mapping.filterMapping).toBe('$exists(foo)');
+      expect(announced).toEqual(['$exists(foo)']);
+      expect(component.mapping.filterMapping).toBe(''); // the step never writes the mapping
       expect(component.filterFormly.get('filterMapping')?.value).toBe('$exists(foo)');
     });
 
@@ -264,16 +267,49 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('onSampleTargetTemplatesButton', () => {
-    it('emits a fresh sample target template for INBOUND mappings', () => {
-      component.stepperConfiguration = buildConfig({ direction: Direction.INBOUND });
-      component.mapping = buildMapping({ targetAPI: 'MEASUREMENT' });
+    it('emits the sample target template the service computes', () => {
+      mockStepperService.computeSampleTargetTemplate.and.returnValue({ sample: true });
       const emitted: any[] = [];
       component.targetTemplateChange.subscribe((t) => emitted.push(t));
 
       component.onSampleTargetTemplatesButton();
 
-      expect(emitted.length).toBe(1);
-      expect(emitted[0]).toBeDefined();
+      expect(mockStepperService.computeSampleTargetTemplate).toHaveBeenCalledWith(component.mapping, component.stepperConfiguration);
+      expect(emitted).toEqual([{ sample: true }]);
+    });
+  });
+
+  describe('getSourceTemplate / getTargetTemplate', () => {
+    const full = { value: 1, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] };
+    const editor = (content: any) => ({ get: () => content }) as any;
+
+    it('restores hidden metadata keys onto what the editor holds', () => {
+      component.sourceTemplate = full;
+      component.showSourceMetadata = false;
+      component.editorSourceStepTemplate = editor({ value: 2 }); // displayed template, metadata stripped
+
+      expect(component.getSourceTemplate()).toEqual({ value: 2, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] });
+    });
+
+    it('returns the editor content as is while metadata is shown', () => {
+      component.targetTemplate = full;
+      component.showTargetMetadata = true;
+      component.editorTargetStepTemplate = editor({ value: 2 }); // user removed the metadata on purpose
+
+      expect(component.getTargetTemplate()).toEqual({ value: 2 });
+    });
+
+    it('does not resurrect a key the user edited into a different value', () => {
+      component.sourceTemplate = full;
+      component.showSourceMetadata = false;
+      component.editorSourceStepTemplate = editor({ value: 2, _IDENTITY_: { externalId: 'edited' } });
+
+      expect(component.getSourceTemplate()._IDENTITY_).toEqual({ externalId: 'edited' });
+    });
+
+    it('is undefined without an editor, so the host keeps its own value', () => {
+      expect(component.getSourceTemplate()).toBeUndefined();
+      expect(component.getTargetTemplate()).toBeUndefined();
     });
   });
 });

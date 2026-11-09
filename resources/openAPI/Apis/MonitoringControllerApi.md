@@ -1,6 +1,6 @@
 # MonitoringControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -126,7 +126,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**MappingStatus**](../Models/AnyType.md)
+[**MappingStatus**](../Models/MappingStatus.md)
 
 ### Authorization
 

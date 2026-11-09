@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,7 +25,7 @@ import {
   InventoryService,
   FetchClient
 } from '@c8y/client';
-import { BehaviorSubject, forkJoin, from, map, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
 
 import {
   BASE_URL,
@@ -44,9 +44,6 @@ interface ExtensionFilter {
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
-  // Private subjects
-  readonly appDeleted$ = new Subject<IManagedObject>();
-
   // Configuration
   private readonly CONFIG = {
     PAGE_SIZE: 100,
@@ -172,7 +169,9 @@ export class ExtensionService {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // 409 carries the mappings that still use the extension, 400 the reason it cannot be deleted
+        const body = await response.json().catch(() => undefined);
+        throw new Error(body?.message || `HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error(`Failed to delete processor extension ${name}:`, error);
@@ -199,6 +198,7 @@ export class ExtensionService {
         return {
           ...ext,
           loaded: backendExt.loaded,
+          message: backendExt.message,
           external: backendExt.external,
           extensionEntries: Object.values(backendExt.extensionEntries || {})
         };

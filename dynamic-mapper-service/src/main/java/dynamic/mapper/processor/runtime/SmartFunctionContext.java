@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -42,8 +42,8 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>When constructed with a {@link FlowStateStore} and a mapping identifier,
  * state written via {@code setState} is automatically persisted across message
- * invocations. The store is written back inside {@link #clearState()}, which is
- * called by {@code ProcessingContext.close()} at the end of each message.</p>
+ * invocations. At the end of each message {@code ProcessingContext.close()} calls
+ * {@link #persistState()}, which writes back only the keys this invocation changed.</p>
  */
 @Slf4j
 public class SmartFunctionContext implements DataPrepContext {
@@ -57,6 +57,9 @@ public class SmartFunctionContext implements DataPrepContext {
     private final FlowStateStore stateStore;
     private final String mappingIdentifier;
     private Map<String, Object> config;
+    // Keys this invocation wrote, and whether it called clearState(): only these reach the store.
+    private final java.util.Set<String> changedKeys = new java.util.HashSet<>();
+    private boolean wipeRequested;
 
     /**
      * Creates a context without persistence (backward-compatible constructor).
@@ -138,6 +141,7 @@ public class SmartFunctionContext implements DataPrepContext {
         // Convert Value to Java object for safe storage
         Object javaValue = convertValueToJavaObject(value);
         state.put(key, javaValue);
+        changedKeys.add(key);
 
         log.debug("{} - Flow state set: {}={}", tenant, key, javaValue);
     }
@@ -340,23 +344,43 @@ public class SmartFunctionContext implements DataPrepContext {
         state.put(DataPrepContext.LOGS, logs);
     }
 
+    /**
+     * Called by Smart Function code: removes every state entry held for this mapping, effective when
+     * the message ends. Collected logs and warnings are kept.
+     */
     @Override
     public void clearState() {
-        if (stateStore != null && mappingIdentifier != null) {
-            stateStore.saveState(tenant, mappingIdentifier, getPersistableState());
-        }
-        state.clear();
+        state.keySet().removeIf(key -> !isEphemeral(key));
+        changedKeys.clear();
+        wipeRequested = true;
     }
 
     /**
-     * Returns a copy of the state map with ephemeral keys ({@code _WARNINGS_},
-     * {@code _LOGS_}) removed. Only this subset is persisted across invocations.
+     * Called by {@code ProcessingContext.close()} at the end of the message, not by user code
+     * (package-private, so it is not exposed to JavaScript). Writes back only what this invocation
+     * changed, so a message that merely read state cannot revert what concurrent messages wrote.
      */
-    private Map<String, Object> getPersistableState() {
-        Map<String, Object> persistable = new HashMap<>(state);
-        persistable.remove(DataPrepContext.WARNINGS);
-        persistable.remove(DataPrepContext.LOGS);
-        return persistable;
+    void persistState() {
+        if (stateStore != null && mappingIdentifier != null) {
+            Map<String, Object> upserts = new HashMap<>();
+            java.util.Set<String> removals = new java.util.HashSet<>();
+            for (String key : changedKeys) {
+                Object value = state.get(key);
+                if (value == null) {
+                    removals.add(key);
+                } else {
+                    upserts.put(key, value);
+                }
+            }
+            stateStore.commitChanges(tenant, mappingIdentifier, wipeRequested, upserts, removals);
+        }
+        changedKeys.clear();
+        wipeRequested = false;
+        state.clear();
+    }
+
+    private static boolean isEphemeral(String key) {
+        return DataPrepContext.WARNINGS.equals(key) || DataPrepContext.LOGS.equals(key);
     }
 
     @Override

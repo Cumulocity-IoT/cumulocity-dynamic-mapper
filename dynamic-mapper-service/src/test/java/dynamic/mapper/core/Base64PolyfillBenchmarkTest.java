@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  * Compares three {@code atob}/{@code btoa} implementations across payload sizes:
  * <ul>
  *   <li><b>host function</b> — what production uses
- *       ({@link GraalVMContextService#installBase64Functions}): a {@code ProxyExecutable} calling
+ *       ({@link GraalHostAccessPolicy#installBase64Functions}): a {@code ProxyExecutable} calling
  *       {@code java.util.Base64} directly;</li>
  *   <li><b>Java.type</b> — the former polyfill, reaching {@code java.util.Base64} through
  *       {@code Java.type} lookups;</li>
@@ -164,10 +164,10 @@ class Base64PolyfillBenchmarkTest {
                 Context context = Context.newBuilder("js")
                         .engine(engine)
                         .allowHostAccess(service.getHostAccess())
-                        .allowHostClassLookup(GraalVMContextService::isAllowedHostClass)
+                        .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass)
                         .build()) {
 
-            GraalVMContextService.installBase64Functions(context); // atob / btoa
+            GraalHostAccessPolicy.installBase64Functions(context); // atob / btoa
             context.eval(JAVA_TYPE_POLYFILL);                      // atobJava / btoaJava
             context.eval(PURE_JS_POLYFILL);                        // atobJs / btoaJs
             Value globals = context.getBindings("js");

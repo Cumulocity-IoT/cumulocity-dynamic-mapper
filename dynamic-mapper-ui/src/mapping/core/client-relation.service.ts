@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,11 +26,7 @@ import {
   PATH_RELATION_ENDPOINT,
   SharedService
 } from '../../shared';
-import {
-  NotificationSubscriptionRequest,
-  NotificationSubscriptionResponse,
-  SubscriptionStatus
-} from '../../shared/mapping/mapping.model';
+import { NotificationSubscriptionRequest, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 
 // Custom error types for better error handling
 export class ClientRelationError extends Error {

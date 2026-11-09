@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -144,6 +144,10 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private List<String> logs = new CopyOnWriteArrayList<>();
 
+    /** Names of the connectors an outbound Live Test published through. Empty for every other run. */
+    @Builder.Default
+    private List<String> publishedConnectors = new CopyOnWriteArrayList<>();
+
     @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
@@ -187,6 +191,9 @@ public class ProcessingContext<O> implements AutoCloseable {
     private boolean ignoreFurtherProcessing = false;
 
     private String key;
+
+    /** Broker metadata of the inbound message (Kafka headers, Pulsar properties, ...); may be null. */
+    private Map<String, String> transportMetadata;
 
     private String sourceId;
 
@@ -251,6 +258,13 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object extensionResult;
 
+    /**
+     * Commits extension native state once the result has been delivered. Set by the inbound extension
+     * processor for a non-empty result; run by SendInboundProcessor only when every request succeeded,
+     * so a failed delivery that is redelivered is not mistaken for a duplicate.
+     */
+    private Runnable deferredStateCommit;
+
     private DataPrepContext flowContext;
 
     private Map<String, Object> flowState;
@@ -273,6 +287,15 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     public boolean affectsMappingStatus() {
         return !testing && !testRun;
+    }
+
+    /** Runs the deferred extension-state commit once, if one was registered. */
+    public void runDeferredStateCommit() {
+        Runnable commit = deferredStateCommit;
+        deferredStateCommit = null;
+        if (commit != null) {
+            commit.run();
+        }
     }
 
     public boolean hasError() {
@@ -324,8 +347,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     /**
      * Adds a substitution to the processing cache.
      *
-     * NOTE: This method is NOT thread-safe due to TreeMap not being thread-safe.
-     * If multiple threads call this method concurrently, consider synchronizing or using ConcurrentHashMap.
+     * The cache is a ConcurrentSkipListMap, so concurrent calls are safe; the value list itself is not shared.
      *
      * @param key the substitution key
      * @param value the substitution value
@@ -454,7 +476,11 @@ public class ProcessingContext<O> implements AutoCloseable {
             // Close flow context first (if it holds GraalVM references)
             if (flowContext != null) {
                 try {
-                    flowContext.clearState();
+                    if (flowContext instanceof SmartFunctionContext smartFunctionContext) {
+                        smartFunctionContext.persistState();
+                    } else {
+                        flowContext.clearState();
+                    }
                 } catch (Exception e) {
                     log.warn("{} - Error clearing flow context state: {}", getTenant(), e.getMessage());
                 }
@@ -502,5 +528,24 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     public void clearGraalVMReferences() {
         close();
+    }
+
+    /**
+     * The out-of-band fields delivered to Smart Functions and extensions as {@code transportFields}:
+     * the broker message key under {@code key} plus the connector's metadata. The key wins on a
+     * name clash. Empty if the message carried neither.
+     */
+    public Map<String, String> buildTransportFields() {
+        if (key == null && (transportMetadata == null || transportMetadata.isEmpty())) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, String> fields = new java.util.LinkedHashMap<>();
+        if (transportMetadata != null) {
+            fields.putAll(transportMetadata);
+        }
+        if (key != null) {
+            fields.put(Mapping.CONTEXT_DATA_KEY_NAME, key);
+        }
+        return fields;
     }
 }

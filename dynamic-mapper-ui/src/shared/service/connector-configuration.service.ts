@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,6 +20,8 @@
 import { Injectable, inject } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { SharedService } from './shared.service';
 import { CONNECTOR_FRAGMENT } from '../mapping/mapping.constants';
 import {
@@ -61,10 +63,10 @@ export class ConnectorConfigurationService {
   // Polling configuration
   private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 15 seconds
   private readonly AVAILABLE_INTERVALS: PollingInterval[] = [
-    { label: '5 seconds', value: 5000, seconds: 5 },
-    { label: '15 seconds', value: 15000, seconds: 15 },
-    { label: '30 seconds', value: 30000, seconds: 30 },
-    { label: '60 seconds', value: 60000, seconds: 60 },
+    { label: gettext('5 seconds'), value: 5000, seconds: 5 },
+    { label: gettext('15 seconds'), value: 15000, seconds: 15 },
+    { label: gettext('30 seconds'), value: 30000, seconds: 30 },
+    { label: gettext('60 seconds'), value: 60000, seconds: 60 },
   ];
 
   // Controls whether the auto-refresh polling timer is active.
@@ -82,6 +84,7 @@ export class ConnectorConfigurationService {
   private specifications$?: Observable<ConnectorSpecification[]>;
 
   private readonly sharedService = inject(SharedService);
+  private readonly translateService = inject(TranslateService);
   private readonly eventRealtimeService: EventRealtimeService;
 
   constructor(
@@ -131,7 +134,10 @@ export class ConnectorConfigurationService {
   }
 
   getAvailablePollingIntervals(): PollingInterval[] {
-    return [...this.AVAILABLE_INTERVALS];
+    return this.AVAILABLE_INTERVALS.map(interval => ({
+      ...interval,
+      label: this.translateService.instant(interval.label)
+    }));
   }
 
   getCurrentPollingIntervalValue(): number {
@@ -145,7 +151,7 @@ export class ConnectorConfigurationService {
   getCurrentPollingIntervalLabel(): string {
     const current = this.pollingInterval$.value;
     const found = this.AVAILABLE_INTERVALS.find(interval => interval.value === current);
-    return found ? found.label : `${current / 1000} seconds`;
+    return found ? this.translateService.instant(found.label) : `${current / 1000} seconds`;
   }
 
   refreshConfigurations(): void {
@@ -212,7 +218,7 @@ export class ConnectorConfigurationService {
         }
       );
       if (!response.ok) {
-        return { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+        return { success: false, message: this.translateService.instant(gettext('HTTP {{status}}: {{statusText}}'), { status: response.status, statusText: response.statusText }) };
       }
       return await response.json();
     } catch (error) {

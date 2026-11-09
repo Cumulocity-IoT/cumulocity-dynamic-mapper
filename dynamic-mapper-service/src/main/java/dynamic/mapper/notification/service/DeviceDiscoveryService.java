@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,7 +27,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.device.Device;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
@@ -46,7 +45,7 @@ public class DeviceDiscoveryService {
 
     private final ServiceRegistry serviceRegistry;
 
-    public DeviceDiscoveryService(@Lazy ServiceRegistry serviceRegistry) {
+    public DeviceDiscoveryService(ServiceRegistry serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
     }
 
@@ -237,5 +236,11 @@ public class DeviceDiscoveryService {
         processingDevices.clear();
         recursionDepth.remove();
         log.info("DeviceDiscoveryService cleanup completed");
+    }
+
+    /** Drops tenant-scoped in-flight markers on tenant removal. */
+    public void removeTenant(String tenant) {
+        String prefix = tenant + ":";
+        processingDevices.removeIf(k -> k.startsWith(prefix));
     }
 }

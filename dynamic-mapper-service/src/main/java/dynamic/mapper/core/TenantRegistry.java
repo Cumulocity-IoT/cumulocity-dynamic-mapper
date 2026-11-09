@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,19 +24,15 @@ package dynamic.mapper.core;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.ID;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Registry holding all per-tenant runtime state.
@@ -62,7 +58,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class TenantRegistry {
+public class TenantRegistry implements IMapperConfiguration {
 
     // ─── Credentials & configuration ─────────────────────────────────────────
 
@@ -74,14 +70,6 @@ public class TenantRegistry {
 
     // Structure: < Tenant, MapperServiceRepresentation >
     private final Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
-
-    // ─── Device → connector-client mapping ───────────────────────────────────
-
-    // Structure: < Tenant, < DeviceId, ConnectorClientId > >
-    private final Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, ManagedObject Id > — C8Y inventory ID of the persisted device-to-client map
-    private final Map<String, String>              deviceToClientMapIds    = new ConcurrentHashMap<>();
 
     // ─── External-ID resolution cache & per-ID creation locks ────────────────
 
@@ -163,119 +151,13 @@ public class TenantRegistry {
         mapperServiceRepresentations.put(tenant, repr);
     }
 
+    @Override
     public MapperServiceRepresentation getMapperServiceRepresentation(String tenant) {
         return mapperServiceRepresentations.get(tenant);
     }
 
     public void removeMapperServiceRepresentation(String tenant) {
         mapperServiceRepresentations.remove(tenant);
-    }
-
-    // =========================================================================
-    // Device → connector-client mapping
-    // =========================================================================
-
-    /**
-     * Initialises the device-to-client map for a tenant from the persisted
-     * {@link DeviceToClientMapRepresentation}. Replaces any existing in-memory map.
-     */
-    public void initializeDeviceToClientMap(String tenant,
-            DeviceToClientMapRepresentation representation) {
-        deviceToClientMapIds.put(tenant, representation.getId());
-        Map<String, String> clientMap = new ConcurrentHashMap<>();
-        if (representation.getDeviceToClientMap() != null) {
-            log.debug("{} - Initializing Device To Client Map with {} entries", tenant,
-                    representation.getDeviceToClientMap().size());
-            clientMap.putAll(representation.getDeviceToClientMap());
-        }
-        deviceToClientPerTenant.put(tenant, clientMap);
-    }
-
-    public String getDeviceToClientMapId(String tenant) {
-        return deviceToClientMapIds.get(tenant);
-    }
-
-    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
-        deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
-                .put(deviceId, clientId);
-        log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
-    }
-
-    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
-        if (deviceIds == null || deviceIds.isEmpty()) {
-            log.debug("No device IDs provided for tenant {}, client {}", tenant, clientId);
-            return;
-        }
-        Map<String, String> tenantMappings = deviceToClientPerTenant
-                .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
-        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
-        log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
-                deviceIds.size(), tenant, deviceIds, clientId);
-    }
-
-    public void removeClientRelation(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings != null) {
-            String removedClientId = tenantMappings.remove(deviceId);
-            if (removedClientId != null) {
-                log.debug("Removed client mapping for tenant {}: device {} (was mapped to client {})",
-                        tenant, deviceId, removedClientId);
-            }
-        }
-    }
-
-    public void removeClientById(String tenant, String clientId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings != null) {
-            List<String> toRemove = tenantMappings.entrySet().stream()
-                    .filter(e -> clientId.equals(e.getValue()))
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
-            toRemove.forEach(tenantMappings::remove);
-            log.debug("Removed {} device mappings for client {} in tenant {}",
-                    toRemove.size(), clientId, tenant);
-        }
-    }
-
-    public void clearCacheDeviceToClient(String tenant) {
-        deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
-        log.debug("Cleared all client mappings for tenant {}", tenant);
-    }
-
-    public String resolveDeviceToClient(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null ? tenantMappings.get(deviceId) : null;
-    }
-
-    public Map<String, String> getAllClientRelations(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
-    }
-
-    public List<String> getDevicesForClient(String tenant, String clientId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings == null) return new ArrayList<>();
-        return tenantMappings.entrySet().stream()
-                .filter(e -> clientId.equals(e.getValue()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
-
-    public List<String> getAllClients(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings == null) return new ArrayList<>();
-        return tenantMappings.values().stream()
-                .distinct().sorted().collect(Collectors.toList());
-    }
-
-    public int getClientRelationCount(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null ? tenantMappings.size() : 0;
-    }
-
-    public boolean hasClientRelation(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null && tenantMappings.containsKey(deviceId);
     }
 
     // =========================================================================

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -42,7 +42,10 @@ const MARKDOWN_PAGES = [
   // Start
   'quickstart-inbound', 'quickstart-outbound', 'concepts',
   // Guides
-  'managing-connectors', 'connectors', 'define-mapping',
+  'managing-connectors', 'connectors', 'connector-mqtt', 'connector-amqp', 'connector-amqp10', 'connector-pubsub',
+  'connector-c8y-mqtt-service', 'connector-cumulocity-api', 'connector-http', 'connector-webhook',
+  'connector-rest-polling', 'connector-kafka', 'connector-pulsar',
+  'how-to-pulsar-kafka-mqtt', 'define-mapping',
   'define-subscription-for-outbound', 'transformation-types',
   'jsonata', 'smartfunction', 'javaextension', 'custom-routing',
   'message-explorer', 'monitoring', 'troubleshooting',

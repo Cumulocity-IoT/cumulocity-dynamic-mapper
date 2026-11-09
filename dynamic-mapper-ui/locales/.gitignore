@@ -1,0 +1,2 @@
+# extract-i18n merges the platform catalogs into these files; the app ships src/locales instead.
+*.po

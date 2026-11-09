@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
 
 export interface ConnectorStatusEvent {
   /** The backing Cumulocity event's id. Since a connection-lifecycle session now updates the
@@ -176,7 +177,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_subscription',
     componentDisplayName: 'Connector',
     severity: 'info',
-    description: 'Subscription lifecycle events for connectors'
+    description: gettext('Subscription lifecycle events for connectors')
   },
     [LoggingEventType.CACHE_EVENT_TYPE]: {
     name: 'CACHE_EVENT_TYPE',
@@ -184,7 +185,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_cache',
     componentDisplayName: 'Cache',
     severity: 'info',
-    description: 'Cache event'
+    description: gettext('Cache event')
   },
   [LoggingEventType.CONNECTOR_EVENT_TYPE]: {
     name: 'CONNECTOR_EVENT_TYPE',
@@ -192,7 +193,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_connector',
     componentDisplayName: 'Connector',
     severity: 'info',
-    description: 'Connector status and connection events'
+    description: gettext('Connector status and connection events')
   },
   [LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE]: {
     name: 'MAPPING_LOADING_ERROR_EVENT_TYPE',
@@ -200,7 +201,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_system',
     componentDisplayName: 'System',
     severity: 'error',
-    description: 'Errors occurring during mapping configuration loading'
+    description: gettext('Errors occurring during mapping configuration loading')
   },
   [LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
     name: 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
@@ -208,7 +209,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'error',
-    description: 'Errors during mapping activation'
+    description: gettext('Errors during mapping activation')
   },
   [LoggingEventType.MAPPING_CREATED_EVENT_TYPE]: {
     name: 'MAPPING_CREATED_EVENT_TYPE',
@@ -216,7 +217,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: 'A mapping was created'
+    description: gettext('A mapping was created')
   },
   [LoggingEventType.MAPPING_UPDATED_EVENT_TYPE]: {
     name: 'MAPPING_UPDATED_EVENT_TYPE',
@@ -224,7 +225,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: "A mapping's configuration, filter, code, or debug flag was updated"
+    description: gettext("A mapping's configuration, filter, code, or debug flag was updated")
   },
   [LoggingEventType.MAPPING_DELETED_EVENT_TYPE]: {
     name: 'MAPPING_DELETED_EVENT_TYPE',
@@ -232,7 +233,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: 'A mapping was deleted'
+    description: gettext('A mapping was deleted')
   },
   [LoggingEventType.MAPPING_ACTIVATION_EVENT_TYPE]: {
     name: 'MAPPING_ACTIVATION_EVENT_TYPE',
@@ -240,7 +241,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: 'A mapping was activated or deactivated'
+    description: gettext('A mapping was activated or deactivated')
   },
   [LoggingEventType.MAPPING_CHANGED_EVENT_TYPE]: {
     name: 'MAPPING_CHANGED_EVENT_TYPE',
@@ -248,7 +249,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: 'Bulk/batch mapping configuration change notifications not tied to a single mapping'
+    description: gettext('Bulk/batch mapping configuration change notifications not tied to a single mapping')
   },
   [LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE]: {
     name: 'MAPPING_MIGRATION_EVENT_TYPE',
@@ -256,7 +257,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
-    description: 'Automatic mapping migration notifications'
+    description: gettext('Automatic mapping migration notifications')
   },
   [LoggingEventType.MAPPING_FAILURE_EVENT_TYPE]: {
     name: 'MAPPING_FAILURE_EVENT_TYPE',
@@ -264,7 +265,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'error',
-    description: 'Mapping processing failures and errors'
+    description: gettext('Mapping processing failures and errors')
   },
   [LoggingEventType.NOTIFICATION_EVENT_TYPE]: {
     name: 'NOTIFICATION_EVENT_TYPE',
@@ -272,7 +273,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_notification',
     componentDisplayName: 'Connector',
     severity: 'warning',
-    description: 'Notification connector status events'
+    description: gettext('Notification connector status events')
   },
   [LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE]: {
     name: 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
@@ -280,7 +281,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_subscriptionDeduplication',
     componentDisplayName: 'Connector',
     severity: 'info',
-    description: 'Duplicate subscription removed to prevent multiply processed messages'
+    description: gettext('Duplicate subscription removed to prevent multiply processed messages')
   },
   [LoggingEventType.CODE_TEMPLATE_INIT_EVENT_TYPE]: {
     name: 'CODE_TEMPLATE_INIT_EVENT_TYPE',
@@ -288,7 +289,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_system',
     componentDisplayName: 'System',
     severity: 'info',
-    description: 'System code templates have been re-initialized'
+    description: gettext('System code templates have been re-initialized')
   },
   [LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE]: {
     name: 'BACKFILL_SUBSCRIPTION_EVENT_TYPE',
@@ -296,7 +297,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_subscription',
     componentDisplayName: 'Connector',
     severity: 'info',
-    description: 'Resync of existing devices into a type subscription started/finished'
+    description: gettext('Resync of existing devices into a type subscription started/finished')
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',
@@ -304,7 +305,7 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     component: 'd11r_AnyComponent',
     componentDisplayName: 'All Components',
     severity: 'info',
-    description: 'All event types'
+    description: gettext('All event types')
   }
 };
 

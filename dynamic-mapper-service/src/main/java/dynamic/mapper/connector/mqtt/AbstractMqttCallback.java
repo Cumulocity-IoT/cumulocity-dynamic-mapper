@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -23,14 +23,8 @@ package dynamic.mapper.connector.mqtt;
 
 import dynamic.mapper.util.TenantLogContext;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -41,9 +35,11 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.core.ServiceRegistry;
-import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -70,12 +66,6 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     /** Minimum interval between two reconnect triggers to prevent reconnect storms. */
     private static final long MIN_RECONNECT_INTERVAL_MS = 60_000L;
 
-    /**
-     * Maximum consecutive failures per message before it is treated as a poison pill and ACKed
-     * to break an infinite reconnect loop.
-     */
-    private static final int MAX_CONSECUTIVE_RECONNECTS = 5;
-
     /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
     private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
 
@@ -98,8 +88,11 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     /** Ensures only one thread executes {@link #reconnectTrigger} at a time. */
     protected final Semaphore reconnectExecutionSemaphore = new Semaphore(1);
 
-    /** Per-message consecutive failure counter (topic + payload hash as key). */
-    protected final Map<String, AtomicInteger> failureCountPerMessage = new ConcurrentHashMap<>();
+    /**
+     * Per-message failure counter (topic + payload hash as key). After {@code maxProcessingAttempts}
+     * failures the message is treated as a poison pill and ACKed to break an infinite reconnect loop.
+     */
+    protected final MessageFailureTracker failureTracker;
 
     /** Number of messages currently being processed; used to delay reconnect until ACKs are sent. */
     protected final AtomicInteger activeProcessingMessages = new AtomicInteger(0);
@@ -107,6 +100,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     protected AbstractMqttCallback(
             String tenant,
             ServiceRegistry serviceRegistry,
+            ConnectorConfigurationService connectorConfigurationService,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName,
@@ -118,11 +112,11 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.reconnectTrigger = reconnectTrigger;
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
 
         boolean reconnect = true;
         try {
-            ConnectorConfiguration configuration = serviceRegistry
-                    .getConnectorConfigurationService()
+            ConnectorConfiguration configuration = connectorConfigurationService
                     .getConnectorConfiguration(connectorIdentifier, tenant);
             if (configuration != null && configuration.getProperties() != null) {
                 reconnect = (Boolean) configuration.getProperties()
@@ -201,86 +195,34 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
             if (effectiveQos > 0) {
                 activeProcessingMessages.incrementAndGet();
                 virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
-                    long effectiveTimeout = timeout;
                     try {
-                        List<? extends ProcessingContext<?>> results;
+                        // Give a retransmission more time than the first attempt: a timeout can
+                        // be caused by a transiently slow platform, not by a broken mapping.
+                        // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget.
+                        Long timeoutOverride = null;
                         if (timeout > 0) {
-                            // Give a retransmission more time than the first attempt: a timeout can
-                            // be caused by a transiently slow platform, not by a broken mapping.
-                            // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget — the previous
-                            // cap (the configured pipeline timeout) equalled the base budget itself,
-                            // so the escalation could never actually increase anything.
-                            int attempt = failureCountPerMessage
-                                    .getOrDefault(messageId, new AtomicInteger(0)).get();
-                            effectiveTimeout = Math.min(
+                            int attempt = failureTracker.failures(messageId);
+                            timeoutOverride = Math.min(
                                     (long) timeout * (attempt + 1),
                                     (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
                             if (attempt > 0) {
                                 log.info(
                                         "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                        tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
+                                        tenant, attempt + 1, timeoutOverride, timeout, connectorIdentifier);
                             }
-                            results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                    TimeUnit.MILLISECONDS);
-                        } else {
-                            // No per-message budget (non-Smart-Function mapping). Still bounded: an
-                            // unbounded get() parks this worker — and leaves the message unacknowledged
-                            // — forever if the pipeline blocks in I/O.
-                            effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-                            results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                    TimeUnit.MILLISECONDS);
                         }
 
-                        // JS CPU timeout may have fired and closed the GraalVM context before the
-                        // wall-clock timeout expired. The future completes early with
-                        // cancellationRequested=true. Do NOT ACK — let the broker retransmit.
-                        if (processedResults.getCancellationRequested().get()) {
-                            log.warn(
-                                    "{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
-                                    tenant, connectorIdentifier);
-                            triggerReconnectOrAck(mqttMessage, topic, messageId);
-                            return null;
-                        }
-
-                        int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(
-                                results, tenant, topic, log);
-
-                        if (httpStatusCode < 0) {
-                            // No errors → ACK and clear failure counter
-                            failureCountPerMessage.remove(messageId);
+                        AckOutcome outcome = ProcessingResultHelper.awaitOutcome(
+                                processedResults, tenant, topic, log, timeoutOverride);
+                        if (outcome == AckOutcome.ACK) {
+                            failureTracker.clear(messageId);
                             log.warn("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                     tenant, topic, extractQos(mqttMessage), connectorIdentifier);
                             acknowledgeMessage(mqttMessage);
-                        } else if (httpStatusCode < 500) {
-                            // Client-side error → ACK (not a transient failure worth retrying)
-                            failureCountPerMessage.remove(messageId);
-                            log.warn(
-                                    "{} - END: Sending manual ack due to non-Server error for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                                    tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                            acknowledgeMessage(mqttMessage);
                         } else {
-                            // Server error (≥500) → do not ACK, trigger reconnect for retransmission
-                            log.warn(
-                                    "{} - END: Server error (HTTP {}), not sending ACK. Triggering reconnect for retransmission. topic: [{}], connector: {}",
-                                    tenant, httpStatusCode, topic, connectorIdentifier);
+                            // Not ACKed: let the broker retransmit (after a reconnect if configured)
                             triggerReconnectOrAck(mqttMessage, topic, messageId);
                         }
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.warn("{} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                                tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                    } catch (TimeoutException e) {
-                        // cancelProcessing() closes any active GraalVM context via
-                        // Context.close(cancelIfExecuting=true) — the only reliable way to stop
-                        // CPU-bound JS that ignores Java thread interruption.
-                        log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
-                                tenant, connectorIdentifier);
-                        boolean futureCompleted = processedResults
-                                .cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-
-                        log.warn(
-                                "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, future completed: {}",
-                                tenant, effectiveTimeout, connectorIdentifier, futureCompleted);
-                        triggerReconnectOrAck(mqttMessage, topic, messageId);
                     } finally {
                         activeProcessingMessages.decrementAndGet();
                     }
@@ -300,29 +242,26 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     /**
      * Circuit-breaker-aware reconnect handler.
      * <ul>
-     *   <li>If {@code reconnectOnProcessingError} is disabled, returns immediately (broker will retransmit).</li>
-     *   <li>If the per-message failure counter reaches {@link #MAX_CONSECUTIVE_RECONNECTS}: the message is
-     *       treated as a poison pill — it is ACKed (discarded) and a hard error is logged.</li>
+     *   <li>Records the failure. If the per-message counter reaches {@code maxProcessingAttempts}, the message is
+     *       treated as a poison pill: it is ACKed (discarded) and a hard error is logged, whatever the setting
+     *       below.</li>
+     *   <li>If {@code reconnectOnProcessingError} is disabled, returns (broker will retransmit).</li>
      *   <li>Otherwise {@link #triggerReconnect(String)} schedules an exponentially backed-off disconnect.</li>
      * </ul>
      */
     protected void triggerReconnectOrAck(M mqttMessage, String topic, String messageId) {
+        if (failureTracker.recordFailureReachedLimit(messageId)) {
+            log.error(
+                    "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
+                            + "infinite retransmission. Message is discarded. topic: [{}], connector: {}",
+                    tenant, failureTracker.limit(), topic, connectorIdentifier);
+            acknowledgeMessage(mqttMessage);
+            return;
+        }
         if (!reconnectOnProcessingError) {
             log.info(
                     "{} - END: reconnectOnProcessingError is disabled, waiting for broker to retransmit unACKed message. connector: {}",
                     tenant, connectorIdentifier);
-            return;
-        }
-
-        int failureCount = failureCountPerMessage
-                .getOrDefault(messageId, new AtomicInteger(0)).get();
-        if (failureCount >= MAX_CONSECUTIVE_RECONNECTS) {
-            log.error(
-                    "{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
-                            + "infinite reconnect loop. Message is discarded. topic: [{}], connector: {}",
-                    tenant, failureCount, topic, connectorIdentifier);
-            failureCountPerMessage.remove(messageId);
-            acknowledgeMessage(mqttMessage);
             return;
         }
         triggerReconnect(messageId);
@@ -342,9 +281,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
      * the back-off sleep happens before acquiring it so other messages can still be ACKed.
      */
     private void triggerReconnect(String messageId) {
-        int attempt = failureCountPerMessage
-                .computeIfAbsent(messageId, k -> new AtomicInteger(0))
-                .incrementAndGet();
+        int attempt = Math.max(1, failureTracker.failures(messageId));
         lastReconnectTriggerMs.set(System.currentTimeMillis());
 
         long delayMs = attempt <= 1 ? 0L

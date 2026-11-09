@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -85,6 +85,12 @@ public class Extension implements Serializable {
     )
     @NotNull
     public boolean external;
+
+    @Schema(
+        description = "Reason why the extension could not be loaded at all, e.g. a missing or invalid registration file. Empty if the jar could be read; see the entries for per-entry failures.",
+        example = "Registration file: extension-external.yaml missing"
+    )
+    public String message;
 
     @Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,

@@ -49,7 +49,7 @@ flowchart TD
         ign5 -- yes --> consolidation
         ign3 -- no --> send
         ign5 -- no --> send
-        flowres --> send["SendInboundProcessor\nresolve ids, create requests, call Cumulocity"]
+        flowres --> send["SendInboundProcessor\nresolve ids, upsert devices, call Cumulocity"]
         send --> consolidation["ConsolidationProcessor\nbook outcome, close GraalVM context"]
     end
 
@@ -63,3 +63,8 @@ Notes:
   and failed ones.
 - After `FlowResultInboundProcessor` there is no further ignore check; the context goes straight
   to `SendInboundProcessor`.
+- `InternalProtobufProcessor` and `JSONataInboundProcessor` are likewise followed directly by
+  `SubstitutionResultInboundProcessor`; the ignore check comes after it (`filterInventory`).
+- The router does not stop after an error recorded by deserialization or enrichment; later
+  processors detect the failed state themselves (see the trap in
+  [mapping-processing-inbound.md](mapping-processing-inbound.md)).

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -23,7 +23,6 @@ package dynamic.mapper.connector.amqp;
 
 import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
@@ -32,6 +31,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
@@ -113,13 +113,14 @@ public class AMQP10Client extends AConnectorClient {
      * Full constructor with all runtime dependencies.
      */
     public AMQP10Client(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
@@ -371,7 +372,8 @@ public class AMQP10Client extends AConnectorClient {
                     connectorIdentifier,
                     connectorName,
                     topic,
-                    qos);
+                    qos,
+                    session);
 
             MessageConsumer consumer = session.createConsumer(destination);
             consumer.setMessageListener(callback);

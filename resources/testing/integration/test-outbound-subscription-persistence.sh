@@ -7,6 +7,8 @@
 #   2. Create a dynamic type subscription for type "auto-restart-type" (if not already present)
 #   3. Record the current subscriptions (static + dynamic)
 #   4. Trigger a microservice restart by unsubscribing and re-subscribing the microservice
+#      (single-tenant: disable/enable; multi-tenant: see dm_restart_microservice,
+#      needs DM_RESTART_SESSION of the management tenant, or a manual restart)
 #   5. Wait for the service to come back up
 #   6. Send test messages for both devices
 #   7. Verify that both static and dynamic subscriptions are still active
@@ -95,12 +97,8 @@ dm_api GET /subscription/type | jq -r '
 
 # Step 4: Restart the microservice
 dm_step 4 "Restart microservice by disabling and re-enabling"
-dm_pause_for_log_save "Disabling/re-enabling '$DM_MICROSERVICE_NAME' restarts it"
-dm_info "Disabling microservice '$DM_MICROSERVICE_NAME' ..."
-c8y microservices disable --id "$DM_MICROSERVICE_NAME" --force
-dm_wait 5 "service shutdown"
-dm_info "Re-enabling microservice '$DM_MICROSERVICE_NAME' ..."
-c8y microservices enable --id "$DM_MICROSERVICE_NAME" --force
+dm_pause_for_log_save "Restarting '$DM_MICROSERVICE_NAME' discards its log"
+dm_restart_microservice "$DM_MICROSERVICE_NAME"
 
 # Step 5: Wait for the service to come back up
 dm_step 5 "Wait for microservice to restart and initialize"

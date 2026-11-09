@@ -40,21 +40,23 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import java.util.concurrent.TimeoutException;
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
@@ -119,13 +121,14 @@ public class GooglePubSubClient extends AConnectorClient {
      * Full constructor with dependencies
      */
     public GooglePubSubClient(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
@@ -327,11 +330,24 @@ public class GooglePubSubClient extends AConnectorClient {
      * inbound pipeline, and ack or nack based on the result and configured QoS.
      * <ul>
      *   <li>QoS 0 (at-most-once): ack immediately before processing.</li>
-     *   <li>QoS &gt; 0 (at-least-once): ack after successful processing; nack on error so the
-     *       message is redelivered.</li>
+     *   <li>QoS &gt; 0 (at-least-once): ack once the pipeline settled the message; nack on a retry-worthy
+     *       failure so the message is redelivered, and drop it after {@code maxProcessingAttempts}
+     *       failures.</li>
      * </ul>
      * Package-private to allow unit testing without a live Pub/Sub client.
      */
+    /** Pub/Sub message attributes as {@code attribute.<name>} transport metadata, plus the ordering key. */
+    static java.util.Map<String, String> pubSubMetadata(PubsubMessage message) {
+        dynamic.mapper.connector.core.callback.TransportMetadata metadata =
+                new dynamic.mapper.connector.core.callback.TransportMetadata();
+        message.getAttributesMap().forEach((name, value) ->
+                metadata.put(dynamic.mapper.connector.core.callback.TransportMetadata.ATTRIBUTE, name, value));
+        if (!message.getOrderingKey().isEmpty()) {
+            metadata.put("", "orderingKey", message.getOrderingKey());
+        }
+        return metadata.build();
+    }
+
     void processPubSubMessage(PubsubMessage message, AckReplyConsumer consumer,
             String topic, Qos qos) {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
@@ -344,6 +360,7 @@ public class GooglePubSubClient extends AConnectorClient {
                     .sendPayload(true)
                     .connectorIdentifier(connectorIdentifier)
                     .payload(payload)
+                    .metadata(pubSubMetadata(message))
                     .build();
 
             if (serviceConfiguration.getLogPayload()) {
@@ -358,51 +375,49 @@ public class GooglePubSubClient extends AConnectorClient {
                 return;
             }
 
-            // At-least-once: ack only after successful processing
-            // Held in a holder so the timeout handler below can cancel the very pipeline that
-            // timed out (the local would not be in scope there).
-            java.util.concurrent.atomic.AtomicReference<ProcessingResultWrapper<?>> resultRef =
-                    new java.util.concurrent.atomic.AtomicReference<>();
+            // At-least-once: ack only after the pipeline settled the message. A retry-worthy failure
+            // (server error, timeout, cancellation, exception) nacks so Pub/Sub redelivers; after
+            // maxProcessingAttempts failures the message is dropped. Errors a retry would only repeat
+            // (client errors, mapping errors without an HTTP status) are acked, as on every other connector.
+            MessageFailureTracker tracker = failureTracker();
+            AckOutcome outcome;
             try {
                 ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
-                resultRef.set(result);
-                int timeout = result.getPipelineTimeoutMS();
-
-                // Always bounded: this runs on a Pub/Sub subscriber thread, so an unbounded get()
-                // would park that thread — and with it the subscription's delivery slot — for as
-                // long as the pipeline hangs.
-                long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-                List<? extends ProcessingContext<?>> contexts =
-                        result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
-
-                boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
-                if (hasError) {
-                    log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                            tenant, topic, messageId);
-                    consumer.nack();
-                } else {
-                    consumer.ack();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                        tenant, topic, messageId);
-                consumer.nack();
-            } catch (TimeoutException e) {
-                // Must cancel explicitly: falling through to the generic handler below would nack the
-                // message while leaving the pipeline — including any runaway GraalVM context — running.
-                ProcessingResultWrapper<?> timedOut = resultRef.get();
-                boolean drained = timedOut != null
-                        && timedOut.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-                log.warn("{} - Processing timed out for Pub/Sub message: topic=[{}], messageId={}, "
-                        + "worker drained: {} — nacking", tenant, topic, messageId, drained);
-                consumer.nack();
+                outcome = ProcessingResultHelper.awaitOutcome(result, tenant, topic, log, null);
             } catch (Exception e) {
-                log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={}",
                         tenant, topic, messageId, e);
+                outcome = AckOutcome.RETRY;
+            }
+            if (outcome == AckOutcome.ACK) {
+                tracker.clear(messageId);
+                consumer.ack();
+            } else if (tracker.recordFailureReachedLimit(messageId)) {
+                log.error("{} - Dropping Pub/Sub message after {} failed attempts: topic=[{}], messageId={}, "
+                        + "connector: {}", tenant, tracker.limit(), topic, messageId, connectorIdentifier);
+                consumer.ack();
+            } else {
+                log.warn("{} - Processing did not succeed for Pub/Sub message: topic=[{}], messageId={}, "
+                        + "nacking for redelivery", tenant, topic, messageId);
                 consumer.nack();
             }
         }
+    }
+
+    private volatile MessageFailureTracker failureTracker;
+
+    /** Created on first use: the service configuration is only known once the client is wired. */
+    private MessageFailureTracker failureTracker() {
+        MessageFailureTracker tracker = failureTracker;
+        if (tracker == null) {
+            synchronized (this) {
+                if (failureTracker == null) {
+                    failureTracker = MessageFailureTracker.forConfiguration(this::currentServiceConfiguration);
+                }
+                tracker = failureTracker;
+            }
+        }
+        return tracker;
     }
 
     private void stopSubscriberQuietly(Subscriber subscriber, String topic) {

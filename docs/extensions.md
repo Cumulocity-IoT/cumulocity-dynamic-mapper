@@ -228,13 +228,16 @@ package dynamic.mapper.connector.custom;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatus;
 
 public class CustomBrokerClient extends AConnectorClient {
 
     private CustomClient client;
 
     public CustomBrokerClient() {
+        // CUSTOM stands for a new value you add to ConnectorType; also add a case for it to
+        // ConnectorClientFactory.createConnectorClient() and register the specification in
+        // ConnectorRegistry.registerConnectors().
         this.connectorType = ConnectorType.CUSTOM;
         this.connectorSpecification = createConnectorSpecification();
     }

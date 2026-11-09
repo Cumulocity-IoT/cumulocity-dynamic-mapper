@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,9 +19,12 @@
  */
 
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
+import '../../shared';
+import { RepairStrategy, Substitution } from '../../shared';
 import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
 
 /**
@@ -55,7 +58,7 @@ describe('SubstitutionGridComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [SubstitutionGridComponent],
-      providers: [{ provide: BsModalService, useValue: mockBsModalService }]
+      providers: [{ provide: BsModalService, useValue: mockBsModalService }, provideTranslateStub()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SubstitutionGridComponent);
@@ -67,22 +70,48 @@ describe('SubstitutionGridComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('emits the selected index and records it in settings on select', (done) => {
+  describe('in-grid edits', () => {
+    const sub = (overrides: Partial<Substitution> = {}): Substitution => ({
+      pathSource: '$.a', pathTarget: '$.b', repairStrategy: RepairStrategy.DEFAULT, expandArray: false, ...overrides
+    });
+
+    it('announces an expandArray change as a patch and leaves the substitution untouched', () => {
+      const original = sub();
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onExpandArrayChange(2, original, true);
+
+      expect(patches).toEqual([{ index: 2, patch: { expandArray: true } }]);
+      expect(original.expandArray).toBeFalse();
+    });
+
+    it('also resets an array-only repair strategy when expanding', () => {
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onExpandArrayChange(0, sub({ repairStrategy: RepairStrategy.USE_FIRST_VALUE_OF_ARRAY }), true);
+
+      expect(patches).toEqual([{ index: 0, patch: { expandArray: true, repairStrategy: RepairStrategy.DEFAULT } }]);
+    });
+
+    it('announces a repair strategy change as a patch', () => {
+      const patches: any[] = [];
+      component.substitutionPatch.subscribe(p => patches.push(p));
+
+      component.onRepairStrategyChange(1, 'IGNORE');
+
+      expect(patches).toEqual([{ index: 1, patch: { repairStrategy: RepairStrategy.IGNORE } }]);
+    });
+  });
+
+  it('emits the selected index and leaves the settings to the host', (done) => {
     component.selectSub.subscribe((i) => {
       expect(i).toBe(2);
-      expect(component.settings.selectedSubstitutionIndex).toBe(2);
+      expect(component.settings.selectedSubstitutionIndex).toBe(-1); // the host owns it
       done();
     });
     component.onSubstitutionSelect(2);
-  });
-
-  it('emits the index and records it in settings on edit', (done) => {
-    component.editSub.subscribe((i) => {
-      expect(i).toBe(1);
-      expect(component.settings.selectedSubstitutionIndex).toBe(1);
-      done();
-    });
-    component.onSubstitutionEdit(1);
   });
 
   it('emits deleteSub only after the confirmation modal is confirmed', () => {
@@ -95,7 +124,7 @@ describe('SubstitutionGridComponent', () => {
 
     closeSubject.next(true); // user confirms
     expect(deleted).toEqual([3]);
-    expect(component.settings.selectedSubstitutionIndex).toBe(3);
+    expect(component.settings.selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
     expect(modalHide).toHaveBeenCalled();
   });
 

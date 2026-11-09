@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -23,7 +23,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { of, Subject } from 'rxjs';
 import { MappingStepperComponent } from './mapping-stepper.component';
-import { CommitEditorState, EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
+import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
+import { CommitEditorState, MappingCommitService } from '../service/mapping-commit.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { SharedService } from '../../shared';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
@@ -46,6 +47,7 @@ import {
   STEP_TEST_MAPPING
 } from '../../shared/mapping/stepper.model';
 import { configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 
 /**
  * Unit tests for {@link MappingStepperComponent}.
@@ -60,6 +62,7 @@ describe('MappingStepperComponent', () => {
   let component: MappingStepperComponent;
   let fixture: ComponentFixture<MappingStepperComponent>;
   let mockStepperService: jasmine.SpyObj<MappingStepperService>;
+  let mockCommitService: jasmine.SpyObj<MappingCommitService>;
   let mockSubstitutionService: jasmine.SpyObj<SubstitutionManagementService>;
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
@@ -67,7 +70,6 @@ describe('MappingStepperComponent', () => {
   let mockBsModalService: jasmine.SpyObj<BsModalService>;
 
   let mappingPropertyChanged$: Subject<Mapping>;
-  let isButtonDisabled$: Subject<boolean>;
   let isSubstitutionValid$: Subject<boolean>;
 
   const buildMapping = (overrides: Partial<Mapping> = {}): Mapping => ({
@@ -162,9 +164,9 @@ describe('MappingStepperComponent', () => {
 
   beforeEach(async () => {
     mappingPropertyChanged$ = new Subject<Mapping>();
-    isButtonDisabled$ = new Subject<boolean>();
     isSubstitutionValid$ = new Subject<boolean>();
 
+    mockCommitService = jasmine.createSpyObj<MappingCommitService>('MappingCommitService', ['commitMapping', 'encodeMappingForCommit']);
     mockStepperService = jasmine.createSpyObj(
       'MappingStepperService',
       [
@@ -191,15 +193,10 @@ describe('MappingStepperComponent', () => {
         'createCodeTemplateAndRefresh',
         'initializeEditorSession',
         'registerCompletionProvider',
-        'encodeMappingForCommit',
-      'commitMapping'
       ],
       {
-        countDeviceIdentifiers$: of(0),
         isSubstitutionValid$: isSubstitutionValid$,
-        isContentChangeValid$: new Subject(),
         extensionEvents$: of([]),
-        isButtonDisabled$: isButtonDisabled$,
         sourceCustomMessage$: of(''),
         targetCustomMessage$: of(''),
         mappingPropertyChanged$: mappingPropertyChanged$
@@ -248,11 +245,13 @@ describe('MappingStepperComponent', () => {
       imports: [MappingStepperComponent],
       providers: [
         { provide: MappingStepperService, useValue: mockStepperService },
+        { provide: MappingCommitService, useValue: mockCommitService },
         { provide: SubstitutionManagementService, useValue: mockSubstitutionService },
         { provide: SharedService, useValue: mockSharedService },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BottomDrawerService, useValue: mockBottomDrawerService },
-        { provide: BsModalService, useValue: mockBsModalService }
+        { provide: BsModalService, useValue: mockBsModalService },
+        provideTranslateStub()
       ]
     }).compileComponents();
 
@@ -552,8 +551,8 @@ describe('MappingStepperComponent', () => {
 
       component.onCommitButton();
 
-      expect(mockStepperService.encodeMappingForCommit).not.toHaveBeenCalled();
-      expect(mockStepperService.commitMapping).not.toHaveBeenCalled();
+      expect(mockCommitService.encodeMappingForCommit).not.toHaveBeenCalled();
+      expect(mockCommitService.commitMapping).not.toHaveBeenCalled();
     });
   });
 
@@ -576,56 +575,26 @@ describe('MappingStepperComponent', () => {
       await component.ngOnInit();
     });
 
-    it('disables the button when no connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: 'x', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(true);
-        done();
-      });
+    it('disables the button when no connectors are assigned', () => {
       component.deploymentMapEntryChange({ identifier: 'x', connectors: [] });
+
+      expect(component.connectorSelectionEmpty()).toBeTrue();
     });
 
-    it('enables the button when connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: 'x', connectors: ['c1'] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(false);
-        done();
-      });
+    it('enables the button when connectors are assigned', () => {
       component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
+
+      expect(component.connectorSelectionEmpty()).toBeFalse();
     });
 
-    it('stores the new selection on the component (not just the button state), regardless of what the previous selection was', (done) => {
-      // Regression test: deploymentMapEntryChange must reassign this.deploymentMapEntry to the
-      // new value before computing isDisabled — previously it only used the stale prior value,
-      // so the field bound back down into <d11r-mapping-connector> never updated and the button
-      // state was always one selection behind.
+    it('stores the new selection on the component and derives the button state from it, never one selection behind', () => {
       component.deploymentMapEntry = { identifier: 'x', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(component.deploymentMapEntry).toEqual({ identifier: 'x', connectors: ['c1'] });
-        expect(disabled).toBe(false);
-        done();
-      });
+      expect(component.connectorSelectionEmpty()).toBeTrue();
+
       component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
-    });
-  });
 
-  // The isSubstitutionValid$ -> templateForm.setErrors subscription moved into
-  // MappingStepperService.buildTemplateForm() with the stepper/unified-editor
-  // deduplication. This spec mocks that service, so the behaviour can only be covered
-  // at the service layer — see mapping-stepper.service.spec.ts.
-
-  describe('Lifecycle', () => {
-    it('tears down subscriptions and the stepper service on destroy', async () => {
-      await component.ngOnInit();
-      const destroy$ = component['destroy$'];
-      spyOn(destroy$, 'next').and.callThrough();
-      spyOn(destroy$, 'complete').and.callThrough();
-
-      component.ngOnDestroy();
-
-      expect(destroy$.next).toHaveBeenCalled();
-      expect(destroy$.complete).toHaveBeenCalled();
-      expect(mockStepperService.cleanup).toHaveBeenCalled();
+      expect(component.deploymentMapEntry).toEqual({ identifier: 'x', connectors: ['c1'] });
+      expect(component.connectorSelectionEmpty()).toBeFalse();
     });
   });
 });

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -179,6 +179,17 @@
 }
 .d11r-doc .table-layout-fixed {
   table-layout: fixed;
+}
+
+/* Opt-in with <!--table:equal-columns--> before a Markdown table. Fixed layout: a narrow first column
+   (a label such as the QoS level) and every other column the same width, so separate tables with the same
+   number of columns line up instead of each sizing its columns to its own content. */
+.d11r-doc .table-equal-columns {
+  table-layout: fixed;
+}
+.d11r-doc .table-equal-columns th:first-child,
+.d11r-doc .table-equal-columns td:first-child {
+  width: 5rem;
 }
 
 /* Column-width helpers for fixed-layout tables */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -56,6 +56,22 @@ class TokenManagerTest {
     @BeforeEach
     void setUp() {
         tokenManager = new TokenManager(tokenApi, subscriptionsService);
+    }
+
+    @Test
+    void removeTenant_dropsAllTokenReferencesOfThatTenantOnly() {
+        tokenManager.storeDeviceToken("t1", "conn", "d");
+        tokenManager.storeManagementToken("t1", "m");
+        tokenManager.storeCacheInventoryToken("t1", "c");
+        tokenManager.storeManagementToken("t2", "m2");
+
+        tokenManager.removeTenant("t1");
+
+        assertNull(tokenManager.getDeviceToken("t1", "conn"));
+        assertNull(tokenManager.getManagementToken("t1"));
+        assertNull(tokenManager.getCacheInventoryToken("t1"));
+        assertEquals("m2", tokenManager.getManagementToken("t2"));
+        verifyNoInteractions(tokenApi); // reference removal only, no platform call for an unsubscribed tenant
     }
 
     @AfterEach

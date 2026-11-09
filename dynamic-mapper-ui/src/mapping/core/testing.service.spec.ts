@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,6 +19,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
+import { TranslateService } from '@ngx-translate/core';
 import { FetchClient } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
 import { TestingService } from './testing.service';
@@ -29,8 +30,16 @@ import { TestContext } from '../../shared/mapping/processor/processor.model';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockFetchResponse(ok: boolean, body: any): any {
-  return { ok, status: ok ? 200 : 400, statusText: ok ? 'OK' : 'Bad Request', json: async () => body };
+function mockFetchResponse(ok: boolean, body: any, status = ok ? 200 : 400): any {
+  return { ok, status, statusText: ok ? 'OK' : 'Bad Request', json: async () => body };
+}
+
+/** An error response whose body is not JSON, e.g. the HTML page of a gateway. */
+function mockNonJsonResponse(status: number): any {
+  return {
+    ok: false, status, statusText: 'Error',
+    json: async () => { throw new SyntaxError("Unexpected token '<', \"<html>\" is not valid JSON"); }
+  };
 }
 
 function makeMapping(): Mapping {
@@ -80,7 +89,15 @@ describe('TestingService', () => {
       providers: [
         TestingService,
         { provide: FetchClient, useValue: mockClient },
-        { provide: SharedService, useValue: mockSharedService }
+        { provide: SharedService, useValue: mockSharedService },
+        // The app's missing-translation handler returns the key with its {{placeholders}} filled.
+        {
+          provide: TranslateService,
+          useValue: {
+            instant: (key: string, params?: Record<string, unknown>) =>
+              key.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m: string, name: string) => String(params?.[name] ?? ''))
+          }
+        }
       ]
     });
 
@@ -111,10 +128,38 @@ describe('TestingService', () => {
       await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError('Mapping invalid');
     });
 
-    it('should throw a default message when the error body has no message', async () => {
+    it('should name the HTTP status when the error body has no message', async () => {
       mockClient.fetch.and.resolveTo(mockFetchResponse(false, {}));
 
-      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError('Could not be tested!');
+      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError('Could not be tested! (HTTP 400)');
+    });
+
+    it('should not fail with a JSON syntax error when a gateway answers with an HTML page', async () => {
+      mockClient.fetch.and.resolveTo(mockNonJsonResponse(504));
+
+      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError(
+        'The Dynamic Mapper service did not answer (HTTP 504). Check that it is running and try again.');
+    });
+
+    it('should say which role is missing on 403', async () => {
+      mockClient.fetch.and.resolveTo(mockFetchResponse(false, { error: 'Forbidden' }, 403));
+
+      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError(
+        'Testing a mapping needs the Dynamic Mapper admin or create role.');
+    });
+
+    it('should tell an expired session to sign in again on 401', async () => {
+      mockClient.fetch.and.resolveTo(mockNonJsonResponse(401));
+
+      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError(
+        'Your session has expired. Sign in again and repeat the test.');
+    });
+
+    it('should show the backend message of a busy tenant (409) as it is', async () => {
+      mockClient.fetch.and.resolveTo(mockFetchResponse(false, { message: 'Another test of this tenant is still running.' }, 409));
+
+      await expectAsync(service.testMapping(makeTestContext())).toBeRejectedWithError(
+        'Another test of this tenant is still running.');
     });
   });
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -44,43 +44,50 @@ import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import {
-  base64ToString,
-  buildTestMapping,
+  STEP_DEFINE_SUBSTITUTIONS,
+  STEP_GENERAL_SETTINGS,
+  STEP_SELECT_CONNECTOR,
+  STEP_SELECT_TEMPLATES,
+  STEP_TEST_MAPPING
+} from '../../shared/mapping/stepper.model';
+import {
   captureMappingContentSnapshot,
   describeMappingContentChanges,
   hasMappingContentChanged,
   isConnectorSelectionEmpty,
-  MappingContentSnapshot,
-  stripTemplateMetadataTags
+  MappingContentSnapshot
 } from '../../shared/mapping/util';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ConfirmationModalComponent } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
+import { MappingStepperService } from '../service/mapping-stepper.service';
 import {
   CommitBlocker,
   commitSuccessMessage,
-  MappingStepperService,
+  MappingCommitService,
   snapshotConnectors
-} from '../service/mapping-stepper.service';
+} from '../service/mapping-commit.service';
+import { MappingPublishService } from '../versions/mapping-publish.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
-import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
+import { MappingCodeEditorSectionComponent } from '../editor-base/mapping-code-editor-section.component';
 
-// Tab index constants
-const TAB_CONNECTOR = 0;
-const TAB_GENERAL_SETTINGS = 1;
-const TAB_SELECT_TEMPLATES = 2;
-const TAB_DEFINE_TRANSFORMATION = 3;
-const TAB_TEST_MAPPING = 4;
+// The tabs are the stepper's steps, in the same order
+const TAB_CONNECTOR = STEP_SELECT_CONNECTOR;
+const TAB_GENERAL_SETTINGS = STEP_GENERAL_SETTINGS;
+const TAB_SELECT_TEMPLATES = STEP_SELECT_TEMPLATES;
+const TAB_DEFINE_TRANSFORMATION = STEP_DEFINE_SUBSTITUTIONS;
+const TAB_TEST_MAPPING = STEP_TEST_MAPPING;
 
 /** Where a blocked commit sends the user. This is the only place that knows tabs exist —
  * {@link MappingStepperService.commitMapping} reports the blocker and owns no navigation. */
@@ -107,20 +114,30 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     CommonModule,
     TabComponent,
     TabsOutletComponent,
-    EditorComponent,
-    PopoverModule,
+    BsDropdownModule,
     MappingStepPropertiesComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
     MappingTemplateStepComponent,
     MappingStepTestingComponent,
-    MappingExtensionSelectorComponent
+    MappingExtensionSelectorComponent,
+    MappingCodeEditorSectionComponent
   ]
 })
 export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
+  /** Tab labels with a trailing `*` while the tab still misses required input. */
+  connectorTabLabel(): string {
+    return this.connectorSelectionEmpty() ? gettext('Connector *') : gettext('Connector');
+  }
+
+  generalSettingsTabLabel(): string {
+    return this.stepperConfiguration.direction === this.Direction.INBOUND && !this.mapping.mappingTopic?.trim()
+      ? gettext('General Settings *')
+      : gettext('General Settings');
+  }
+
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
-  deploymentMapEntry!: DeploymentMapEntry;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
@@ -129,6 +146,8 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
   private readonly mappingService = inject(MappingService);
+  private readonly commitService = inject(MappingCommitService);
+  private readonly publishService = inject(MappingPublishService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -144,13 +163,17 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   readonly TAB_TEST_MAPPING = TAB_TEST_MAPPING;
 
   currentStepIndex = TAB_CONNECTOR;
-  activeTabIndex = TAB_CONNECTOR;
 
   protected readonly substitutionStepIndex = TAB_DEFINE_TRANSFORMATION;
 
   // Snapshots for change detection — set once at load time
   private initialContentSnapshot: MappingContentSnapshot = { mappingJson: '', sourceTemplateJson: '', targetTemplateJson: '', mappingCode: '' };
   private initialDeploymentConnectors = '';
+
+  /** The connector selection differs from the saved deployment. A Live Test publishes to the saved one. */
+  get connectorsUnsaved(): boolean {
+    return snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
+  }
 
   async ngOnInit(): Promise<void> {
     // Hide auto-refresh button – this is an editor page, not a live-data view
@@ -162,30 +185,14 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
     this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
-    // Initialize the Save-button gate: a mapping requires at least one selected connector
-    this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
+    this.currentStepIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
-    this.currentStepIndex = this.activeTabIndex;
 
-    const init = await this.stepperService.initializeEditorSession(
-      this.mapping,
-      this.stepperConfiguration,
-      this.destroy$,
-      {
-        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
-        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
-        getSourceTemplate: () => this.sourceTemplate,
-        setSourceTemplate: (template) => { this.sourceTemplate = template; }
-      }
-      // disableExtensionSelectorsWhenHidden defaults to false — unified editor's current behavior
-    );
-
-    this.applyEditorSession(init);
+    const init = await this.initSession();
 
     // For the unified editor, expand existing templates upfront since mapping is fully defined
     await this.initializeTemplates();
@@ -202,12 +209,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // Load filter model – handled by MappingTemplateStepComponent on init
     // when filterFormly changes; no action needed here.
 
-    // Seed mappingCode from the persisted mapping once. mappingCode is the live,
-    // editable state from here on — it must never be re-derived from mapping.code
-    // later (mapping.code is stale until save), or in-progress edits get clobbered.
-    if (this.mappingCode === undefined && this.mapping.code) {
-      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
-    }
+    this.seedMappingCode();
 
     // Expand existing templates (mapping is fully defined)
     const templates = this.stepperService.expandExistingTemplates(
@@ -277,11 +279,10 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
   private async handleTabSelected(newIndex: number): Promise<void> {
     // Sync template changes when leaving the Templates tab
-    if (this.activeTabIndex === TAB_SELECT_TEMPLATES) {
+    if (this.currentStepIndex === TAB_SELECT_TEMPLATES) {
       this.updateTemplatesInEditors();
     }
 
-    this.activeTabIndex = newIndex;
     this.currentStepIndex = newIndex;
 
     this.refreshSubstitutionValidity();
@@ -294,23 +295,16 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         await this.handleSelectTemplatesTab();
         break;
       case TAB_DEFINE_TRANSFORMATION:
-        this.handleDefineSubstitutionsTab();
+        this.enterTransformation();
         break;
       case TAB_TEST_MAPPING:
-        this.handleTestMappingTab();
+        this.enterTesting();
         break;
     }
   }
 
   private async handleGeneralSettingsTab(): Promise<void> {
-    this.isLoadingExtensions = true;
-    try {
-      this.extensions = await this.stepperService.loadExtensions(this.mapping);
-      this.updateExtensionItems();
-      this.restoreExtensionSelection(true);
-    } finally {
-      this.isLoadingExtensions = false;
-    }
+    await this.reloadExtensions();
   }
 
   private async handleSelectTemplatesTab(): Promise<void> {
@@ -325,22 +319,30 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.restoreExtensionSelection();
   }
 
-  private handleDefineSubstitutionsTab(): void {
-    this.updateTemplatesInEditors();
-    this.refreshSubstitutionValidity();
+  /** The split button's main action: the last choice from its dropdown. */
+  saveAndActivate = false;
 
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
+  get saveButtonText(): string {
+    return this.saveAndActivate ? gettext('Save & Activate') : gettext('Save');
   }
 
-  private handleTestMappingTab(): void {
-    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
+  /** Only blockers the user cannot fix from inside the editor disable Save; see the template. */
+  get saveDisabled(): boolean {
+    return (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole)
+      || !!this.stepperConfiguration.readOnly
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated mappings are read-only
+      || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
   }
 
-  async onCommitButton(): Promise<void> {
+  /**
+   * @param activateAfterSave "Save & Activate": after the draft is saved, publish it as a version
+   *   and activate it. Saving alone only writes the draft, so the running mapping is unchanged.
+   */
+  async onCommitButton(activateAfterSave = false): Promise<void> {
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
-    const result = await this.stepperService.commitMapping({
+    const result = await this.commitService.commitMapping({
       mapping: this.mapping,
       deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors,
@@ -362,7 +364,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     if (result.status === 'blocked') {
       if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
       const tab = TAB_FOR_BLOCKER[result.blocker];
-      // Through the normal transition (not a bare activeTabIndex assignment) so currentStepIndex
+      // Through the normal transition (not a bare currentStepIndex assignment) so currentStepIndex
       // and the per-tab setup stay consistent — same reasoning as showValidationIssues().
       if (tab !== undefined) await this.onTabSelected(tab);
       return;
@@ -379,10 +381,11 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       return; // the alert has already been raised
     }
 
-    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence);
+    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence, this.translateService);
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
-    if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
+    // Skipped for Save & Activate: its "publish and activate" instruction is carried out below.
+    if (alert && !(activateAfterSave && !result.deploymentFailed)) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     // Saving closes the editor. Re-baselining first matters: navigation is guarded by
     // unsavedChangesGuard, which would otherwise see the just-saved edits as unsaved and prompt.
@@ -392,19 +395,61 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
     // to receive it otherwise silently does nothing once activated.
     // It is advisory and the mapping is already saved, so a failure must not strand the user in
-    // an editor whose state was just rebaselined.
-    try {
-      await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
-    } catch (error) {
-      console.error('Post-save subscription check failed:', error);
-      this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
+    // an editor whose state was just rebaselined. Save & Activate skips it: activation runs the
+    // same check and refuses, so showing it twice would only add noise.
+    if (!activateAfterSave) {
+      try {
+        await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+      } catch (error) {
+        console.error('Post-save subscription check failed:', error);
+        this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
+      }
     }
 
     // The mapping is saved but its connector assignment is not (error alert already raised):
     // stay in the editor so the selection isn't lost and Save can retry the deployment.
     if (result.deploymentFailed) return;
 
+    if (activateAfterSave) {
+      await this.publishAndActivate();
+      // Publishing and activating mutate this.mapping (active, version), which the unsaved-changes
+      // check compares as part of the mapping. Without re-baselining, the navigation below finds
+      // "unsaved changes" and traps the user in the discard prompt.
+      this.rebaselineAfterSave(this.mapping, false);
+    }
+
+    // The grid shows its cached list until a reload lands. commitMapping reloaded it before the
+    // publish and activation ran, so without this the grid briefly shows the outdated version.
+    await this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+
     this.navigateToGrid();
+  }
+
+  /**
+   * Second half of Save & Activate. The draft is already saved; a cancelled publish dialog leaves
+   * it as a draft, which is what plain Save would have done, so say so rather than closing silently.
+   */
+  private async publishAndActivate(): Promise<void> {
+    const name = this.mapping.name;
+    try {
+      if (this.mapping.draftDirty) {
+        const outcome = await this.publishService.publishDraft(this.mapping);
+        if (outcome.cancelled) {
+          this.alertService.add({
+            text: this.translateService.instant(gettext('Saved draft for {{name}}. It is not live yet: publish and activate it from the mapping list (Versions).'), { name }),
+            type: 'success',
+            timeout: ALERT_ACTION_REQUIRED_TIMEOUT
+          });
+        }
+      } else if (!this.mapping.active && this.mapping.version) {
+        // Connector-only change: no draft to publish, but an inactive mapping can still be switched on.
+        await this.publishService.activate(this.mapping, this.mapping.version);
+      } else {
+        this.alertService.info(this.translateService.instant(gettext('{{name}} has no unpublished changes.'), { name }));
+      }
+    } catch (error) {
+      this.alertService.danger(gettext('Saved, but activating the mapping failed'), (error as Error).message);
+    }
   }
 
   /**
@@ -526,7 +571,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       return;
     }
 
-    // Go through the normal transition rather than assigning activeTabIndex: it is queued behind
+    // Go through the normal transition rather than assigning currentStepIndex: it is queued behind
     // any in-flight tab change and performs the per-tab setup the step depends on.
     await this.onTabSelected(TAB_DEFINE_TRANSFORMATION);
     // The tab's content is rendered lazily, so the step only exists once that has been applied.

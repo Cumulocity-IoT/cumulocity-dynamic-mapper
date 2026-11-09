@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,6 +27,7 @@ import {
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { Column, ColumnDataType, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
@@ -64,13 +65,12 @@ export class DeviceSelectorTableComponent implements OnInit {
   clickedUpdateSubscription() {
     const existingIds = new Set(this.deviceList.map(device => device.id));
 
-    // Only add new IDs that don't already exist
-    this.selectedItemIds?.forEach((id) => {
-      if (!existingIds.has(id)) {
-        this.deviceList.push({ id });
-      }
-    });
-    this.commit.emit(this.deviceList);
+    // Only add new IDs that don't already exist. The host's list is not changed: it receives
+    // the combined list and decides what to keep.
+    const added = (this.selectedItemIds ?? [])
+      .filter(id => !existingIds.has(id))
+      .map(id => ({ id }));
+    this.commit.emit([...this.deviceList, ...added]);
   }
 
   clickedCancel() {
@@ -86,7 +86,7 @@ export class DeviceSelectorTableComponent implements OnInit {
     const cols: Column[] = [
       // Plain text instead of NameDeviceGridColumn, whose renderer turns the name into a link to the device page
       {
-        header: 'Name',
+        header: gettext('Name'),
         name: 'name',
         path: 'name',
         filterable: true,
@@ -97,7 +97,7 @@ export class DeviceSelectorTableComponent implements OnInit {
       new RegistrationDateDeviceGridColumn(),
       new SystemIdDeviceGridColumn(),
       {
-        header: 'Type',
+        header: gettext('Type'),
         name: 'type',
         path: 'type',
         filterable: true,

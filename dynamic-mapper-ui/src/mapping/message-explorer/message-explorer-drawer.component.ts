@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Component, inject, Input, OnInit, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -193,21 +194,21 @@ export class MessageExplorerDrawerComponent implements OnInit {
 
   async onStart(): Promise<void> {
     if (this.direction === 'INBOUND' && !this.selectedConnectorIdentifier) {
-      this.alertService.warning('Please select a connector.');
+      this.alertService.warning(gettext('Please select a connector.'));
       return;
     }
     if (this.direction === 'INBOUND' && (!this.topic || !this.topic.trim())) {
-      this.alertService.warning('Please enter a topic to listen on.');
+      this.alertService.warning(gettext('Please enter a topic to listen on.'));
       return;
     }
     const useSourceMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'source';
     const useTypeMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'deviceType';
     if (useSourceMode && this.selectedDeviceList.length === 0) {
-      this.alertService.warning('Please select a device or group to monitor.');
+      this.alertService.warning(gettext('Please select a device or group to monitor.'));
       return;
     }
     if (useTypeMode && !this.deviceTypeFilter.trim()) {
-      this.alertService.warning('Please enter a device type to monitor.');
+      this.alertService.warning(gettext('Please enter a device type to monitor.'));
       return;
     }
     const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);

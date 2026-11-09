@@ -650,6 +650,13 @@ dm_wait_for_subscription_present() {  # <device_id> [timeout_secs=30] [interval_
 }
 
 # Wait until no notification2 subscriptions exist for <device_id>.
+# Current entry count of a mapper cache (INVENTORY_CACHE | INBOUND_ID_CACHE | OUTBOUND_ID_CACHE),
+# the same figure the Monitoring > Cache statistic page shows. Outputs -1 when it cannot be read.
+dm_cache_size() {   # <cache_id>
+    dm_api GET "/cache?cacheId=$1" | jq -r 'if type == "number" then . else -1 end' 2>/dev/null \
+        || printf -- '-1'
+}
+
 dm_wait_for_subscription_absent() {  # <device_id> [timeout_secs=30] [interval_secs=1]
     local _device=$1 _timeout=${2:-30} _interval=${3:-1} _elapsed=0
     while [ "$_elapsed" -lt "$_timeout" ]; do
@@ -2446,6 +2453,72 @@ dm_pause_for_log_save() {   # [reason]
     else
         dm_warn "No terminal available — continuing without waiting (set DM_SKIP_LOG_PAUSE=1 to silence)"
     fi
+}
+
+# Restart the dynamic-mapper microservice for the current tenant, in either setup:
+#   * single-tenant: the app is owned by the current tenant -> disable/enable the app itself.
+#   * multi-tenant : the app is owned by the management tenant and only SUBSCRIBED here. A
+#     subtenant user cannot unsubscribe it (DELETE /tenant/tenants/<t>/applications/<id> -> 403).
+#     Then the restart needs a management-tenant session, or a manual restart:
+#       DM_RESTART_USER + DM_RESTART_PASSWORD [+ DM_RESTART_TENANT = management tenant id]
+#            [+ DM_RESTART_HOST = management tenant URL, if it differs from the subtenant's]
+#         -> management-tenant admin credentials, applied to the two subscribe calls only
+#            (the active session is untouched; C8Y_TOKEN is ignored for those calls).
+#       DM_RESTART_SESSION=<go-c8y-cli session file of a management-tenant admin>
+#         -> unsubscribe/re-subscribe THIS tenant ("$C8Y_TENANT") with that session.
+#       otherwise -> ask the user to restart the service by hand (needs a terminal), or
+#         skip the test (exit 42) when there is none.
+dm_restart_microservice() {   # [microservice-name]
+    local _name="${1:-${DM_MICROSERVICE_NAME:-dynamic-mapper-service}}"
+    local _app _app_id _owner _tenant="${C8Y_TENANT:-}"
+    _app=$(c8y microservices get --id "$_name" --output json </dev/null 2>/dev/null) \
+        || dm_error "Microservice '$_name' not found for tenant '${_tenant}'"
+    _app_id=$(printf '%s' "$_app" | jq -r '.id // empty')
+    _owner=$(printf '%s' "$_app" | jq -r '.owner.tenant.id // empty')
+
+    if [ -z "$_owner" ] || [ "$_owner" = "$_tenant" ]; then
+        dm_info "Single-tenant: '$_name' is owned by '${_tenant}' - disabling/re-enabling it"
+        c8y microservices disable --id "$_name" --force </dev/null
+        dm_wait 5 "service shutdown"
+        c8y microservices enable --id "$_name" --force </dev/null
+        return 0
+    fi
+
+    dm_info "Multi-tenant: '$_name' is owned by '$_owner' and subscribed by '${_tenant}'"
+    if [ -n "${DM_RESTART_USER:-}" ] && [ -n "${DM_RESTART_PASSWORD:-}" ]; then
+        local _mgmt="${DM_RESTART_TENANT:-$_owner}"
+        dm_info "Using credentials of '${DM_RESTART_USER}' (tenant '$_mgmt'${DM_RESTART_HOST:+, host $DM_RESTART_HOST}) to unsubscribe/re-subscribe '${_tenant}'"
+        env -u C8Y_TOKEN C8Y_USER="$DM_RESTART_USER" C8Y_PASSWORD="$DM_RESTART_PASSWORD" C8Y_TENANT="$_mgmt" ${DM_RESTART_HOST:+C8Y_HOST="$DM_RESTART_HOST"} \
+            c8y tenants applications disable --tenant "$_tenant" --application "$_app_id" --force </dev/null \
+            || dm_error "Unsubscribe of '$_name' from '${_tenant}' failed - are the credentials those of a '$_mgmt' admin?"
+        dm_wait 5 "service shutdown"
+        env -u C8Y_TOKEN C8Y_USER="$DM_RESTART_USER" C8Y_PASSWORD="$DM_RESTART_PASSWORD" C8Y_TENANT="$_mgmt" ${DM_RESTART_HOST:+C8Y_HOST="$DM_RESTART_HOST"} \
+            c8y tenants applications enable --tenant "$_tenant" --application "$_app_id" --force </dev/null \
+            || dm_error "Re-subscribe of '$_name' to '${_tenant}' failed"
+        return 0
+    fi
+    if [ -n "${DM_RESTART_SESSION:-}" ]; then
+        dm_info "Using management session '${DM_RESTART_SESSION}' to unsubscribe/re-subscribe '${_tenant}'"
+        c8y tenants applications disable --session "$DM_RESTART_SESSION" \
+            --tenant "$_tenant" --application "$_app_id" --force </dev/null \
+            || dm_error "Unsubscribe of '$_name' from '${_tenant}' failed - does the session belong to '$_owner'?"
+        dm_wait 5 "service shutdown"
+        c8y tenants applications enable --session "$DM_RESTART_SESSION" \
+            --tenant "$_tenant" --application "$_app_id" --force </dev/null \
+            || dm_error "Re-subscribe of '$_name' to '${_tenant}' failed"
+        return 0
+    fi
+
+    if [ -r /dev/tty ] && { : </dev/tty; } 2>/dev/null; then
+        printf "\n${_C_YELLOW}Manual restart needed${_C_RESET}: a '%s' user cannot unsubscribe '%s'.\n" "$_tenant" "$_name" >&2
+        printf "As '%s' unsubscribe and re-subscribe tenant '%s' (or restart the service),\n" "$_owner" "$_tenant" >&2
+        printf "or rerun with DM_RESTART_USER/DM_RESTART_PASSWORD (management tenant admin).\n" >&2
+        printf "Press ENTER once the service has been restarted (Ctrl-C to abort) ... " >&2
+        read -r _ </dev/tty || true
+        printf "\n" >&2
+        return 0
+    fi
+    dm_skip_exit "Multi-tenant setup: restart needs '$_owner' rights. Set DM_RESTART_USER/DM_RESTART_PASSWORD (or DM_RESTART_SESSION) or run with a terminal."
 }
 
 # Notification 2.0 subscriptions of a device via the raw REST response ({"subscriptions":[...]}).

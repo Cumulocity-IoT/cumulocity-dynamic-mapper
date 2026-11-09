@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -48,12 +48,13 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
 
     private final String tenant;
     private final C8YAgent c8yAgent;
-    private final NotificationSubscriber notificationSubscriber;
+    private final NotificationClientOperations notificationSubscriber;
 
-    public CacheInventoryUpdateClient(ServiceRegistry serviceRegistry, String tenant) {
+    public CacheInventoryUpdateClient(NotificationClientOperations notificationSubscriber, ServiceRegistry serviceRegistry,
+            String tenant) {
         this.tenant = tenant;
         this.c8yAgent = serviceRegistry.getC8yAgent();
-        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
+        this.notificationSubscriber = notificationSubscriber;
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);
     }
 
@@ -113,10 +114,21 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             String notificationTenant = NotificationHelper.extractTenant(
                 notification.getNotificationHeaders(), tenant);
 
-            Map<String, Object> payload = NotificationHelper.parsePayload(notification.getMessage());
-            String sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
+            // A DELETE notification has an empty body, so the id comes from the channel header.
+            String message = notification.getMessage();
+            String sourceId = null;
+            if (message != null && !message.isBlank()) {
+                Map<String, Object> payload = NotificationHelper.parsePayload(message);
+                sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
+            }
+            if (sourceId == null) {
+                sourceId = NotificationHelper.extractSourceIdFromHeaders(notification.getNotificationHeaders());
+            }
 
-            if (sourceId != null) {
+            if (sourceId == null) {
+                log.warn("{} - DELETE notification without a resolvable source id, cache not evicted. headers={}",
+                        notificationTenant, notification.getNotificationHeaders());
+            } else {
                 c8yAgent.evictDeletedManagedObjectFromCaches(notificationTenant, sourceId);
 
                 ManagedObjectRepresentation mor = new ManagedObjectRepresentation();

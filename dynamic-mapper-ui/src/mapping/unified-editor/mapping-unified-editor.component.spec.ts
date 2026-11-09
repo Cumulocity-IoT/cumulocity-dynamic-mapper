@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,12 +29,8 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingUnifiedEditorComponent } from './mapping-unified-editor.component';
-import {
-  CommitBlocker,
-  CommitResult,
-  EditorSessionResult,
-  MappingStepperService
-} from '../service/mapping-stepper.service';
+import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
+import { CommitBlocker, CommitResult, MappingCommitService } from '../service/mapping-commit.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingService } from '../core/mapping.service';
@@ -50,6 +46,7 @@ import {
   Feature,
   Qos
 } from '../../shared';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
@@ -71,6 +68,7 @@ describe('MappingUnifiedEditorComponent', () => {
   let component: MappingUnifiedEditorComponent;
   let fixture: ComponentFixture<MappingUnifiedEditorComponent>;
   let mockStepperService: jasmine.SpyObj<MappingStepperService>;
+  let mockCommitService: jasmine.SpyObj<MappingCommitService>;
   let mockSubstitutionService: jasmine.SpyObj<SubstitutionManagementService>;
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
@@ -82,7 +80,6 @@ describe('MappingUnifiedEditorComponent', () => {
   let mockSubscriptionService: jasmine.SpyObj<SubscriptionService>;
   let activatedRoute: { snapshot: { data: Record<string, any> } };
 
-  let isButtonDisabled$: Subject<boolean>;
   let isSubstitutionValid$: Subject<boolean>;
   let mappingPropertyChanged$: Subject<Mapping>;
 
@@ -141,7 +138,7 @@ describe('MappingUnifiedEditorComponent', () => {
   const deploymentMapEntry: DeploymentMapEntry = { identifier: '42', connectors: ['c1'] };
 
   // Default stand-in for MappingStepperService.initializeEditorSession()'s return value — the
-  // real logic behind it is unit tested directly on the service (mapping-stepper.service.spec.ts);
+  // real logic behind it is unit tested directly on the service (mapping-commit.service.spec.ts);
   // these component tests only need a realistic-shaped result to apply onto their own fields.
   const buildEditorSessionResult = (overrides: Partial<EditorSessionResult> = {}): EditorSessionResult => ({
     stepperViewModel: {} as any,
@@ -174,10 +171,10 @@ describe('MappingUnifiedEditorComponent', () => {
   });
 
   beforeEach(async () => {
-    isButtonDisabled$ = new Subject<boolean>();
     isSubstitutionValid$ = new Subject<boolean>();
     mappingPropertyChanged$ = new Subject<Mapping>();
 
+    mockCommitService = jasmine.createSpyObj<MappingCommitService>('MappingCommitService', ['commitMapping', 'encodeMappingForCommit']);
     mockStepperService = jasmine.createSpyObj(
       'MappingStepperService',
       [
@@ -202,16 +199,11 @@ describe('MappingUnifiedEditorComponent', () => {
         'computeExtensionItems',
         'createCodeTemplateAndRefresh',
         'initializeEditorSession',
-        'registerCompletionProvider',
-        'encodeMappingForCommit',
-        'commitMapping'
+        'registerCompletionProvider'
       ],
       {
-        countDeviceIdentifiers$: of(0),
         isSubstitutionValid$: isSubstitutionValid$,
-        isContentChangeValid$: new Subject(),
         extensionEvents$: of([]),
-        isButtonDisabled$: isButtonDisabled$,
         sourceCustomMessage$: of(''),
         targetCustomMessage$: of(''),
         mappingPropertyChanged$: mappingPropertyChanged$
@@ -238,8 +230,10 @@ describe('MappingUnifiedEditorComponent', () => {
       'saveDraft',
       'createMapping',
       'refreshMappings',
+      'reloadMappings',
       'updateDefinedDeploymentMapEntry'
     ]);
+    mockMappingService.reloadMappings.and.resolveTo();
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
     mockGlobalContextService = jasmine.createSpyObj('GlobalContextService', ['register', 'unregister']);
     mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']);
@@ -279,6 +273,7 @@ describe('MappingUnifiedEditorComponent', () => {
       imports: [MappingUnifiedEditorComponent],
       providers: [
         { provide: MappingStepperService, useValue: mockStepperService },
+        { provide: MappingCommitService, useValue: mockCommitService },
         { provide: SubstitutionManagementService, useValue: mockSubstitutionService },
         { provide: SharedService, useValue: mockSharedService },
         { provide: AlertService, useValue: mockAlertService },
@@ -292,7 +287,8 @@ describe('MappingUnifiedEditorComponent', () => {
         // The component injects SubscriptionService, whose real constructor takes a
         // FetchClient the test injector cannot provide (NG0201). It is only used for
         // validateSubscriptionOutbound(), so a spy is enough.
-        { provide: SubscriptionService, useValue: mockSubscriptionService }
+        { provide: SubscriptionService, useValue: mockSubscriptionService },
+        provideTranslateStub()
       ]
     }).compileComponents();
 
@@ -318,7 +314,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('opens on the Transformation tab for a regular mapping', async () => {
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_DEFINE_TRANSFORMATION);
+      expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
     });
 
     it('opens on the General-settings tab for an EXTENSION_JAVA mapping', async () => {
@@ -326,7 +322,7 @@ describe('MappingUnifiedEditorComponent', () => {
         transformationType: TransformationType.EXTENSION_JAVA
       });
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_GENERAL_SETTINGS);
+      expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
     it('opens on the General-settings tab for a PROTOBUF_INTERNAL mapping', async () => {
@@ -334,12 +330,12 @@ describe('MappingUnifiedEditorComponent', () => {
         mappingType: MappingType.PROTOBUF_INTERNAL
       });
       await component.ngOnInit();
-      expect(component.activeTabIndex).toBe(TAB_GENERAL_SETTINGS);
+      expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
     // The real bootstrap logic (view model, systems, schemas, read-only gating, code-editor help
     // text, ...) moved into MappingStepperService.initializeEditorSession() (Phase 4) and is unit
-    // tested directly there (mapping-stepper.service.spec.ts). These tests only verify the
+    // tested directly there (mapping-commit.service.spec.ts). These tests only verify the
     // component delegates to it and applies the result back onto its own fields.
     it('delegates to initializeEditorSession with its own mapping/config/destroy$/callbacks', async () => {
       await component.ngOnInit();
@@ -353,9 +349,9 @@ describe('MappingUnifiedEditorComponent', () => {
           onSelectExtensionEvent: jasmine.any(Function),
           getSourceTemplate: jasmine.any(Function),
           setSourceTemplate: jasmine.any(Function)
-        })
-        // No 5th argument — unlike the stepper, the unified editor uses the default
-        // (disableExtensionSelectorsWhenHidden = false).
+        }),
+        // Unlike the stepper (true), the unified editor does not disable the extension controls.
+        false
       );
     });
 
@@ -475,7 +471,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('revalidates substitutions against the newly active tab index', async () => {
       await component.onTabSelected(TAB_DEFINE_TRANSFORMATION);
-      expect(component.activeTabIndex).toBe(TAB_DEFINE_TRANSFORMATION);
+      expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
       expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
       expect(mockStepperService.refreshSubstitutionValidity).toHaveBeenCalled();
     });
@@ -495,14 +491,14 @@ describe('MappingUnifiedEditorComponent', () => {
 
   /**
    * The persistence sequence itself (encode, saveDraft vs createMapping, deployment write,
-   * refresh) moved to {@link MappingStepperService.commitMapping} in Phase 6 and is unit tested
-   * there against the full CommitResult matrix (mapping-stepper.service.spec.ts). What remains
+   * refresh) moved to {@link MappingCommitService.commitMapping} in Phase 6 and is unit tested
+   * there against the full CommitResult matrix (mapping-commit.service.spec.ts). What remains
    * here is the unified editor's OWN responsibility: assembling the request, and turning each
    * result status into navigation, an alert, or a tab.
    */
   describe('onCommitButton', () => {
     function commitResolvesTo(result: CommitResult): void {
-      mockStepperService.commitMapping.and.resolveTo(result);
+      mockCommitService.commitMapping.and.resolveTo(result);
     }
 
     /** A successful commit, carrying the server's copy as `persisted`. */
@@ -534,7 +530,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
       await component.onCommitButton();
 
-      expect(mockStepperService.commitMapping).toHaveBeenCalledWith(jasmine.objectContaining({
+      expect(mockCommitService.commitMapping).toHaveBeenCalledWith(jasmine.objectContaining({
         mapping: component.mapping,
         deploymentMapEntry,
         stepperConfiguration: component.stepperConfiguration,
@@ -555,7 +551,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
       await component.onCommitButton();
 
-      expect(mockStepperService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
+      expect(mockCommitService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
     });
 
     it('alerts and closes the editor on a successful save', async () => {
@@ -591,11 +587,11 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('re-baselines so an immediate second save writes neither a draft nor the deployment', async () => {
       await component.onCommitButton();
-      mockStepperService.commitMapping.calls.reset();
+      mockCommitService.commitMapping.calls.reset();
 
       await component.onCommitButton();
 
-      const second = mockStepperService.commitMapping.calls.mostRecent().args[0];
+      const second = mockCommitService.commitMapping.calls.mostRecent().args[0];
       // Same snapshot values the service compares against => contentChanged/deploymentChanged false.
       expect(second.initialDeploymentConnectors).toBe(JSON.stringify(deploymentMapEntry.connectors));
       expect(second.initialContentSnapshot).toEqual(
@@ -612,12 +608,12 @@ describe('MappingUnifiedEditorComponent', () => {
       ];
 
       for (const [blocker, tab] of cases) {
-        component.activeTabIndex = TAB_TEST_MAPPING;
+        component.currentStepIndex = TAB_TEST_MAPPING;
         commitResolvesTo({ status: 'blocked', blocker });
 
         await component.onCommitButton();
 
-        expect(component.activeTabIndex).withContext(blocker).toBe(tab);
+        expect(component.currentStepIndex).withContext(blocker).toBe(tab);
       }
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
@@ -733,7 +729,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
     it('does not ask again after a successful save', async () => {
       component.mapping.name = 'edited';
-      mockStepperService.commitMapping.and.resolveTo({
+      mockCommitService.commitMapping.and.resolveTo({
         status: 'saved', contentChanged: true, deploymentChanged: false, persisted: component.mapping
       });
 
@@ -752,13 +748,16 @@ describe('MappingUnifiedEditorComponent', () => {
   });
 
   describe('Deployment map entry changes', () => {
-    it('disables the save button when no connectors are assigned', (done) => {
-      component.deploymentMapEntry = { identifier: '42', connectors: [] };
-      isButtonDisabled$.subscribe((disabled) => {
-        expect(disabled).toBe(true);
-        done();
-      });
+    it('disables the save button when no connectors are assigned', () => {
       component.deploymentMapEntryChange({ identifier: '42', connectors: [] });
+
+      expect(component.connectorSelectionEmpty()).toBeTrue();
+    });
+
+    it('enables the save button once a connector is assigned', () => {
+      component.deploymentMapEntryChange({ identifier: '42', connectors: ['c1'] });
+
+      expect(component.connectorSelectionEmpty()).toBeFalse();
     });
   });
 

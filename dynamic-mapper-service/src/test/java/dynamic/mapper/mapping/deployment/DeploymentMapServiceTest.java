@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -205,8 +205,8 @@ class DeploymentMapServiceTest {
         service.updateDeployment(TENANT, "m1", List.of("c1"));
         service.removeMappingDeployment(TENANT, "m1");
 
-        service.removeTenantDeploymentMap(TENANT);
-        service.initializeTenantDeploymentMap(TENANT, false);
+        service.removeTenant(TENANT);
+        service.initializeTenant(TENANT, false);
 
         assertTrue(service.getDeploymentMap(TENANT).isEmpty());
         assertTrue(rep.getDeploymentMap().isEmpty());

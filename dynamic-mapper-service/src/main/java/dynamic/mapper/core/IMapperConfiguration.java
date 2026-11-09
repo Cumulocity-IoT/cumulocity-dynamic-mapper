@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,8 +25,8 @@ import dynamic.mapper.model.MapperServiceRepresentation;
 
 /**
  * Narrow interface exposing the per-tenant mapper service representation.
- * C8YAgent depends on this interface rather than the concrete
- * ServiceRegistry to sever the direct circular dependency.
+ * {@code TenantRegistry} implements it. {@code C8YAgent} and the other beans that need only this lookup
+ * depend on the interface, not on {@code ServiceRegistry}, which itself depends on {@code C8YAgent}.
  */
 public interface IMapperConfiguration {
     MapperServiceRepresentation getMapperServiceRepresentation(String tenant);

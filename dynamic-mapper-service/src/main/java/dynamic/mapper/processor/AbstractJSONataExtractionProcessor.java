@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -151,6 +151,17 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                 && substitution.getExpandArray()) {
             // Extracted result is an array, iterate over elements
             var extractedSourceContentCollection = (Collection<?>) extractedSourceContent;
+            if (extractedSourceContentCollection.isEmpty()) {
+                // Nothing to fan out. Treat it like a missing source value, so the repair
+                // strategy decides, instead of leaving the target with zero cached values
+                // (which would surface as a "NOT_DEFINED" marker in the request).
+                context.getWarnings().add(String.format(
+                        "Expand as array: expression '%s' (for target '%s') returned an empty array;"
+                                + " handling it like a missing value",
+                        substitution.getPathSource(), substitution.getPathTarget()));
+                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, null,
+                        substitution, mapping);
+            }
             for (Object element : extractedSourceContentCollection) {
                 SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, element,
                         substitution, mapping);

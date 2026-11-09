@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -68,7 +68,7 @@ public class MappingsRepresentationTest {
                 });
 
         // Setup repository to return empty list by default
-        lenient().when(mappingRepository.findAll(anyString(), any(), any()))
+        lenient().when(mappingRepository.findAll(anyString(), any(), any(), any()))
                 .thenReturn(new ArrayList<>());
 
         // Create the validator with mocked dependencies

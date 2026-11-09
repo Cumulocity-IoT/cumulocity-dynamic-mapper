@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,27 +21,20 @@
 
 package dynamic.mapper.controller;
 
-import java.util.HashMap;
+import dynamic.mapper.notification.NotificationSubscriber;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
-import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.connector.core.client.ConnectorException;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -67,7 +60,9 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.status.LoggingEventType;
 import org.joda.time.DateTime;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.mapping.deployment.DeploymentMapService;
 import dynamic.mapper.mapping.status.MappingStatusService;
@@ -91,12 +86,16 @@ public class OperationController {
 
     private final ConnectorRegistry connectorRegistry;
     private final MappingService mappingService;
+    private final MappingOrchestrationService mappingOrchestrationService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
-    private final BootstrapService bootstrapService;
+    private final CodeTemplateLoader codeTemplateLoader;
+    private final ConnectorLifecycleService connectorLifecycleService;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
+    private final NotificationSubscriber notificationSubscriber;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final CacheManager cacheManager;
     private final DeploymentMapService deploymentMapService;
     private final MappingStatusService mappingStatusService;
@@ -294,7 +293,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {
-        serviceRegistry.clearCacheDeviceToClient(tenant);
+        deviceToClientRegistry.clearCacheDeviceToClient(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -305,39 +304,13 @@ public class OperationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'direction' is required");
         }
         Direction direction = Direction.valueOf(directionParam);
-        if (direction.equals(Direction.INBOUND)) {
-            String samples = serviceConfigurationService.getSampleMappingsInbound_01();
-            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
-            });
-            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.INBOUND);
-            mappings.forEach(mapping -> {
-                AtomicBoolean alreadyExits = new AtomicBoolean(false);
-                existingMappings.forEach(existingMapping -> {
-                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
-                        alreadyExits.set(true);
-                });
-                if (!alreadyExits.get()) {
-                    mapping.setActive(false);
-                    mappingService.createMapping(tenant, mapping);
-                }
-            });
-        } else {
-            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.OUTBOUND);
-            String samples = serviceConfigurationService.getSampleMappingsOutbound_01();
-            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
-            });
-            mappings.forEach(mapping -> {
-                AtomicBoolean alreadyExits = new AtomicBoolean(false);
-                existingMappings.forEach(existingMapping -> {
-                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
-                        alreadyExits.set(true);
-                });
-                if (!alreadyExits.get()) {
-                    mapping.setActive(false);
-                    mappingService.createMapping(tenant, mapping);
-                }
-            });
-        }
+        String samples = direction.equals(Direction.INBOUND)
+                ? serviceConfigurationService.getSampleMappingsInbound_01()
+                : serviceConfigurationService.getSampleMappingsOutbound_01();
+        List<Mapping> sampleMappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+        });
+        mappingService.addSampleMappings(tenant, direction.equals(Direction.INBOUND) ? Direction.INBOUND
+                : Direction.OUTBOUND, sampleMappings);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -345,7 +318,7 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Init system code template", tenant);
 
-        serviceConfigurationService.initCodeTemplates(serviceConfiguration, true);
+        codeTemplateLoader.initCodeTemplates(serviceConfiguration, true);
 
         try {
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
@@ -366,41 +339,16 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        // Rebuild all caches at once
-        mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
-
-        // Reconcile each connector against the freshly rebuilt caches and the deployment map.
-        // This (un)subscribes inbound mappings and rebuilds the effective outbound set, so that
-        // mappings removed/un-deployed since the last reload are also dropped (not just added).
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        connectorMap.values().forEach(client -> {
-            try {
-                client.reconcileSubscriptions();
-            } catch (Exception e) {
-                log.error("{} - Error reloading mappings for connector {}",
-                        tenant, client.getConnectorIdentifier(), e);
-            }
-        });
-
+        mappingOrchestrationService.reloadMappings(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
-        deploymentMapService.initializeTenantDeploymentMap(tenant, true);
+        deploymentMapService.initializeTenant(tenant, true);
 
         // Apply the now-empty deployment live (same as a deployment PUT): without this,
         // connectors keep their inbound subscriptions until a reconnect or reload.
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        if (connectorMap != null) {
-            connectorMap.values().forEach(client -> {
-                try {
-                    client.reconcileSubscriptions();
-                } catch (Exception e) {
-                    log.error("{} - Error reconciling connector {} after deployment map reset",
-                            tenant, client.getConnectorIdentifier(), e);
-                }
-            });
-        }
+        mappingOrchestrationService.reconcileConnectors(tenant, id -> true);
 
         c8YAgent.createLoggingEvent(
                 "Deployment map reset: all mappings are now undeployed",
@@ -427,28 +375,8 @@ public class OperationController {
         String version = (versionParam != null && !versionParam.isBlank()) ? versionParam.trim() : null;
         Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, version);
 
-        // Only the connectors this mapping is deployed to can have a subscription to
-        // (un)register; other connectors were never subscribed and reconcile independently
-        // when the deployment map itself changes (see DeploymentController). Mirrors
-        // MappingController's notifyDeployedConnectorsInbound for create/update.
-        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, updatedMapping.getIdentifier());
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        Map<String, String> failed = new HashMap<>();
-        for (AConnectorClient client : connectorMap.values()) {
-            if (!deployedConnectorIds.contains(client.getConnectorIdentifier())) {
-                continue;
-            }
-            if (updatedMapping.getDirection() == Direction.INBOUND) {
-                if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
-                    ConnectorConfiguration conf = client.getConnectorConfiguration();
-                    failed.put(conf.getIdentifier(), conf.getName());
-                }
-            } else {
-                client.updateSubscriptionForOutbound(updatedMapping, false, true);
-            }
-        }
-
-        if (failed.size() > 0) {
+        Map<String, String> failed = mappingOrchestrationService.applyActivation(tenant, updatedMapping);
+        if (!failed.isEmpty()) {
             return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
         }
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -494,7 +422,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
-        mappingStatusService.initializeTenantStatus(tenant, true);
+        mappingStatusService.initializeTenant(tenant, true);
         mappingService.sendMappingStatus(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -505,104 +433,33 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
-        serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        notificationSubscriber.notificationSubscriberReconnect(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters)
-            throws JsonProcessingException, ConnectorRegistryException, ConnectorException {
+    private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters) {
         String connectorIdentifier = parameters.get("connectorIdentifier");
         if (connectorIdentifier == null || connectorIdentifier.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'connectorIdentifier' is required");
         }
-        ConnectorConfiguration configuration = connectorConfigurationService
-                .getConnectorConfiguration(connectorIdentifier, tenant);
-
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService
-                .getServiceConfiguration(tenant);
-
-        // Must be set and persisted before triggering the connection, because
-        // AConnectorClient.loadConfiguration() reloads from persistence inside submitConnect().
-        // If we save after, loadConfiguration() reads enabled=false and shouldConnect() returns false.
-        configuration.setEnabled(true);
-        connectorConfigurationService.saveConnectorConfiguration(configuration);
-
-        // If the client is already registered (e.g. DISCONNECTED after a failed startup),
-        // reconnect it directly. initializeConnectorByConfiguration uses putIfAbsent, so the
-        // old client would stay in the registry and the new one would be silently dropped,
-        // leaving the registered client's status unchanged.
-        AConnectorClient existingClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-        Future<?> connectTask;
-        if (existingClient != null) {
-            log.info("{} - Client {} already registered, reconnecting existing client", tenant, configuration.getName());
-            connectTask = existingClient.reconnect();
-        } else {
-            connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
-                    tenant);
+        try {
+            connectorLifecycleService.connect(tenant, connectorIdentifier);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
-
-        // Wait up to 10s for fast connections; if still connecting after timeout just
-        // return success — the async task continues in the background.
-        if (connectTask != null) {
-            try {
-                connectTask.get(10, TimeUnit.SECONDS);
-            } catch (TimeoutException e) {
-                log.info("{} - Connector {} still connecting after 10s, returning success (async)", tenant,
-                        configuration.getName());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("{} - Interrupted while waiting for connector to connect: {}", tenant, configuration.getName());
-            } catch (Exception e) {
-                log.error("{} - Connector {} failed to connect: {}", tenant, configuration.getName(), e.getMessage(), e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-            }
-        }
-
-        // Reconnect outbound notification subscriptions after the connector is ready
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-        if (client != null && client.supportedDirections().contains(Direction.OUTBOUND)) {
-            serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-        }
-
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleDisconnect(String tenant, Map<String, String> parameters)
-            throws JsonProcessingException, ConnectorRegistryException {
+    private ResponseEntity<?> handleDisconnect(String tenant, Map<String, String> parameters) {
         String connectorIdentifier = parameters.get("connectorIdentifier");
         if (connectorIdentifier == null || connectorIdentifier.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'connectorIdentifier' is required");
         }
-        ConnectorConfiguration configuration = connectorConfigurationService
-                .getConnectorConfiguration(connectorIdentifier, tenant);
-        if (configuration == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No connector configuration found for identifier: " + connectorIdentifier);
+        try {
+            connectorLifecycleService.disconnect(tenant, connectorIdentifier);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
-
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-        if (client == null) {
-            // Connector is not actively running — mark as disabled and return success
-            log.info("{} - Connector {} is not active, marking as disabled", tenant, configuration.getName());
-            configuration.setEnabled(false);
-            connectorConfigurationService.saveConnectorConfiguration(configuration);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        }
-
-        configuration.setEnabled(false);
-        connectorConfigurationService.saveConnectorConfiguration(configuration);
-        bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
-        // Reconnect other notification clients for remaining connectors
-        boolean reconnected = serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-        if (!reconnected) {
-            // Connector is disconnected and marked disabled locally, but reconnecting the
-            // remaining notification subscriptions against Cumulocity failed (e.g. backend
-            // temporarily unavailable) - surface this instead of silently reporting success.
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Connector " + (configuration.getName() != null ? configuration.getName() : connectorIdentifier)
-                            + " was disconnected, but reconnecting remaining notification subscriptions failed");
-        }
-
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -637,7 +494,7 @@ public class OperationController {
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("FLOW_STATE_CACHE".equals(cacheId)) {
-            flowStateStore.clearTenantState(tenant);
+            flowStateStore.removeTenant(tenant);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

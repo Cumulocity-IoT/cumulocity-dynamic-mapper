@@ -1,5 +1,73 @@
 # Dynamic Mapper Service for Cumulocity
 
+## Release 6.6.1 (in development)
+
+### Acknowledgement and retries (behaviour change)
+
+A message is now acknowledged only after the mapping pipeline settled it. One rule applies to every connector:
+acknowledge on success, on a client error (4xx), and on a mapping error without an HTTP status; do not acknowledge on
+a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the broker redelivers.
+
+- **AMQP, Kafka, the HTTP connector.** Before, AMQP 0-9-1 never sent an ack for at-least-once subscriptions (the callback
+  had no channel), AMQP 1.0 and the HTTP connector acknowledged before the pipeline finished, and Kafka could commit
+  past a failed record. The HTTP connector now answers `500` when the pipeline fails or times out, so the sender can
+  retry. Kafka seeks the partition back to the failed record.
+- **Google Pub/Sub** no longer redelivers client errors and mapping errors without an HTTP status (it nacked every
+  error before). A cancelled pipeline is nacked.
+- **New setting `maxProcessingAttempts`** (Service configuration, Processing tab, default 5, minimum 1): after this many
+  failures of the same message, MQTT, Pulsar, the Cumulocity MQTT Service, Kafka, AMQP 0-9-1, and Pub/Sub acknowledge
+  and drop it, and the error stays in the mapping status. MQTT and Pulsar dropped after 5 before; MQTT now also drops
+  when `reconnectOnProcessingError` is off. AMQP 1.0 now also uses this limit. Existing configurations get the default.
+- **Outbound notifications (`CustomWebSocketClient`)** use the same rule and the same `maxProcessingAttempts`. A webhook
+  answering 5xx is still retried and a 4xx is not. A timeout now waits for the worker to leave, as on every other
+  connector.
+- **REST polling skips a page that keeps failing.** Before, a polled page whose processing failed was retried forever
+  and blocked the topic. Now, after `maxProcessingAttempts` failures of the same page, the connector skips it: the
+  cursor moves on, the data of that page is not processed, and the skip is recorded as the mapping's last error and in
+  the log. A failed HTTP fetch still escalates `RETRYING` to `FAILED` and is not counted, and neither is a failure
+  with a server error (HTTP 5xx), so an outage of Cumulocity never skips data.
+- A Smart Function leg cancelled by the pipeline timeout counts as a failure. An empty result from a Java extension is
+  ignored, not a failure.
+
+### State in Smart Functions and Java extensions (behaviour change)
+
+- A message writes back only the state keys it changed, so a message that only reads state no longer reverts what
+  concurrent messages wrote, and `setState(key, null)` no longer loses the whole update. Two messages writing the same
+  key still race.
+- **Java extension state is now saved** (`setNativeState`), for inbound and outbound extensions. It was loaded but
+  never saved before. It is not saved when the extension throws.
+- **The flow state lifetime is per mapping.** A mapping's state expires when that mapping has not written it for
+  `flowStateRetention` minutes. Before, one timer covered the whole tenant. A read does not restart the timer.
+
+### Telemetry export with OpenTelemetry (OTLP)
+
+The service now exports logs, traces, and metrics over OTLP (`http/protobuf`). The default endpoint is
+`http://cumulocity-grafana-alloy:4318`, configured in `application-prod.properties`.
+
+- **Metrics.** All Micrometer meters (prefix `dynmapper_`) and the JVM runtime metrics (memory, GC, threads, CPU) are
+  exported every 15 seconds. The inbound and outbound message, error, and processing-time meters carry the tags
+  `tenant`, `connectorName`, and `connectorType`. Further meters cover Cumulocity request time, free Cumulocity
+  connections, identity and inventory cache sizes and hits, and the connector status (`dynmapper_connector_status`,
+  the `ConnectorStatus` ordinal).
+- **Dashboards.** Two Grafana dashboards for these metrics are in `resources/grafana`.
+- **Configuration.** Set `OTEL_EXPORTER_OTLP_ENDPOINT` to use another collector, add credentials with
+  `otel.exporter.otlp.headers` for a hosted gateway such as Grafana Cloud, or set `OTEL_SDK_DISABLED=true` to turn the
+  export off.
+- **An unreachable collector does not affect message processing.** Export runs on its own threads. If the collector is
+  down, for example while the Alloy microservice restarts, the service logs `Failed to export ... The request could not
+  be executed` with a timeout and drops that batch.
+- When a tenant unsubscribes, the service removes that tenant's meters.
+
+### Other fixes
+
+- **Multi-tenancy: complete cleanup when a sub-tenant unsubscribes.** Connectors now stop first, and the service waits
+  for a running housekeeping cycle, which removes the `NullPointerException` ("Error during housekeeping: null") logged
+  after an unsubscribe. A failing step no longer skips the later ones. The service now also removes the device-to-client
+  maps, extension classloaders, notification callbacks and tokens, Explorer sessions, and per-tenant metrics.
+- The `SHARED` code template cannot be deleted (answer `406`); engine creation tolerates a tenant without it.
+- Creating a connector (for example by import) drops secrets still masked as `****`; they must be entered again.
+- `GET /mapping/version-counts` and `GET /extension` need the Admin or Create role.
+
 ## Release 6.5.3
 
 ### Mapping testing: Dry Run and Live Test (behaviour change)

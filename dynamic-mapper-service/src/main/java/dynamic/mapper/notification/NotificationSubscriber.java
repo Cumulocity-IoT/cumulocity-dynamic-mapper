@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,11 +21,12 @@
 
 package dynamic.mapper.notification;
 
+import dynamic.mapper.core.InventoryCacheSubscriptionRequest;
+import dynamic.mapper.core.TenantScoped;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.service.*;
@@ -33,13 +34,16 @@ import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import org.springframework.core.annotation.Order;
 
 /**
  * Facade/Orchestrator for notification subscription management.
@@ -48,24 +52,30 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationSubscriber {
+@Order(TenantScoped.ORDER_NOTIFICATIONS)
+public class NotificationSubscriber implements TenantScoped, NotificationClientOperations {
 
     private final SubscriptionManager subscriptionManager;
     private final NotificationConnectionManager connectionManager;
     private final MqttPushManager mqttPushManager;
     private final TokenManager tokenManager;
     private final MessagingManagementService messagingManagementService;
-    private final ConnectorRegistry connectorRegistry;
+    private final OutboundDispatcherRegistry dispatcherRegistry;
     private final DeviceDiscoveryService deviceDiscoveryService;
 
     @Getter
     private final SubscriptionQueryService queryService;
 
-    // === Lifecycle Methods ===
-
-    public void addSubscriber(String tenant, String identifier, OutboundMessageDispatcher dispatcherOutbound) {
-        connectorRegistry.addSubscriber(tenant, identifier, dispatcherOutbound);
+    /**
+     * Hands this bean to the connection manager, which creates the WebSocket clients that call back into it.
+     * Done here, not through constructor injection, because that would be a dependency cycle.
+     */
+    @PostConstruct
+    void registerWithConnectionManager() {
+        connectionManager.setClientOperations(this);
     }
+
+    // === Lifecycle Methods ===
 
     public void initializeDeviceClient(String tenant) {
         connectionManager.initializeDynamicDeviceClient(tenant);
@@ -94,6 +104,40 @@ public class NotificationSubscriber {
         connectionManager.disconnect(tenant);
     }
 
+    /** Nothing to create: connections and tokens are set up when connectors and subscriptions start. */
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        dispatcherRegistry.initializeTenant(ctx.tenant());
+    }
+
+    @Override
+    public void stopTenant(String tenant) {
+        disconnect(tenant);
+    }
+
+    /**
+     * Unsubscribes the tenant's Notification 2.0 tokens on the platform, then drops all per-tenant state.
+     * Runs after {@link #stopTenant}. Not used for reconnects, see {@link #disconnect(String)}.
+     */
+    @Override
+    public void removeTenant(String tenant) {
+        dispatcherRegistry.removeTenant(tenant);
+        try {
+            unsubscribeDeviceSubscriber(tenant);
+        } catch (Exception e) {
+            log.error("{} - Error unsubscribing device subscriber: {}", tenant, e.getMessage(), e);
+        }
+        try {
+            unsubscribeDeviceGroupSubscriber(tenant); // reads the management token: before removeTenant of tokens
+        } catch (Exception e) {
+            log.error("{} - Error unsubscribing device group subscriber: {}", tenant, e.getMessage(), e);
+        }
+        connectionManager.removeTenant(tenant);
+        tokenManager.removeTenant(tenant);
+        subscriptionManager.removeTenant(tenant);
+        deviceDiscoveryService.removeTenant(tenant);
+    }
+
     // === Device Subscription Methods ===
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
@@ -115,6 +159,16 @@ public class NotificationSubscriber {
     public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
             String tenant, ManagedObjectRepresentation mor) {
         return subscriptionManager.subscribeByDeviceGroup(tenant, mor);
+    }
+
+    /** Carries out the inventory-cache subscription changes that {@code CacheManager} and the enrichment service request. */
+    @EventListener
+    public void onInventoryCacheSubscriptionRequest(InventoryCacheSubscriptionRequest request) {
+        switch (request.action()) {
+            case SUBSCRIBE -> subscribeMOForInventoryCacheUpdates(request.tenant(), request.mor());
+            case UNSUBSCRIBE -> unsubscribeMOForInventoryCacheUpdates(request.tenant(), request.mor());
+            case UNSUBSCRIBE_ALL -> unsubscribeAllMOForInventoryCacheUpdates(request.tenant());
+        }
     }
 
     public Future<NotificationSubscriptionRepresentation> subscribeMOForInventoryCacheUpdates(
@@ -376,7 +430,7 @@ public class NotificationSubscriber {
         log.info("{} - Removing connector {}", tenant, connectorIdentifier);
         
         // Remove subscriber from registry
-        connectorRegistry.removeSubscriber(tenant, connectorIdentifier);
+        dispatcherRegistry.remove(tenant, connectorIdentifier);
         
         // Handle connection cleanup
         connectionManager.handleConnectorRemoval(tenant, connectorIdentifier);
@@ -391,7 +445,7 @@ public class NotificationSubscriber {
         log.info("{} - Adding connector {}", tenant, connectorIdentifier);
         
         // Add subscriber to registry
-        connectorRegistry.addSubscriber(tenant, connectorIdentifier, dispatcherOutbound);
+        dispatcherRegistry.add(tenant, connectorIdentifier, dispatcherOutbound);
         
         log.info("{} - Successfully added connector {}", tenant, connectorIdentifier);
     }
@@ -425,12 +479,6 @@ public class NotificationSubscriber {
             mqttPushManager.cleanup();
         } catch (Exception e) {
             log.error("Error cleaning up MqttPushManager: {}", e.getMessage(), e);
-        }
-        
-        try {
-            connectorRegistry.cleanup();
-        } catch (Exception e) {
-            log.error("Error cleaning up ConnectorRegistry: {}", e.getMessage(), e);
         }
         
         log.info("NotificationSubscriber cleanup completed");

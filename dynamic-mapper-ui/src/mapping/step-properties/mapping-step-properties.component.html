@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -42,22 +42,10 @@
   </div>
 </div> -->
 <div class="inner-scroll fit-h">
-  <div class="card-block p-b-0">
+  <div class="card-block p-b-0 d11r-props-compact">
     <div [formGroup]="propertyFormly">
-      <div class="legend form-block">Topics</div>
-      <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
+      <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="model"
+        (modelChange)="commitModel()"></formly-form>
     </div>
-    @if (filterInventoryModel.filterExpression.resultType !== 'empty') {
-    <div class="row">
-      <div class="col-lg-6 d-col g-8">
-        <div class="form-group m-l-0 m-b-4">
-          <label translate class="p-l-8">Filter Inventory Result [{{ filterInventoryModel.filterExpression.resultType }}]</label>
-          <textarea class="form-control font-smaller" c8y-textarea-autoresize
-            data-cy="dm-mapping-properties-filter-inventory-result"
-            [readonly]="true">{{ filterInventoryModel.filterExpression.result }}</textarea>
-        </div>
-      </div>
-    </div>
-    }
   </div>
 </div>

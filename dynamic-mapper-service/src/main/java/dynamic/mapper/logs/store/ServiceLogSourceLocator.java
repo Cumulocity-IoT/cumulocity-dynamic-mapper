@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -167,7 +167,7 @@ public class ServiceLogSourceLocator {
     }
 
     @EventListener
-    public void onUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
+    public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
         cache.remove(event.getTenant());
     }
 }

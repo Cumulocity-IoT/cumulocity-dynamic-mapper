@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,10 +18,12 @@
  * @authors Christof Strack
  */
 
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   FetchClient,
 } from '@c8y/client';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import {
   BASE_URL,
   SharedService,
@@ -34,6 +36,8 @@ import { HttpStatusCode } from '@angular/common/http';
   providedIn: 'root'
 })
 export class TestingService {
+  private readonly translateService = inject(TranslateService);
+
   constructor(
     private readonly sharedService: SharedService,
     private readonly client: FetchClient
@@ -51,13 +55,43 @@ export class TestingService {
     });
     const data = await response;
     if (!data.ok) {
-      const errorTxt = await data.json();
-      throw new Error(errorTxt.message ?? 'Could not be tested!');
+      throw new Error(await this.describeFailure(data));
     }
     const m = await data.json();
     return m;
   }
 
+  /**
+   * The text for a test request that came back with an error status. The backend's own message wins: it
+   * names the cause. Without one (a gateway answering with an HTML page, an empty body) the status says
+   * what is wrong; parsing such a body as JSON used to throw "Unexpected token '<'" instead.
+   */
+  private async describeFailure(response: { status: number; json(): Promise<any> }): Promise<string> {
+    let backendMessage: unknown;
+    try {
+      backendMessage = (await response.json())?.message;
+    } catch {
+      // Not JSON: fall through to the status text.
+    }
+    if (typeof backendMessage === 'string' && backendMessage.trim()) {
+      return backendMessage;
+    }
+    const status = response.status;
+    switch (status) {
+      case 401:
+        return this.translateService.instant(gettext('Your session has expired. Sign in again and repeat the test.'));
+      case 403:
+        return this.translateService.instant(gettext('Testing a mapping needs the Dynamic Mapper admin or create role.'));
+      case 502:
+      case 503:
+      case 504:
+        return this.translateService.instant(
+          gettext('The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again.'),
+          { status });
+      default:
+        return this.translateService.instant(gettext('Could not be tested! (HTTP {{status}})'), { status });
+    }
+  }
 
   async resetMockCache() {
     const [response1, response2] = await Promise.all([

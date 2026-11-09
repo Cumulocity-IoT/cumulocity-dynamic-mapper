@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,7 +22,6 @@ package dynamic.mapper.util;
 
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.pattern.ClassicConverter;
-import ch.qos.logback.classic.pattern.MessageConverter;
 
 /**
  * Registers the tenant-aware conversion words in logback's process-wide registries.

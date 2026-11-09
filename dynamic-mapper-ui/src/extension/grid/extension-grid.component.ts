@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -28,6 +28,7 @@ import { Feature, Operation, SharedService } from '../../shared';
 import { AddExtensionComponent } from '../add/add-extension.component';
 import { ExtensionService } from '../extension.service';
 import { ExtensionCardComponent } from '../card/extension-card.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface ExtensionState {
   reloading: boolean;
@@ -78,7 +79,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
     try {
       await this.initializeComponent();
     } catch (error) {
-      this.alertService.warning('Failed to initialize component', error);
+      this.alertService.warning(gettext('Failed to initialize component'), error);
     }
   }
 
@@ -96,10 +97,10 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
   async reloadExtensions(): Promise<void> {
     try {
       await this.sharedService.runOperation({ operation: Operation.RELOAD_EXTENSIONS });
-      this.alertService.success('Extensions reloaded');
+      this.alertService.success(gettext('Extensions reloaded'));
       await this.loadExtensions();
     } catch (error) {
-      this.alertService.warning('Failed to reload extensions', error);
+      this.alertService.warning(gettext('Failed to reload extensions'), error);
     }
   }
 
@@ -108,7 +109,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
       const modalRef = this.showAddExtensionModal();
       this.handleModalClose(modalRef);
     } catch (error) {
-      this.alertService.warning('Failed to add Java Extension', error);
+      this.alertService.warning(gettext('Failed to add Java Extension'), error);
     }
   }
 
@@ -136,7 +137,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
       tap(() => this.updateState({ reloading: true })),
       switchMap(() => this.loadExtensionsWithRetry().pipe(
         catchError(error => {
-          this.alertService.warning('Failed to load extensions', error);
+          this.alertService.warning(gettext('Failed to load extensions'), error);
           this.updateState({ reloading: false });
           return of([]);
         })
@@ -171,7 +172,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
           await this.reloadExtensions();
           modalRef.hide();
         },
-        error: error => this.alertService.warning('Modal close error', error)
+        error: error => this.alertService.warning(gettext('Modal close error'), error)
       });
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,16 +17,16 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import {
   ApplicationRef,
   Component,
   NgZone,
   OnDestroy,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, inject } from '@angular/core';
 import {
-  AlertService,
   CoreModule,
   DropAreaComponent,
   ModalLabels
@@ -44,18 +44,20 @@ import { createCustomUuid, Mapping } from '../../shared';
   imports:[CoreModule]
 })
 export class ImportMappingsComponent implements OnDestroy {
+  private readonly translateService = inject(TranslateService);
   @ViewChild(DropAreaComponent) dropAreaComponent;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   isLoading: boolean = false;
   isAppCreated: boolean = false;
   errorMessage: string;
-  successText: string = 'Imported mappings';
+  resultType: 'success' | 'warning' | 'error' = 'success';
+  resultText: string = '';
+  failedMappings: string[] = [];
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService,
     private ngZone: NgZone,
     private appRef: ApplicationRef
   ) { }
@@ -67,7 +69,9 @@ export class ImportMappingsComponent implements OnDestroy {
         await this.onFile(file);
       }
     } catch (error) {
-      this.alertService.warning(`Import failed. Verify the format of the import file!`);
+      this.errorMessage = this.translateService.instant(gettext('Import failed. Verify the format of the import file!'));
+      this.isLoading = false;
+      this.progress$.next(null);
     }
   }
 
@@ -75,6 +79,7 @@ export class ImportMappingsComponent implements OnDestroy {
     this.isLoading = true;
     this.errorMessage = null;
     this.isAppCreated = false;
+    this.failedMappings = [];
     this.progress$.next(0);
 
     const ms = await file.text();
@@ -93,17 +98,20 @@ export class ImportMappingsComponent implements OnDestroy {
         successCount++;
         this.progress$.next((100 * (i + 1)) / countMappings);
       } catch (ex) {
-        const errorMsg = `Failed to import mapping ${m.name}`;
-        errors.push(errorMsg);
+        errors.push(m.name);
       }
     }
 
+    this.failedMappings = errors;
     if (errors.length === 0) {
-      this.alertService.success(`Imported ${successCount} mapping(s) successfully.`);
+      this.resultType = 'success';
+      this.resultText = this.translateService.instant(gettext('Imported {{successCount}} mapping(s) successfully.'), { successCount });
     } else if (successCount === 0) {
-      this.errorMessage = `Failed to import mappings. ${errors.length} error(s) occurred.`;
+      this.resultType = 'error';
+      this.resultText = this.translateService.instant(gettext('Failed to import mappings. {{errorCount}} error(s) occurred.'), { errorCount: errors.length });
     } else {
-      this.alertService.warning(`Import completed: ${successCount} succeeded, ${errors.length} failed.`);
+      this.resultType = 'warning';
+      this.resultText = this.translateService.instant(gettext('Import completed: {{successCount}} succeeded, {{errorCount}} failed.'), { successCount, errorCount: errors.length });
     }
 
     // Use NgZone.run to ensure the view updates run inside Angular's zone

@@ -1,0 +1,2971 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: dynamic-mapper\n"
+"Language: de\n"
+"Language-Team: German\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "-- Select connector --"
+msgstr ""
+
+msgid ", which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads."
+msgstr ""
+
+msgid "… {{count}} earlier entries omitted …"
+msgstr ""
+
+msgid "… {{count}} earlier entry omitted …"
+msgstr ""
+
+msgid "· Editing"
+msgstr ""
+
+msgid "{{ 'Select Payload Format and Transformation Type' | translate }}"
+msgstr ""
+
+msgid "{{ editMode ? 'Edit explorer session' : 'Start exploring messages' }}"
+msgstr ""
+
+msgid "{{ editMode ? 'Update' : 'Start' }}"
+msgstr ""
+
+msgid "{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}"
+msgstr ""
+
+msgid "{{count}} more requests sent; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "{{count}} test devices deleted."
+msgstr ""
+
+msgid "{{failed}} of {{total}} test devices could not be deleted"
+msgstr ""
+
+msgid "{{mapping.name}}"
+msgstr ""
+
+msgid "{{mode}} connector"
+msgstr ""
+
+msgid "{{name}} (handled as {{level}})"
+msgstr ""
+
+msgid "{{name}} has no unpublished changes."
+msgstr ""
+
+msgid "{{title}} with agent:"
+msgstr ""
+
+msgid "<i c8yicon=\"download-archive\"></i> Download mapping"
+msgstr ""
+
+msgid "<i c8yicon=\"download-archive\"></i> Download MO"
+msgstr ""
+
+msgid "<i c8yicon=\"enter-right\"></i>Reset to default"
+msgstr ""
+
+msgid "<i c8yicon=\"filter\"></i>Update Filter Execution Mapping"
+msgstr ""
+
+msgid "1 more request sent; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "1 problem must be fixed before this mapping can be saved. Your edits are kept."
+msgstr ""
+
+msgid "1 to 5000. Lines beyond this are stored in the next run."
+msgstr ""
+
+msgid "100 to 10000, and at most 16 MB. When full, the oldest waiting lines are dropped."
+msgstr ""
+
+msgid "15 seconds"
+msgstr ""
+
+msgid "30 seconds"
+msgstr ""
+
+msgid "5 seconds"
+msgstr ""
+
+msgid "60 seconds"
+msgstr ""
+
+msgid "A mapping was activated or deactivated"
+msgstr ""
+
+msgid "A mapping was created"
+msgstr ""
+
+msgid "A mapping was deleted"
+msgstr ""
+
+msgid "A mapping's configuration, filter, code, or debug flag was updated"
+msgstr ""
+
+msgid "A request or response is not a JSON object, so it is shown as text under \"payload\"."
+msgstr ""
+
+msgid "A substitution defining the DeviceIdentifier must be used."
+msgstr ""
+
+msgid "About this log"
+msgstr ""
+
+msgid "Accept & don't show again"
+msgstr ""
+
+msgid "Accessing and transforming payload data"
+msgstr ""
+
+msgid "Action required — removed in 6.3.0:"
+msgstr ""
+
+msgid "Activated {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Activated {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Activated version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Active version"
+msgstr ""
+
+msgid "Add a note…"
+msgstr ""
+
+msgid "Add and select connector"
+msgstr ""
+
+msgid "Add connector"
+msgstr ""
+
+msgid "Add extension"
+msgstr ""
+
+msgid "Add Java Extension"
+msgstr ""
+
+msgid "Add new client"
+msgstr ""
+
+msgid "Add Processor Extension"
+msgstr ""
+
+msgid "Add relations"
+msgstr ""
+
+msgid "Add relations (device selection)"
+msgstr ""
+
+msgid "Add relations, for devices and clients"
+msgstr ""
+
+msgid "Add sample mappings"
+msgstr ""
+
+msgid "Add subscriptions (device table)"
+msgstr ""
+
+msgid "Add subscriptions (table)"
+msgstr ""
+
+msgid "Add substitution"
+msgstr "Substitution hinzufügen"
+
+msgid "Add your first extension by clicking below."
+msgstr ""
+
+msgid "Added new code template."
+msgstr ""
+
+msgid "Added sample mappings for {{direction}}"
+msgstr ""
+
+msgid "advanced setting(s) hidden. Enable \"Expert settings\" to show them."
+msgstr ""
+
+msgid "AI Agent"
+msgstr ""
+
+msgid "AI Assistant"
+msgstr ""
+
+msgid "AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined."
+msgstr ""
+
+msgid "AI capabilities are disabled in this tenant."
+msgstr ""
+
+msgid "AI generation failed. Please try again."
+msgstr ""
+
+msgid "AI Mapping Assistant"
+msgstr ""
+
+msgid "AI result applied to the editor. Review it and press Save to keep it."
+msgstr ""
+
+msgid "AI settings could not be verified. The AI assistant is unavailable."
+msgstr ""
+
+msgid "AI Shared Code Assistant"
+msgstr ""
+
+msgid "AI-assisted mapping"
+msgstr ""
+
+msgid "alarm"
+msgstr ""
+
+msgid "All devices in the selected group will be subscribed automatically."
+msgstr ""
+
+msgid "All extensions"
+msgstr ""
+
+msgid "All lines"
+msgstr ""
+
+msgid "All lines of the selected instance."
+msgstr ""
+
+msgid "All subjects"
+msgstr ""
+
+msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves."
+msgstr ""
+
+msgid "Allow to define expressions using JSONata"
+msgstr ""
+
+msgid "Already removed in 6.3.0:"
+msgstr ""
+
+msgid "AMQP 0-9-1 connector"
+msgstr ""
+
+msgid "AMQP 1.0 connector"
+msgstr ""
+
+msgid "An extension must be selected for an Extension (Java) mapping."
+msgstr ""
+
+msgid "Any direction"
+msgstr ""
+
+msgid "are currently defined."
+msgstr ""
+
+msgid "Array templates require transformation type <code>SMART_FUNCTION</code>."
+msgstr ""
+
+msgid "As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once."
+msgstr ""
+
+msgid "Ask the agent to fix these"
+msgstr ""
+
+msgid "Assign devices or device groups"
+msgstr ""
+
+msgid "Assume device exists"
+msgstr ""
+
+msgid "At least once"
+msgstr ""
+
+msgid "At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression."
+msgstr ""
+
+msgid "At least one substitution has an empty source or target path. Both must be set."
+msgstr ""
+
+msgid "At least one substitution of this outbound mapping has \"Expand as array\" set. Outbound mappings produce exactly one message, so switch it off."
+msgstr ""
+
+msgid "At most once"
+msgstr ""
+
+msgid "Auto acknowledge"
+msgstr ""
+
+msgid "Auto acknowledge outbound operation."
+msgstr ""
+
+msgid "Automatic mapping migration notifications"
+msgstr ""
+
+msgid "Base64"
+msgstr ""
+
+msgid "Between 1 and 500. Oldest messages are discarded when the limit is reached."
+msgstr ""
+
+msgid ""
+"Bind external IDs atomically during managed object creation in a single request\n"
+"                    (requires Cumulocity platform ≥ May 2026). Disable this on older instances such as\n"
+"                    Cumulocity Edge that do not yet support this feature."
+msgstr ""
+
+msgid "Broker message key produced by this mapping, e.g. the Kafka record key"
+msgstr ""
+
+msgid "Bulk/batch mapping configuration change notifications not tied to a single mapping"
+msgstr ""
+
+msgid "By"
+msgstr ""
+
+msgid "By device group"
+msgstr ""
+
+msgid "By device or device group"
+msgstr ""
+
+msgid "By device type"
+msgstr ""
+
+msgid "By specifying \"$\" you selected the root of the target template..."
+msgstr ""
+
+msgid "Bytes (1024 to 262144) of log text in one event."
+msgstr ""
+
+msgid "Bytes (256 to 65536). A longer message or stack trace is cut."
+msgstr ""
+
+msgid "Cache alias maps for SparkPlug B mappings"
+msgstr ""
+
+msgid "Cache cleared."
+msgstr ""
+
+msgid "Cache event"
+msgstr ""
+
+msgid "Cache statistic"
+msgstr ""
+
+msgid "Caching"
+msgstr ""
+
+msgid "Cancel editing / new substitution"
+msgstr ""
+
+msgid ""
+"Capture raw JSON payloads from the Cumulocity Notification 2.0 API.\n"
+"          Specify a device / device group to subscribe for messages. And then select a message to build a mapping."
+msgstr ""
+
+msgid "Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping."
+msgstr ""
+
+msgid "Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code> directly in templates is not supported. Use substitutions instead. Changes are reverted!"
+msgstr ""
+
+msgid "Chart processed"
+msgstr ""
+
+msgid "check Service Events"
+msgstr ""
+
+msgid "Check the generated result before saving"
+msgstr ""
+
+msgid "Checkbox"
+msgstr ""
+
+msgid "Choose another file"
+msgstr ""
+
+msgid "choose connector ..."
+msgstr ""
+
+msgid "Clear cache"
+msgstr ""
+
+msgid "Clear flow state"
+msgstr ""
+
+msgid "Clear inbound external ID cache"
+msgstr ""
+
+msgid "Clear inventory cache"
+msgstr ""
+
+msgid "Clear outbound external ID cache"
+msgstr ""
+
+msgid "Clear the selection to see all lines again."
+msgstr ""
+
+msgid "Click «Start exploring messages…» to capture live inbound or outbound messages."
+msgstr ""
+
+msgid "Click a node in the source template to select it as the source of a substitution."
+msgstr ""
+
+msgid "Client"
+msgstr ""
+
+msgid "Client Name"
+msgstr ""
+
+msgid "Client relation outbound"
+msgstr ""
+
+msgid "Close and fix"
+msgstr ""
+
+msgid "Code template"
+msgstr ""
+
+msgid "Code Template"
+msgstr ""
+
+msgid "Code template gallery"
+msgstr ""
+
+msgid "code template(s)"
+msgstr ""
+
+msgid "Code templates"
+msgstr ""
+
+msgid "Code templates are only available for Smart Function mappings, not {{transformationType}}."
+msgstr ""
+
+msgid "collected log"
+msgstr ""
+
+msgid "Collected log"
+msgstr ""
+
+msgid "Component"
+msgstr ""
+
+msgid "Configurable"
+msgstr ""
+
+msgid "Connector"
+msgstr ""
+
+msgid "Connector *"
+msgstr ""
+
+msgid "Connector assignments for {{mappingName}} saved."
+msgstr ""
+
+msgid "Connector disconnected."
+msgstr ""
+
+msgid "Connector is connecting, please wait..."
+msgstr ""
+
+msgid "Connector reference"
+msgstr ""
+
+msgid "Connector status and connection events"
+msgstr ""
+
+msgid "Connector type"
+msgstr ""
+
+msgid "connector:"
+msgstr ""
+
+msgid "connectors"
+msgstr ""
+
+msgid ""
+"Connectors of type Cumulocity MQTT Service - (device isolation) and Cumulocity MQTT Service - (tenant isolation)\n"
+"        can only be created once.\n"
+"        <br>"
+msgstr ""
+
+msgid "Console output"
+msgstr ""
+
+msgid "Console output copied to clipboard."
+msgstr ""
+
+msgid "Continue without a subscription. Add one later from the Subscription outbound page."
+msgstr ""
+
+msgid "Copied code template"
+msgstr ""
+
+msgid "Copy console output"
+msgstr ""
+
+msgid "Core concepts"
+msgstr ""
+
+msgid "Could not be tested! (HTTP {{status}})"
+msgstr ""
+
+msgid "Could not copy the console output. Select the text and copy it manually."
+msgstr ""
+
+msgid "Could not create mapping"
+msgstr ""
+
+msgid "Could not open the AI assistant: {{message}}"
+msgstr ""
+
+msgid "Could not save acceptance. The notice may appear again next time."
+msgstr ""
+
+msgid "Could not upload the *.jar file. Please check your connection and try again."
+msgstr ""
+
+msgid "Could not verify AI agent availability — proceeding with manual entry only."
+msgstr ""
+
+msgid "Create device"
+msgstr ""
+
+msgid "Create mapping"
+msgstr ""
+
+msgid "Create mapping from selected messages"
+msgstr ""
+
+msgid "Create new code template"
+msgstr ""
+
+msgid "Create new shared code"
+msgstr ""
+
+msgid "Create or select client name"
+msgstr ""
+
+msgid "Create the target node, including missing parent nodes, if it does not exist in the target template."
+msgstr ""
+
+msgid "Create your first connector."
+msgstr ""
+
+msgid "Create your first mapping."
+msgstr ""
+
+msgid "Create your first relation for a device."
+msgstr ""
+
+msgid "Create your first subscription for a device."
+msgstr ""
+
+msgid "Cumulocity API connector"
+msgstr ""
+
+msgid "Cumulocity MQTT Service connector"
+msgstr ""
+
+msgid "Custom routing"
+msgstr ""
+
+msgid "Date Created"
+msgstr ""
+
+msgid "Days lifetime"
+msgstr ""
+
+msgid "Days lifetime inbound Id cache"
+msgstr ""
+
+msgid "Days lifetime inventory cache"
+msgstr ""
+
+msgid "Days lifetime outbound Id cache"
+msgstr ""
+
+msgid "Deactivated {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Deactivated {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "debug"
+msgstr ""
+
+msgid "Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs"
+msgstr ""
+
+msgid "Default Parameter (YAML)"
+msgstr ""
+
+msgid "Define templates for source &amp; target payload"
+msgstr ""
+
+msgid "Defining a mapping"
+msgstr ""
+
+msgid "Delete {{itemName}}"
+msgstr ""
+
+msgid "Delete {{itemName}}s"
+msgstr ""
+
+msgid "Delete all relations"
+msgstr ""
+
+msgid "Delete all relations (table)"
+msgstr ""
+
+msgid "Delete all relations, for devices and clients"
+msgstr ""
+
+msgid "Delete mapping extension"
+msgstr ""
+
+msgid "Delete old lines every"
+msgstr ""
+
+msgid "Delete old stored lines"
+msgstr ""
+
+msgid "Delete relation"
+msgstr ""
+
+msgid "Delete relations"
+msgstr ""
+
+msgid "Delete substitution"
+msgstr ""
+
+msgid "Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them."
+msgstr ""
+
+msgid "Delete version {{version}}"
+msgstr ""
+
+msgid "Deleted {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Deleted {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Deleted code template"
+msgstr ""
+
+msgid "Deleted version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Delivery"
+msgstr ""
+
+msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
+msgstr ""
+
+msgid "Deprecated mapping type"
+msgstr ""
+
+msgid "Details & logs"
+msgstr ""
+
+msgid "Device does not exist"
+msgstr ""
+
+msgid "Device Isolation Cumulocity MQTT Service"
+msgstr ""
+
+msgid "Device metadata made available to mappings."
+msgstr ""
+
+msgid "Device or device group"
+msgstr ""
+
+msgid "Device selection"
+msgstr ""
+
+msgid "device type:"
+msgstr ""
+
+msgid "Direction"
+msgstr ""
+
+msgid "Direction filter"
+msgstr ""
+
+msgid "Directions"
+msgstr ""
+
+msgid "Disable debug"
+msgstr ""
+
+msgid "Disable debugging"
+msgstr ""
+
+msgid "Disabled debug for {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Disabled debug for {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Discard and leave"
+msgstr ""
+
+msgid "Discard draft"
+msgstr ""
+
+msgid "Discard unsaved changes"
+msgstr ""
+
+msgid "Discarded draft of {{name}}"
+msgstr ""
+
+msgid "Disconnected connectors cannot be selected."
+msgstr ""
+
+msgid "Download managed object JSON"
+msgstr ""
+
+msgid "Download raw mapping JSON for manual editing"
+msgstr ""
+
+msgid "draft"
+msgstr ""
+
+msgid "Drag to resize (double-click to reset)"
+msgstr ""
+
+msgid "Dry Run"
+msgstr ""
+
+msgid "Dry Run runs the mapping without sending anything."
+msgstr ""
+
+msgid "Dry Run runs the mapping without writing anything to your tenant."
+msgstr ""
+
+msgid "Dummy message!"
+msgstr ""
+
+msgid "Duplicate subscription removed to prevent multiply processed messages"
+msgstr ""
+
+msgid "e.g. c8y_MQTTDevice"
+msgstr ""
+
+msgid "e.g. placeholder"
+msgstr ""
+
+msgid "e.g. sensors/#  or  devices/+/data"
+msgstr ""
+
+msgid "e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
+msgstr ""
+
+msgid "Edit session"
+msgstr ""
+
+msgid "Edit the mapping to create a draft, then publish it to create the first version."
+msgstr ""
+
+msgid "Enable 'Send connector lifecycle' in Service configuration to record connector status logs."
+msgstr ""
+
+msgid "Enable debug"
+msgstr ""
+
+msgid "Enable debugging"
+msgstr ""
+
+msgid ""
+"Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,\n"
+"                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled\n"
+"                    (default), code runs in flat-script mode."
+msgstr ""
+
+msgid "Enabled / Disabled"
+msgstr ""
+
+msgid "Enabled debug for {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Enabled debug for {{successCount}} mapping(s). Failed for: {{names}}."
+msgstr ""
+
+msgid "Enriching data with device inventory information"
+msgstr ""
+
+msgid "Enter agent name"
+msgstr ""
+
+msgid "Error handling and logging"
+msgstr ""
+
+msgid "Error rate"
+msgstr ""
+
+msgid "Errors"
+msgstr ""
+
+msgid "Errors during mapping activation"
+msgstr ""
+
+msgid "Errors occurring during mapping configuration loading"
+msgstr ""
+
+msgid "event"
+msgstr ""
+
+msgid "Event contains attachment"
+msgstr ""
+
+msgid "Event contains attachment, e.g. image, ... that is stored separately."
+msgstr ""
+
+msgid "Event Implementation"
+msgstr ""
+
+msgid "Event is required"
+msgstr ""
+
+msgid "Event Name"
+msgstr ""
+
+msgid "Event name is required."
+msgstr ""
+
+msgid "Events published to Cumulocity"
+msgstr ""
+
+msgid "Exactly once"
+msgstr ""
+
+msgid "Expand array"
+msgstr ""
+
+msgid "Expand as array"
+msgstr ""
+
+msgid "Expert Mode"
+msgstr ""
+
+msgid "Expert settings"
+msgstr ""
+
+msgid "Explorer session has expired. Start a new session."
+msgstr ""
+
+msgid "Explorer session started, but subscribing to the topic failed: {{warning}}"
+msgstr ""
+
+msgid "Explorer session stopped."
+msgstr ""
+
+msgid "Explorer session updated, but subscribing to the topic failed: {{warning}}"
+msgstr ""
+
+msgid "Explorer session updated."
+msgstr ""
+
+msgid "Export all connectors"
+msgstr ""
+
+msgid "Export all mappings"
+msgstr ""
+
+msgid "Export connector"
+msgstr ""
+
+msgid "Export connector(s)"
+msgstr ""
+
+msgid "Export mapping"
+msgstr ""
+
+msgid "Export service configuration"
+msgstr ""
+
+msgid "Extension"
+msgstr ""
+
+msgid "Extension is required"
+msgstr ""
+
+msgid "Extension Name"
+msgstr ""
+
+msgid "Extension name is required."
+msgstr ""
+
+msgid "Extension Parameter (YAML)"
+msgstr ""
+
+msgid "Extension type"
+msgstr ""
+
+msgid "Extensions reloaded"
+msgstr ""
+
+msgid "External"
+msgstr ""
+
+msgid "External and Internal"
+msgstr ""
+
+msgid "External ID binding during MO creation"
+msgstr ""
+
+msgid "External ID caches"
+msgstr ""
+
+msgid "External id type"
+msgstr ""
+
+msgid "Failed mappings:"
+msgstr ""
+
+msgid "Failed to activate mappings"
+msgstr ""
+
+msgid "Failed to activate version"
+msgstr ""
+
+msgid "Failed to add Java Extension"
+msgstr ""
+
+msgid "Failed to add sample mappings"
+msgstr ""
+
+msgid "Failed to clear cache"
+msgstr ""
+
+msgid "Failed to clear cache!"
+msgstr ""
+
+msgid "Failed to copy code template"
+msgstr ""
+
+msgid "Failed to create mapping {{name}}:"
+msgstr ""
+
+msgid "Failed to create new code template"
+msgstr ""
+
+msgid "Failed to create subscription:"
+msgstr ""
+
+msgid "Failed to deactivate mappings"
+msgstr ""
+
+msgid "Failed to delete code template"
+msgstr ""
+
+msgid "Failed to delete Java Extension"
+msgstr ""
+
+msgid "Failed to delete mapping {{name}}:"
+msgstr ""
+
+msgid "Failed to delete mappings"
+msgstr ""
+
+msgid "Failed to delete relation:"
+msgstr ""
+
+msgid "Failed to delete subscription:"
+msgstr ""
+
+msgid "Failed to delete version"
+msgstr ""
+
+msgid "Failed to deploy mapping {{name}} to connectors:"
+msgstr ""
+
+msgid "Failed to disable debug for mappings"
+msgstr ""
+
+msgid "Failed to discard draft"
+msgstr ""
+
+msgid "Failed to download the log."
+msgstr ""
+
+msgid "Failed to enable debug for mappings"
+msgstr ""
+
+msgid "Failed to establish connection!"
+msgstr ""
+
+msgid "Failed to export mappings"
+msgstr ""
+
+msgid "Failed to export the service configuration"
+msgstr ""
+
+msgid "Failed to fetch the service log."
+msgstr ""
+
+msgid "Failed to import connectors: {{errorDetail}}"
+msgstr ""
+
+msgid "Failed to import mappings. {{errorCount}} error(s) occurred."
+msgstr ""
+
+msgid "Failed to initialize component"
+msgstr ""
+
+msgid "Failed to load extensions"
+msgstr ""
+
+msgid "Failed to load features. Please refresh the page."
+msgstr ""
+
+msgid "Failed to load inbound mappings."
+msgstr ""
+
+msgid "Failed to load logs."
+msgstr ""
+
+msgid "Failed to load outbound mappings."
+msgstr ""
+
+msgid "Failed to load resources from the backend service dynamic-mapper-service. Please check that this service is deployed and try again."
+msgstr ""
+
+msgid "Failed to load the mapping tree: the server returned an invalid response. Check the microservice logs."
+msgstr ""
+
+msgid "Failed to load version counts"
+msgstr ""
+
+msgid "Failed to load versions"
+msgstr ""
+
+msgid "Failed to parse JavaScript code from AI response"
+msgstr ""
+
+msgid "Failed to publish draft"
+msgstr ""
+
+msgid "Failed to re-initialize system code templates!"
+msgstr ""
+
+msgid "Failed to reconnect!"
+msgstr ""
+
+msgid "Failed to reload extensions"
+msgstr ""
+
+msgid "Failed to reset deployment cache:"
+msgstr ""
+
+msgid "Failed to reset deployment cache!"
+msgstr ""
+
+msgid "Failed to reset transformation"
+msgstr ""
+
+msgid "Failed to resync type subscription:"
+msgstr ""
+
+msgid "Failed to rotate GraalVM Engine!"
+msgstr ""
+
+msgid "Failed to save code template"
+msgstr ""
+
+msgid "Failed to save draft for {{name}}:"
+msgstr ""
+
+msgid "Failed to start explorer session: {{error}}"
+msgstr ""
+
+msgid "Failed to update code template metadata"
+msgstr ""
+
+msgid "Failed to update explorer session: {{error}}"
+msgstr ""
+
+msgid "Failed to update note"
+msgstr ""
+
+msgid "Failed to update relations:"
+msgstr ""
+
+msgid "Failed to update service configuration"
+msgstr ""
+
+msgid "Failed to update subscriptions:"
+msgstr ""
+
+msgid "Failed to update test mapping"
+msgstr ""
+
+msgid "Feature changes in release 6.4.0"
+msgstr ""
+
+msgid "Fetch now"
+msgstr ""
+
+msgid "Filter by"
+msgstr ""
+
+msgid "Filter by Direction"
+msgstr ""
+
+msgid "Filter execution mapping"
+msgstr ""
+
+msgid "Filter inventory"
+msgstr ""
+
+msgid "Filter Inventory Result [{{resultType}}]"
+msgstr ""
+
+msgid "Filter Result [{{resultType}}]"
+msgstr ""
+
+msgid "Filtered"
+msgstr ""
+
+msgid "Filtered by mapping"
+msgstr ""
+
+msgid "Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency."
+msgstr ""
+
+msgid "First"
+msgstr ""
+
+msgid "Flow state"
+msgstr ""
+
+msgid "For connectors"
+msgstr ""
+
+msgid "for subscription and deduplication details."
+msgstr ""
+
+msgid "Fragments from inventory to cache"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "General settings"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "General Settings *"
+msgstr ""
+
+msgid "General, topic, and filter"
+msgstr ""
+
+msgid "Generate new Smart Function from scratch"
+msgstr ""
+
+msgid "Generate new substitutions from scratch"
+msgstr ""
+
+msgid "Generate Smart Function"
+msgstr ""
+
+msgid "Generate substitutions"
+msgstr ""
+
+msgid "Generate Substitutions"
+msgstr ""
+
+msgid "Generated {{count}} substitutions."
+msgstr ""
+
+msgid "Generating substitutions for this mapping based on its source and target templates. This starts automatically — no action needed."
+msgstr ""
+
+msgid "Go to problem"
+msgstr ""
+
+msgid "Google Cloud Pub/Sub connector"
+msgstr ""
+
+msgid "GraalVM context pool size"
+msgstr ""
+
+msgid "GraalVM engine rotation threshold"
+msgstr ""
+
+msgid "GraalVM Engine rotation triggered."
+msgstr ""
+
+msgid "Guides"
+msgstr ""
+
+msgid "Handling different Cumulocity API types (measurements, events, alarms, inventory)"
+msgstr ""
+
+msgid "header key"
+msgstr ""
+
+msgid "Hex"
+msgstr ""
+
+msgid "Hierarchy mapping"
+msgstr ""
+
+msgid "Hierarchy mapping inbound"
+msgstr ""
+
+msgid "Hours (1 to 720). Older lines are deleted."
+msgstr ""
+
+msgid "How long the session stays alive without being polled. Increase for devices that send infrequently."
+msgstr ""
+
+msgid ""
+"How many times a message may fail before the connector drops it instead of asking\n"
+"                    the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar,\n"
+"                    Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST\n"
+"                    polling, a page of polled data that keeps failing is skipped after this many attempts; server\n"
+"                    errors do not count, so an outage never skips data. The default is 3."
+msgstr ""
+
+msgid "How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array."
+msgstr ""
+
+msgid "How to migrate"
+msgstr ""
+
+msgid "HTTP {{status}}: {{statusText}}"
+msgstr ""
+
+msgid "HTTP connector"
+msgstr ""
+
+msgid "I can create, modify or review the shared code that is available to all Smart Functions. Pick an option below, or describe what you need. Nothing is saved until you press Save on the page."
+msgstr ""
+
+msgid "I can generate a Smart Function for this mapping based on its source template. There's no fixed target template — pick an option below, or describe the target payload you'd like it to produce."
+msgstr ""
+
+msgid "I want to provide a sample target payload"
+msgstr ""
+
+msgid "Identifier"
+msgstr ""
+
+msgid "If the extracted value is an array, use only its first element. Not applicable when \"Expand as array\" is set."
+msgstr ""
+
+msgid "If the extracted value is an array, use only its last element. Not applicable when \"Expand as array\" is set."
+msgstr ""
+
+msgid "If the extracted value is missing or null, delete the target node from the target template."
+msgstr ""
+
+msgid "If the extracted value is missing or null, skip the substitution and keep whatever the target template defines."
+msgstr ""
+
+msgid "If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type."
+msgstr ""
+
+msgid "Import completed: {{successCount}} succeeded, {{errorCount}} failed: {{errorDetail}}"
+msgstr ""
+
+msgid "Import completed: {{successCount}} succeeded, {{errorCount}} failed."
+msgstr ""
+
+msgid "Import connectors"
+msgstr ""
+
+msgid "Import Connectors"
+msgstr ""
+
+msgid "Import failed: {{message}}"
+msgstr ""
+
+msgid "Import failed: the service rejected the configuration (HTTP {{status}})."
+msgstr ""
+
+msgid "Import failed. Verify the format of the import file!"
+msgstr ""
+
+msgid "Import Mapping"
+msgstr ""
+
+msgid "Import mappings"
+msgstr ""
+
+msgid "Import service configuration"
+msgstr ""
+
+msgid "Imported {{successCount}} connector(s) successfully."
+msgstr ""
+
+msgid "Imported {{successCount}} mapping(s) successfully."
+msgstr ""
+
+msgid "Imported connectors were disabled because sensitive properties (e.g. passwords, tokens) are not exported. Please edit them and re-enter the real values before enabling."
+msgstr ""
+
+msgid "In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically."
+msgstr ""
+
+msgid "inbound"
+msgstr ""
+
+msgid "Inbound"
+msgstr ""
+
+msgid "Inbound (Smart Function JavaScript)"
+msgstr ""
+
+msgid ""
+"INFO stores the processing steps, including message payloads. WARN stores warnings and\n"
+"                      errors only."
+msgstr ""
+
+msgid "Init internal code templates"
+msgstr ""
+
+msgid "Install sample mapping"
+msgstr ""
+
+msgid "Internal"
+msgstr ""
+
+msgid "invalid file"
+msgstr ""
+
+msgid "Inventory cache"
+msgstr ""
+
+msgid "Java Extension"
+msgstr ""
+
+msgid "JavaScript callback for creating substitutions"
+msgstr ""
+
+msgid "JavaScript callback for Smart functions"
+msgstr ""
+
+msgid "JavaScript Code Template"
+msgstr ""
+
+msgid "JavaScript engine (advanced)"
+msgstr ""
+
+msgid "JavaScript for creating complete payloads as Smart Functions."
+msgstr ""
+
+msgid "JavaScript for creating substitutions..."
+msgstr ""
+
+msgid "JSONata"
+msgstr ""
+
+msgid "JSONata AI Agent"
+msgstr ""
+
+msgid "Kafka connector"
+msgstr ""
+
+msgid "Keep editing"
+msgstr ""
+
+msgid "Keep stored lines for"
+msgstr ""
+
+msgid "Keep this on, or stored lines pile up. Runs even when storing is switched off."
+msgstr ""
+
+msgid "key: {{key}}"
+msgstr ""
+
+msgid "Largest stored event"
+msgstr ""
+
+msgid "Last"
+msgstr ""
+
+msgid "Last error"
+msgstr ""
+
+msgid "Last sync time"
+msgstr ""
+
+msgid "Let AI propose a target structure"
+msgstr ""
+
+msgid "Limit:"
+msgstr ""
+
+msgid "line(s) were left out because of the collection limit."
+msgstr ""
+
+msgid "Lines appear with a short delay (the collection interval): use Fetch now to store the waiting lines right away. Fetch now reaches only the service instance that answers; other instances store their lines at their own interval. Lines logged before the collection was switched on are not included."
+msgstr ""
+
+msgid "Lines collected before this filter existed are not included."
+msgstr ""
+
+msgid "Lines kept in memory"
+msgstr ""
+
+msgid "Live Test"
+msgstr ""
+
+msgid "Live Test is not available for this combination of payload type and transformation type"
+msgstr ""
+
+msgid "Live Test needs a mapping that uses an external ID"
+msgstr ""
+
+msgid "Live Test publishes the result to the connected broker and needs a mapping that uses an external id and a Dry Run result."
+msgstr ""
+
+msgid "Live Test sends the result to Cumulocity using a test device registered as \"d11r_liveTest_\" + the external id, so the real device is never touched, and needs a mapping that uses an external id and a Dry Run result."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} {{id}} on device {{deviceId}}{{externalId}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} {{id}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}} on device {{deviceId}}{{externalId}}."
+msgstr ""
+
+msgid "Live test successful: created {{noun}}."
+msgstr ""
+
+msgid "Live test successful: device {{deviceId}}{{externalId}} created or updated."
+msgstr ""
+
+msgid "Live test successful: device created or updated."
+msgstr ""
+
+msgid "Live test successful: published {{count}} messages; see \"Show Next Test Result\"."
+msgstr ""
+
+msgid "Live test successful: published 1 message to topic {{topic}}."
+msgstr ""
+
+msgid "Live test successful: published 1 message."
+msgstr ""
+
+msgid "Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them."
+msgstr ""
+
+msgid "Loaded"
+msgstr ""
+
+msgid "Loading code templates..."
+msgstr ""
+
+msgid "Loading Extensions:"
+msgstr ""
+
+msgid "Loading Java extensions..."
+msgstr ""
+
+msgid "Loading service events..."
+msgstr ""
+
+msgid "Log connector errors"
+msgstr ""
+
+msgid "Log errors when connecting in microservice log file."
+msgstr ""
+
+msgid "Log payload"
+msgstr ""
+
+msgid "Log payload in microservice log file."
+msgstr ""
+
+msgid "Log substitution"
+msgstr ""
+
+msgid ""
+"Log substitution in microservice log file when applying a\n"
+"                    mapping."
+msgstr ""
+
+msgid "Log verbosity"
+msgstr ""
+
+msgid "Logs not updated: lifecycle logging disabled."
+msgstr ""
+
+msgid "Longest single message"
+msgstr ""
+
+msgid "Lowest level stored"
+msgstr ""
+
+msgid "Manage relations"
+msgstr ""
+
+msgid "Manage subscriptions"
+msgstr ""
+
+msgid "Manage subscriptions (by device groups)"
+msgstr ""
+
+msgid "Manage subscriptions (by device type)"
+msgstr ""
+
+msgid "Manage subscriptions (device selection)"
+msgstr ""
+
+msgid "Managing connectors"
+msgstr ""
+
+msgid "Managing permissions"
+msgstr ""
+
+msgid "Mapping"
+msgstr ""
+
+msgid "Mapping {{mappingName}} created successfully"
+msgstr ""
+
+msgid "Mapping {{name}} deleted successfully"
+msgstr ""
+
+msgid "Mapping and transformation type"
+msgstr ""
+
+msgid "Mapping could only activate partially. It failed for the following connectors: {{connectors}}"
+msgstr ""
+
+msgid "Mapping filter uses the collected log; the platform log can only be filtered within the loaded window."
+msgstr ""
+
+msgid ""
+"Mapping handles payloads in CSV format. Any separator can be defined.\\nUse the following expression to return the fields in an array.\\nFor the expression $split(payload, /,\\\\s*/) the result is:\n"
+"      [\n"
+"        \"165\",\n"
+"        \"14.5\",\n"
+"        \"2022-08-06T00:14:50.000+02:00\",\n"
+"        \"c8y_FuelMeasurement\"\n"
+"      ]\n"
+"      ."
+msgstr ""
+
+msgid ""
+"Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading \"0x\".\n"
+"Use the JSONata function \"$number() to parse an hexadecimal string as a number, e.g. $number(\"0x5a75\") returns 23157."
+msgstr ""
+
+msgid "Mapping handles payloads in JSON format."
+msgstr ""
+
+msgid "Mapping name"
+msgstr ""
+
+msgid "Mapping parses payloads in PROTOBUF format by an internal extension."
+msgstr ""
+
+msgid "Mapping processing failures and errors"
+msgstr ""
+
+msgid "Mapping statistic reset successfully."
+msgstr ""
+
+msgid "Mapping topic"
+msgstr ""
+
+msgid "Mapping topic sample"
+msgstr ""
+
+msgid "mappings are currently defined."
+msgstr ""
+
+msgid "Mappings reloaded"
+msgstr ""
+
+msgid "MappingTopic and MappingTopicSample do not have same structure in the Topic Name."
+msgstr ""
+
+msgid "Max failure count"
+msgstr ""
+
+msgid "Max messages to buffer"
+msgstr ""
+
+msgid "Maximum CPU time for Smart Function JavaScript code"
+msgstr ""
+
+msgid ""
+"Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.\n"
+"                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from\n"
+"                    starving the CPU."
+msgstr ""
+
+msgid "Maximum end-to-end processing time for Smart Functions"
+msgstr ""
+
+msgid ""
+"Maximum number of GraalVM contexts kept idle in the per-mapping context pool.\n"
+"                    Higher values reduce per-message context-creation overhead at high throughput; lower values\n"
+"                    reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system\n"
+"                    code. Default: 20."
+msgstr ""
+
+msgid ""
+"Maximum number of versions kept per mapping. When a new version is published, the\n"
+"                    oldest versions beyond this limit are deleted; the active version is never deleted."
+msgstr ""
+
+msgid "Maximum processing attempts per message"
+msgstr ""
+
+msgid ""
+"Maximum wall-clock time in milliseconds the system waits for a Smart Function to\n"
+"                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API\n"
+"                    calls.\n"
+"                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.\n"
+"                    Must be greater than the CPU time limit above."
+msgstr ""
+
+msgid "measurement"
+msgstr ""
+
+msgid "Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants."
+msgstr ""
+
+msgid "Message Explorer"
+msgstr ""
+
+msgid "Messages by outcome"
+msgstr ""
+
+msgid "Metadata (JSONata)"
+msgstr ""
+
+msgid "Microservice: dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!"
+msgstr ""
+
+msgid "Milliseconds (5000 to 3600000) between two runs that store the waiting lines."
+msgstr ""
+
+msgid "Milliseconds (60000 to 86400000) between two clean-ups."
+msgstr ""
+
+msgid "Minutes lifetime flow state"
+msgstr ""
+
+msgid "Modal close error"
+msgstr ""
+
+msgid "Modify the current session parameters. Existing messages will be cleared when the session is restarted."
+msgstr ""
+
+msgid "Monitoring overview"
+msgstr ""
+
+msgid "More save options"
+msgstr ""
+
+msgid "Most lines per run"
+msgstr ""
+
+msgid "Most per-message lines are DEBUG: lower the service log level on the Service configuration page to see them."
+msgstr ""
+
+msgid "MQTT connector"
+msgstr ""
+
+msgid "MultiLevel wildcard \"#\" can only appear at the end."
+msgstr ""
+
+msgid "Must be greater than the CPU time limit — otherwise the CPU limit is never reached."
+msgstr ""
+
+msgid "Name of jsonata agent"
+msgstr ""
+
+msgid ""
+"Name of jsonata agent to be used when generating substitutions. The needs to be\n"
+"                    defined in the AI Agent Manager."
+msgstr ""
+
+msgid "Name of smartFunction agent"
+msgstr ""
+
+msgid ""
+"Name of smartFunction agent to be used when generating Cumulocity API payloads as\n"
+"                    JavaScript code.\n"
+"                    The needs to be\n"
+"                    defined in the AI Agent Manager."
+msgstr ""
+
+msgid "New client: {{selectedClient.name}}"
+msgstr ""
+
+msgid "New code template"
+msgstr ""
+
+msgid "Newly created devices of this type will be subscribed automatically."
+msgstr ""
+
+msgid "Next match"
+msgstr ""
+
+msgid "No active session"
+msgstr ""
+
+msgid "No code templates available for this transformation type"
+msgstr ""
+
+msgid "No collected log yet"
+msgstr ""
+
+msgid "No connectors exist."
+msgstr ""
+
+msgid "No connectors found to import."
+msgstr ""
+
+msgid "No console output for this test run"
+msgstr ""
+
+msgid "No device type available for this device."
+msgstr ""
+
+msgid "No device types configured."
+msgstr ""
+
+msgid "No device types defined. Saving now removes the type-based subscription."
+msgstr ""
+
+msgid "No entries for this extension, try to reload extensions."
+msgstr ""
+
+msgid "No events available."
+msgstr ""
+
+msgid "No extension to display."
+msgstr ""
+
+msgid "No group detected for this device — group must be available to use this option."
+msgstr ""
+
+msgid "No Java extensions available — upload one first"
+msgstr ""
+
+msgid "No lines for this mapping in the part of the platform log that is loaded."
+msgstr ""
+
+msgid "No lines for this mapping in this range."
+msgstr ""
+
+msgid "No logs entries for this connectors."
+msgstr ""
+
+msgid "No mappings exist."
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "No output yet"
+msgstr ""
+
+msgid "No relations exist."
+msgstr ""
+
+msgid "No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use \"Live Test\" to get actual responses."
+msgstr ""
+
+msgid "No source template"
+msgstr ""
+
+msgid "No subscriptions for devices exist."
+msgstr ""
+
+msgid "No substitutions were generated."
+msgstr ""
+
+msgid "No target template"
+msgstr ""
+
+msgid "No template to edit — the payload structure comes from the Protobuf schema in the selected extension."
+msgstr ""
+
+msgid "No test devices exist."
+msgstr ""
+
+msgid "No timing data yet. It appears once a mapping has processed a message."
+msgstr ""
+
+msgid "No type detected for this device — type must be available to use this option."
+msgstr ""
+
+msgid "No valid JavaScript code was generated."
+msgstr ""
+
+msgid "No versions yet."
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Add it under Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Add them under Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "Not Known"
+msgstr ""
+
+msgid "Not Loaded"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "NOTE: this level is not supported by: {{connectors}}."
+msgstr ""
+
+msgid "Nothing has been collected for your tenant. Either the operator has not switched the collection on, or no line at the configured level has been logged for your tenant yet."
+msgstr ""
+
+msgid "Notification connector status events"
+msgstr ""
+
+msgid ""
+"Notification subscriptions for a device type only fire for devices created after the type was added. Use\n"
+"          resync to also subscribe devices of a type that already existed beforehand. This rescans the full\n"
+"          inventory for the selected type and can take a while on large inventories."
+msgstr ""
+
+msgid "Notification subscriptions for a device type only fire for devices created after the type was added. Use this to also subscribe devices of a type that already existed beforehand."
+msgstr ""
+
+msgid "Number events"
+msgstr ""
+
+msgid "Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated."
+msgstr ""
+
+msgid "Number of mapping versions to retain"
+msgstr ""
+
+msgid "Number of status transitions bundled into this session"
+msgstr ""
+
+msgid ""
+"Number of unique JavaScript source compilations after which the GraalVM Engine is\n"
+"                    rotated (replaced) to release the memory it holds for them, about 6 to 50 KB per distinct source.\n"
+"                    Each new or updated mapping code counts once per Engine lifetime; re-executing the same code is a\n"
+"                    cache hit and does not count. Lower values release memory sooner but re-warm all mappings more\n"
+"                    often. Default: 1000."
+msgstr ""
+
+msgid "object"
+msgstr ""
+
+msgid "on"
+msgstr ""
+
+msgid "only Internal"
+msgstr ""
+
+msgid "Only one MultiLevel wildcard \"#\" is allowed."
+msgstr ""
+
+msgid "Only one substitution defining the DeviceIdentifier can be used."
+msgstr ""
+
+msgid "Only open sessions"
+msgstr ""
+
+msgid "Only the first selected message is used, because the mapping is not generated with AI."
+msgstr ""
+
+msgid "Only the lines loaded now are searched: use Previous and Next to look further."
+msgstr ""
+
+msgid "Only with errors"
+msgstr ""
+
+msgid "open"
+msgstr ""
+
+msgid "Open the Message Explorer from the mapper navigation menu."
+msgstr ""
+
+msgid "operation"
+msgstr ""
+
+msgid "Optional YAML parameter passed to the extension."
+msgstr ""
+
+msgid "Or switch on Collected log to search the whole stored range."
+msgstr ""
+
+msgid "outbound"
+msgstr ""
+
+msgid "Outbound"
+msgstr ""
+
+msgid "Outbound (Smart Function JavaScript)"
+msgstr ""
+
+msgid "Outbound mapping"
+msgstr ""
+
+msgid "Outbound mappings"
+msgstr ""
+
+msgid ""
+"Outbound mappings enabled. Changing this property require unsubscribing/subscribing\n"
+"                    the Dynamic Mapper microservice to this tenant."
+msgstr ""
+
+msgid ""
+"Outbound mappings require a device subscription so Cumulocity pushes events to the broker.\n"
+"              Would you like to set one up now?"
+msgstr ""
+
+msgid "Outbound subscription"
+msgstr ""
+
+msgid "Overview"
+msgstr ""
+
+msgid "Partially"
+msgstr ""
+
+msgid "Payload"
+msgstr ""
+
+msgid "Payload Format"
+msgstr ""
+
+msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing."
+msgstr ""
+
+msgid "Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and passes a rich JSON object to your Smart Function. For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized to SparkPlug B protobuf binary before publishing. NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent NDATA / DDATA messages can resolve metric aliases. The aliasMap (metric name → alias) is available in the outbound Smart Function via context.getConfig().aliasMap."
+msgstr ""
+
+msgid "Payload types"
+msgstr ""
+
+msgid "Platform log"
+msgstr ""
+
+msgid "Platform log: live, all lines. Collected log: stored per tenant, can be filtered by mapping over its whole range."
+msgstr ""
+
+msgid "Please enter a device type to monitor."
+msgstr ""
+
+msgid "Please enter a topic to listen on."
+msgstr ""
+
+msgid "Please review and adjust the target template to reflect your actual data before generating with AI in the next step."
+msgstr ""
+
+msgid "Please select a connector."
+msgstr ""
+
+msgid "Please select a device or group to monitor."
+msgstr ""
+
+msgid "Please select nodes in both templates to define a substitution."
+msgstr ""
+
+msgid "polling suspended, session still alive on broker"
+msgstr ""
+
+msgid "Previous match"
+msgstr ""
+
+msgid "problems must be fixed before this mapping can be saved. Your edits are kept."
+msgstr ""
+
+msgid "Processed"
+msgstr ""
+
+msgid "Processing time per mapping (slowest first)"
+msgstr ""
+
+msgid "Processor extension"
+msgstr ""
+
+msgid "Processor extension uploaded successfully."
+msgstr ""
+
+msgid "Publish"
+msgstr ""
+
+msgid "Publish draft"
+msgstr ""
+
+msgid "Publish topic"
+msgstr ""
+
+msgid "Publish topic sample"
+msgstr ""
+
+msgid "Published and activated version {{version}} of {{name}}"
+msgstr ""
+
+msgid "Published through connector(s): {{connectors}}."
+msgstr ""
+
+msgid "Published version {{version}} of {{name}}. It keeps running {{current}} until you activate the new version."
+msgstr ""
+
+msgid "Published version {{version}} of {{name}}. It stays inactive until you activate it."
+msgstr ""
+
+msgid "Publishes the result to the connected broker"
+msgstr ""
+
+msgid "PublishTopic and PublishTopicSample do not have same structure in the Topic Name."
+msgstr ""
+
+msgid "Pulsar connector"
+msgstr ""
+
+msgid "Pulsar, Kafka, and MQTT compared"
+msgstr ""
+
+msgid "QoS"
+msgstr ""
+
+msgid "Quickstart inbound"
+msgstr ""
+
+msgid "Quickstart outbound"
+msgstr ""
+
+msgid "Raise only while troubleshooting — verbose logging costs throughput."
+msgstr ""
+
+msgid "Re-initialize system code templates"
+msgstr ""
+
+msgid "Read Only"
+msgstr ""
+
+msgid "Received at"
+msgstr ""
+
+msgid "Reconnect Subscription outbound"
+msgstr ""
+
+msgid "Reconnect Subscription outbound endpoint."
+msgstr ""
+
+msgid "Reconnected successfully."
+msgstr ""
+
+msgid "Reference"
+msgstr ""
+
+msgid "Relation for this device deleted successfully"
+msgstr ""
+
+msgid "Relations deleted successfully"
+msgstr ""
+
+msgid "Relations updated successfully"
+msgstr ""
+
+msgid "Reliability settings"
+msgstr ""
+
+msgid "Reload mappings in service"
+msgstr ""
+
+msgid "Removed in 6.4.0:"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Rename the template and edit its description"
+msgstr ""
+
+msgid "Repair strategy"
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "Requests (failed)"
+msgstr ""
+
+msgid "Reset deployment cache"
+msgstr ""
+
+msgid "Reset deployment cache."
+msgstr ""
+
+msgid "Reset Dry Run"
+msgstr ""
+
+msgid "Reset mapping statistic"
+msgstr ""
+
+msgid "Reset statistics"
+msgstr ""
+
+msgid "Resolution of device external IDs to Cumulocity managed objects."
+msgstr ""
+
+msgid "REST Polling connector"
+msgstr ""
+
+msgid "Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected."
+msgstr ""
+
+msgid "Resume"
+msgstr ""
+
+msgid "Resync existing devices"
+msgstr ""
+
+msgid "Resync existing devices into a type subscription"
+msgstr ""
+
+msgid "Resync of existing devices into a type subscription started/finished"
+msgstr ""
+
+msgid "Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Retention"
+msgstr ""
+
+msgid "Reused test device {{testDevice}} from an earlier Live Test."
+msgstr ""
+
+msgid "Review / Refine existing Smart Function"
+msgstr ""
+
+msgid "Review / Refine existing substitutions"
+msgstr ""
+
+msgid "Review / Refine with AI"
+msgstr ""
+
+msgid "Review before saving"
+msgstr ""
+
+msgid "Review existing shared code"
+msgstr ""
+
+msgid "Review properties, e.g. client_id must be different across different client connectors to the same broker."
+msgstr ""
+
+msgid "Rotate GraalVM Engine"
+msgstr ""
+
+msgid "Run a Dry Run first; Live Test needs its result"
+msgstr ""
+
+msgid "Run a Live Test on an inbound mapping to create a test device."
+msgstr ""
+
+msgid "Runs the mapping without writing anything to your tenant"
+msgstr ""
+
+msgid "Save & Activate"
+msgstr ""
+
+msgid "Saved code template"
+msgstr ""
+
+msgid "Saved draft and connector assignments for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft for {{mappingName}}. It is not live yet: use Save & Activate, or publish and activate it (Versions)."
+msgstr ""
+
+msgid "Saved draft for {{name}}. It is not live yet: publish and activate it from the mapping list (Versions)."
+msgstr ""
+
+msgid "Saved, but activating the mapping failed"
+msgstr ""
+
+msgid "Saved, but activating the version failed"
+msgstr ""
+
+msgid "Scroll to top"
+msgstr ""
+
+msgid "Search documentation…"
+msgstr ""
+
+msgid "Search for clients..."
+msgstr ""
+
+msgid "Search message or connector"
+msgstr ""
+
+msgid "Select 2 to {{ maxSamples }} messages of the same type, for example only JSON or only binary, to generate one Smart Function with AI from all of them."
+msgstr ""
+
+msgid "Select a device or group to create a dedicated Notification 2.0 subscription."
+msgstr ""
+
+msgid "Select agent"
+msgstr ""
+
+msgid "Select at least one connector before saving."
+msgstr ""
+
+msgid "Select between 2 and {{max}} messages of the same type, for example only JSON or only binary."
+msgstr ""
+
+msgid "Select devices group to subscribe to all device for outbound mappings"
+msgstr ""
+
+msgid "Select devices to subscribe to for outbound mappings"
+msgstr ""
+
+msgid "Select devices types to subscribe to for outbound mappings"
+msgstr ""
+
+msgid "Select or create client name"
+msgstr ""
+
+msgid "Select Payload Format and Transformation Type"
+msgstr ""
+
+msgid "Select source node to define substitution!"
+msgstr ""
+
+msgid "Select target node to define substitution!"
+msgstr ""
+
+msgid "Select template..."
+msgstr ""
+
+msgid "Select templates"
+msgstr ""
+
+msgid "Select the connector and topic to inspect incoming messages in real time."
+msgstr ""
+
+msgid "Selected connectors"
+msgstr ""
+
+msgid "Selected connectors for mapping"
+msgstr ""
+
+msgid "Selected source node: {{path}}"
+msgstr ""
+
+msgid "Selected substitution is an expression"
+msgstr ""
+
+msgid "Selected target node: {{path}}"
+msgstr ""
+
+msgid "Send connector lifecycle"
+msgstr ""
+
+msgid "Send events on topic subscriptions"
+msgstr ""
+
+msgid ""
+"Send events when status for outbound notifications changes.\n"
+"                    Be aware this can cause additional costs"
+msgstr ""
+
+msgid ""
+"Send events when status of a connector changes. Be aware\n"
+"                    this can cause additional costs"
+msgstr ""
+
+msgid ""
+"Send events when the subscription for a topic changes. Be\n"
+"                    aware this can cause additional costs"
+msgstr ""
+
+msgid "Send mapping statistics"
+msgstr ""
+
+msgid "Send mapping status"
+msgstr ""
+
+msgid "Send notification lifecycle"
+msgstr ""
+
+msgid ""
+"Send statics about how often a mapping was applied. Be\n"
+"                    aware this can cause additional costs"
+msgstr ""
+
+msgid "Sends the result to Cumulocity using a test device"
+msgstr ""
+
+msgid "Sent with the message and available in your code."
+msgstr ""
+
+msgid "Service configuration"
+msgstr ""
+
+msgid "Service configuration restored from file."
+msgstr ""
+
+msgid "Service events"
+msgstr ""
+
+msgid "Service logs"
+msgstr ""
+
+msgid "Session TTL (minutes)"
+msgstr ""
+
+msgid ""
+"Set size inbound Id cache. After changing the size you have\n"
+"                    to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set size inventory cache. After changing the size you have\n"
+"                    to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set size of the outbound external Id cache. Used by outbound mappings\n"
+"                    with \"useExternalId\" enabled to avoid resolving the external Id from Cumulocity on every\n"
+"                    message. After changing the size you have to clear the cache to take effect"
+msgstr ""
+
+msgid ""
+"Set time after which complete cache in cleared. This is\n"
+"                    useful when you plan to delete a device or assign an\n"
+"                    external id to different device"
+msgstr ""
+
+msgid ""
+"Set time after which complete outbound Id cache is cleared. This is\n"
+"                    useful when you plan to delete a device or re-assign an\n"
+"                    external id to a different device"
+msgstr ""
+
+msgid ""
+"Set time in minutes after which the flow state of a Smart Function or Java Extension\n"
+"                    mapping is cleared when that mapping has not written it. Each mapping expires on its own. Set to 0\n"
+"                    to disable TTL."
+msgstr ""
+
+msgid "setting(s)"
+msgstr ""
+
+msgid "Shared code with agent:"
+msgstr ""
+
+msgid "show less"
+msgstr ""
+
+msgid "show more"
+msgstr ""
+
+msgid "Show Next Test Result"
+msgstr ""
+
+msgid "Show only messages from devices whose C8Y type matches this value."
+msgstr ""
+
+msgid "Show or hide the metadata fields in this template"
+msgstr ""
+
+msgid "Showing the {{shown}} most recent of {{total}} status transitions in this session"
+msgstr ""
+
+msgid "Size inbound Id cache"
+msgstr ""
+
+msgid "Size inventory cache"
+msgstr ""
+
+msgid "Size outbound Id cache"
+msgstr ""
+
+msgid "Skip for now"
+msgstr ""
+
+msgid "Skipped {{skippedCount}} HTTP connector(s): the HTTP connector is created automatically and cannot be imported."
+msgstr ""
+
+msgid "Smart Function"
+msgstr ""
+
+msgid "Smart Function execution limits"
+msgstr ""
+
+msgid "SmartFunction AI Agent"
+msgstr ""
+
+msgid "Some subscriptions could not be created: {{count}} device(s) failed. Check Service Events for details."
+msgstr ""
+
+msgid "Source and device"
+msgstr ""
+
+msgid "Source API"
+msgstr ""
+
+msgid "Source Expression"
+msgstr ""
+
+msgid "Source Result"
+msgstr ""
+
+msgid "Source Template - {{system}}"
+msgstr ""
+
+msgid "source:"
+msgstr ""
+
+msgid "SourceTemplate must be valid JSON."
+msgstr ""
+
+msgid "SparkPlug B"
+msgstr ""
+
+msgid "Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static)."
+msgstr ""
+
+msgid "Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices."
+msgstr ""
+
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgstr ""
+
+msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
+msgstr ""
+
+msgid "Start exploring messages…"
+msgstr ""
+
+msgid "Statistic processed"
+msgstr ""
+
+msgid "Stop session"
+msgstr ""
+
+msgid "Store every"
+msgstr ""
+
+msgid "Store service logs"
+msgstr ""
+
+msgid ""
+"Store this tenant's log lines as events so they can be read without access to the\n"
+"                      microservice. Stored as ordinary events, which can count against your storage."
+msgstr ""
+
+msgid "Subject (connector, mapping, ...)"
+msgstr ""
+
+msgid "Submitted the Smart Function"
+msgstr ""
+
+msgid "Submitted the substitutions"
+msgstr ""
+
+msgid "Submitting the Smart Function"
+msgstr ""
+
+msgid "Submitting the substitutions"
+msgstr ""
+
+msgid "Subscription by"
+msgstr ""
+
+msgid "Subscription dynamic"
+msgstr ""
+
+msgid "Subscription failed"
+msgstr ""
+
+msgid "Subscription for this device deleted successfully"
+msgstr ""
+
+msgid "Subscription lifecycle events for connectors"
+msgstr ""
+
+msgid "Subscription outbound"
+msgstr ""
+
+msgid "Subscription request is still being processed – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details."
+msgstr ""
+
+msgid "Subscription request submitted. Subscriptions are processed asynchronously."
+msgstr ""
+
+msgid "Subscription static"
+msgstr ""
+
+msgid "Subscriptions are processed asynchronously. Verify the result in the list below or"
+msgstr ""
+
+msgid "Substitution as JavaScript (SUBSTITUTION_AS_CODE)"
+msgstr ""
+
+msgid "Substitutions defining the device identifier are marked with an \"*\". Before adding a substitution target and source property in templates have to be selected."
+msgstr ""
+
+msgid "Support ESM modules"
+msgstr ""
+
+msgid "System code templates have been re-initialized"
+msgstr ""
+
+msgid "System code templates re-initialized."
+msgstr ""
+
+msgid "System, shared"
+msgstr ""
+
+msgid "Target and device"
+msgstr ""
+
+msgid "Target API"
+msgstr ""
+
+msgid "Target Expression"
+msgstr ""
+
+msgid "Target Result"
+msgstr ""
+
+msgid "Target Template - {{system}}"
+msgstr ""
+
+msgid "TargetTemplate must be valid JSON."
+msgstr ""
+
+msgid "Templates"
+msgstr ""
+
+msgid "Test connection"
+msgstr ""
+
+msgid "Test device"
+msgstr ""
+
+msgid "Test device {{testDevice}} created; remove it under Monitoring > Test device."
+msgstr ""
+
+msgid "Test device deleted."
+msgstr ""
+
+msgid "Test devices are listed under Monitoring > Test device."
+msgstr ""
+
+msgid "Test execution failed"
+msgstr ""
+
+msgid "Test mapping"
+msgstr ""
+
+msgid "Tested a JSONata expression"
+msgstr ""
+
+msgid "Testing a JSONata expression"
+msgstr ""
+
+msgid "Testing a mapping needs the Dynamic Mapper admin or create role."
+msgstr ""
+
+msgid "Testing is not available for this combination of payload type and transformation type."
+msgstr ""
+
+msgid "The collected log is not available."
+msgstr ""
+
+msgid "The complete log of the selected microservice instance, including the lines of every tenant that shares it."
+msgstr ""
+
+msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
+msgstr ""
+
+msgid "The expression extracts an array. To create one request per element, add the substitution and then switch on \"Expand as array\" in the substitution table."
+msgstr ""
+
+msgid "The extension {{extensionName}} with event {{eventName}} is not loaded..."
+msgstr ""
+
+msgid "The filter expression must evaluate to a boolean value: either true or false"
+msgstr ""
+
+msgid "The filter expression must return of boolean type"
+msgstr ""
+
+msgid "The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = \"lora-device-type\"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "The JSON path in the target template where the value extracted from the source is written to."
+msgstr ""
+
+msgid "The list shows only lines written while the selected mapping processed a payload. Connector lines belong to no mapping."
+msgstr ""
+
+msgid ""
+"The listed fragments will be cached and can be referenced in\n"
+"                    'filterInventory'. Each entry can be an exact fragment name (e.g. <code>type</code>,\n"
+"                    <code>c8y_Hardware</code>) or a glob pattern using <code>*</code> (any sequence of\n"
+"                    characters) and <code>?</code> (single character), e.g.\n"
+"                    <code>sparkPlugB_DBIRTH_*</code> to cache all fragments whose name starts with\n"
+"                    <code>sparkPlugB_DBIRTH_</code>."
+msgstr ""
+
+msgid "The mapping could not be saved"
+msgstr ""
+
+msgid "The mapping from the link was not found. Showing all lines."
+msgstr ""
+
+msgid "The mapping produced no request for this payload."
+msgstr ""
+
+msgid "The mapping produced no request, so nothing was sent."
+msgstr ""
+
+msgid "The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally."
+msgstr ""
+
+msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgstr ""
+
+msgid "The mapping was saved, but checking the device subscriptions failed."
+msgstr ""
+
+msgid "The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name"
+msgstr ""
+
+msgid "The max failure count must not be negative."
+msgstr ""
+
+msgid "The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once."
+msgstr ""
+
+msgid "The message recording (formerly “snooping”) feature has been removed. It is replaced by the"
+msgstr ""
+
+msgid "The microservice log lines of this tenant that its administrators can read under Monitoring &gt; Service logs."
+msgstr ""
+
+msgid "The platform log is not available to your tenant."
+msgstr ""
+
+msgid "The processing timeout must be greater than the CPU time limit."
+msgstr ""
+
+msgid "The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgstr ""
+
+msgid "The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name"
+msgstr ""
+
+msgid "The referenced device does not exist and createNonExistingDevice is disabled for this mapping. Do you want to assume for this test that the device exists?"
+msgstr ""
+
+msgid "the session is active, but the broker rejected the subscribe request, so no messages will arrive:"
+msgstr ""
+
+msgid "The template contains the dummy field <code>_TOPIC_LEVEL_</code>..."
+msgstr ""
+
+msgid "The templates below are the ones currently available in your tenant. Each one demonstrates:"
+msgstr ""
+
+msgid "The transformation type"
+msgstr ""
+
+msgid "This connector is currently enabled. Disable it first to edit its configuration."
+msgstr ""
+
+msgid "This expression is required..."
+msgstr ""
+
+msgid "This mapping already has a Smart Function. I can review the existing code and suggest improvements, or generate a new one from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+msgstr ""
+
+msgid "This mapping already has substitutions defined. I can review them and suggest improvements, or generate a new set from scratch based on the mapping's source and target templates. Pick an option below, or describe what you'd like changed."
+msgstr ""
+
+msgid "This mapping has changes that have not been saved. Leaving now discards them."
+msgstr ""
+
+msgid "This mapping has unpublished draft changes"
+msgstr ""
+
+msgid "This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>."
+msgstr ""
+
+msgid "This payload format requires the Smart Function transformation type."
+msgstr ""
+
+msgid "This payload type is not edited as JSON. The mapper decodes it, or your code receives the raw data."
+msgstr ""
+
+msgid "This replaces the current service configuration."
+msgstr ""
+
+msgid "This rescans the full inventory for type \"{{type}}\" and subscribes any existing device not already covered. This can take a while on large inventories. Continue?"
+msgstr ""
+
+msgid "This session had an error-driven transition (unexpected disconnect, retry, or failure)"
+msgstr ""
+
+msgid "This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. Your shared code will NOT be affected. Any customizations made to system templates will be lost. Do you want to proceed?"
+msgstr ""
+
+msgid "Time avg / max"
+msgstr ""
+
+msgid "Time since previous transition"
+msgstr ""
+
+msgid "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+msgstr ""
+
+msgid "Toggle connection activation"
+msgstr ""
+
+msgid "Toggle mapping activation"
+msgstr ""
+
+msgid "Top"
+msgstr ""
+
+msgid "topic:"
+msgstr ""
+
+msgid "total"
+msgstr ""
+
+msgid "Transformation"
+msgstr ""
+
+msgid "Transformation Type"
+msgstr ""
+
+msgid "Transformation type is required"
+msgstr ""
+
+msgid "transformation type, and delete the originals."
+msgstr ""
+
+msgid "Transformation types"
+msgstr ""
+
+msgid "Transport fields"
+msgstr ""
+
+msgid "Troubleshooting"
+msgstr ""
+
+msgid "Type your message..."
+msgstr ""
+
+msgid "unknown error"
+msgstr ""
+
+msgid "Unknown error occurred"
+msgstr ""
+
+msgid "Unsaved Changes"
+msgstr ""
+
+msgid "Update connector"
+msgstr ""
+
+msgid "Update existing device"
+msgstr ""
+
+msgid "Update Filter Execution Mapping"
+msgstr ""
+
+msgid "Update substitution"
+msgstr ""
+
+msgid "Update successful"
+msgstr ""
+
+msgid "Update the managed object of the device if it already exists."
+msgstr ""
+
+msgid "Updated code template metadata"
+msgstr ""
+
+msgid "Upload a *.jar file"
+msgstr ""
+
+msgid "Upload a JSON file"
+msgstr ""
+
+msgid "Use external id"
+msgstr ""
+
+msgid "Use Previous or Next to keep looking."
+msgstr ""
+
+msgid "Use Previous to look further back."
+msgstr ""
+
+msgid "Use Reset Dry Run to run it again"
+msgstr ""
+
+msgid "Use the captured payload directly as the source template when creating or editing a mapping."
+msgstr ""
+
+msgid "Use the Collected log switch to change to the live platform log."
+msgstr ""
+
+msgid "Use the Collected log switch to search by mapping over the whole stored range."
+msgstr ""
+
+msgid "Used as a filter to select which mappings apply when a notification arrives."
+msgstr ""
+
+msgid "UTC"
+msgstr ""
+
+msgid "Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results."
+msgstr ""
+
+msgid "Version {{version}} of {{name}} is saved, but the mapping was not activated."
+msgstr ""
+
+msgid "Version/Status"
+msgstr ""
+
+msgid "Versioning mappings"
+msgstr ""
+
+msgid "Versions of"
+msgstr ""
+
+msgid "View (deprecated)"
+msgstr ""
+
+msgid "View Code"
+msgstr ""
+
+msgid "View configuration"
+msgstr ""
+
+msgid "View connector"
+msgstr ""
+
+msgid "Waiting for messages on <code>{{ sessionTopic }}</code>…"
+msgstr ""
+
+msgid "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
+msgstr ""
+
+msgid "was removed in release 6.3. Affected mappings are no longer executed. Export them, recreate them using the"
+msgstr ""
+
+msgid "was removed in release 6.3. If you still have affected mappings, export them, recreate them using the"
+msgstr ""
+
+msgid "Webhook connector"
+msgstr ""
+
+msgid "What the mapper reports into the platform event log."
+msgstr ""
+
+msgid ""
+"When device isolation for Cumulocity MQTT Service is enabled only registered MQTT\n"
+"                    clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the\n"
+"                    Dynamic Mapper microservice to this tenant."
+msgstr ""
+
+msgid ""
+"When enabled, the SparkPlug B BIRTH fragments (sparkPlugB_NBIRTH,\n"
+"                    sparkPlugB_DBIRTH) are automatically included in the inventory cache for all cached\n"
+"                    managed objects. This removes the need to add these fragments manually to the list\n"
+"                    above."
+msgstr ""
+
+msgid "When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings."
+msgstr ""
+
+msgid "When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function."
+msgstr ""
+
+msgid "Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path."
+msgstr ""
+
+msgid "Working with device identifiers and external IDs"
+msgstr ""
+
+msgid "Write the extracted value to the target path as-is. The path must already exist in the target template."
+msgstr ""
+
+msgid "You are about to delete a connector. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a mapping extension. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a relation. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete a substitution. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete all relations. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid "You are about to delete multiple {{itemName}}s. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid "You are about to delete relations. Do you want to proceed to delete ALL?"
+msgstr ""
+
+msgid "You are about to delete the mapping statistic. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to delete this {{itemName}}. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to permanently delete {{version}} of {{name}}. This cannot be undone. Do you want to proceed?"
+msgstr ""
+
+msgid "You are about to permanently discard the draft of {{name}}. All unsaved changes will be lost. Do you want to proceed?"
+msgstr ""
+
+msgid "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+msgstr ""
+
+msgid "You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator."
+msgstr ""
+
+msgid "You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator."
+msgstr ""
+
+msgid "You have unsaved changes. Do you want to save before leaving?"
+msgstr ""
+
+msgid "Your code produces the structure of the target payload."
+msgstr ""
+
+msgid "Your session has expired. Sign in again and repeat the test."
+msgstr ""
+
+msgid "Your tenant's lines only, at the configured level, kept for a limited time."
+msgstr ""
+
+msgid "Your tenant's lines only."
+msgstr ""

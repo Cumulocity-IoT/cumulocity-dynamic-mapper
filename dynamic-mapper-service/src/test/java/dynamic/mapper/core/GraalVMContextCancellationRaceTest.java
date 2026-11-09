@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -87,7 +87,7 @@ class GraalVMContextCancellationRaceTest {
     void setUp() {
         graalVMContextService = new GraalVMContextService();
         serviceConfiguration = buildServiceConfig();
-        graalVMContextService.createGraalsResources(TENANT, serviceConfiguration);
+        graalVMContextService.initializeTenant(TENANT, serviceConfiguration);
         workerExecutor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "cancel-race-worker");
             t.setDaemon(true);
@@ -99,7 +99,7 @@ class GraalVMContextCancellationRaceTest {
     void tearDown() {
         workerExecutor.shutdownNow();
         try {
-            graalVMContextService.removeGraalsResources(TENANT);
+            graalVMContextService.removeTenant(TENANT);
         } catch (Exception ignored) {
         }
     }
@@ -123,6 +123,9 @@ class GraalVMContextCancellationRaceTest {
 
     private ServiceConfiguration buildServiceConfig() {
         ServiceConfiguration config = new ServiceConfiguration();
+        // The busy-loop mappings are flat scripts without exports, so run them in non-ESM mode
+        // regardless of the default.
+        config.setSupportESM(false);
         Map<String, CodeTemplate> templates = new HashMap<>();
 
         CodeTemplate shared = new CodeTemplate();
@@ -523,7 +526,7 @@ class GraalVMContextCancellationRaceTest {
                 .engine(engine)
                 .option("js.text-encoding", "true")
                 .allowHostAccess(graalVMContextService.getHostAccess())
-                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass)
+                .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass)
                 .build();
         directContext.eval(graalVMContextService.getGraalsSourceShared(TENANT));
         directContext.eval(graalVMContextService.getGraalsSourceSystem(TENANT));

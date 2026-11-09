@@ -12,7 +12,7 @@
 | **absolutePath** | **String** |  | [optional] [default to null] |
 | **level** | **String** |  | [optional] [default to null] |
 | **tenant** | **String** |  | [optional] [default to null] |
-| **treeLock** | [**Object**](.md) |  | [optional] [default to null] |
+| **treeLock** | [**oas_any_type_not_mapped**](.md) |  | [optional] [default to null] |
 | **parentOptional** | [**MappingTreeNode**](MappingTreeNode.md) |  | [optional] [default to null] |
 | **mappingOptional** | [**Mapping**](Mapping.md) |  | [optional] [default to null] |
 

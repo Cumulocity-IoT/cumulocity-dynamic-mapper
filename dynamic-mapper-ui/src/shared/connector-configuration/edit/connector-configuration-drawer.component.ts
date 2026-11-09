@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -41,6 +41,7 @@ import { FormatStringPipe } from '../../misc/format-string.pipe';
 import { SharedModule } from '../../shared.module';
 import { Action } from '../types';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface PropertyEntry {
   key: string;
@@ -153,7 +154,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       id: 'connectorType',
       wrappers: ['c8y-form-field'],
       props: {
-        label: 'Connector type',
+        label: gettext('Connector type'),
         options: filteredSpecs
           .map(sp => {
             const singletonSuffix = !this.allowedConnectors.includes(sp.connectorType) ? ' - Only one instance per tenant allowed' : '';
@@ -182,7 +183,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private specificationProperties: { [name: string]: ConnectorProperty } = {};
 
   private createHideExpression(entry: PropertyEntry) {
-    return (model) => !isPropertyActive(this.specificationProperties, entry.key, model?.properties);
+    return (field: FormlyFieldConfig) =>
+      !isPropertyActive(this.specificationProperties, entry.key, field.model?.properties);
   }
 
   private labelFor(entry: PropertyEntry): string {
@@ -204,7 +206,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           description: entry.property.description || undefined,
           ...additionalProps
         },
-        hideExpression: this.createHideExpression(entry)
+        expressions: { hide: this.createHideExpression(entry) }
       }]
     };
   }
@@ -264,7 +266,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
         },
-        hideExpression: this.createHideExpression(entry),
+        expressions: { hide: this.createHideExpression(entry) },
         // Initialize with empty object if no default value
         defaultValue: entry.property.defaultValue || {}
       }]
@@ -300,7 +302,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           type: 'input',
           wrappers: ['c8y-form-field'],
           props: {
-            label: 'Name',
+            label: gettext('Name'),
             required: true,
             disabled: this.readOnly,
           }
@@ -311,8 +313,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           key: 'description',
           wrappers: ['c8y-form-field'],
           props: {
-            label: 'Description',
-            placeholder: 'choose connector ...',
+            label: gettext('Description'),
+            placeholder: gettext('choose connector ...'),
             disabled: this.readOnly,
           },
         }
@@ -366,7 +368,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return {
       type: 'template',
       template: `<div class="legend form-block">${this.escapeHtml(group)}</div>`,
-      hideExpression: (model) => memberHidden.every(isHidden => isHidden(model))
+      expressions: { hide: (field: FormlyFieldConfig) => memberHidden.every(isHidden => isHidden(field)) }
     };
   }
 

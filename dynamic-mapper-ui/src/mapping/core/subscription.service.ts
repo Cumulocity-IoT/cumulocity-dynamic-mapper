@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,6 +22,7 @@ import { Injectable, inject } from '@angular/core';
 import { FetchClient, IIdentified } from '@c8y/client';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import {
   ALERT_INFO_TIMEOUT,
   BASE_URL,
@@ -29,11 +30,7 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   SharedService
 } from '../../shared';
-import {
-  NotificationSubscriptionRequest,
-  NotificationSubscriptionResponse,
-  SubscriptionStatus
-} from '../../shared/mapping/mapping.model';
+import { NotificationSubscriptionRequest, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 
 // Custom error types for better error handling
 export class SubscriptionError extends Error {
@@ -104,7 +101,9 @@ export class SubscriptionService {
 
     if (!hasSubscription) {
       this.alertService.add({
-        text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.",
+        text: gettext(
+          "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+        ),
         type: 'info',
         timeout: ALERT_INFO_TIMEOUT
       });

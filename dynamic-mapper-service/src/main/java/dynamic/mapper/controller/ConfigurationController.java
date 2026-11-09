@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,17 +24,15 @@ package dynamic.mapper.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
 import dynamic.mapper.configuration.CodeTemplate;
+import dynamic.mapper.configuration.CodeTemplateService;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
@@ -57,7 +55,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -106,11 +103,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ConfigurationController {
 
     private final ConnectorRegistry connectorRegistry;
-    private final ConnectorClientFactory connectorClientFactory;
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
-    private final BootstrapService bootstrapService;
+    private final CodeTemplateService codeTemplateService;
+    private final ConnectorLifecycleService connectorLifecycleService;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
     private final ObjectMapper objectMapper;
@@ -128,7 +125,7 @@ public class ConfigurationController {
             - `userHasMappingCreateRole`: Whether user can create/modify mappings
             - `userHasMappingAdminRole`: Whether user has administrative privileges
             - `pulsarAvailable`: Whether pulsar is available
-            - `deviceIsolationMQTTServiceEnabled`: Whether device siolation for Cumulocity MQTT Service is enabled
+            - `deviceIsolationMQTTServiceEnabled`: Whether device isolation for Cumulocity MQTT Service is enabled
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Feature flags retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Feature.class))),
@@ -207,22 +204,12 @@ public class ConfigurationController {
                     }
                     """))) @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
-        }
-        // Remove sensitive data before printing to log
-        ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.getConnectorType());
-        ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            dropInactiveProperties(tenant, connectorSpecification, configuration);
-            connectorConfigurationService.saveConnectorConfiguration(configuration);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception ex) {
-            log.error("{} - Error creating connector instance", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            connectorLifecycleService.createConnectorConfiguration(tenant, configuration);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Get connector configurations", description = """
@@ -335,74 +322,13 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Delete connection instance {}", tenant, identifier);
         try {
-            ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
-                    tenant);
-            if (configuration == null) {
-                // Idempotent / defensive: nothing to delete. Avoids a NullPointerException
-                // (and a misleading 500) when deleting an already-removed connector.
-                log.info("{} - Connector {} not found, nothing to delete", tenant, identifier);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Connector not found: " + identifier);
+            connectorLifecycleService.deleteConnector(tenant, identifier);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            if (ex.getReason() == ConnectorLifecycleService.Reason.FAILED) {
+                throw Utils.toStatusException(ex);
             }
-            if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
-            }
-
-            boolean wasDisabled = !configuration.getEnabled();
-            boolean needsReconnect = wasDisabled &&
-                (configuration.getConnectorType().equals(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR));
-
-            // The teardown below MUST always run — even if the (optional) temporary
-            // re-enable + reconnect or the resource cleanup fails. Otherwise a failed
-            // delete of a disabled Pulsar connector would leave it persisted with
-            // enabled=true (resurrected and reconnected) instead of being removed.
-            try {
-                // For Pulsar connectors that are disabled, temporarily enable them so the
-                // broker subscription can be removed. This briefly persists enabled=true;
-                // the finally block guarantees the configuration is still deleted.
-                if (needsReconnect) {
-                    log.info("{} - Temporarily enabling connector {} to delete Pulsar subscription", tenant, identifier);
-                    configuration.setEnabled(true);
-                    connectorConfigurationService.saveConnectorConfiguration(configuration);
-
-                    ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-                    Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-
-                    // Wait for connector to connect (with timeout)
-                    try {
-                        connectTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
-                    } catch (Exception e) {
-                        log.warn("{} - Could not reconnect connector {} for subscription cleanup: {}", tenant, identifier, e.getMessage());
-                        // Continue anyway - deleteResources() has fallback logic
-                    }
-                }
-
-                // Delete connector-specific resources (e.g., Pulsar subscriptions)
-                bootstrapService.deleteConnectorResources(tenant, identifier);
-            } finally {
-                // Best-effort teardown: one failing step must not skip the others or
-                // leave the connector configuration behind.
-                try {
-                    bootstrapService.disableConnector(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error disabling connector {} during delete: {}", tenant, identifier, e.getMessage());
-                }
-                try {
-                    // Clean up Notification 2.0 subscriptions
-                    bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error shutting down connector {} during delete: {}", tenant, identifier, e.getMessage());
-                }
-                connectorConfigurationService.deleteConnectorConfiguration(identifier);
-                try {
-                    mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error removing connector {} from deployment map during delete: {}", tenant, identifier, e.getMessage());
-                }
-                connectorRegistry.removeClientFromStatusMap(tenant, identifier);
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error deleting connector instance: {}", tenant, identifier, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            // a missing or protected connector is answered with the reason as the body
+            return ResponseEntity.status(Utils.statusOf(ex)).body(ex.getMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
@@ -420,35 +346,10 @@ public class ConfigurationController {
     public ResponseEntity<ConnectionTestResult> testConnectionConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        ConnectorSpecification spec = connectorRegistry.getConnectorSpecification(configuration.getConnectorType());
-        if (spec == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported connector type");
-        }
         try {
-            ConnectorConfiguration original = configuration.getIdentifier() == null ? null
-                    : connectorConfigurationService.getConnectorConfiguration(configuration.getIdentifier(), tenant);
-            configuration.restoreMaskedSecrets(spec, original);
-            configuration.copyPredefinedValues(spec);
-            AConnectorClient client = AConnectorClient
-                    .constructForProbe(() -> connectorClientFactory.createConnectorClient(configuration, "", tenant));
-            try {
-                if (client == null || !client.supportsConnectionTest()) {
-                    return ResponseEntity.ok(ConnectionTestResult.failed(
-                            "Connection test is not supported for this connector type", null));
-                }
-                // The registry's specification only has generic defaults; a client may predefine values of its own
-                // (e.g. the MQTT Service URL and the tenant's credentials), exactly as loadConfiguration() applies them.
-                configuration.copyPredefinedValues(client.getConnectorSpecification());
-                log.info("{} - Testing connector configuration, type: {}", tenant, configuration.getConnectorType());
-                return ResponseEntity.ok(client.testConnection());
-            } finally {
-                if (client != null) {
-                    client.discardProbe();
-                }
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error testing connector configuration", tenant, ex);
-            return ResponseEntity.ok(ConnectionTestResult.failed("Test failed: " + ex.getMessage(), null));
+            return ResponseEntity.ok(connectorLifecycleService.testConnection(tenant, configuration));
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
     }
 
@@ -489,27 +390,12 @@ public class ConfigurationController {
                     """))) @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Update connection instance {}", tenant, identifier);
-        // make sure we are using the correct identifier
-        configuration.setIdentifier(identifier);
-        // Remove sensitive data before printing to log
-        ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.getConnectorType());
-        ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            // check if password filed was touched, e.g. != "****", then use password from
-            // new payload, otherwise copy password from previously saved configuration
-            ConnectorConfiguration originalConfiguration = connectorConfigurationService
-                    .getConnectorConfiguration(configuration.getIdentifier(), tenant);
-
-            configuration.restoreMaskedSecrets(connectorSpecification, originalConfiguration);
-            dropInactiveProperties(tenant, connectorSpecification, configuration);
-            connectorConfigurationService.saveConnectorConfiguration(configuration);
-        } catch (Exception ex) {
-            log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(connectorLifecycleService.updateConnectorConfiguration(tenant, identifier, configuration));
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
     @Operation(summary = "Get service configuration", description = "Retrieves the service configuration for the current tenant including feature flags, cache settings, and operational parameters.")
@@ -554,45 +440,13 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @RequestBody Map<String, Object> updates) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration currentServiceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
-
         log.info("{} - Update service configuration with partial updates: {}", tenant, updates);
-
         try {
-            ServiceConfiguration existingConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            ServiceConfiguration serviceConfiguration = objectMapper
-                    .readerForUpdating(existingConfiguration)
-                    .readValue(objectMapper.writeValueAsBytes(updates));
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            if (!serviceConfiguration.getOutboundMappingEnabled()
-                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
-                serviceRegistry.getNotificationSubscriber().disconnect(tenant);
-            } else if (serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
-                    || serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                            && serviceRegistry.getNotificationSubscriber()
-                                    .getDeviceConnectionStatus(tenant) != 200) {
-
-                // Test if OutboundMapping is switched on
-                if (serviceConfiguration.getOutboundMappingEnabled()
-                        && !currentServiceConfiguration.getOutboundMappingEnabled()) {
-                    List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
-                            .getConnectorConfigurations(tenant);
-                    for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                        bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
-                                serviceConfiguration, tenant);
-                    }
-                    serviceRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
-                    serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
-                }
-            }
-
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception ex) {
-            log.error("{} - Error updating service configuration", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            connectorLifecycleService.updateServiceConfiguration(tenant, updates);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Get code template", description = "Returns the code template for the given ID. Code templates provide reusable JavaScript code for custom processing in mappings.")
@@ -605,32 +459,11 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> getCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "shared") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code template: {}", tenant, id);
-
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
-        }
-
-        CodeTemplate result = codeTemplates.get(id);
-        if (result == null) {
-            // Template not found - return 404 Not Found
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } else {
-            // Template exists - return it with 200 OK
-            return new ResponseEntity<>(result, HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(codeTemplateService.get(tenant, id), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            return codeTemplateFailure(ex);
         }
     }
 
@@ -653,56 +486,12 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Delete code template: {}", tenant, id);
-
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
-        }
-        // Checked before the try: both of these are documented outcomes, and the blanket
-        // catch(Exception) below would otherwise turn them into a 500 — the NPE on a missing
-        // template made the 404 branch at the end of this method unreachable, and the 406 was
-        // swallowed because ResponseStatusException is itself a RuntimeException.
-        CodeTemplate result = codeTemplates.get(id);
-        if (result == null) {
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        if (result.internal) {
-            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                    "Deletion of internal templates not allowed");
-        }
-
         try {
-            result = codeTemplates.remove(id);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-
-            // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
-            // (Though this should rarely happen since they're typically marked as internal)
-            if (TemplateType.SHARED.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
-                log.info("{} - Cleared cached SHARED code source after deletion", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
-                log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error updating code template [{}]", tenant, id, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            return new ResponseEntity<>(codeTemplateService.delete(tenant, id), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            return codeTemplateFailure(ex);
         }
-        serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @Operation(summary = "Get all code templates", description = "Returns all code templates for the current tenant including both system and custom templates.")
@@ -713,11 +502,12 @@ public class ConfigurationController {
     @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, CodeTemplate>> getCodeTemplates() {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code templates", tenant);
-
-        Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
-        return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(codeTemplateService.getAll(tenant), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
+        }
     }
 
     @Operation(summary = "Update code template", description = """
@@ -741,62 +531,11 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id,
             @Valid @RequestBody CodeTemplate codeTemplate) {
-        if (codeTemplate.id != null && !id.equals(codeTemplate.id)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    String.format("Path id '%s' does not match body id '%s'", id, codeTemplate.id));
-        }
-        codeTemplate.id = id;
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
-
-            // A read-only template is framework-owned (SYSTEM holds the Java bindings the runtime
-            // needs). The UI disables its save button, but that was the ONLY thing stopping an
-            // overwrite — a direct API call could replace SYSTEM and break every Smart Function
-            // mapping in the tenant. SYSTEM is additionally re-loaded from the classpath on every
-            // startup, so such an edit would be silently reverted anyway; refusing it is clearer.
-            CodeTemplate existing = codeTemplates.get(id);
-            if (existing != null && existing.readonly) {
-                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                        String.format("Template '%s' is read-only and cannot be modified", id));
-            }
-
-            // A hand-edit of @name / @description in the header is adopted before the header is
-            // regenerated from the fields, which would otherwise overwrite it.
-            if (existing != null) {
-                serviceConfigurationService.adoptHeaderMetadataEdits(codeTemplate, existing);
-                // A client that predates the sample fields drops them on a round-trip; keep the
-                // stored values rather than persisting a null over them.
-                if (codeTemplate.samplePayload == null) {
-                    codeTemplate.samplePayload = existing.samplePayload;
-                }
-                if (codeTemplate.sampleTopic == null) {
-                    codeTemplate.sampleTopic = existing.sampleTopic;
-                }
-            }
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
-            codeTemplates.put(id, codeTemplate);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-
-            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
-            if (TemplateType.SHARED.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
-                log.info("{} - Invalidated and updated cached SHARED code source", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
-                log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
-            }
-
-            log.debug("{} - Updated code template", tenant);
-        } catch (ResponseStatusException ex) {
-            // A deliberate status (e.g. the read-only refusal above) must not be flattened to 500.
-            log.warn("{} - Error updating code template [{}]: {}", tenant, id, ex.getReason());
-            throw ex;
-        } catch (Exception ex) {
-            log.error("{} - Error updating code template [{}]", tenant, id, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            codeTemplateService.update(tenant, id, codeTemplate);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.OK);
     }
@@ -818,71 +557,30 @@ public class ConfigurationController {
             @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            if (codeTemplates.containsKey(codeTemplate.id)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        String.format("Template with id '%s' already exists", codeTemplate.id));
-            }
-            // `defaultTemplate` means "this is the template a new mapping of this type starts
-            // from", and the seeding code expresses that by giving it the type's name as its id.
-            // A template with any other id therefore cannot be the default, whatever the request
-            // says. The UI's Duplicate action used to copy the flag along with the rest of the
-            // template, which left two templates of one type claiming it; the next startup then
-            // saw the type's default as already present and handed the shipped template a UUID id
-            // instead of its canonical one, breaking the editor's lookup of the starting template.
-            if (codeTemplate.defaultTemplate && codeTemplate.templateType != null
-                    && !codeTemplate.templateType.name().equals(codeTemplate.id)) {
-                log.info("{} - Ignoring defaultTemplate=true on new template [{}]: only '{}' can be "
-                        + "the default for {}", tenant, codeTemplate.id,
-                        codeTemplate.templateType.name(), codeTemplate.templateType);
-                codeTemplate.defaultTemplate = false;
-            }
-
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
-            codeTemplates.put(codeTemplate.id, codeTemplate);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-
-            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
-            if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
-                log.info("{} - Created and cached SHARED code source", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
-                log.info("{} - Created and cached SYSTEM code source", tenant);
-            }
-
-            log.debug("{} - Create code template", tenant);
-        } catch (ResponseStatusException ex) {
-            log.warn("{} - Error creating code template: {}", tenant, ex.getReason());
-            throw ex;
-        } catch (JsonProcessingException ex) {
-            log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        } catch (Exception ex) {
-            log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            codeTemplateService.create(tenant, codeTemplate);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
 
-    private Map<String, CodeTemplate> getCodeTemplates(String tenant, ServiceConfiguration serviceConfiguration) {
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
+    /** A missing template answers with an empty 404; every other failure becomes an error response. */
+    private <T> ResponseEntity<T> codeTemplateFailure(CodeTemplateService.CodeTemplateException ex) {
+        if (ex.getReason() == CodeTemplateService.Reason.NOT_FOUND) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return codeTemplates;
+        throw toStatusException(ex);
+    }
+
+    private ResponseStatusException toStatusException(CodeTemplateService.CodeTemplateException ex) {
+        HttpStatus status = switch (ex.getReason()) {
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case NOT_ALLOWED -> HttpStatus.NOT_ACCEPTABLE;
+            case ID_MISMATCH -> HttpStatus.BAD_REQUEST;
+            case ALREADY_EXISTS -> HttpStatus.CONFLICT;
+            case FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+        return new ResponseStatusException(status, ex.getMessage());
     }
 
     // TEST ONLY — not exposed in OpenAPI docs
@@ -903,21 +601,6 @@ public class ConfigurationController {
         } catch (Exception ex) {
             log.error("{} - [TEST] Error setting acceptedDeprecationNotice", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        }
-    }
-
-    /**
-     * Removes the values of properties that do not apply to the configuration (their condition is not met), so
-     * that a stale value the UI no longer shows cannot stay active in the connector.
-     */
-    private void dropInactiveProperties(String tenant, ConnectorSpecification spec, ConnectorConfiguration configuration) {
-        if (spec == null || configuration.getProperties() == null) {
-            return;
-        }
-        List<String> removed = spec.removeInactiveProperties(configuration.getProperties());
-        if (!removed.isEmpty()) {
-            log.info("{} - Dropped properties that do not apply to connector {}: {}", tenant,
-                    configuration.getIdentifier(), removed);
         }
     }
 }

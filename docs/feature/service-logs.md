@@ -3,7 +3,7 @@
 > **Status: built, on by default per tenant, not yet run on a deployed tenant.** Done: the per-line tenant field, the
 > in-process **capture** and **collector** (`dynamic.mapper.logs`), **per-tenant settings** (switch, level, limits, retention)
 > in the service configuration and on the Service configuration page, the **service endpoint**
-> `GET /monitoring/service-logs` (admin only) and the *Monitoring → Service logs* page.
+> `GET /monitoring/service-logs` and `POST /monitoring/service-logs/flush` (both admin only) and the *Monitoring → Service logs* page.
 
 How a tenant that merely **subscribes** to `dynamic-mapper-service` sees the log lines of its own mappings and connectors,
 when the service is deployed in an enterprise (owner) tenant and shared by many sub-tenants.
@@ -25,8 +25,12 @@ application-management role. A sub-tenant has no access at all, so exactly the t
 - **Collection is bounded.** Only lines at or above the tenant's minimum level are stored (default `INFO`; `INFO` lines can
   carry device payloads, so a tenant can choose `WARN`); each tenant's volume is capped per run (the excess follows in the next run), one record is cut to a maximum size, and the in-memory backlog is bounded; stored lines are
   deleted after a retention period (default 24 h). Lines lost to a buffer overflow are visible in the log view ("lines omitted"), not silent.
-- **Near-real-time, not exact.** Lines appear within the tenant's interval (default 30 s). Lines still in memory when the process
-  dies are lost. Guaranteed delivery is a non-goal.
+- **Near-real-time, not exact.** Lines appear within the tenant's interval (default 30 s), or at once when an administrator
+  asks the page to fetch now. Lines still in memory when the process dies are lost (a final run on shutdown stores what it
+  can). Guaranteed delivery is a non-goal.
+- **A tenant cannot capture lines the service does not log.** The minimum level only filters; it cannot lower the service's
+  own logger levels. The shipped root level is `INFO`, so `DEBUG` and `TRACE` lines are never available whatever the tenant
+  chooses, unless the operator lowers the logger level.
 - **Reading is restricted to `ROLE_DYNAMIC_MAPPER_ADMIN`**, enforced by the service, and the navigation entry is hidden for
   everyone else. Limit: the stored lines are ordinary platform events, so a user holding the platform's event-read
   permission can still list them with the platform's own API; a platform permission cannot be tied to an application role.
@@ -70,13 +74,14 @@ platform's log* for what was measured.
 | `ServiceLogPolicy`, `ServiceLogChunker` | minimum level, excluded loggers, record size. The chunker puts a tenant's records **in time order** (stable; a chunk ends at its newest record), takes records up to the per-run line cap and **defers the rest to the next run**, and builds byte-bounded chunks that each remember the records they were made from. **A record reaches a tenant only if its own tenant field names that tenant and the tenant is subscribed** |
 | `ServiceLogCollector` | one run (with capture suppressed on its own thread): drain → per-tenant chunks → store. When a store fails, **exactly the records that were not stored** (the failed and later chunks, plus the deferred ones) are put back in order; other tenants are not held up; lines lost to a buffer overflow are reported as `omitted` on that tenant's next chunk. Never throws; a repeated identical failure is logged once, then every 20th run; records of tenants that are not subscribed are dropped. Runs once more on shutdown to store what is still waiting |
 | `EventServiceLogSink`, `ServiceLogSourceLocator` | one `d11r_serviceLog` event per chunk, written with that tenant's service user, on a dedicated source object (below). Two instances creating the source at the same moment: the loser uses the winner's and deletes its own duplicate; a write that finds the source gone (the tenant deleted it) forgets the cached id so the next run recreates it |
-| `ServiceLogReader`, `ServiceLogsController` | the read side (below) |
+| `ServiceLogReader`, `ServiceLogsController` | the read side (below), plus `POST /monitoring/service-logs/flush`, which calls `ServiceLogCollectorJob.flushTenant()` to store the calling tenant's waiting lines of **this instance** now (the page's *Fetch now*); a no-op when the operator switched collection off |
 | `ServiceLogCollectorJob` | the `@Scheduled` tick (every 5 s); the collector decides per tenant whether it is due. The beans of the capture and the job exist unless the operator set `service.logs.enabled=false`; the sink, the reader and the retention job are always present. Stores what is still waiting when the service stops |
 | `ServiceLogRetention`, `ServiceLogRetentionJob` | **retention, independent of the collector**: a tick every minute; per tenant, when its retention interval has elapsed, deletes stored lines older than **its** `retentionHours` (bulk delete by type, source and time). Runs even when the tenant switched storing off, so a service that stopped collecting does not leave events behind; a tenant that switched retention off is left alone; a failing tenant does not stop the others and is retried at once on the next pass; unsubscribed tenants are not touched (their events belong to their tenant); every instance runs it, which is redundant but harmless |
 | `ServiceLogSettingsProvider`, `TenantServiceLogSettings` | the settings of one tenant right now, read from the tenant's service configuration in memory (cheap per log event); a change saved on the Service configuration page applies to the next line |
 
-Settings: see *Per-tenant settings*. Nothing about the service log is in `application.properties`; the only property is the operator's
-switch `service.logs.enabled=false`, which turns capture and collector off for every tenant (the clean-up keeps running).
+Settings: see *Per-tenant settings*. Nothing about the service log is in `application.properties`. Two operator properties exist, both optional:
+`service.logs.enabled=false` turns capture and collector off for every tenant (the clean-up keeps running), and
+`service.logs.reader.max-chunks` (default 10) is the number of chunks per page of the read side.
 
 Known limits: a record's time is the event's millisecond, so a reader that pages by time can skip a chunk whose last record
 shares its millisecond with the previous chunk's; every line of a multi-line record counts against the line cap, and the

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,6 +18,7 @@
 
 package dynamic.mapper.mapping;
 
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.model.validation.ValidationError;
@@ -222,5 +223,24 @@ class MappingValidatorSubstitutionExpressionTest {
     void emptySubstitutionArrayIsTolerated() {
         assertTrue(validator.validateSubstitutionExpressions(
                 mappingWith(TransformationType.JSONATA)).isEmpty());
+    }
+
+    @Test
+    void expandArrayOnOutboundIsRejected() {
+        Mapping mapping = mappingWith(TransformationType.JSONATA, Substitution.builder()
+                .pathSource("values").pathTarget("v").repairStrategy(RepairStrategy.DEFAULT).expandArray(true).build());
+        mapping.setDirection(Direction.OUTBOUND);
+        List<ValidationIssue> issues = validator.validateSubstitutionExpressions(mapping);
+        assertEquals(1, issues.size());
+        assertEquals(ValidationError.Substitution_Expand_Array_Not_Supported_For_Outbound, issues.get(0).code());
+        assertEquals("substitutions[0].expandArray", issues.get(0).field());
+    }
+
+    @Test
+    void expandArrayOnInboundIsAccepted() {
+        Mapping mapping = mappingWith(TransformationType.JSONATA, Substitution.builder()
+                .pathSource("values").pathTarget("v").repairStrategy(RepairStrategy.DEFAULT).expandArray(true).build());
+        mapping.setDirection(Direction.INBOUND);
+        assertTrue(validator.validateSubstitutionExpressions(mapping).isEmpty());
     }
 }

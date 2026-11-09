@@ -15,8 +15,8 @@
 | **requestCumulocity** | **String** | Request payload with Cumulocity source identifier populated (for internal connectors) | [optional] [default to null] |
 | **pathCumulocity** | **String** | Path used for the Cumulocity API request | [optional] [default to null] |
 | **response** | **String** | Response received from the target system | [optional] [default to null] |
-| **error** | [**DynamicMapperRequest_error**](DynamicMapperRequest_error.md) |  | [optional] [default to null] |
 | **binaryPayload** | **byte[]** | Pre-encoded binary payload (e.g. SparkPlug B proto bytes). When set, connectors use this instead of encoding request as UTF-8. | [optional] [default to null] |
+| **errorMessage** | **String** | Message of the error that occurred during request execution; absent when the request succeeded | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

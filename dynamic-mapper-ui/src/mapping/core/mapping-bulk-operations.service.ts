@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,9 +19,12 @@
  */
 import { Injectable, inject } from '@angular/core';
 import { AlertService, DataGridComponent } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { saveAs } from 'file-saver';
 import { BehaviorSubject, finalize, take, takeUntil, Subject } from 'rxjs';
 import { Direction, Mapping, MappingEnriched } from '../../shared';
+import { serializeMappingsForExport } from '../../shared/mapping/util';
 import { MappingService } from './mapping.service';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
@@ -35,6 +38,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
 export class MappingBulkOperationsService {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationModalService);
 
   /**
@@ -82,13 +86,20 @@ export class MappingBulkOperationsService {
           }
 
           if (errors.length === 0) {
-            this.alertService.success(`Activated ${successCount} mapping(s) successfully.`);
+            this.alertService.success(
+              this.translateService.instant(gettext('Activated {{successCount}} mapping(s) successfully.'), { successCount })
+            );
           } else {
-            this.alertService.warning(`Activated ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+            this.alertService.warning(
+              this.translateService.instant(gettext('Activated {{successCount}} mapping(s). Failed for: {{names}}.'), {
+                successCount,
+                names: errors.join(', ')
+              })
+            );
           }
           this.mappingService.refreshMappings(direction);
         } catch (error) {
-          this.alertService.danger('Failed to activate mappings', error);
+          this.alertService.danger(gettext('Failed to activate mappings'), error);
         }
       });
 
@@ -140,13 +151,20 @@ export class MappingBulkOperationsService {
           }
 
           if (errors.length === 0) {
-            this.alertService.success(`Deactivated ${successCount} mapping(s) successfully.`);
+            this.alertService.success(
+              this.translateService.instant(gettext('Deactivated {{successCount}} mapping(s) successfully.'), { successCount })
+            );
           } else {
-            this.alertService.warning(`Deactivated ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+            this.alertService.warning(
+              this.translateService.instant(gettext('Deactivated {{successCount}} mapping(s). Failed for: {{names}}.'), {
+                successCount,
+                names: errors.join(', ')
+              })
+            );
           }
           this.mappingService.refreshMappings(direction);
         } catch (error) {
-          this.alertService.danger('Failed to deactivate mappings', error);
+          this.alertService.danger(gettext('Failed to deactivate mappings'), error);
         }
       });
 
@@ -165,7 +183,6 @@ export class MappingBulkOperationsService {
     destroy$: Subject<void>,
     setLoading: (loading: boolean) => void
   ): void {
-    const action = debug ? 'Enabled' : 'Disabled';
     setLoading(true);
     mappingsEnriched$
       .pipe(
@@ -194,13 +211,24 @@ export class MappingBulkOperationsService {
           }
 
           if (errors.length === 0) {
-            this.alertService.success(`${action} debug for ${successCount} mapping(s) successfully.`);
+            const message = debug
+              ? gettext('Enabled debug for {{successCount}} mapping(s) successfully.')
+              : gettext('Disabled debug for {{successCount}} mapping(s) successfully.');
+            this.alertService.success(this.translateService.instant(message, { successCount }));
           } else {
-            this.alertService.warning(`${action} debug for ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+            const message = debug
+              ? gettext('Enabled debug for {{successCount}} mapping(s). Failed for: {{names}}.')
+              : gettext('Disabled debug for {{successCount}} mapping(s). Failed for: {{names}}.');
+            this.alertService.warning(
+              this.translateService.instant(message, { successCount, names: errors.join(', ') })
+            );
           }
           this.mappingService.refreshMappings(direction);
         } catch (error) {
-          this.alertService.danger(`Failed to ${action.toLowerCase()} debug for mappings`, error);
+          this.alertService.danger(
+            debug ? gettext('Failed to enable debug for mappings') : gettext('Failed to disable debug for mappings'),
+            error
+          );
         }
       });
 
@@ -241,7 +269,7 @@ export class MappingBulkOperationsService {
 
           this.exportMappings(mappings2Export, direction);
         } catch (error) {
-          this.alertService.danger('Failed to export mappings', error);
+          this.alertService.danger(gettext('Failed to export mappings'), error);
         }
       });
 
@@ -296,15 +324,22 @@ export class MappingBulkOperationsService {
           }
 
           if (errors.length === 0) {
-            this.alertService.success(`Deleted ${successCount} mapping(s) successfully.`);
+            this.alertService.success(
+              this.translateService.instant(gettext('Deleted {{successCount}} mapping(s) successfully.'), { successCount })
+            );
           } else {
-            this.alertService.warning(`Deleted ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+            this.alertService.warning(
+              this.translateService.instant(gettext('Deleted {{successCount}} mapping(s). Failed for: {{names}}.'), {
+                successCount,
+                names: errors.join(', ')
+              })
+            );
           }
           // No explicit refreshMappings() here: deleteMapping() above already refreshes the
           // affected direction after each successful delete (the last one leaves the list
           // current), so an extra call here would just be one more wasted refetch.
         } catch (error) {
-          this.alertService.danger('Failed to delete mappings', error);
+          this.alertService.danger(gettext('Failed to delete mappings'), error);
         }
       });
 
@@ -317,7 +352,7 @@ export class MappingBulkOperationsService {
    * @param direction The mapping direction (for filename)
    */
   private exportMappings(mappings: Mapping[], direction: Direction): void {
-    const json = JSON.stringify(mappings, undefined, 2);
+    const json = serializeMappingsForExport(mappings);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${direction}.json`);
   }

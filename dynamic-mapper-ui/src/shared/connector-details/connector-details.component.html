@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -54,7 +54,7 @@
     [path]="'c8y-pkg-dynamic-mapper/node3/connectorConfiguration'">
   </c8y-breadcrumb-item>
   <!-- <c8y-breadcrumb-item [label]="configuration?.name"></c8y-breadcrumb-item> -->
-  <c8y-breadcrumb-item [label]="'Details & logs'"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="'Details & logs' | translate"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
 <div class="elevation-sm p-12">
@@ -81,15 +81,20 @@
       <c8y-li role="listitem">
         <div class="d-flex">
           <div class="col-md-3">
-            <span class="text-10 label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
+            <span class="text-10 label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description | translate">
               {{ event.status ? event.status : '-' }}
             </span>
             @if (event.historyCount) {
             <span class="text-10 label label-default m-l-4"
-              title="{{ event.statusLog?.historyTruncated
-                ? ('Showing the ' + event.historyCount + ' most recent of ' + (event.historyCount + event.statusLog.historyOmittedCount) + ' status transitions in this session')
-                : ('Number of status transitions bundled into this session' | translate) }}">
-              {{ event.historyCount }}{{ event.statusLog?.historyTruncated ? '+' : '' }} {{ event.historyCount === 1 && !event.statusLog?.historyTruncated ? 'event' : 'events' }}
+              [title]="event.statusLog?.historyTruncated
+                ? ('Showing the {{shown}} most recent of {{total}} status transitions in this session' | translate: { shown: event.historyCount, total: event.historyCount + event.statusLog.historyOmittedCount })
+                : ('Number of status transitions bundled into this session' | translate)">
+              {{ event.historyCount }}{{ event.statusLog?.historyTruncated ? '+' : '' }}
+              @if (event.historyCount === 1 && !event.statusLog?.historyTruncated) {
+              <span translate>event</span>
+              } @else {
+              <span translate>events</span>
+              }
             </span>
             @if (event.sessionClosed === false) {
             <span class="text-10 label label-info m-l-4" translate>open</span>
@@ -116,7 +121,7 @@
     </c8y-li-timeline>
     }
     @if ((statusLogs$ | async)?.length === 0) {
-    <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.'"
+    <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.' | translate"
       [horizontal]="true"></c8y-ui-empty-state>
     }
   </c8y-list-group>

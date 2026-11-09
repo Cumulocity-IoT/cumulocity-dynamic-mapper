@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,6 +29,7 @@ import dynamic.mapper.connector.core.*;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Qos;
@@ -73,7 +74,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
-    private static final long DEFAULT_NEGATIVE_ACK_DELAY = 60;
+    private static final int DEFAULT_NEGATIVE_ACK_DELAY = 60;
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
@@ -110,13 +111,14 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Full constructor with dependencies
      */
     public MQTTServicePulsarClient(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal
@@ -623,6 +625,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * If the consumer is already closed, it will temporarily reconnect to perform
      * the unsubscribe
      */
+    @Override
     public void deleteResources() {
         if (towardsPlatformTopic == null) {
             log.debug("{} - No platform topic configured, skipping subscription deletion", tenant);

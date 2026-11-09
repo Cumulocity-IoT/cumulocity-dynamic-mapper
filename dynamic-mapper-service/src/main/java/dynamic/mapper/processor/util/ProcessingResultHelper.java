@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,7 +25,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -39,6 +42,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -371,6 +375,87 @@ public class ProcessingResultHelper {
         }
     }
 
+    /** What a connector does with a message after the pipeline ran. */
+    public enum AckOutcome {
+        /** The message is settled: acknowledge it (also for client errors, which a retry would repeat). */
+        ACK,
+        /** The pipeline failed in a way a retry may fix: do not acknowledge, let the broker redeliver. */
+        RETRY
+    }
+
+    /**
+     * Waits for the pipeline of a message and decides whether the connector may acknowledge it.
+     * See {@link #awaitOutcome} for the rule.
+     *
+     * @return {@code true} if the message is safe to acknowledge
+     */
+    public static boolean awaitAckable(ProcessingResultWrapper<?> processedResults,
+                                       String tenant, String topic, Logger log) {
+        return awaitOutcome(processedResults, tenant, topic, log, null) == AckOutcome.ACK;
+    }
+
+    /**
+     * The one rule every connector applies to the result of a pipeline run. The wait is always bounded;
+     * on timeout the pipeline is cancelled and drained.
+     *
+     * <ul>
+     *   <li>{@code RETRY}: the pipeline timed out, was interrupted or cancelled (for example a Smart
+     *       Function stopped by the CPU limit), threw, or reported a server-side (5xx) error.</li>
+     *   <li>{@code ACK}: everything else, including no errors, errors without an HTTP status, and client
+     *       errors (4xx), which a redelivery would only repeat, and messages the dispatcher skipped
+     *       without a pipeline.</li>
+     * </ul>
+     *
+     * A caller that retries decides separately how often (see {@code MessageFailureTracker}).
+     *
+     * @param timeoutOverrideMs wait this long instead of the mapping's budget (for example a longer wait on
+     *                          a retransmission), or {@code null} for the default
+     */
+    public static AckOutcome awaitOutcome(ProcessingResultWrapper<?> processedResults,
+                                          String tenant, String topic, Logger log, Long timeoutOverrideMs) {
+        return awaitOutcome(processedResults, tenant, topic, log, timeoutOverrideMs, false);
+    }
+
+    /**
+     * Same rule as {@link #awaitOutcome(ProcessingResultWrapper, String, String, Logger, Long)}.
+     *
+     * @param includeRequestErrors also read the HTTP status from errors recorded on the individual requests,
+     *                             not only on the context. Outbound publishing records its failures there (a
+     *                             webhook answering 503 is a server error worth a retry, a 400 is not).
+     */
+    public static AckOutcome awaitOutcome(ProcessingResultWrapper<?> processedResults,
+                                          String tenant, String topic, Logger log, Long timeoutOverrideMs,
+                                          boolean includeRequestErrors) {
+        if (processedResults == null || processedResults.getProcessingResult() == null) {
+            return AckOutcome.ACK;
+        }
+        int timeout = processedResults.getPipelineTimeoutMS();
+        long effectiveTimeout = timeoutOverrideMs != null ? timeoutOverrideMs
+                : timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+        try {
+            List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult()
+                    .get(effectiveTimeout, TimeUnit.MILLISECONDS);
+            if (processedResults.getCancellationRequested().get()) {
+                log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
+                return AckOutcome.RETRY;
+            }
+            return extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500
+                    ? AckOutcome.ACK : AckOutcome.RETRY;
+        } catch (TimeoutException e) {
+            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+            log.warn("{} - Processing timed out after {}ms, not acknowledging, topic: [{}], drained: {}",
+                    tenant, effectiveTimeout, topic, drained);
+            return AckOutcome.RETRY;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("{} - Interrupted while waiting for processing, not acknowledging, topic: [{}]", tenant, topic);
+            return AckOutcome.RETRY;
+        } catch (ExecutionException e) {
+            log.warn("{} - Processing failed, not acknowledging, topic: [{}]", tenant, topic, e);
+            return AckOutcome.RETRY;
+        }
+    }
+
     /**
      * Scans processing results for errors and returns the maximum HTTP status code found.
      * <p>
@@ -388,11 +473,25 @@ public class ProcessingResultHelper {
      */
     public static int extractMaxHttpStatus(List<? extends ProcessingContext<?>> results,
                                            String tenant, String topic, Logger log) {
+        return extractMaxHttpStatus(results, tenant, topic, log, false);
+    }
+
+    /**
+     * As {@link #extractMaxHttpStatus(List, String, String, Logger)}, optionally also counting errors recorded
+     * on the individual requests of each context. For a request error the status is taken from the
+     * {@link ProcessingException} found along its cause chain, or from an {@link SDKException} there.
+     *
+     * @return -1 if no error, otherwise the highest HTTP status code found (0 if none carries a status)
+     */
+    public static int extractMaxHttpStatus(List<? extends ProcessingContext<?>> results,
+                                           String tenant, String topic, Logger log,
+                                           boolean includeRequestErrors) {
         if (results == null) return -1;
         boolean anyError = false;
         int maxStatus = 0;
         for (ProcessingContext<?> context : results) {
-            if (context.hasError()) {
+            boolean contextError = context.hasError();
+            if (contextError) {
                 anyError = true;
                 log.error("{} - Error in processing context for topic: [{}]", tenant, topic);
                 for (Exception error : context.getErrors()) {
@@ -402,10 +501,36 @@ public class ProcessingResultHelper {
                     }
                 }
             }
+            if (includeRequestErrors) {
+                for (DynamicMapperRequest request : context.getRequests()) {
+                    if (!request.hasError()) {
+                        continue;
+                    }
+                    anyError = true;
+                    maxStatus = Math.max(maxStatus, httpStatusOf(request.getError()));
+                }
+            }
         }
         return anyError ? maxStatus : -1;
     }
 
+    /** The HTTP status carried by an error or one of its causes, 0 if none carries one. */
+    private static int httpStatusOf(Throwable error) {
+        int status = 0;
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof ProcessingException pe) {
+                status = Math.max(status, pe.getHttpStatusCode());
+            } else if (current instanceof SDKException sdk) {
+                status = Math.max(status, sdk.getHttpStatus());
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return status;
+    }
 
     /**
      * Creates a DynamicMapperRequest using focused contexts without adding to collector.

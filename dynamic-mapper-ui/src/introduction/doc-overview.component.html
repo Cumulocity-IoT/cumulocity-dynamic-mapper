@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -22,9 +22,9 @@
     <c8y-title>{{ 'Home' | translate }}</c8y-title>
     <a id="top"></a>
     <div class="text-right m-b-16">
-      <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+      <a (click)="scrollToElement('top')" class="to-the-top" role="button" [attr.aria-label]="'Scroll to top' | translate"
 >
-        <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+        <i class="dlt-c8y-icon-chevron-up m-r-4"></i> <span translate>Top</span>
       </a>
     </div>
     <div class="doc-content" #docBody>
@@ -37,14 +37,14 @@
     <ul class="text-16">
       <li>
         <b>{{ countMappingInbound$ | async }}</b>
-        <a [routerLink]="ROUTE_INBOUND"> inbound</a> and
+        <a [routerLink]="ROUTE_INBOUND"> <span translate>inbound</span></a> <span translate>and</span>
         <b>{{ countMappingOutbound$ | async }}</b>
-        <a [routerLink]="ROUTE_OUTBOUND"> outbound</a>
-        mappings are currently defined.
+        <a [routerLink]="ROUTE_OUTBOUND"> <span translate>outbound</span></a>
+        <span translate>mappings are currently defined.</span>
       </li>
       <li>
         <b>{{ countConnector$ | async }}</b>
-        <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are currently defined.
+        <a [routerLink]="ROUTE_CONNECTORS"> <span translate>connectors</span></a> <span translate>are currently defined.</span>
       </li>
     </ul>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -51,6 +51,7 @@ interface MonitoringComponentState {
   error: string | null;
 }
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -64,6 +65,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 export class MonitoringComponent implements OnInit, OnDestroy {
   // Modern Angular dependency injection
   private readonly router = inject(Router);
+  private readonly translateService = inject(TranslateService);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
@@ -96,7 +98,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private readonly baseColumns: Column[] = [
     {
       name: 'name',
-      header: 'Name',
+      header: gettext('Name'),
       path: 'name',
       filterable: false,
       // No sortOrder: the grid would then re-sort the rows alphabetically and drop the
@@ -111,7 +113,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     },
     {
       name: 'mappingTopic',
-      header: 'Mapping topic',
+      header: gettext('Mapping topic'),
       path: 'mappingTopic',
       filterable: false,
       sortable: true,
@@ -120,7 +122,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     },
     {
       name: 'publishTopic',
-      header: 'Publish topic',
+      header: gettext('Publish topic'),
       path: 'publishTopic',
       filterable: false,
       sortable: true,
@@ -128,7 +130,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
-      header: 'Received',
+      header: gettext('Received'),
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
@@ -138,7 +140,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '100px'
     },
     {
-      header: 'Processed',
+      header: gettext('Processed'),
       name: 'messagesProcessed',
       path: 'messagesProcessed',
       filterable: true,
@@ -148,7 +150,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '100px'
     },
     {
-      header: 'Filtered',
+      header: gettext('Filtered'),
       name: 'messagesFiltered',
       path: 'messagesFiltered',
       filterable: true,
@@ -158,7 +160,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '90px'
     },
     {
-      header: 'Errors',
+      header: gettext('Errors'),
       name: 'errors',
       path: 'errors',
       filterable: true,
@@ -168,7 +170,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '80px'
     },
     {
-      header: 'Error rate',
+      header: gettext('Error rate'),
       name: 'errorRateDisplay',
       path: 'errorRateDisplay',
       filterable: false,
@@ -178,7 +180,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       visible: false
     },
     {
-      header: 'Status',
+      header: gettext('Status'),
       name: 'healthDisplay',
       path: 'healthDisplay',
       filterable: false,
@@ -187,7 +189,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '170px'
     },
     {
-      header: 'Requests (failed)',
+      header: gettext('Requests (failed)'),
       name: 'requestsDisplay',
       path: 'requestsDisplay',
       filterable: false,
@@ -197,7 +199,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       visible: false
     },
     {
-      header: 'Time avg / max',
+      header: gettext('Time avg / max'),
       name: 'processingTimeDisplay',
       path: 'processingTimeDisplay',
       filterable: false,
@@ -207,7 +209,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       visible: false
     },
     {
-      header: 'Last message',
+      header: gettext('Last message'),
       name: 'lastMessageDisplay',
       path: 'lastMessageDisplay',
       filterable: false,
@@ -216,7 +218,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '180px'
     },
     {
-      header: 'Last error',
+      header: gettext('Last error'),
       name: 'lastErrorDisplay',
       path: 'lastErrorDisplay',
       filterable: false,
@@ -395,8 +397,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
   private showConfirmationModal(): BsModalRef {
     const initialState = {
-      title: 'Reset mapping statistic',
-      message: 'You are about to delete the mapping statistic. Do you want to proceed?',
+      title: gettext('Reset mapping statistic'),
+      message: gettext('You are about to delete the mapping statistic. Do you want to proceed?'),
       labels: {
         ok: 'Delete',
         cancel: 'Cancel'
@@ -448,7 +450,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
     const errorMessage = error instanceof Error
       ? error.message
-      : 'Unknown error occurred';
+      : this.translateService.instant(gettext('Unknown error occurred'));
 
     this.updateState({
       error: errorMessage,

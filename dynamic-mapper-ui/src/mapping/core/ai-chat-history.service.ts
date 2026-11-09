@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -86,6 +86,8 @@ export function generationInputsKey(mappingForAI: Record<string, unknown> | null
     transformationType: m['transformationType'],
     mappingType: m['mappingType'],
     sampleTransportFields: m['sampleTransportFields'],
+    sampleMessageInfo: m['sampleMessageInfo'],
+    additionalSamples: m['additionalSamples'],
     supportESM: !!m['supportESM']
   });
 }

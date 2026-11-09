@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -41,6 +41,7 @@ import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Qos;
@@ -76,12 +77,13 @@ public class MQTT3Client extends AMQTTClient {
      * Full constructor with dependencies
      */
     public MQTT3Client(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
-        super(serviceRegistry, connectorRegistry, connectorConfiguration,
+        super(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorSpecification = createConnectorSpecification();
     }
@@ -269,6 +271,7 @@ public class MQTT3Client extends AMQTTClient {
         mqttCallback = new MQTT3Callback(
                 tenant,
                 serviceRegistry,
+                connectorConfigurationService,
                 dispatcher,
                 connectorIdentifier,
                 connectorName,

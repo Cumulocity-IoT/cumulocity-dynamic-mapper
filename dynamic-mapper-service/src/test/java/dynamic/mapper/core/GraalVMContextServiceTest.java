@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -39,6 +39,7 @@ import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import lombok.extern.slf4j.Slf4j;
+import org.graalvm.polyglot.Context;
 
 /**
  * Unit tests for {@link GraalVMContextService} covering:
@@ -46,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Count-based engine rotation</li>
  *   <li>Active-context tracking via {@code engineActiveContexts}</li>
  *   <li>Explicit {@link Engine#close()} after all in-flight contexts drain</li>
- *   <li>Correct behaviour of {@link GraalVMContextService#removeGraalsResources}</li>
+ *   <li>Correct behaviour of {@link GraalVMContextService#removeTenant}</li>
  * </ul>
  */
 @Slf4j
@@ -70,14 +71,14 @@ class GraalVMContextServiceTest {
     void setUp() {
         service = new GraalVMContextService();
         serviceConfig = buildServiceConfig();
-        service.createGraalsResources(TENANT, serviceConfig);
+        service.initializeTenant(TENANT, serviceConfig);
     }
 
     @AfterEach
     void tearDown() {
         // Try a graceful remove (no-op if already removed by the test)
         try {
-            service.removeGraalsResources(TENANT);
+            service.removeTenant(TENANT);
         } catch (Exception ignored) {
         }
         if (engineToCloseInTearDown != null) {
@@ -152,7 +153,7 @@ class GraalVMContextServiceTest {
         assertNotNull(service.getGraalsSourceSystem(TENANT), "System source should be cached");
 
         engineToCloseInTearDown = engine;
-        log.info("✅ createGraalsResources initialises engine and sources");
+        log.info("✅ initializeTenant initialises engine and sources");
     }
 
     @Test
@@ -217,7 +218,7 @@ class GraalVMContextServiceTest {
         recordUniqueCompilation("onMessage_trigger.js"); // triggers rotation
 
         Map<String, AtomicInteger> counters = field(service, "compilationCounters");
-        // After rotation createGraalsResources resets the counter to 0
+        // After rotation initializeTenant resets the counter to 0
         int counterAfter = counters.get(TENANT).get();
         assertTrue(counterAfter < GraalVMContextService.ENGINE_ROTATION_THRESHOLD,
                 "Counter should have reset after rotation, got: " + counterAfter);
@@ -365,7 +366,7 @@ class GraalVMContextServiceTest {
     }
 
     // -------------------------------------------------------------------------
-    // removeGraalsResources
+    // removeTenant
     // -------------------------------------------------------------------------
 
     @Test
@@ -373,14 +374,14 @@ class GraalVMContextServiceTest {
         Engine engine = currentEngine();
         // No getGraalEngine calls — count stays at 0
 
-        service.removeGraalsResources(TENANT);
+        service.removeTenant(TENANT);
 
         // Engine was idle: should have been closed immediately
         assertThrows(Exception.class, () -> {
             org.graalvm.polyglot.Context.newBuilder("js").engine(engine).build();
-        }, "Idle engine should be closed by removeGraalsResources");
+        }, "Idle engine should be closed by removeTenant");
 
-        log.info("✅ removeGraalsResources closes idle engine immediately");
+        log.info("✅ removeTenant closes idle engine immediately");
     }
 
     @Test
@@ -390,7 +391,7 @@ class GraalVMContextServiceTest {
         // Simulate one in-flight context
         service.getGraalEngine(TENANT); // count = 1
 
-        service.removeGraalsResources(TENANT);
+        service.removeTenant(TENANT);
 
         // Engine is retired but not yet drained — still usable for in-flight work
         Set<Engine> retired = field(service, "retiredEngines");
@@ -402,12 +403,12 @@ class GraalVMContextServiceTest {
         assertFalse(retired.contains(engine),
                 "Engine should be closed and removed from retiredEngines after drain");
 
-        log.info("✅ removeGraalsResources defers close until in-flight contexts drain");
+        log.info("✅ removeTenant defers close until in-flight contexts drain");
     }
 
     @Test
     void removeGraalsResources_cleansUpAllTenantState() throws Exception {
-        service.removeGraalsResources(TENANT);
+        service.removeTenant(TENANT);
 
         Map<String, Engine> engines = field(service, "graalEngines");
         assertNull(engines.get(TENANT), "graalEngines should not contain tenant after remove");
@@ -418,7 +419,7 @@ class GraalVMContextServiceTest {
         assertNull(service.getGraalsSourceShared(TENANT), "Shared source should be removed");
         assertNull(service.getGraalsSourceSystem(TENANT), "System source should be removed");
 
-        log.info("✅ removeGraalsResources removes all tenant state");
+        log.info("✅ removeTenant removes all tenant state");
     }
 
     // -------------------------------------------------------------------------
@@ -515,4 +516,17 @@ class GraalVMContextServiceTest {
                 "The wrapper message must use the label too, got: " + thrown.getMessage());
     }
 
+
+    @Test
+    void initializeTenantAgainRetiresThePreviousEngineInsteadOfOrphaningIt() throws Exception {
+        Engine previous = currentEngine();
+
+        service.initializeTenant(TENANT, serviceConfig); // e.g. a repeated subscribe event
+
+        Engine current = currentEngine();
+        assertNotSame(previous, current);
+        // an engine nothing uses is closed; a leaked one would still accept contexts
+        assertThrows(IllegalStateException.class,
+                () -> Context.newBuilder("js").engine(previous).build());
+    }
 }

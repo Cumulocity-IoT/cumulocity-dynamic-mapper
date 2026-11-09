@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 import { Injectable } from '@angular/core';
@@ -24,6 +24,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from '../shared/service/shared.service';
 import { NODE2} from '../shared/mapping/mapping.constants';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class StatisticTabFactory implements TabFactory {
@@ -41,21 +42,21 @@ export class StatisticTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
         priority: 930,
-        label: 'Inbound',
+        label: gettext('Inbound'),
         icon: 'swipe-right',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/outbound`,
         priority: 920,
-        label: 'Outbound',
+        label: gettext('Outbound'),
         icon: 'swipe-left',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/chart`,
         priority: 910,
-        label: 'Chart',
+        label: gettext('Chart'),
         icon: 'pie-chart',
         orientation: 'horizontal',
       } as Tab);

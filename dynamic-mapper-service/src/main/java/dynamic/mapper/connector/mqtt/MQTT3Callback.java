@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,6 +25,7 @@ import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,9 +37,10 @@ import lombok.extern.slf4j.Slf4j;
 public class MQTT3Callback extends AbstractMqttCallback<Mqtt3Publish> {
 
     MQTT3Callback(String tenant, ServiceRegistry serviceRegistry,
+            ConnectorConfigurationService connectorConfigurationService,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName,
             String clientId, Runnable reconnectTrigger) { // clientId unused in MQTT3 but kept for API symmetry
-        super(tenant, serviceRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
+        super(tenant, serviceRegistry, connectorConfigurationService, callback, connectorIdentifier, connectorName, reconnectTrigger);
     }
 
     @Override

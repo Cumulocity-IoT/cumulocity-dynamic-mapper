@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -308,15 +308,21 @@ class AConnectorClientSubscriptionInitRetryTest {
 
     private static void invokeRunSubscriptionInitRetry(AConnectorClient connector, long previousDelayMs)
             throws Exception {
-        Method m = AConnectorClient.class.getDeclaredMethod("runSubscriptionInitRetry", long.class);
+        Method m = SubscriptionRetryScheduler.class.getDeclaredMethod("runInitRetry", long.class);
         m.setAccessible(true);
-        m.invoke(connector, previousDelayMs);
+        m.invoke(retryScheduler(connector), previousDelayMs);
     }
 
     private static boolean retryScheduledFlag(AConnectorClient connector) throws Exception {
-        Field f = AConnectorClient.class.getDeclaredField("subscriptionInitRetryScheduled");
+        Field f = SubscriptionRetryScheduler.class.getDeclaredField("initRetryScheduled");
         f.setAccessible(true);
-        return ((AtomicBoolean) f.get(connector)).get();
+        return ((AtomicBoolean) f.get(retryScheduler(connector))).get();
+    }
+
+    private static SubscriptionRetryScheduler retryScheduler(AConnectorClient connector) throws Exception {
+        Field f = AConnectorClient.class.getDeclaredField("retryScheduler");
+        f.setAccessible(true);
+        return (SubscriptionRetryScheduler) f.get(connector);
     }
 
     private static int housekeepingQueueSize(AConnectorClient connector) throws Exception {

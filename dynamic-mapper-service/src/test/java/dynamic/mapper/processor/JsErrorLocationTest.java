@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,7 +15,7 @@ import org.graalvm.polyglot.Source;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import dynamic.mapper.controller.TestController;
+import dynamic.mapper.mapping.MappingTestService;
 import dynamic.mapper.model.Mapping;
 
 /**
@@ -74,8 +74,8 @@ class JsErrorLocationTest {
         Exception top = new ProcessingException("top: middle", mid);
 
         // "middle" is already part of the top message, so only the root cause is appended
-        assertEquals("top: middle (caused by: root cause)", TestController.describeError(top));
-        assertEquals("NullPointerException", TestController.describeError(new NullPointerException()));
+        assertEquals("top: middle (caused by: root cause)", MappingTestService.describeError(top));
+        assertEquals("NullPointerException", MappingTestService.describeError(new NullPointerException()));
     }
 
     @Test

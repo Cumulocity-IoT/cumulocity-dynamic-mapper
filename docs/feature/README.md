@@ -34,6 +34,8 @@ decided against rather than forgotten.
 | [mapping-testing.md](mapping-testing.md) | Dry Run and Live Test of a mapping, test devices |
 | [mapping-testing-isolation.md](mapping-testing-isolation.md) | Keeping tests apart from live state: caches, mapping status, Smart Function state, real devices |
 | [identity-resolution.md](identity-resolution.md) | External ID ↔ managed object, implicit device creation |
+| [deployment-map.md](deployment-map.md) | Which mappings run on which connector: defined vs. effective deployment, live reconcile, reset |
+| [mapping-tree.md](mapping-tree.md) | The topic tree that resolves inbound topics to mappings, and the Hierarchy mapping page |
 | [reliability.md](reliability.md) | QoS, processing timeouts, failure handling, status counters |
 
 ### Transformations
@@ -58,20 +60,20 @@ decided against rather than forgotten.
 | [message-explorer.md](message-explorer.md) | Live inspection of broker traffic, seeding a mapping from a captured message |
 | [ai-agent-generation.md](ai-agent-generation.md) | Generating substitutions and Smart Functions via the AI Agent Manager |
 | [service-logs.md](service-logs.md) | Microservice logs for sub-tenants of a multi-tenant deployment: collection, per-tenant events, the Service logs page |
+| [import-export.md](import-export.md) | Import and export of mappings, connectors, and the service configuration, and how the three differ |
+
+### Outbound delivery and configuration
+
+| Page | Covers |
+|---|---|
+| [outbound-subscriptions.md](outbound-subscriptions.md) | How a device gets subscribed for outbound mappings: static, by type, by group, and the resync backfill |
+| [device-isolation.md](device-isolation.md) | Restricting outbound MQTT Service delivery to registered clients, the device↔client map, the relation endpoints |
+| [code-templates.md](code-templates.md) | System, shared, and per-type code templates behind Smart Functions, and the reset |
+| [roles-and-permissions.md](roles-and-permissions.md) | The three roles, the operation permission table, feature flags, what the UI hides or disables |
 
 ---
 
 ## Not documented yet
 
-Features that exist in the product and have no page. Listed so the gap is visible rather than
-rediscovered; ordered by how much a reader loses without them.
-
-| Feature | Where it lives | Why it matters |
-|---|---|---|
-| **Deployment map** | `DeploymentController` (`/defined`, `/effective`), `DeploymentMapService` | Which mappings run on which connector — a core concept with no page at all. "Defined" vs. "effective" deployment is not obvious, and failing deployment is a common cause of "my mapping does nothing". |
-| **Outbound subscription management** | `NotificationSubscriptionController` (`/subscription`, `/type`, `/type/resync/{type}`, `/group`, `/device`) | How a device comes to be subscribed at all: static, by device type, by group, plus the resync that backfills pre-existing devices. `mapping-processing-outbound.md` documents the pipeline *after* a notification arrives, never how the subscription got there. |
-| **Code templates** | `ConfigurationController` (`/code`, `/code/{id}`), `codeTemplates` in `ServiceConfiguration` | The shared/system JavaScript library and the per-type starting templates behind every Smart Function. Customer-editable, and part of what a tenant loses on a configuration reset. |
-| **Device isolation / client relations** | `ClientRelationController`, `deviceIsolationMQTTServiceEnabled` | Restricting outbound MQTT Service delivery to registered clients, and the device↔client mapping behind it. A tenant-wide switch whose semantics are undocumented. |
-| **Import / export** | UI only — mappings, connectors (#563), service configuration (#567) | Three different scopes with three different behaviours (mappings additive, connectors imported disabled because secrets are masked, service configuration a full overwrite). The differences are the documentation-worthy part. |
-| **Mapping tree** | `MappingController` `/tree`, `MappingTreeNode` | The topic hierarchy view, and how the resolver tree it renders relates to mapping resolution. |
-| **Roles and permissions** | `ROLE_DYNAMIC_MAPPER_ADMIN` / `_CREATE`, `Feature` flags | Which role may do what, and what the UI hides rather than disables. Renamed in 5.5.0 (see `CHANGES.md`) with no feature page to point at. |
+No feature is currently listed as missing a page. Add a row here, with where it lives and why it matters,
+when a feature ships without one.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -138,7 +138,7 @@ class GraalVMContextMemoryMeasurementTest {
         GraalVMContextService service = new GraalVMContextService();
         ServiceConfiguration config = serviceConfig(shared, system);
         config.setContextPoolSize(Math.max(perMapping, 1));
-        service.createGraalsResources(TENANT, config);
+        service.initializeTenant(TENANT, config);
         Engine engine = service.peekGraalEngine(TENANT);
         Source sharedSource = service.getGraalsSourceShared(TENANT);
         Source systemSource = service.getGraalsSourceSystem(TENANT);
@@ -195,7 +195,7 @@ class GraalVMContextMemoryMeasurementTest {
                     executed.heapMb() - before.heapMb(), failures,
                     executed.heapMb() - released.heapMb());
         } finally {
-            service.removeGraalsResources(TENANT);
+            service.removeTenant(TENANT);
         }
     }
 

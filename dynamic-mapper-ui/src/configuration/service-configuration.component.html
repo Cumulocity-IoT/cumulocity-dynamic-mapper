@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -91,6 +91,7 @@
       <c8y-list-group class="p-l-24 p-r-24">
         <form [formGroup]="serviceForm">
           @if (section == 'general') {
+          @if (expertMode) {
           <c8y-li>
             <c8y-li-icon icon="swipe-left"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -130,6 +131,7 @@
               </div>
             </div>
           </c8y-li>
+          }
           <c8y-li>
             <c8y-li-icon icon="link"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -169,30 +171,11 @@
               </div>
             </div>
           </c8y-li>
-          <c8y-li>
-            <c8y-li-icon icon="clock-o"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Message Explorer session TTL (minutes)' | translate }}</p>
-                <p>
-                  <small translate>Default lifetime of a Message Explorer session: it is automatically stopped once
-                    the UI has not polled it for this long. Can be overridden per session when starting it.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Message Explorer session TTL (minutes)' | translate }}">
-                  <input class="form-control" name="explorerSessionTTLMinutes" type="number" min="1"
-                    formControlName="explorerSessionTTLMinutes" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
           }
           @if (section == 'processing') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Smart Function execution limits
+              <span translate>Smart Function execution limits</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -243,12 +226,33 @@
               </div>
             </div>
           </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="refresh"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum processing attempts per message' | translate }}</p>
+                <p>
+                  <small translate>How many times a message may fail before the connector drops it instead of asking
+                    the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar,
+                    Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST
+                    polling, a page of polled data that keeps failing is skipped after this many attempts; server
+                    errors do not count, so an outage never skips data. The default is 3.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Maximum processing attempts per message' | translate }}">
+                  <input class="form-control" name="maxProcessingAttempts" type="number" min="1"
+                    formControlName="maxProcessingAttempts" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              JavaScript engine (advanced)
-              <small class="text-muted">Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most
-                tenants.</small>
+              <span translate>JavaScript engine (advanced)</span>
+              <small class="text-muted" translate>Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -318,8 +322,8 @@
           @if (section == 'caching') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              External ID caches
-              <small class="text-muted">Resolution of device external IDs to Cumulocity managed objects.</small>
+              <span translate>External ID caches</span>
+              <small class="text-muted" translate>Resolution of device external IDs to Cumulocity managed objects.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -403,8 +407,8 @@
           </c8y-li>
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Inventory cache
-              <small class="text-muted">Device metadata made available to mappings.</small>
+              <span translate>Inventory cache</span>
+              <small class="text-muted" translate>Device metadata made available to mappings.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -467,7 +471,7 @@
                     <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)"
                       [minus]="inventoryFragmentsList.length > 0">
                       <div class="fragment-input">
-                        <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
+                        <input class="form-control" [placeholder]="'e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*' | translate"
                           type="text" [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
                       </div>
                     </c8y-input-group-list>
@@ -477,9 +481,10 @@
               </div>
             </div>
           </c8y-li>
+          @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Retention
+              <span translate>Retention</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -488,8 +493,9 @@
               <div>
                 <p>{{ 'Minutes lifetime flow state' | translate }}</p>
                 <p>
-                  <small translate>Set time in minutes after which the complete flow state for Smart Functions and Java
-                    Extensions is cleared. Set to 0 to disable TTL.</small>
+                  <small translate>Set time in minutes after which the flow state of a Smart Function or Java Extension
+                    mapping is cleared when that mapping has not written it. Each mapping expires on its own. Set to 0
+                    to disable TTL.</small>
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
@@ -501,10 +507,11 @@
               </div>
             </div>
           </c8y-li>
+          }
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Advanced
+              <span translate>Advanced</span>
             </div>
           </c8y-li>
           <c8y-li>
@@ -533,8 +540,8 @@
           @if (section == 'monitoring') {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Events published to Cumulocity
-              <small class="text-muted">What the mapper reports into the platform event log.</small>
+              <span translate>Events published to Cumulocity</span>
+              <small class="text-muted" translate>What the mapper reports into the platform event log.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -612,8 +619,8 @@
           </c8y-li>
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-              Log verbosity
-              <small class="text-muted">Raise only while troubleshooting — verbose logging costs throughput.</small>
+              <span translate>Log verbosity</span>
+              <small class="text-muted" translate>Raise only while troubleshooting — verbose logging costs throughput.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -671,12 +678,12 @@
             </div>
           </c8y-li>
           }
+          @if (expertMode) {
           <ng-container formGroupName="serviceLogs">
             <c8y-li class="p-t-16">
               <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
-                Service logs
-                <small class="text-muted">The microservice log lines of this tenant that its administrators can read under
-                  Monitoring &gt; Service logs.</small>
+                <span translate>Service logs</span>
+                <small class="text-muted" translate>The microservice log lines of this tenant that its administrators can read under Monitoring &gt; Service logs.</small>
               </div>
             </c8y-li>
             <c8y-li>
@@ -735,7 +742,6 @@
                 </div>
               </div>
             </c8y-li>
-            @if (expertMode) {
             <c8y-li>
               <c8y-li-icon icon="clock"></c8y-li-icon>
               <div class="d-flex a-i-center">
@@ -843,8 +849,8 @@
                 </div>
               </div>
             </c8y-li>
-            }
           </ng-container>
+          }
           }
           @if (section == 'ai') {
           @if (aiCapabilitiesDisabled) {
@@ -867,13 +873,20 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of jsonata agent' | translate }}">
+                  @if (aiAgentDeployed) {
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" name="jsonataAgent" formControlName="jsonataAgent"
+                      [attr.aria-label]="'Select agent' | translate">
+                      @for (agent of agentOptions('jsonataAgent'); track agent) {
+                      <option [value]="agent">{{ agent }}</option>
+                      }
+                    </select>
+                    <span></span>
+                  </div>
+                  } @else {
                   <input class="form-control" type="text" formControlName="jsonataAgent" name="jsonataAgent"
-                    list="dynamic-mapper-jsonata-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
-                  <datalist id="dynamic-mapper-jsonata-agents">
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent"></option>
-                    }
-                  </datalist>
+                    autocomplete="off" placeholder="{{ 'Enter agent name' | translate }}" />
+                  }
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
                     [popover]="(aiCapabilitiesDisabled
@@ -899,13 +912,20 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of smartFunction agent' | translate }}">
+                  @if (aiAgentDeployed) {
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" name="smartFunctionAgent" formControlName="smartFunctionAgent"
+                      [attr.aria-label]="'Select agent' | translate">
+                      @for (agent of agentOptions('smartFunctionAgent'); track agent) {
+                      <option [value]="agent">{{ agent }}</option>
+                      }
+                    </select>
+                    <span></span>
+                  </div>
+                  } @else {
                   <input class="form-control" type="text" formControlName="smartFunctionAgent" name="smartFunctionAgent"
-                    list="dynamic-mapper-smart-function-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
-                  <datalist id="dynamic-mapper-smart-function-agents">
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent"></option>
-                    }
-                  </datalist>
+                    autocomplete="off" placeholder="{{ 'Enter agent name' | translate }}" />
+                  }
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
                     [popover]="(aiCapabilitiesDisabled

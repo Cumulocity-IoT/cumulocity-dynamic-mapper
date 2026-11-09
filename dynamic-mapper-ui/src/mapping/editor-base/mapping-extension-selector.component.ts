@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -48,6 +48,11 @@ export class MappingExtensionSelectorComponent {
   @Input() isLoading = false;
   @Input() hasParameter = false;
   @Input() extensionItems: string[] = [];
-  @Input() extensionEvents!: Observable<{ label: string; value: string }[]>;
+  @Input() extensionEvents!: Observable<{ label: string; value: string; description?: string }[]>;
   @Input() dataCyPrefix = 'dm-mapping-stepper';
+
+  /** Description of the currently selected event, shown below the dropdown instead of inside it. */
+  descriptionFor(events: { value: string; description?: string }[] | null): string | undefined {
+    return events?.find(e => e.value === this.form?.get('eventName')?.value)?.description;
+  }
 }

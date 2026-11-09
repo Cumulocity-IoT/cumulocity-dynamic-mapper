@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PublishVersionModalComponent } from './publish-version-modal.component';
@@ -65,17 +86,29 @@ describe('PublishVersionModalComponent', () => {
   });
 
   describe('confirm', () => {
-    it('emits {version, note} on closeSubject and completes it when valid', (done) => {
+    it('emits {version, note, activate} on closeSubject and completes it when valid', (done) => {
       component.version = '1.2.3';
       component.note = '  Fixed a bug  ';
 
-      const emitted: Array<{ version: string; note: string } | null> = [];
+      const emitted: Array<{ version: string; note: string; activate: boolean } | null> = [];
       component.closeSubject.subscribe({
         next: (v) => emitted.push(v),
         complete: () => {
-          expect(emitted).toEqual([{ version: '1.2.3', note: 'Fixed a bug' }]);
+          expect(emitted).toEqual([{ version: '1.2.3', note: 'Fixed a bug', activate: true }]);
           done();
         }
+      });
+
+      component.confirm();
+    });
+
+    it('reports the activation option as unchecked', (done) => {
+      component.version = '1.2.3';
+      component.activate = false;
+
+      component.closeSubject.subscribe((v) => {
+        expect(v?.activate).toBeFalse();
+        done();
       });
 
       component.confirm();
@@ -94,7 +127,7 @@ describe('PublishVersionModalComponent', () => {
 
   describe('cancel', () => {
     it('emits null on closeSubject and completes it', (done) => {
-      const emitted: Array<{ version: string; note: string } | null> = [];
+      const emitted: Array<{ version: string; note: string; activate: boolean } | null> = [];
       component.closeSubject.subscribe({
         next: (v) => emitted.push(v),
         complete: () => {

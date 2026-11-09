@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -260,5 +260,19 @@ class DeviceDiscoveryServiceTest {
         Device device = new Device();
         device.setId(id);
         return device;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void removeTenantDropsOnlyThatTenantsInFlightMarkers() throws Exception {
+        Field f = DeviceDiscoveryService.class.getDeclaredField("processingDevices");
+        f.setAccessible(true);
+        Set<String> set = (Set<String>) f.get(deviceDiscoveryService);
+        set.add("t1:100");
+        set.add("t2:100");
+
+        deviceDiscoveryService.removeTenant("t1");
+
+        assertEquals(Set.of("t2:100"), set);
     }
 }

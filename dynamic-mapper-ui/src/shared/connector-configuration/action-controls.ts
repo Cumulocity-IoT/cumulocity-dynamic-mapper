@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,6 +25,7 @@ import { LabelRendererComponent } from '../component/renderer/label.renderer.com
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
 import { ConnectorStatusEnabledRendererComponent } from './renderer/connector-status-enabled.renderer.component';
 import { ConnectorDetailCellRendererComponent } from './renderer/connector-detail-cell.renderer.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 export const ACTION_CONTROLS: ActionControlConfig[] = [
   // Edit action for admin users on disabled connectors
@@ -49,7 +50,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
   },
   {
     type: 'duplicate',
-    text: 'Duplicate',
+    text: gettext('Duplicate'),
     icon: 'duplicate',
     callbackName: 'onConfigurationCopy',
     visibilityRules: [
@@ -71,7 +72,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
   },
   {
     type: 'EXPORT',
-    text: 'Export connector',
+    text: gettext('Export connector'),
     icon: 'export',
     callbackName: 'exportSingle',
     visibilityRules: [
@@ -88,7 +89,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
 export const GRID_COLUMNS: Column[] = [
   {
     name: 'name',
-    header: 'Name',
+    header: gettext('Name'),
     path: 'name',
     filterable: false,
     sortable: true,
@@ -99,7 +100,7 @@ export const GRID_COLUMNS: Column[] = [
   },
   {
     name: 'status',
-    header: 'Status',
+    header: gettext('Status'),
     path: 'status',
     filterable: false,
     sortable: true,
@@ -109,7 +110,7 @@ export const GRID_COLUMNS: Column[] = [
   },
   {
     name: 'identifier',
-    header: 'Identifier',
+    header: gettext('Identifier'),
     path: 'identifier',
     filterable: false,
     visible: false,
@@ -118,7 +119,7 @@ export const GRID_COLUMNS: Column[] = [
   },
   {
     name: 'connectorType',
-    header: 'Type',
+    header: gettext('Type'),
     path: 'connectorType',
     filterable: false,
     sortable: true,
@@ -129,7 +130,7 @@ export const GRID_COLUMNS: Column[] = [
   },
   {
     name: 'supportedDirections',
-    header: 'Directions',
+    header: gettext('Directions'),
     path: 'supportedDirections',
     filterable: false,
     // Not sortable: the underlying value is an array (e.g. ["INBOUND","OUTBOUND"]), same
@@ -142,7 +143,7 @@ export const GRID_COLUMNS: Column[] = [
   },
   {
     name: 'enabled',
-    header: 'Enabled',
+    header: gettext('Enabled'),
     path: 'enabled',
     filterable: false,
     sortable: true,

@@ -79,7 +79,7 @@ the function runs. They are deliberately absent from the TypeScript and from the
 | `msg.cumulocityType` | `InputMessage.cumulocityType` | Outbound processor; typed `never` on `DynamicMapperDeviceMessage` since inbound passes `null` |
 | `msg.time` | `InputMessage.time` | Both processors (`Instant.now().toString()`) |
 | `msg.transportId` | `InputMessage.transportId` | Inbound processor (`context.getConnectorIdentifier()`); `null` for outbound |
-| `msg.transportFields` | `InputMessage.transportFields` | Inbound processor; carries the Kafka record **key** as `{"key": ...}`, empty map when the transport has none |
+| `msg.transportFields` | `InputMessage.transportFields` | Inbound processor; carries the broker message **key** as `{"key": ...}` plus connector metadata (`header.*`, `property.*`, `attribute.*`, `routingKey`, ...), built by `ProcessingContext.buildTransportFields()`; empty map when the transport has none |
 
 **Templates**
 

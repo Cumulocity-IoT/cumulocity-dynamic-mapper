@@ -149,6 +149,11 @@ jobs:
         run: npm run lint
         working-directory: ./dynamic-mapper-ui
 
+      # Runs before the build: the extraction also reads dist/, which would change locales.pot.
+      - name: Translation check (unmarked texts, locales.pot, app catalogs)
+        run: npm run i18n:check
+        working-directory: ./dynamic-mapper-ui
+
       - name: Build
         run: npm run build
         working-directory: ./dynamic-mapper-ui

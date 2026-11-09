@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -44,7 +44,6 @@ import org.springframework.http.ResponseEntity;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.version.MappingVersion;
@@ -73,7 +72,7 @@ class MappingControllerTest {
     private static final String TENANT = "testTenant";
 
     @Mock
-    private ConnectorRegistry connectorRegistry;
+    private dynamic.mapper.mapping.MappingOrchestrationService mappingOrchestrationService;
 
     @Mock
     private MappingService mappingService;
@@ -85,7 +84,7 @@ class MappingControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new MappingController(connectorRegistry, mappingService, contextService);
+        controller = new MappingController(mappingOrchestrationService, mappingService, contextService);
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);

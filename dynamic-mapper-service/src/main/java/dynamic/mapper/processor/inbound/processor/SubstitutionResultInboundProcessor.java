@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,7 +32,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -58,14 +58,14 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    private final ServiceRegistry serviceRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final IdentityResolutionService identityResolutionService;
 
     public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
-            ServiceRegistry serviceRegistry, IdentityResolutionService identityResolutionService) {
+            DeviceToClientRegistry deviceToClientRegistry, IdentityResolutionService identityResolutionService) {
         this.c8yAgent = c8yAgent;
         this.mappingService = mappingService;
-        this.serviceRegistry = serviceRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.identityResolutionService = identityResolutionService;
     }
 
@@ -214,7 +214,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 // cache the mapping of device to client ID
                 if (!context.isTesting() && context.getClientId() != null
                         && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                    serviceRegistry.addOrUpdateClientRelation(tenant,
+                    deviceToClientRegistry.addOrUpdateClientRelation(tenant,
                             context.getClientId(),
                             sourceId.getValue().toString());
                 }
@@ -233,7 +233,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
             if (!context.isTesting() && context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                serviceRegistry.addOrUpdateClientRelation(tenant,
+                deviceToClientRegistry.addOrUpdateClientRelation(tenant,
                         context.getClientId(),
                         sourceId.getValue().toString());
             }
@@ -376,6 +376,13 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                     substitute = new SubstituteValue(null, TYPE.IGNORE, declared, false);
                 } else {
                     substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+                }
+                if (finalI == pathTargetSubstitute.size()) {
+                    // Once per pathTarget, so test results show the gap without one line per request.
+                    context.getWarnings().add(String.format(
+                            "Target '%s' has %d value(s) but %d request(s) are created; the remaining"
+                                    + " request(s) use repairStrategy '%s'",
+                            pathTarget, pathTargetSubstitute.size(), size, declared));
                 }
                 log.warn(
                         "{} - Mapping '{}' has only {} value(s) cached for pathTarget: '{}' but a cardinality of {};"

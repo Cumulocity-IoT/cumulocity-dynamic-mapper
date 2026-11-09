@@ -1,6 +1,6 @@
 # CacheControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -13,13 +13,13 @@ All URIs are relative to *http://localhost:8080*
 
 Get cache size
 
-    Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.
+    Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE.
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **cacheId** | **String**| Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE | [default to null] |
+| **cacheId** | **String**| Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE | [default to null] |
 
 ### Return type
 

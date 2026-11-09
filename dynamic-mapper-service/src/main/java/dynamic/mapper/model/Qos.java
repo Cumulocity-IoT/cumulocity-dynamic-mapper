@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -139,5 +139,23 @@ public enum Qos {
         // which is stronger than requested. Over-delivering is safe; silently using an
         // unsupported level is not.
         return weakest != null ? weakest : target;
+    }
+
+    /**
+     * The strongest QoS requested by the active mappings of a list, or {@link #AT_MOST_ONCE} if there are
+     * none. Null-safe on the list (an unresolved topic yields no mappings at all), on its elements, and on
+     * each mapping's {@code qos}, which mappings created through the API before the field was defaulted may
+     * leave {@code null}; such a mapping counts as {@link #DEFAULT}.
+     */
+    public static Qos strongestActive(java.util.List<Mapping> mappings) {
+        if (mappings == null) {
+            return AT_MOST_ONCE;
+        }
+        return mappings.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(Mapping::getActive)
+                .map(m -> orDefault(m.getQos()))
+                .reduce(Qos::max)
+                .orElse(AT_MOST_ONCE);
     }
 }

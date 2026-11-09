@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -254,6 +254,33 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     });
   });
 
+  describe('describeSendResult for an outbound Live Test', () => {
+    const published = (extra: Partial<TestResult> = {}): TestResult => ({
+      success: true, errors: [], requests: [{ publishTopic: 'measurements/x' } as DynamicMapperRequest], ...extra
+    });
+
+    beforeEach(() => {
+      component.mapping.direction = Direction.OUTBOUND;
+    });
+
+    it('names the connectors the message went through', () => {
+      const text = component.describeSendResult(published({ publishedConnectors: ['Hive', 'Remote Pulsar'] }));
+      expect(text).toBe('Live test successful: published 1 message to topic measurements/x. '
+        + 'Published through connector(s): Hive, Remote Pulsar.');
+    });
+
+    it('warns that unsaved connector changes were not applied', () => {
+      component.connectorsUnsaved = true;
+      const text = component.describeSendResult(published({ publishedConnectors: ['Hive'] }));
+      expect(text).toContain('unsaved changes in the Connector tab are not applied');
+    });
+
+    it('stays silent about the connector selection when it is saved', () => {
+      component.connectorsUnsaved = false;
+      expect(component.describeSendResult(published())).not.toContain('Connector tab');
+    });
+  });
+
   describe('the "assume device exists" choice is per run', () => {
     it('is not written into testMapping, so it does not stick', async () => {
       testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsError), Promise.resolve(ok));
@@ -404,7 +431,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alertService.danger).toHaveBeenCalledWith('Failed to clear cache: no connection');
     });
 
-    it('a successful Live Test raises the alert that says what was created', async () => {
+    it('a successful Live Test logs what was created without an alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve({
         success: true, errors: [], warnings: [],
         requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
@@ -412,10 +439,8 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onSendTest();
 
-      expect(alertService.add).toHaveBeenCalledTimes(1);
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('info');
-      expect(alert.text).toContain('created alarm 99 on device 4711');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs?.some(l => l.startsWith('INFO ') && l.includes('created alarm 99 on device 4711'))).toBeTrue();
     });
 
     it('a Live Test that produced no request says nothing was sent instead of claiming a creation', async () => {
@@ -423,11 +448,30 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onSendTest();
 
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('warning');
-      expect(alert.text).toContain('nothing was sent');
-      expect(alert.text).not.toContain('created');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs?.some(l => l.includes('created'))).toBeFalse();
       expect(component.testingModel.logs).toContain('INFO The mapping produced no request, so nothing was sent.');
+    });
+
+    it('expands a collapsed console when a run wrote to it', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+      component.showConsole = false;
+
+      await component.onTestTransformation();
+
+      expect(component.showConsole).toBeTrue();
+    });
+
+    it('expands a collapsed console for a Dry Run whose only line is the test-mode note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'MEASUREMENT', request: { a: 1 } } as DynamicMapperRequest]
+      }));
+      component.showConsole = false;
+
+      await component.onTestTransformation();
+
+      expect(component.showConsole).toBeTrue();
     });
 
     it('a Dry Run without a request explains the empty result in the console', async () => {
@@ -507,6 +551,90 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alertService.danger).toHaveBeenCalledWith('<Test execution failed>: boom');
     });
   });
+  describe('failures', () => {
+    const failed = (errors: string[], extra: Partial<TestResult> = {}): TestResult =>
+      ({ success: false, requests: [], errors, warnings: [], ...extra });
+
+    it('a failed Dry Run logs the error to the console without an alert', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(failed(['Error evaluating $.temp'])));
+
+      await component.onTestTransformation();
+
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain('ERROR: Error evaluating $.temp');
+    });
+
+    it('a failed Live Test logs every error to the console without an alert', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(failed(['first', 'second', 'third'])));
+
+      await component.onSendTest();
+
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain('ERROR: first');
+    });
+
+    it('a request that is not JSON no longer discards the result: it is shown as text with a note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'MEASUREMENT', request: 'temp;21.5\n', response: undefined } as DynamicMapperRequest]
+      }));
+
+      await component.onTestTransformation();
+
+      expect(alertService.danger).not.toHaveBeenCalled();
+      expect(component.testingModel.results.length).toBe(1);
+      expect(component.testingModel.request).toEqual({ payload: 'temp;21.5\n' });
+      expect(component.testingModel.logs).toContain(
+        'INFO A request or response is not a JSON object, so it is shown as text under "payload".');
+    });
+
+    it('a JSON request is parsed as before, without the note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', request: '{"b":1,"a":2}' } as DynamicMapperRequest]
+      }));
+
+      await component.onTestTransformation();
+
+      expect(component.testingModel.request).toEqual({ a: 2, b: 1 });
+      expect(component.testingModel.logs?.some(l => l.includes('not a JSON object'))).toBeFalse();
+    });
+
+    it('a Live Test that succeeded with warnings keeps them in the console without an alert', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: ["Connector 'A' was skipped: it is not connected."],
+        requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
+      }));
+
+      await component.onSendTest();
+
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain("WARNING: Connector 'A' was skipped: it is not connected.");
+    });
+  });
+
+  describe('outbound Live Test result', () => {
+    beforeEach(() => {
+      component.mapping.direction = Direction.OUTBOUND;
+    });
+
+    it('says what was published instead of claiming an object was created', () => {
+      const text = component.describeSendResult({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', publishTopic: 'out/alarm/4711', sourceId: '4711' } as DynamicMapperRequest]
+      });
+      expect(text).toBe('Live test successful: published 1 message to topic out/alarm/4711.');
+    });
+
+    it('counts several messages', () => {
+      const text = component.describeSendResult({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM' } as DynamicMapperRequest, { api: 'ALARM' } as DynamicMapperRequest]
+      });
+      expect(text).toBe('Live test successful: published 2 messages; see "Show Next Test Result".');
+    });
+  });
+
   describe('payload sync with the mapping being edited', () => {
     // Regression: running a test used to rewrite mapping.sourceTemplate and push the payload back
     // to the host, so the editor reported "unsaved changes" for a mapping nobody had edited.
@@ -544,11 +672,11 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(JSON.parse(ctx.mapping.sourceTemplate)).toEqual({ a: 1 });
     });
 
-    it('a payload the user really edited is written back and announced', () => {
+    it('a payload the user really edited is announced to the host, which owns the mapping', () => {
       component.onSourceTemplateChanged({ updatedContent: { json: { a: 2 } } } as any);
 
-      expect(JSON.parse(component.mapping.sourceTemplate)).toEqual({ a: 2 });
       expect(emitted).toEqual([{ a: 2 }]);
+      expect(component.mapping.sourceTemplate).toBe(originalSource); // the step never writes the mapping
     });
 
     it('a change event that only re-serializes the same payload is not an edit', () => {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -45,6 +45,12 @@ public class ExplorerMessage {
     @Schema(description = "Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise", example = "863859042393327")
     private String key;
 
+    @Schema(description = "Type of the connector that received the message (e.g. MQTT, KAFKA, PULSAR, AMQP_091); null for OUTBOUND messages", example = "KAFKA")
+    private String connectorType;
+
+    @Schema(description = "Broker metadata of the message, e.g. Kafka headers as header.<name>, Pulsar properties as property.<name>, AMQP routingKey/exchange; null if none")
+    private java.util.Map<String, String> metadata;
+
     @Schema(description = "Display name of the connector", example = "MQTT Broker")
     private String connectorName;
 
@@ -56,6 +62,15 @@ public class ExplorerMessage {
 
     @Schema(description = "true if the original payload was binary and has been Base64-encoded", example = "false")
     private boolean binary;
+
+    @Schema(description = "Detected payload type: EMPTY, JSON, XML, TEXT or BINARY", example = "JSON")
+    private String payloadType;
+
+    @Schema(description = "Size of the original payload in bytes (before any Base64 encoding)", example = "552")
+    private int payloadSize;
+
+    @Schema(description = "Well-known format of a binary payload recognized by its magic bytes (e.g. GZIP, ZIP, AVRO); null if unknown or not binary", example = "GZIP")
+    private String binaryFormat;
 
     @Schema(description = "C8Y source device ID (outbound only)", example = "12345")
     private String sourceId;

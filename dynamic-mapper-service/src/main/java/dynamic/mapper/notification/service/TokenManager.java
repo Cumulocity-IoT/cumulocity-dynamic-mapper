@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -120,6 +120,16 @@ public class TokenManager {
         return tenant != null ? cacheInventoryTokens.get(tenant) : null;
     }
 
+    /** Drops every token reference of a tenant (no platform call; see the unsubscribe* methods for that). */
+    public void removeTenant(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        deviceTokens.remove(tenant);
+        managementTokens.remove(tenant);
+        cacheInventoryTokens.remove(tenant);
+    }
+
     public void unsubscribeDeviceSubscriber(String tenant) {
         if (tenant == null) {
             return;
@@ -127,6 +137,11 @@ public class TokenManager {
 
         // L1 fix: device subscriber tokens live in deviceTokens (per-connector map), not managementTokens
         Map<String, String> tenantTokens = deviceTokens.remove(tenant);
+        if (tenantTokens != null && dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+            log.debug("{} - Tenant unsubscribed, dropped {} device tokens without platform calls", tenant,
+                    tenantTokens.size());
+            return;
+        }
         if (tenantTokens != null) {
             int unsubscribedCount = 0;
             for (String token : tenantTokens.values()) {
@@ -148,6 +163,9 @@ public class TokenManager {
 
         // L1 fix: device group (management) token lives in managementTokens, not deviceTokens
         String token = managementTokens.remove(tenant);
+        if (token != null && dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+            return;
+        }
         if (token != null) {
             try {
                 tokenApi.unsubscribe(new Token(token));

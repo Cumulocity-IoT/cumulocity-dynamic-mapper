@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 import { CdkStep } from '@angular/cdk/stepper';
-import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { ChangeDetectionStrategy } from '@angular/core';
 
@@ -30,6 +31,7 @@ import { IIdentified } from '@c8y/client';
 import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { ClientRelationService } from '../core/client-relation.service';
 import { Subject } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface StepperLabels {
   next: string;
@@ -52,6 +54,7 @@ const CONSTANTS = {
   imports:[CoreModule,AssetSelectorModule]
 })
 export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterViewInit {
+  private readonly injector = inject(Injector);
   clients: string[] = [];
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<any>();
@@ -66,9 +69,10 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   stepLabel: any;
   labels: StepperLabels = {
-    next: 'Next',
-    cancel: 'Cancel'
+    next: gettext('Next'),
+    cancel: gettext('Cancel')
   };
+  readonly confirmLabels = { custom: gettext('Confirm') };
 
   feature: Feature;
 
@@ -141,19 +145,18 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
       try {
         const { devices } = await this.clientRelationService.getDevicesForClient(this.selectedClient.name);
 
-        // Use setTimeout to ensure the component is fully rendered
-        setTimeout(() => {
+        // The device selector of this step exists after the render that shows the step.
+        afterNextRenderInZone(this.injector, () => {
           this.selectedDevices = devices?.map(id => ({ id })) || [];
-          console.log("Step change - devices updated", this.selectedDevices);
           this.cdr.detectChanges();
-        }, 100); // Small delay to ensure component is ready
+        });
 
       } catch (error) {
         // ignore not found error
-        setTimeout(() => {
+        afterNextRenderInZone(this.injector, () => {
           this.selectedDevices = [];
           this.cdr.detectChanges();
-        }, 100);
+        });
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -88,7 +88,8 @@ class MappingServiceActivationTest {
     void setUp() {
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
                 resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
-                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
+                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService,
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class));
         service = spy(real);
 
         lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);

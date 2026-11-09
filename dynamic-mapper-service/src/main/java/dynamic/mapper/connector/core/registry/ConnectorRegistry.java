@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,8 +21,8 @@
 
 package dynamic.mapper.connector.core.registry;
 
+import dynamic.mapper.core.TenantScoped;
 import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -46,13 +46,40 @@ import jakarta.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import org.springframework.core.annotation.Order;
 
+/**
+ * Central, tenant-aware registry for connector state.
+ * <p>
+ * For each tenant, the registry holds:
+ * <ul>
+ * <li>the connector client instances, keyed by connector identifier
+ * ({@link AConnectorClient}), and</li>
+ * <li>the last known {@link ConnectorStatusEvent} per connector.</li>
+ * </ul>
+ * It also holds the {@link ConnectorSpecification} of every supported
+ * {@link ConnectorType}. The specifications are tenant-independent and are
+ * filled once by {@link #registerConnectors()}.
+ * <p>
+ * <b>Tenant lifecycle:</b> as a {@link TenantScoped} component, the registry
+ * creates the per-tenant status map in {@link #initializeTenant(String)}, closes
+ * all clients of a tenant in {@link #stopTenant(String)}, and drops all
+ * per-tenant state in {@link #removeTenant(String)}. After removal, the tenant
+ * is remembered so that a late status update from a stray thread does not
+ * re-create its status map. Re-subscribing the tenant clears this marker.
+ * <p>
+ * <b>Thread safety:</b> all maps are {@link ConcurrentHashMap} instances, so
+ * clients can be registered, looked up, and removed concurrently from
+ * connector, notification, and tenant-lifecycle threads.
+ */
 @Component
 @Slf4j
-public class ConnectorRegistry {
+@Order(TenantScoped.ORDER_CONNECTORS)
+public class ConnectorRegistry implements TenantScoped {
 
     // Structure: < Tenant, < ConnectorIdentifier, ConnectorInstance > >
     private Map<String, Map<String, AConnectorClient>> connectorTenantMap = new ConcurrentHashMap<>();
@@ -63,9 +90,12 @@ public class ConnectorRegistry {
     // Structure: < Tenant, < ConnectorIdentifier, ConnectorStatusEvent > >
     private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < ConnectorIdentifier, OutboundMessageDispatcher > >
-    // Added for NotificationSubscriber support
-    private Map<String, Map<String, OutboundMessageDispatcher>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
+    /**
+     * Tenants whose resources were removed (unsubscribed). A late status update from a stray
+     * thread must not re-create their status map via {@link #getConnectorStatusMap}; cleared
+     * again by {@link #initializeTenant} when the tenant re-subscribes.
+     */
+    private final Set<String> removedTenants = ConcurrentHashMap.newKeySet();
 
     // === Existing Methods ===
 
@@ -135,7 +165,15 @@ public class ConnectorRegistry {
             Iterator<Entry<String, AConnectorClient>> iterator = connectorMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Entry<String, AConnectorClient> entryNext = iterator.next();
-                entryNext.getValue().stopHousekeepingAndClose();
+                try {
+                    // same as unregisterClient: release the dispatcher to avoid memory leaks
+                    entryNext.getValue().setDispatcher(null);
+                    // cleanup() = stop housekeeping + close + clear subscription state
+                    entryNext.getValue().cleanup();
+                } catch (Exception e) {
+                    // one failing client must not leave the remaining ones running
+                    log.warn("{} - Error cleaning up connector {}: {}", tenant, entryNext.getKey(), e.getMessage());
+                }
                 iterator.remove();
             }
         }
@@ -188,15 +226,24 @@ public class ConnectorRegistry {
     }
 
     public Map<String, ConnectorStatusEvent> getConnectorStatusMap(String tenant) {
-        // computeIfAbsent ensures the map always exists after initializeResources,
+        // computeIfAbsent ensures the map always exists after initializeTenant,
         // and guards against races during startup where updateStatus is called before
-        // initializeResources has run for this tenant.
+        // initializeTenant has run for this tenant.
+        if (removedTenants.contains(tenant)) {
+            // tenant unsubscribed: hand out a detached map so the update is dropped, not stored
+            return new ConcurrentHashMap<>();
+        }
         return connectorStatusMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
-    public void initializeResources(String tenant) {
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
+    public void initializeTenant(String tenant) {
+        removedTenants.remove(tenant);
         connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());
-        dispatcherOutboundMaps.put(tenant, new ConcurrentHashMap<>());
     }
 
     /**
@@ -205,9 +252,19 @@ public class ConnectorRegistry {
      * the tenant's client map but leaves the (now empty) tenant entry behind, so remove it here
      * too and keep the cleanup contract uniform: no key of an unsubscribed tenant survives.
      */
-    public void removeResources(String tenant) {
+    @Override
+    public void stopTenant(String tenant) {
+        try {
+            unregisterAllClientsForTenant(tenant);
+        } catch (ConnectorRegistryException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void removeTenant(String tenant) {
+        removedTenants.add(tenant);
         connectorStatusMaps.remove(tenant);
-        dispatcherOutboundMaps.remove(tenant);
         connectorTenantMap.remove(tenant);
     }
 
@@ -226,59 +283,6 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.REST_POLLING, new HttpPollingConnector().getConnectorSpecification());
     }
 
-    // === New Methods for NotificationSubscriber Support ===
-
-    /**
-     * Add a dispatcher for notification subscriber tracking
-     */
-    public void addSubscriber(String tenant, String identifier, OutboundMessageDispatcher dispatcherOutbound) {
-        if (tenant == null || identifier == null || dispatcherOutbound == null) {
-            log.warn("Cannot add subscriber with null parameters: tenant={}, identifier={}", tenant, identifier);
-            return;
-        }
-
-        dispatcherOutboundMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
-                .put(identifier, dispatcherOutbound);
-        log.debug("{} - Added subscriber {} for tenant", tenant, identifier);
-    }
-
-    /**
-     * Remove a dispatcher
-     */
-    public void removeSubscriber(String tenant, String identifier) {
-        if (tenant == null || identifier == null) {
-            log.warn("Cannot remove subscriber: invalid parameters (tenant={}, identifier={})", tenant, identifier);
-            return;
-        }
-
-        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherOutboundMaps.get(tenant);
-        if (dispatchers != null) {
-            dispatchers.remove(identifier);
-            log.debug("{} - Removed subscriber {}", tenant, identifier);
-        }
-    }
-
-    /**
-     * Get all dispatchers for a tenant
-     */
-    public Map<String, OutboundMessageDispatcher> getDispatchers(String tenant) {
-        if (tenant == null) {
-            return new HashMap<>();
-        }
-        return dispatcherOutboundMaps.getOrDefault(tenant, new HashMap<>());
-    }
-
-    /**
-     * Get a specific dispatcher
-     */
-    public OutboundMessageDispatcher getDispatcher(String tenant, String identifier) {
-        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherOutboundMaps.get(tenant);
-        if (dispatchers != null) {
-            return dispatchers.get(identifier);
-        }
-        return null;
-    }
-
     @PreDestroy
     public void cleanup() {
         log.info("Cleaning up ConnectorRegistry");
@@ -295,7 +299,6 @@ public class ConnectorRegistry {
         // Clear all maps
         connectorTenantMap.clear();
         connectorStatusMaps.clear();
-        dispatcherOutboundMaps.clear();
         connectorSpecificationMap.clear();
 
         log.info("ConnectorRegistry cleanup completed");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -94,7 +94,7 @@ public class DeploymentMapService {
      * @param tenant the tenant identifier
      * @param reset if true, creates a new empty deployment map; if false, loads existing configuration
      */
-    public void initializeTenantDeploymentMap(String tenant, boolean reset) {
+    public void initializeTenant(String tenant, boolean reset) {
         synchronized (lockFor(tenant)) {
         MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
@@ -128,7 +128,7 @@ public class DeploymentMapService {
      * 
      * @param tenant the tenant identifier
      */
-    public void removeTenantDeploymentMap(String tenant) {
+    public void removeTenant(String tenant) {
         synchronized (lockFor(tenant)) {
             deploymentMaps.remove(tenant);
         }
@@ -369,7 +369,7 @@ public class DeploymentMapService {
      *
      * <p>Must be called with the tenant lock held. Updates the {@link MapperServiceRepresentation}
      * object with the current deployment configuration and keeps its cached copy in sync, so a
-     * later {@link #initializeTenantDeploymentMap} does not resurrect stale deployments.
+     * later {@link #initializeTenant} does not resurrect stale deployments.
      *
      * @throws IllegalStateException if the inventory update failed (the in-memory map is already
      *                               changed; callers must not report success)

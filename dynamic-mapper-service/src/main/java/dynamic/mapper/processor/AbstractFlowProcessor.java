@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.core.GraalHostAccessPolicy;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -89,6 +90,18 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         this.graalVMContextService = graalVMContextService;
     }
 
+    /**
+     * Books a leg that was cancelled before its Smart Function ran as a failure. Returning without
+     * an error would let {@code ConsolidationProcessor} count the leg as processed and reset the
+     * mapping's failure streak, although the broker callback already treats it as failed.
+     */
+    private void recordCancelled(ProcessingContext<?> context, String tenant, Mapping mapping) {
+        String message = String.format(
+                "Processing of mapping %s was cancelled (pipeline timeout) before the Smart Function ran",
+                mapping.getName());
+        handleProcessingError(new ProcessingException(message), message, context, tenant, mapping);
+    }
+
     public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -104,6 +117,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation already requested before process() started, skipping JS execution for mapping: {}",
                     tenant, mapping.getName());
+            recordCancelled(context, tenant, mapping);
             return;
         }
 
@@ -122,6 +136,15 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             }
             log.info("{} - Skipping JS execution for mapping {}: GraalVM context setup failed earlier",
                     tenant, mapping.getName());
+            return;
+        }
+
+        // ── Early-exit: an earlier stage (e.g. payload deserialization) already failed. The Camel
+        // route still reaches this processor, and running the Smart Function with a null payload
+        // would only bury the real cause under a misleading "Cannot read property of null" error.
+        if (context.hasError()) {
+            log.info("{} - Skipping JS execution for mapping {}: an earlier processing stage failed: {}",
+                    tenant, mapping.getName(), context.getErrors().get(0).getMessage());
             return;
         }
 
@@ -361,6 +384,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                  if (wrapperCheck != null && wrapperCheck.getCancellationRequested().get()) {
                      log.warn("{} - Cancellation requested just before JS execute(), skipping for mapping: {}",
                              tenant, mapping.getName());
+                     recordCancelled(context, tenant, mapping);
                      return;
                  }
 
@@ -440,7 +464,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         }
 
         // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
-        GraalVMContextService.installBase64Functions(graalContext);
+        GraalHostAccessPolicy.installBase64Functions(graalContext);
 
         // Use pre-cached Source if available - no decoding or parsing needed
         if (context.getSharedSource() != null) {

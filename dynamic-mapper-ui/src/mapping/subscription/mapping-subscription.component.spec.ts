@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,7 +29,7 @@ import { SubscriptionService } from '../core/subscription.service';
 import { SharedService } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import { Feature } from '../../shared';
-import { Device, NotificationSubscriptionResponse } from '../../shared/mapping/mapping.model';
+import { Device, NotificationSubscriptionResponse } from '../../shared/mapping/notification-subscription.model';
 import { IIdentified } from '@c8y/client';
 
 describe('MappingSubscriptionComponent', () => {
@@ -126,6 +127,7 @@ describe('MappingSubscriptionComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MappingSubscriptionComponent],
       providers: [
+        provideTranslateStub(),
         { provide: MappingService, useValue: mockMappingService },
         { provide: SubscriptionService, useValue: mockSubscriptionService },
         { provide: SharedService, useValue: mockSharedService },
@@ -199,6 +201,7 @@ describe('MappingSubscriptionComponent', () => {
       await TestBed.configureTestingModule({
         imports: [MappingSubscriptionComponent],
         providers: [
+        provideTranslateStub(),
           { provide: MappingService, useValue: mockMappingService },
           { provide: SubscriptionService, useValue: mockSubscriptionService },
           { provide: SharedService, useValue: mockSharedService },

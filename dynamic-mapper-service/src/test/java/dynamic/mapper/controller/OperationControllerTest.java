@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,8 +22,6 @@
 package dynamic.mapper.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -53,7 +51,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.core.ServiceRegistry;
@@ -70,6 +68,7 @@ import org.springframework.web.server.ResponseStatusException;
 import dynamic.mapper.model.ServiceOperation;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.mapping.deployment.DeploymentMapService;
@@ -88,13 +87,15 @@ class OperationControllerTest {
     private static final String TENANT = "testTenant";
 
     @Mock private ConnectorRegistry connectorRegistry;
+    @Mock private dynamic.mapper.mapping.MappingOrchestrationService mappingOrchestrationService;
     @Mock private MappingService mappingService;
     @Mock private ConnectorConfigurationService connectorConfigurationService;
     @Mock private ServiceConfigurationService serviceConfigurationService;
-    @Mock private BootstrapService bootstrapService;
+    @Mock private ConnectorLifecycleService connectorLifecycleService;
     @Mock private C8YAgent c8YAgent;
     @Mock private ContextService<UserCredentials> contextService;
     @Mock private ServiceRegistry serviceRegistry;
+    @Mock private dynamic.mapper.core.DeviceToClientRegistry deviceToClientRegistry;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private MappingStatusService mappingStatusService;
     @Mock private IdentityFacade identityFacade;
@@ -108,8 +109,8 @@ class OperationControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
-                serviceConfigurationService, bootstrapService, c8YAgent, contextService, serviceRegistry,
+        controller = new OperationController(connectorRegistry, mappingService, mappingOrchestrationService, connectorConfigurationService,
+                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry, org.mockito.Mockito.mock(dynamic.mapper.notification.NotificationSubscriber.class), deviceToClientRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 

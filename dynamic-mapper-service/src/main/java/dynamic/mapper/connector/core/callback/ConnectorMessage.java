@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -35,6 +35,13 @@ public class ConnectorMessage {
     private String key;
 
     private String[] headers;
+
+    /**
+     * Broker-specific message metadata (Kafka headers, Pulsar properties, AMQP headers, ...), see
+     * {@link TransportMetadata}. Delivered to Smart Functions and extensions as transport fields.
+     * Null if the connector has none.
+     */
+    private java.util.Map<String, String> metadata;
 
     @NotNull
     private String tenant;

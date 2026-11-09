@@ -80,11 +80,15 @@ declare -a TESTS=(
     "inbound|test-inbound-mapping-versioning|Mapping versioning (draft, publish, activate, rollback)"
     "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
     "inbound|test-inbound-filter|filterMapping / filterInventory — inbound"
+    "inbound|test-inbound-malformed-payload|Malformed / wrong-shape payload dropped; mapping keeps processing"    "inbound|test-inbound-source-c8y-id|useExternalId=false: device addressed by internal id (_IDENTITY_.c8ySourceId)"
+    "inbound|test-inbound-event-attachment|_CONTEXT_DATA_ attachment + deviceName/deviceType on inbound EVENT"
+
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Inbound: Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
     "smartfunction|test-inbound-smartfunction-04|Inbound: Pattern 04: Dual payload type + deduplication"
-    "smartfunction|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+    "smartfunction|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"    "smartfunction|test-inbound-smartfunction-custom-route|Inbound: cumulocityType custom → /service/ route (API.CUSTOM)"
+
     # ── Extensions (Inbound + Outbound) ──────────────────────────────────────
     "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
     "extension|test-inbound-extension-custom-alarm|Extension: JSON → Alarm"
@@ -99,13 +103,16 @@ declare -a TESTS=(
     "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
     "outbound|test-outbound-filter-inventory|filterInventory / filterMapping — outbound inventory"
+    "outbound|test-outbound-inventory-cache-eviction|Inventory cache — eviction on device delete"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
     "outbound|test-outbound-smartfunction-molookup|Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-webhook|C8Y Measurement → WEB_HOOK connector (needs http-polling-mock)"
-    "outbound|test-outbound-static-subscription|Static subscription management"
+    "outbound|test-outbound-static-subscription|Static subscription management"    "outbound|test-outbound-subscription-api-all|Static subscription api=ALL delivers measurement, event and alarm mappings"
+    "outbound|test-outbound-with-children|EVENT_WITH_CHILDREN / ALARM_WITH_CHILDREN subscriptions (parent + child)"
+
     "outbound|test-outbound-type-subscription|Dynamic type subscription"
     "outbound|test-outbound-type-subscription-resync|Type subscription resync (backfill of pre-existing devices)"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
@@ -114,6 +121,8 @@ declare -a TESTS=(
     "outbound|test-outbound-type-subscription-removal|Type subscription removal unsubscribes devices"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
     # ── Reliability ───────────────────────────────────────────────────────────
+    "reliability|test-api-mapping-dry-run|POST /test/mapping dry-run + REST validation errors (no broker needed)"    "reliability|test-api-code-templates|/configuration/code CRUD (no broker needed)"
+
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
     "reliability|test-multi-connector|Multiple connector status check"
     "reliability|test-reconnect|Connector disconnect / reconnect cycle"

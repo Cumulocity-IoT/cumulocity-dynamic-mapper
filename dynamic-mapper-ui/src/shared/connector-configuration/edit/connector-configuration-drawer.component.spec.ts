@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -298,9 +298,9 @@ describe('ConnectorConfigurationDrawerComponent', () => {
         Object.entries(props()).forEach(([k, p]) => (p.group = original[k]));
       });
 
-      // The fixed "General" legend above name/description has no hideExpression; property-group legends always do.
+      // The fixed "General" legend above name/description has no expressions.hide; property-group legends always do.
       const groupLegendFields = () =>
-        component.dynamicFormFields.filter(f => f.type === 'template' && f.hideExpression);
+        component.dynamicFormFields.filter(f => f.type === 'template' && f.expressions?.['hide']);
 
       const legends = () =>
         groupLegendFields()
@@ -358,10 +358,10 @@ describe('ConnectorConfigurationDrawerComponent', () => {
         try {
           await component['createDynamicForm'](ConnectorType.MQTT);
           const legend = groupLegendFields()[0];
-          const hide = legend.hideExpression as (model: any) => boolean;
+          const hide = legend.expressions['hide'] as (field: any) => boolean;
 
-          expect(hide({ properties: { enableSSL: false } })).toBe(true);
-          expect(hide({ properties: { enableSSL: true } })).toBe(false);
+          expect(hide({ model: { properties: { enableSSL: false } } })).toBe(true);
+          expect(hide({ model: { properties: { enableSSL: true } } })).toBe(false);
         } finally {
           delete props()['mqttHost'].condition;
           delete props()['mqttPort'].condition;
@@ -503,8 +503,8 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       component['specificationProperties'] = properties;
       const hideExpression = component['createHideExpression']({ key: 'trust', property: properties['trust'] });
 
-      expect(hideExpression({ properties: { protocol: 'mqtt://' } })).toBe(true);
-      expect(hideExpression({ properties: { protocol: 'mqtts://' } })).toBe(false);
+      expect(hideExpression({ model: { properties: { protocol: 'mqtt://' } } } as any)).toBe(true);
+      expect(hideExpression({ model: { properties: { protocol: 'mqtts://' } } } as any)).toBe(false);
     });
 
     it('should hide a property whose condition holds but whose parent is hidden', () => {

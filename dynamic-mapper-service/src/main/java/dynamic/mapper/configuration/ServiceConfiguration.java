@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -30,6 +30,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonMerge;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
@@ -40,6 +41,7 @@ import lombok.ToString;
 
 @Data
 @ToString()
+@JsonIgnoreProperties(ignoreUnknown = true)
 @AllArgsConstructor
 @Schema(description = "Service configuration for the dynamic mapping service controlling logging, caching, extensions, and performance settings")
 public class ServiceConfiguration implements Cloneable {
@@ -69,12 +71,12 @@ public class ServiceConfiguration implements Cloneable {
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
-        this.supportESM = false;
+        this.maxProcessingAttempts = DEFAULT_MAX_PROCESSING_ATTEMPTS;
+        this.supportESM = true;
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
         this.mappingVersionRetention = 5;
         this.engineRotationThreshold = 1000;
-        this.explorerSessionTTLMinutes = 10;
         this.contextPoolSize = 20;
         this.serviceLogs = new ServiceLogsConfiguration();
     }
@@ -209,6 +211,9 @@ public class ServiceConfiguration implements Cloneable {
      */
     public static final int PROCESSING_HARD_CEILING_MS = 120_000;
 
+    /** How often a message may fail before the connector drops it instead of retrying. */
+    public static final int DEFAULT_MAX_PROCESSING_ATTEMPTS = 5;
+
     /**
      * The JavaScript CPU budget actually applied, with the default substituted for a missing
      * value.
@@ -259,6 +264,10 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer flowStateRetention;
 
+    @Schema(description = "How many times a message may fail before the connector drops it (acknowledges it, with the error kept in the mapping status) instead of asking the broker to redeliver it. Applies to connectors that retry: MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, outbound Notification 2.0, and REST polling, where a page of polled data that keeps failing is skipped (server errors do not count). Default 3.", example = "3", minimum = "1")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer maxProcessingAttempts;
+
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
@@ -296,11 +305,6 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer contextPoolSize;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Default TTL in minutes for Message Explorer sessions: a session is automatically stopped if the UI has not polled it within this window. Can be overridden per session when starting it.", example = "10", minimum = "1")
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    private Integer explorerSessionTTLMinutes;
 
     @Schema(description = "Settings of the service log (Monitoring > Service logs): what is stored for this tenant, how much, and for how long. Every value has a default; unset values keep it.")
     @JsonSetter(nulls = Nulls.SKIP)

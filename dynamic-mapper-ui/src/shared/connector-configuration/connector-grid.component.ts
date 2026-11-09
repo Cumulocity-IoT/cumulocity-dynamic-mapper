@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,7 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../misc/after-render';
 import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
@@ -53,6 +54,7 @@ import { provideGridPersistence } from '../misc/grid-persistence';
   ]
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+  private readonly injector = inject(Injector);
   @Input() selectable = true;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   private directions$ = new BehaviorSubject<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
@@ -139,7 +141,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       .subscribe(value => {
         this.currentPollingInterval = value;
         this.onRefreshIntervalChange(value);
-        setTimeout(() => {
+        // After the render that hands the new interval to the countdown component.
+        afterNextRenderInZone(this.injector, () => {
           this.nextTriggerCountdown$.next(this.currentPollingInterval);
           this.resetCountdown();
         });
@@ -154,9 +157,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     }];
     this.cdr.detectChanges();
     if (this.selectable) {
-      setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
+      afterNextRenderInZone(this.injector, () => this.connectorGrid.setItemsSelected(this.selected, true));
     }
-    setTimeout(() => this.startCountdown());
+    afterNextRenderInZone(this.injector, () => this.startCountdown());
     this.initVisibilityTracking();
   }
 
@@ -253,7 +256,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     this.bulkActionControls = [
       {
         type: 'EXPORT',
-        text: 'Export connector(s)',
+        text: gettext('Export connector(s)'),
         icon: 'export',
         callback: this.exportConnectorBulk.bind(this)
       }
@@ -317,8 +320,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private updateDeploymentMapEntry(selected: string[]): void {
     if (!this.deploymentMapEntry) return;
 
-    this.deploymentMapEntry.connectors = selected;
-    this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
+    // A new object: the host owns the entry and hands the new one back through the input.
+    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry, connectors: selected });
 
     if (this.readOnly) {
       this.updateReadOnlyConfigurations(selected);
@@ -493,8 +496,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private showConfirmationModal(): BsModalRef {
     return this.bsModalService.show(ConfirmationModalComponent, {
       initialState: {
-        title: 'Delete connector',
-        message: 'You are about to delete a connector. Do you want to proceed?',
+        title: gettext('Delete connector'),
+        message: gettext('You are about to delete a connector. Do you want to proceed?'),
         labels: { ok: 'Delete', cancel: 'Cancel' }
       }
     });

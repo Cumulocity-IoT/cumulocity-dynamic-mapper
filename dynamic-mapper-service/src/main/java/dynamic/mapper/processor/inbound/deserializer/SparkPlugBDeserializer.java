@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,7 +31,6 @@ import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.model.Mapping;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.tahu.protobuf.SparkplugBProto;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -139,7 +138,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      * @param cacheManager resolved lazily to avoid a circular dependency during
      *                     bean initialization
      */
-    public SparkPlugBDeserializer(@Lazy C8YAgent c8yAgent, @Lazy CacheManager cacheManager) {
+    public SparkPlugBDeserializer(C8YAgent c8yAgent, CacheManager cacheManager) {
         this.c8yAgent = c8yAgent;
         this.cacheManager = cacheManager;
     }

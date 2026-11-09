@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -32,13 +32,13 @@
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
 
-  <cdk-step label="Select or create client name">
+  <cdk-step [label]="'Select or create client name' | translate">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
       <div class="row">
         <div class="col-xs-12">
           <h4 class="text-medium">
             <div class="text-center">
-              <span>Create or select client name</span>
+              <span translate>Create or select client name</span>
             </div>
           </h4>
         </div>
@@ -54,7 +54,7 @@
                   <div>
                     <label translate>Client Name</label>
                   </div>
-                  <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...'"
+                  <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...' | translate"
                     data-cy="dm-client-relation-client-input"
                     [allowFreeEntries]="true" [(ngModel)]="selectedClient" (onSearch)="onSearch($event)">
                     @for (client of filteredClients; track client) {
@@ -67,7 +67,7 @@
                     @if (selectedClient && filteredClients.length == 0) {
                       <c8y-li class="bg-level-2 p-8 sticky-bottom">
                         <span translate>New client: {{selectedClient.name}}</span>
-                        <button class="btn btn-default btn-sm m-l-8" title="Add new client" type="button"
+                        <button class="btn btn-default btn-sm m-l-8" [title]="'Add new client' | translate" type="button"
                           (click)="addNewClient(searchTerm)" data-cy="dm-client-relation-add-client" translate>
                           Add new client
                         </button>
@@ -87,10 +87,10 @@
     </c8y-stepper-buttons>
   </cdk-step>
 
-  <cdk-step label="Assign devices or device groups" state="final">
+  <cdk-step [label]="'Assign devices or device groups' | translate" state="final">
     <div class="d-col no-align-items p-48 fit-h fit-w c8y-stepper--no-btns">
       <div class="card-header separator fit-w j-c-center">
-        <h4 class="card-title fit-w text-center">
+        <h4 class="card-title fit-w text-center" translate>
           Device selection
         </h4>
       </div>
@@ -109,7 +109,7 @@
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       data-cy="dm-client-relation-step2-buttons"
-      (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="{ custom: 'Confirm' }"
+      (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="confirmLabels"
       [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     </c8y-stepper-buttons>
   </cdk-step>

@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 package dynamic.mapper.logs.capture;
 
 import dynamic.mapper.logs.model.ServiceLogRecord;
@@ -156,5 +177,21 @@ class BoundedServiceLogBufferTest {
         }
 
         assertEquals(1, buffer.drain(java.util.List.of("tenantB")).get("tenantB").size());
+    }
+
+    @Test
+    void whenTheSharedLimitIsReachedTheBiggestHolderPaysNotTheTenantThatAddsALine() {
+        BoundedServiceLogBuffer buffer = new BoundedServiceLogBuffer();
+        String big = "x".repeat(60_000); // ~120 KB each
+        // Ten tenants at their own limit together exceed the shared one.
+        for (int t = 0; t < 10; t++) {
+            for (int i = 0; i < 140; i++) {
+                buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH.plusMillis(i), "INFO", "t", "big" + t, "l", big),
+                        10_000);
+            }
+        }
+        buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH, "INFO", "t", "small", "l", "small"), 10_000);
+
+        assertEquals(1, buffer.drain(java.util.List.of("small")).get("small").size());
     }
 }

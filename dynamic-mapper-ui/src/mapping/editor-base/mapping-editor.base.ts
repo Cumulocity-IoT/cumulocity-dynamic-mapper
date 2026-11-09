@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,10 +18,13 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, computed, signal } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
@@ -34,12 +37,16 @@ import {
   isSubstitutionsAsCode,
   Mapping,
   StepperConfiguration,
+  Substitution,
   TransformationType
 } from '../../shared';
 import {
+  base64ToString,
   buildTestMapping,
   checkTransformationType,
   isConnectorSelectionEmpty,
+  stripTemplateMetadataTags,
+  TemplateEditorRef,
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
@@ -49,8 +56,7 @@ import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
-import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
-import { StepperViewModel } from '../stepper/stepper-view.model';
+import { StepperViewModel } from './stepper-view.model';
 
 /**
  * State and behavior shared by the linear stepper and the unified (tabbed) editor.
@@ -66,10 +72,26 @@ import { StepperViewModel } from '../stepper/stepper-view.model';
 // declares lifecycle hooks (ngAfterViewInit/ngOnDestroy), even when it is abstract.
 @Directive()
 export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
+  private readonly injector = inject(Injector);
   abstract mapping: Mapping;
   abstract stepperConfiguration: StepperConfiguration;
-  abstract deploymentMapEntry: DeploymentMapEntry;
-  abstract templateStepRef: MappingTemplateStepComponent;
+  /**
+   * The connectors this mapping is deployed to. Held in a signal so what is derived from it, such
+   * as {@link connectorSelectionEmpty}, is always current, even when the connector step reports
+   * its selection while the view is being checked. Hosts declare the `deploymentMapEntry` input
+   * through `inputs: [...]` in their `@Component`, not with a field of their own.
+   */
+  private readonly deploymentMapEntrySignal = signal<DeploymentMapEntry | undefined>(undefined);
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this.deploymentMapEntrySignal()!;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this.deploymentMapEntrySignal.set(value);
+  }
+  /** True while no connector is selected; a mapping needs one to be saved. Derived, never set. */
+  readonly connectorSelectionEmpty = computed(() => isConnectorSelectionEmpty(this.deploymentMapEntrySignal()));
+  /** The rendered template step, if any; the base only needs what {@link TemplateEditorRef} offers. */
+  abstract templateStepRef: TemplateEditorRef | undefined;
   abstract codeEditor: EditorComponent;
   abstract currentStepIndex: number;
   /** Index of the transformation step/tab; anything before it counts as "before substitutions". */
@@ -78,6 +100,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   protected readonly cdr = inject(ChangeDetectorRef);
   protected readonly bsModalService = inject(BsModalService);
   protected readonly alertService = inject(AlertService);
+  protected readonly translateService = inject(TranslateService);
   protected readonly bottomDrawerService = inject(BottomDrawerService);
   protected readonly stepperService = inject(MappingStepperService);
   protected readonly substitutionService = inject(SubstitutionManagementService);
@@ -118,11 +141,8 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
-  get countDeviceIdentifiers$() { return this.stepperService.countDeviceIdentifiers$; }
   get isSubstitutionValid$() { return this.stepperService.isSubstitutionValid$; }
-  get isContentChangeValid$() { return this.stepperService.isContentChangeValid$; }
   get extensionEvents$() { return this.stepperService.extensionEvents$; }
-  get isButtonDisabled$() { return this.stepperService.isButtonDisabled$; }
   get sourceCustomMessage$() { return this.stepperService.sourceCustomMessage$; }
   get targetCustomMessage$() { return this.stepperService.targetCustomMessage$; }
 
@@ -190,6 +210,59 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /** Starts the editor session shared by both hosts and applies it; the caller assigns the schemas. */
+  protected async initSession(disableExtensionSelectorsWhenHidden = false): Promise<EditorSessionResult> {
+    const init = await this.stepperService.initializeEditorSession(
+      this.mapping,
+      this.stepperConfiguration,
+      this.destroy$,
+      {
+        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
+        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
+        getSourceTemplate: () => this.sourceTemplate,
+        setSourceTemplate: (template) => { this.sourceTemplate = template; }
+      },
+      disableExtensionSelectorsWhenHidden
+    );
+    this.applyEditorSession(init);
+    return init;
+  }
+
+  /**
+   * Seeds mappingCode from the persisted mapping, once. mappingCode is the live, editable state
+   * from then on and must never be re-derived from mapping.code (stale until save), or in-progress
+   * edits get clobbered.
+   */
+  protected seedMappingCode(): void {
+    if (this.mappingCode === undefined && this.mapping.code) {
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
+    }
+  }
+
+  /** (Re-)loads the tenant's extensions and re-patches the extension selects. */
+  protected async reloadExtensions(): Promise<void> {
+    this.isLoadingExtensions = true;
+    try {
+      this.extensions = await this.stepperService.loadExtensions(this.mapping);
+      this.updateExtensionItems();
+      // Re-patches form values after items are loaded so c8y-select can match them
+      this.restoreExtensionSelection(true);
+    } finally {
+      this.isLoadingExtensions = false;
+    }
+  }
+
+  /** Entering the transformation step/tab: pull the latest templates and refresh the test mapping. */
+  protected enterTransformation(): void {
+    this.updateTemplatesInEditors();
+    this.refreshSubstitutionValidity();
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
+  }
+
+  protected enterTesting(): void {
+    this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
+  }
+
   /**
    * Copies the session result onto the host. The schemas are deliberately left out: the stepper
    * assigns them with the rest, the unified editor only after its templates are expanded, and
@@ -250,7 +323,10 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       if (warnIfMissing) {
         this.raiseAlert({
           type: 'warning',
-          text: `The extension ${extension.extensionName} with event ${extension.eventName} is not loaded...`
+          text: this.translateService.instant(gettext('The extension {{extensionName}} with event {{eventName}} is not loaded...'), {
+            extensionName: extension.extensionName,
+            eventName: extension.eventName
+          })
         });
       }
       return !warnIfMissing;
@@ -279,24 +355,29 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
     this.deploymentMapEntry = deploymentMapEntry;
-    // Use queueMicrotask for change detection cycle completion
-    queueMicrotask(() => {
-      this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
-      this.cdr.markForCheck();
-    });
+  }
+
+  /** The host owns the mapping: children report changes, only the host writes them. */
+  onSubstitutionsChange(substitutions: Substitution[]): void {
+    this.mapping.substitutions = substitutions;
+  }
+
+  onPropertiesChange(patch: Partial<Mapping>): void {
+    Object.assign(this.mapping, patch);
+  }
+
+  onFilterMappingChange(filterMapping: string): void {
+    this.mapping.filterMapping = filterMapping;
   }
 
   onTestingSourceTemplateChanged(template: any): void {
     this.sourceTemplate = template;
+    // The payload the user edited in the test step becomes the mapping's source template.
+    this.mapping.sourceTemplate = JSON.stringify(template || {});
   }
 
   raiseAlert(alert: Alert): void {
     this.stepperService.raiseAlert(alert);
-  }
-
-  async onSampleTargetTemplatesButton(): Promise<void> {
-    this.targetTemplate = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
-    this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);
   }
 
   onSelectExtensionName(extensionName: string): void {
@@ -347,7 +428,10 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     const templateType = tryToTemplateType(this.stepperConfiguration.direction!, this.mapping.transformationType);
     if (!templateType) {
       this.alertService.warning(
-        `Code templates are only available for Smart Function mappings, not ${this.mapping.transformationType}.`
+        this.translateService.instant(
+          gettext('Code templates are only available for Smart Function mappings, not {{transformationType}}.'),
+          { transformationType: this.mapping.transformationType }
+        )
       );
       return;
     }
@@ -372,14 +456,56 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * The "Generate with AI" button is unavailable without a deployed agent or in read-only mode.
+   * Substitutions are generated against the source editor, so they also need it. A Smart Function
+   * does not: ANY_PAYLOAD has no source editor because the message is binary, but its code can
+   * still be generated (the AI gets the base64 sample from the mapping).
+   */
+  get aiGenerationDisabled(): boolean {
+    const needsSourceEditor = !isSubstitutionsAsCode(this.mapping);
+    return !!this.stepperViewModel?.config.readOnly
+      || !this.aiAgentDeployed
+      || (needsSourceEditor && !this.stepperViewModel?.config.showEditorSource);
+  }
+
+  /** An existing mapping is being refined; a new one generated. */
+  get aiButtonLabel(): string {
+    return this.stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI';
+  }
+
   async openGenerateSubstitutionDrawer(): Promise<void> {
     this.isGenerateSubstitutionOpen = true;
 
-    const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
-
-    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
-    });
+    let drawer;
+    try {
+      const testMapping: any = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      // What is known about the captured message (type, size, sender, broker metadata) lives on the
+      // stepper configuration only; attach it to the drawer's copy so AI generation sees it. Never
+      // persisted on the mapping itself.
+      if (this.stepperConfiguration.sampleTransportFields) {
+        testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+      }
+      if (this.stepperConfiguration.sampleMessageInfo) {
+        testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+      }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
+      drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
+        initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
+      });
+    } catch (error) {
+      // Without this the click handler's promise rejects silently and the button just does nothing.
+      console.error('Could not open the AI assistant:', error);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Could not open the AI assistant: {{message}}'), {
+          message: (error as Error)?.message ?? error
+        })
+      );
+      this.isGenerateSubstitutionOpen = false;
+      return;
+    }
 
     try {
       const result = await drawer.instance.result;
@@ -389,23 +515,26 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
           this.mappingCode = result;
 
           if (this.codeEditor) {
-            // Use queueMicrotask for view update cycle completion
-            queueMicrotask(() => {
+            // After the render that applies the new `mappingCode` to the editor's input.
+            afterNextRenderInZone(this.injector, () => {
               this.codeEditor.writeValue(result);
               this.cdr.markForCheck();
             });
           }
         } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
+          this.alertService.warning(gettext('No valid JavaScript code was generated.'));
         }
       } else {
         if (Array.isArray(result) && result.length > 0) {
-          this.alertService.success(`Generated ${result.length} substitutions.`);
+          this.alertService.success(
+            this.translateService.instant(gettext('Generated {{count}} substitutions.'), { count: result.length })
+          );
           // Same bulk replace as the transformation step: the generated set replaces the whole
           // list atomically, with one validity refresh instead of one per item.
-          this.substitutionService.replaceAllSubstitutions(result, this.mapping, () => this.refreshSubstitutionValidity());
+          this.onSubstitutionsChange(this.substitutionService.replaceAllSubstitutions(result));
+          this.refreshSubstitutionValidity();
         } else {
-          this.alertService.warning('No substitutions were generated.');
+          this.alertService.warning(gettext('No substitutions were generated.'));
         }
       }
     } catch (error) {
@@ -413,7 +542,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
       // failure, so it shouldn't surface as an error to the user.
       if (error !== 'User canceled') {
         console.error('AI generation error:', error);
-        this.alertService.danger('AI generation failed. Please try again.');
+        this.alertService.danger(gettext('AI generation failed. Please try again.'));
       }
     }
 

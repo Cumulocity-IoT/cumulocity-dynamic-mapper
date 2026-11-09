@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,6 +24,7 @@ package dynamic.mapper.model.extension;
 import dynamic.mapper.model.Direction;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
@@ -39,7 +40,10 @@ import java.util.Map;
 @ToString
 @Builder
 @AllArgsConstructor
-@JsonIgnoreProperties({"loaded", "message"})
+// loaded/message are runtime status: sent to the UI (getters) but never read back from, or
+// persisted with, a mapping that embeds this entry.
+@JsonIgnoreProperties(value = {"loaded", "message"}, allowGetters = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExtensionEntry implements Serializable {
 
     @NotNull

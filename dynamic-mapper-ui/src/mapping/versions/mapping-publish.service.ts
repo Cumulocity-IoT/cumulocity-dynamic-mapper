@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,18 +20,22 @@
 
 import { Injectable, inject } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { take } from 'rxjs/operators';
 
-import { Mapping } from '../../shared';
-import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
+import { Direction, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionService } from '../core/subscription.service';
 import { PublishVersionModalComponent } from './publish-version-modal.component';
 
 /** What a publish attempt actually did, so callers know whether to refresh. */
 export interface PublishOutcome {
   /** false when the user cancelled the version dialog, or publishing failed. */
   published: boolean;
+  /** true when the user closed the version dialog without publishing (nothing went wrong). */
+  cancelled?: boolean;
   /** true when the mapping was also activated as part of this flow. */
   activated: boolean;
 }
@@ -40,39 +44,48 @@ export interface PublishOutcome {
  * Publishing a draft, shared by the version drawer and the mapping grid's "Publish draft" row
  * action so the two cannot drift apart.
  *
- * It also closes the second half of the gap: publishing a draft does not make a mapping live if
- * the mapping is inactive. Rather than leaving the user to notice the Activate toggle afterwards,
- * the flow offers to activate straight away.
+ * It also closes the second half of the gap: publishing a draft does not make a mapping live.
+ * The version dialog carries an activation option, so publishing and activating are one dialog
+ * instead of a second confirmation.
  */
 @Injectable({ providedIn: 'root' })
 export class MappingPublishService {
   private readonly mappingService = inject(MappingService);
   private readonly bsModalService = inject(BsModalService);
   private readonly alertService = inject(AlertService);
-  private readonly confirmationService = inject(ConfirmationModalService);
+  private readonly translateService = inject(TranslateService);
+  private readonly subscriptionService = inject(SubscriptionService);
 
   async publishDraft(mapping: Mapping): Promise<PublishOutcome> {
     const version = await this.askForVersion(mapping);
-    if (!version) return { published: false, activated: false };
+    if (!version) return { published: false, activated: false, cancelled: true };
 
     let publishedVersion: string;
     try {
       const mv = await this.mappingService.publishDraft(mapping.id, version.version, version.note || undefined);
       publishedVersion = mv.version;
     } catch (e) {
-      this.alertService.danger('Failed to publish draft', (e as Error).message);
+      this.alertService.danger(gettext('Failed to publish draft'), (e as Error).message);
       return { published: false, activated: false };
     }
 
-    const activated = await this.offerActivation(mapping, publishedVersion);
-    if (!activated) {
-      this.alertService.success(`Published version ${publishedVersion} of ${mapping.name}`);
+    if (!version.activate) {
+      this.alertService.success(mapping.active
+        ? this.translateService.instant(
+          gettext('Published version {{version}} of {{name}}. It keeps running {{current}} until you activate the new version.'),
+          { version: publishedVersion, name: mapping.name, current: mapping.version })
+        : this.translateService.instant(
+          gettext('Published version {{version}} of {{name}}. It stays inactive until you activate it.'),
+          { version: publishedVersion, name: mapping.name }));
+      return { published: true, activated: false };
     }
+
+    const activated = await this.activate(mapping, publishedVersion);
     return { published: true, activated };
   }
 
   /** Version suggestions come from the backend; fall back so the dialog still opens if that fails. */
-  private async askForVersion(mapping: Mapping): Promise<{ version: string; note: string } | null> {
+  private async askForVersion(mapping: Mapping): Promise<{ version: string; note: string; activate: boolean } | null> {
     let suggestions: { patch: string; minor: string; major: string };
     try {
       suggestions = await this.mappingService.suggestNextVersions(mapping.id);
@@ -80,15 +93,16 @@ export class MappingPublishService {
       suggestions = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
     }
 
-    return new Promise<{ version: string; note: string } | null>(resolve => {
+    return new Promise<{ version: string; note: string; activate: boolean } | null>(resolve => {
       const ref = this.bsModalService.show(PublishVersionModalComponent, {
         initialState: {
           mappingName: mapping.name,
           currentVersion: mapping.version ?? null,
+          mappingActive: !!mapping.active,
           suggestions
         }
       });
-      ref.content.closeSubject.pipe(take(1)).subscribe((r: { version: string; note: string } | null) => {
+      ref.content.closeSubject.pipe(take(1)).subscribe((r: { version: string; note: string; activate: boolean } | null) => {
         resolve(r);
         ref.hide();
       });
@@ -96,35 +110,34 @@ export class MappingPublishService {
   }
 
   /**
-   * Publishing never activates: an active mapping keeps running its previous version, an inactive
-   * one stays dormant. Both are steps users miss, so offer the switch explicitly.
+   * Activates `version` of `mapping`. Public because Save & Activate has a connector-only path that
+   * activates without publishing.
+   *
+   * An outbound mapping with no device subscribed would be active but receive nothing. The
+   * activation toggle in the grid refuses that case, so this does too instead of being a way around it.
    */
-  private async offerActivation(mapping: Mapping, publishedVersion: string): Promise<boolean> {
-    const wasActive = !!mapping.active;
-    const confirmed = await this.confirmationService.confirm({
-      title: wasActive ? 'Switch to new version?' : 'Activate mapping?',
-      message: wasActive
-        ? `Version ${publishedVersion} of "${mapping.name}" has been published, but the mapping is still `
-          + `running version ${mapping.version}. Switch to ${publishedVersion} now?`
-        : `Version ${publishedVersion} of "${mapping.name}" has been published, but the mapping is `
-          + `inactive, so it will not process any messages yet. Activate it now?`,
-      labels: { ok: wasActive ? 'Switch now' : 'Activate now', cancel: wasActive ? 'Keep current' : 'Leave inactive' }
-    });
-    if (!confirmed) {
-      this.alertService.success(wasActive
-        ? `Published version ${publishedVersion} of ${mapping.name}. It keeps running ${mapping.version} until you activate the new version.`
-        : `Published version ${publishedVersion} of ${mapping.name}. It stays inactive until you activate it.`);
-      return false;
+  async activate(mapping: Mapping, version: string): Promise<boolean> {
+    if (mapping.direction === Direction.OUTBOUND) {
+      const subscribed = await this.subscriptionService.validateSubscriptionOutbound(Direction.OUTBOUND);
+      if (!subscribed) {
+        this.alertService.warning(this.translateService.instant(
+          gettext('Version {{version}} of {{name}} is saved, but the mapping was not activated.'),
+          { version, name: mapping.name }
+        ));
+        return false;
+      }
     }
-
     try {
-      await this.mappingService.activateVersion(mapping.id, publishedVersion);
+      await this.mappingService.activateVersion(mapping.id, version);
       mapping.active = true;
-      mapping.version = publishedVersion;
-      this.alertService.success(`Published and activated version ${publishedVersion} of ${mapping.name}`);
+      mapping.version = version;
+      this.alertService.success(this.translateService.instant(
+        gettext('Published and activated version {{version}} of {{name}}'),
+        { version, name: mapping.name }
+      ));
       return true;
     } catch (e) {
-      this.alertService.danger('Published, but activating the version failed', (e as Error).message);
+      this.alertService.danger(gettext('Saved, but activating the version failed'), (e as Error).message);
       return false;
     }
   }

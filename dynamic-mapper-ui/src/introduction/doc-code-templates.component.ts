@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { CoreModule, BottomDrawerService } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
@@ -49,6 +50,7 @@ import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/cod
   encapsulation: ViewEncapsulation.None
 })
 export class DocCodeTemplatesComponent implements OnInit {
+  private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
   title = 'Code templates';
@@ -69,9 +71,9 @@ export class DocCodeTemplatesComponent implements OnInit {
       const rendered = await this.markdownService.loadAndRender('code-templates');
       this.title = rendered.title;
       this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
-      setTimeout(() => {
+      afterNextRenderInZone(this.injector, () => {
         const body = this.docBodyRef?.nativeElement;
-        if (!body) return; // navigated away before the macrotask ran
+        if (!body) return; // navigated away before the render happened
         this.markdownService.highlightCodeBlocks(body);
         this.markdownService.renderMermaidDiagrams(body);
       });

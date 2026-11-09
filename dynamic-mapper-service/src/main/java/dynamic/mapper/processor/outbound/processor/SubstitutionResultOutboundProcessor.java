@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -46,6 +46,7 @@ import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.util.Utils;
@@ -224,6 +225,25 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
+            // Per request, like the flow and extension processors: the test result and the UI read the topic here.
+            dynamicMapperRequest.setPublishTopic(context.getResolvedPublishTopic());
+            // PUT/PATCH/DELETE address the device in the URL path, not in the body; without this
+            // an internal webhook would send them to the collection path. POST is left untouched.
+            // The request carries the notification's API; the publish topic names the real target.
+            API topicApi = OutboundRequestFinalizer.deriveApi(null, context.getResolvedPublishTopic());
+            if (topicApi != null) {
+                dynamicMapperRequest.setApi(topicApi);
+            }
+            // Only for an internal Cumulocity destination (the topic names a Cumulocity API): the request
+            // otherwise keeps the notification's API, and finalizing it would rewrite the method or
+            // reject the payload of an external webhook request.
+            if (topicApi != null && deviceSource != null && !deviceSource.isEmpty()
+                    && (method == RequestMethod.PUT || method == RequestMethod.PATCH
+                            || method == RequestMethod.DELETE)) {
+                OutboundRequestFinalizer.finalizeRequest(dynamicMapperRequest, deviceSource,
+                        dynamicMapperRequest.getRequest(), tenant);
+                OutboundRequestFinalizer.throwIfRejected(dynamicMapperRequest);
+            }
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

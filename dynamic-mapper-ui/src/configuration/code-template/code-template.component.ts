@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -261,11 +261,10 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   async onInitSystemCodeTemplate() {
     const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
       initialState: {
-        title: 'Re-initialize system code templates',
-        message:
-          'This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. ' +
-          'Your shared code will NOT be affected. Any customizations made to system templates will be lost. ' +
-          'Do you want to proceed?',
+        title: gettext('Re-initialize system code templates'),
+        message: gettext(
+          'This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. Your shared code will NOT be affected. Any customizations made to system templates will be lost. Do you want to proceed?'
+        ),
         labels: { ok: 'Re-initialize', cancel: 'Cancel' }
       }
     });

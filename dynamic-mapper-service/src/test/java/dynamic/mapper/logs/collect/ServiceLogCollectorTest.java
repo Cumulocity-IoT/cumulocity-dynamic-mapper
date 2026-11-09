@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 package dynamic.mapper.logs.collect;
 
 import dynamic.mapper.logs.settings.TestSettings;
@@ -13,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -303,6 +323,19 @@ class ServiceLogCollectorTest {
         int restored = buffer.pending.get("tenantA").size();
         assertEquals(30, storedLines + restored, "nothing lost and nothing stored twice");
         assertTrue(storedLines > 0 && restored > 0);
+    }
+
+    @Test
+    void aTenantWhoseChunkingFailsGetsItsRecordsBackAndOthersAreStillStored() {
+        // A record without a time makes sorting throw: the chunking of tenantA fails after the buffer was drained.
+        buffer.add(new ServiceLogRecord(null, "WARN", "t", "tenantA", "d.m.core.Foo", "no time"))
+                .add(rec("tenantA", "WARN", 1, "a"))
+                .add(rec("tenantB", "WARN", 2, "b"));
+
+        collector(Set.of("tenantA", "tenantB")).collect();
+
+        assertEquals(2, buffer.pending.get("tenantA").size(), "tenantA's records are back, not lost");
+        assertTrue(sink.logsOf("tenantB").contains("b"), "tenantB is not held up");
     }
 
     @Test

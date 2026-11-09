@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -107,7 +107,7 @@ class ProcessingModeServiceTenantTest {
         RestConnector firstB = connectorFor(TENANT_B);
 
         // Happens when tenant A unsubscribes — its credentials must not stay resident.
-        service.clearConnectorCache(TENANT_A);
+        service.removeTenant(TENANT_A);
 
         runningAs(TENANT_A);
         assertNotSame(firstA, connectorFor(TENANT_A),

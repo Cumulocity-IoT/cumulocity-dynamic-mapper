@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -32,17 +32,17 @@
     </p>
     <div class="p-24">
       <c8y-form-group>
-        <label>Name</label>
+        <label translate>Name</label>
         <input
           class="form-control"
           required
-          placeholder="New code template"
+          [placeholder]="'New code template' | translate"
           [(ngModel)]="codeTemplate.name"
           />
       </c8y-form-group>
       @if (action === 'CREATE' || action === 'RENAME') {
         <c8y-form-group>
-          <label>Description</label>
+          <label translate>Description</label>
           <textarea
             class="form-control"
             rows="4"

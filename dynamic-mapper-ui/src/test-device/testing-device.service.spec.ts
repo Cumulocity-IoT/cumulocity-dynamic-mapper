@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,9 @@
  * @authors Christof Strack
  */
 
+import { TestBed } from '@angular/core/testing';
 import { AlertService } from '@c8y/ngx-components';
+import { provideTranslateStub } from '../shared/testing/translate-stub';
 import { InventoryService } from '@c8y/client';
 import { TestingDeviceService } from './testing-device.service';
 
@@ -34,7 +36,8 @@ describe('TestingDeviceService', () => {
     inventory = jasmine.createSpyObj('InventoryService', ['list', 'delete']);
     alert = jasmine.createSpyObj('AlertService', ['success', 'danger']);
     // constructor: (inventoryService, sharedService, alert); only the inventory and the alert are used here
-    service = new (TestingDeviceService as any)(inventory, undefined, alert);
+    TestBed.configureTestingModule({ providers: [provideTranslateStub()] });
+    service = TestBed.runInInjectionContext(() => new (TestingDeviceService as any)(inventory, undefined, alert));
   });
 
   describe('getTotal', () => {

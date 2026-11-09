@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,6 +24,7 @@ import { RealtimeSubjectService } from '@c8y/ngx-components';
 import { NEVER } from 'rxjs';
 import { SharedService } from './shared.service';
 import { ConnectorConfigurationService } from './connector-configuration.service';
+import { provideTranslateStub } from '../testing/translate-stub';
 import {
   BASE_URL,
   ConnectorConfiguration,
@@ -64,6 +65,7 @@ describe('ConnectorConfigurationService', () => {
     TestBed.configureTestingModule({
       providers: [
         ConnectorConfigurationService,
+        provideTranslateStub(),
         { provide: FetchClient, useValue: mockClient },
         { provide: SharedService, useValue: { getDynamicMappingServiceAgent: async () => 'agent-1' } },
         {

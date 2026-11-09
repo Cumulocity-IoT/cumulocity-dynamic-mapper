@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -37,6 +37,7 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { EventService, IEvent } from '@c8y/client';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { SharedService } from '../../../shared';
 
 interface DeviceTypeRow {
@@ -111,7 +112,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
   readonly columns: Column[] = [
     {
       name: 'type',
-      header: 'Device type',
+      header: gettext('Device type'),
       path: 'type',
       filterable: true,
       sortable: true,
@@ -119,7 +120,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
     },
     {
       name: 'lastSyncTime',
-      header: 'Last sync time',
+      header: gettext('Last sync time'),
       path: 'lastSyncTime',
       filterable: false,
       sortable: true,
@@ -127,7 +128,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
     },
     {
       name: 'status',
-      header: 'Status',
+      header: gettext('Status'),
       path: 'status',
       filterable: false,
       sortable: true,
@@ -151,7 +152,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
   readonly actionControls: ActionControl[] = [
     {
       type: 'RESYNC',
-      text: 'Resync existing devices',
+      text: gettext('Resync existing devices'),
       icon: 'refresh',
       callback: (item: DeviceTypeRow) => this.requestResync(item.type)
     }

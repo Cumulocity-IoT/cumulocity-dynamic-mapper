@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -52,7 +52,6 @@ import org.mockito.quality.Strictness;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.identity.ExternalIDCollectionRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.identity.ExternalIDCollection;
@@ -61,10 +60,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
-import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
-import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.core.mock.MockIdentity;
@@ -186,7 +183,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, null, identityFacade, null, null, null, null, null,
                 subscriptionsService, null, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         ExternalIDRepresentation result = agent.resolveExternalId2GlobalId(TEST_TENANT, identity, true);
@@ -267,7 +264,7 @@ class MockIsolationRegressionTest {
         return new C8YAgent(
                 null, null, identityFacade, null, null, null, null, null,
                 subscriptionsService, null, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cm, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cm, null, null, null, null,
                 "1.0.0", 10);
     }
 
@@ -318,8 +315,8 @@ class MockIsolationRegressionTest {
         when(subscriptionsService.getTenant()).thenReturn(TEST_TENANT);
 
         // Real caches and real mocks; only the platform edges are faked.
-        NotificationSubscriber notificationSubscriber = mock(NotificationSubscriber.class);
-        CacheManager realCacheManager = new CacheManager(mock(C8YAgent.class), notificationSubscriber);
+        org.springframework.context.ApplicationEventPublisher eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        CacheManager realCacheManager = new CacheManager(eventPublisher);
         realCacheManager.initializeInboundExternalIdCache(TEST_TENANT, 100);
         realCacheManager.initializeOutboundExternalIdCache(TEST_TENANT, 100);
         realCacheManager.initializeInventoryCache(TEST_TENANT, 100);
@@ -353,7 +350,7 @@ class MockIsolationRegressionTest {
                 inv -> inventoryFacade.get(GId.asGId((String) inv.getArgument(1)), inv.getArgument(2),
                         inv.getArgument(3)));
         InventoryCacheEnrichmentService enrichment = new InventoryCacheEnrichmentService(
-                realCacheManager, tenantRegistry, notificationSubscriber);
+                realCacheManager, tenantRegistry, eventPublisher);
         IdentityResolutionService resolution = new IdentityResolutionService(agent, tenantRegistry,
                 new ObjectMapper());
 
@@ -380,7 +377,7 @@ class MockIsolationRegressionTest {
                 realCacheManager.getOutboundExternalIdCache(TEST_TENANT).getExternalIdForSource(outboundKey));
         assertSame(liveMO, realCacheManager.getInventoryCache(TEST_TENANT).getMOBySource(REAL_INTERNAL_ID));
         assertEquals(REAL_INTERNAL_ID, tenantRegistry.getCachedExternalId(cacheKey));
-        verifyNoInteractions(notificationSubscriber);
+        verifyNoInteractions(eventPublisher);
 
         // Control: the same question in production mode IS answered from the live cache,
         // proving the caches above really were warm.
@@ -418,7 +415,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, inventoryFacade, identityFacade, null, null, null, null, null,
                 subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, "d11r_liveTest_x", "d11r_liveTest_x", "c8y_Serial");
@@ -459,7 +456,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, inventoryFacade, identityFacade, null, null, null, null, null,
                 subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, externalId, externalId, "c8y_Serial");

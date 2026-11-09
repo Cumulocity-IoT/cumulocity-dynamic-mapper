@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { randomIdAsString } from '../util';
+import { randomIdAsString } from '../random-id';
 import { API, Mapping, RepairStrategy } from '../mapping.model';
 import { ContentChanges } from '../../component/json-editor/json-editor.component';
 import { Content } from 'vanilla-jsoneditor';
@@ -37,7 +37,8 @@ export interface DynamicMapperRequest {
   externalIdType?: string;
   request?: any;
   response?: any;
-  error?: string;
+  /** Why this request failed; absent when it succeeded. */
+  errorMessage?: string;
   hidden?: boolean;
 }
 
@@ -58,6 +59,8 @@ export interface TestResult {
   testDeviceCreated?: boolean;
   /** "d11r_liveTest_" + the mapping's external ID: the external ID the test device is registered under. */
   testDeviceExternalId?: string;
+  /** Outbound Live Test: names of the connectors the message was published through (the saved deployment). */
+  publishedConnectors?: string[];
   /**
    * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
    * rather than per-request, since one publish call reads a single key for the whole message —

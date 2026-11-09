@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -40,11 +40,12 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
 
   async flush(): Promise<void> {
     const response = await this.client.fetch(`${BASE_URL}/${PATH_SERVICE_LOGS_ENDPOINT}/flush`, { method: 'POST' });
-    if (response.status === 403) {
-      throw new LogsUnavailableError('Fetching the service log requires the role ROLE_DYNAMIC_MAPPER_ADMIN', 403);
+    if (response.status === 403 || response.status === 404) {
+      throw new LogsUnavailableError('Fetching the service log requires the role ROLE_DYNAMIC_MAPPER_ADMIN', response.status);
     }
     if (!response.ok) {
-      throw new LogsUnavailableError(`The service answered HTTP ${response.status}`, response.status);
+      // A temporary failure (502/503 while the service restarts) is not "unavailable to you": the page must stay usable.
+      throw new Error(`The service answered HTTP ${response.status}`);
     }
   }
 
@@ -55,11 +56,12 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
     if (request.mapping && MAPPING_IDENTIFIER.test(request.mapping)) query.set('mapping', request.mapping);
     const suffix = query.toString();
     const response = await this.client.fetch(`${BASE_URL}/${PATH_SERVICE_LOGS_ENDPOINT}${suffix ? `?${suffix}` : ''}`);
-    if (response.status === 403) {
-      throw new LogsUnavailableError('Reading the service log requires the role ROLE_DYNAMIC_MAPPER_ADMIN', 403);
+    if (response.status === 403 || response.status === 404) {
+      throw new LogsUnavailableError('Reading the service log requires the role ROLE_DYNAMIC_MAPPER_ADMIN', response.status);
     }
     if (!response.ok) {
-      throw new LogsUnavailableError(`The service answered HTTP ${response.status}`, response.status);
+      // A temporary failure (502/503 while the service restarts) is not "unavailable to you": the page must stay usable.
+      throw new Error(`The service answered HTTP ${response.status}`);
     }
     const body = await response.json();
     return {

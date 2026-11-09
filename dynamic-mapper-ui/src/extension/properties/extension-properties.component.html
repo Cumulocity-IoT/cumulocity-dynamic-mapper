@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -23,7 +23,7 @@
 
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form">
   <div class="d-flex">
-    <label>Direction</label>
+    <label translate>Direction</label>
     <div class="c8y-select-wrapper">
       <select class="form-control" [(ngModel)]="directionFilter" [attr.aria-label]="'Direction filter' | translate">
         <option value="ANY" translate>Any direction</option>
@@ -53,10 +53,13 @@
         @for (entry of filteredEntries; track entry; let i = $index) {
         <c8y-li role="listitem" class="p-t-4" #li>
           <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-          <div class="col-md-4">
-            <span class="m-r-16">{{ entry.eventName }}</span>
-          </div>
           <div class="col-md-6">
+            <strong class="m-r-16">{{ entry.eventName }}</strong>
+            @if (entry.description) {
+            <p class="text-muted small m-b-0 m-t-4">{{ entry.description }}</p>
+            }
+          </div>
+          <div class="col-md-4">
             @if (entry.direction) {
             <span class="label label-primary m-l-4">
               {{ entry.direction | formatStringAsWords }}
@@ -82,9 +85,7 @@
         @if (
         !filteredEntries || filteredEntries.length === 0
         ) {
-        <c8y-ui-empty-state [icon]="'plugin'" [title]="
-                'No entries for this extension, try to reload extensions.'
-              " [horizontal]="true"></c8y-ui-empty-state>
+        <c8y-ui-empty-state [icon]="'plugin'" [title]="'No entries for this extension, try to reload extensions.' | translate" [horizontal]="true"></c8y-ui-empty-state>
         }
       </c8y-list-group>
     </div>

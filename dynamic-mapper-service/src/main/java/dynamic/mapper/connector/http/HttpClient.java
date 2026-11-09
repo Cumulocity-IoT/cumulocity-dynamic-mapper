@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,10 +27,12 @@ import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
@@ -75,13 +77,14 @@ public class HttpClient extends AConnectorClient {
      * Full constructor with dependencies
      */
     public HttpClient(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
@@ -240,8 +243,9 @@ public class HttpClient extends AConnectorClient {
      * retry, since the controller's error handling could never trigger.
      *
      * @param message The connector message containing the HTTP request data
+     * @return the pipeline result, which the controller waits on before it answers the caller
      */
-    public void onMessage(ConnectorMessage message) {
+    public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
         if (dispatcher == null) {
             log.error("{} - Dispatcher is not initialized, cannot process message", tenant);
             throw new IllegalStateException("Dispatcher is not initialized, cannot process message");
@@ -252,7 +256,7 @@ public class HttpClient extends AConnectorClient {
                     tenant, message.getTopic());
         }
 
-        dispatcher.onMessage(message);
+        return dispatcher.onMessage(message);
     }
 
     /**

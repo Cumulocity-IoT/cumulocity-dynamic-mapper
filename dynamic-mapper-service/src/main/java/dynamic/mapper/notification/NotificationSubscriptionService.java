@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -50,6 +50,7 @@ public class NotificationSubscriptionService {
     private final C8YAgent c8yAgent;
 
     private final ServiceRegistry serviceRegistry;
+    private final NotificationSubscriber notificationSubscriber;
 
     public NotificationSubscriptionResponse createDeviceSubscription(String tenant,
             NotificationSubscriptionRequest request, String subscription) {
@@ -65,7 +66,7 @@ public class NotificationSubscriptionService {
             if (mor != null) {
                 // Fresh list per root: passing the accumulated list would re-subscribe every
                 // previously collected device for each further root (quadratic).
-                List<Device> related = serviceRegistry.getNotificationSubscriber()
+                List<Device> related = notificationSubscriber
                         .findAllRelatedDevicesByMO(tenant, mor, new ArrayList<>(), false);
 
                 for (Device childDevice : related) {
@@ -74,7 +75,7 @@ public class NotificationSubscriptionService {
                     }
                     ManagedObjectRepresentation childMor = serviceRegistry.getC8yAgent()
                             .getManagedObjectForId(tenant, childDevice.getId(), false);
-                    pending.put(childDevice.getId(), serviceRegistry.getNotificationSubscriber()
+                    pending.put(childDevice.getId(), notificationSubscriber
                             .subscribeDeviceAndConnect(tenant, childMor, request.getApi(), subscription));
 
                     // Pre-populate inventory cache for this device to ensure inventory filters work correctly
@@ -101,7 +102,7 @@ public class NotificationSubscriptionService {
             NotificationSubscriptionRequest request, String subscription) {
 
         // Get current subscriptions for the target bucket
-        NotificationSubscriptionResponse current = serviceRegistry.getNotificationSubscriber()
+        NotificationSubscriptionResponse current = notificationSubscriber
                 .getSubscriptionsDevices(tenant, null, subscription);
 
         // Calculate differences
@@ -135,8 +136,7 @@ public class NotificationSubscriptionService {
     public NotificationSubscriptionResponse updateGroupSubscription(String tenant,
             NotificationSubscriptionRequest request) {
         try {
-            NotificationSubscriptionResponse deviceGroupsSubscription = serviceRegistry
-                    .getNotificationSubscriber()
+            NotificationSubscriptionResponse deviceGroupsSubscription = notificationSubscriber
                     .getSubscriptionsByDeviceGroup(tenant);
 
             List<Device> toBeRemovedGroups = new ArrayList<>();
@@ -159,7 +159,7 @@ public class NotificationSubscriptionService {
                 for (Device group : toBeRemovedGroups) {
                     ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                     if (groupMor != null) {
-                        serviceRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(tenant, groupMor);
+                        notificationSubscriber.unsubscribeByDeviceGroup(tenant, groupMor);
                         unsubscribeGroupDevices(tenant, groupMor, protectedIds, configuredTypes);
                     } else {
                         log.warn("{} - Could not unsubscribe group with id {}. DeviceGroup does not exist!", tenant,
@@ -174,7 +174,7 @@ public class NotificationSubscriptionService {
             // Ensure management client is initialized for group subscriptions
             if (!toBeCreatedGroups.isEmpty()) {
                 log.info("{} - Ensuring management client is initialized for group subscriptions", tenant);
-                serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+                notificationSubscriber.initializeManagementClient(tenant);
             }
 
             // Subscribe to new groups
@@ -182,9 +182,9 @@ public class NotificationSubscriptionService {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                 if (groupMor != null) {
                     // add subscription for deviceGroup
-                    serviceRegistry.getNotificationSubscriber().subscribeByDeviceGroup(tenant, groupMor);
+                    notificationSubscriber.subscribeByDeviceGroup(tenant, groupMor);
                     try {
-                        allChildDevices = serviceRegistry.getNotificationSubscriber()
+                        allChildDevices = notificationSubscriber
                                 .findAllRelatedDevicesByMO(tenant, groupMor, allChildDevices, false);
                     } catch (Exception e) {
                         log.error("{} - Error creating group subscriptions: ", tenant, e);
@@ -199,12 +199,12 @@ public class NotificationSubscriptionService {
             if (!allChildDevices.isEmpty()) {
                 // Ensure dynamic device client is initialized before subscribing devices
                 log.info("{} - Ensuring dynamic device client is initialized for group subscription", tenant);
-                serviceRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+                notificationSubscriber.initializeDeviceClient(tenant);
 
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
                             childDevice.getId(), false);
-                    pending.put(childDevice.getId(), serviceRegistry.getNotificationSubscriber()
+                    pending.put(childDevice.getId(), notificationSubscriber
                             .subscribeDeviceAndConnect(tenant, childDeviceMor,
                                     request.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
 
@@ -218,7 +218,7 @@ public class NotificationSubscriptionService {
             SubscribeOutcome outcome = awaitSubscriptions(tenant, pending);
 
             // Get all currently subscribed device groups to return
-            NotificationSubscriptionResponse updatedSubscription = serviceRegistry.getNotificationSubscriber()
+            NotificationSubscriptionResponse updatedSubscription = notificationSubscriber
                     .getSubscriptionsByDeviceGroup(tenant);
             updatedSubscription.setFailedDeviceIds(outcome.failedDeviceIds());
             if (outcome.status() != NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE) {
@@ -234,11 +234,11 @@ public class NotificationSubscriptionService {
 
     public void deleteGroupSubscription(String tenant, ManagedObjectRepresentation groupMor) {
         // Remove group subscription
-        serviceRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(tenant, groupMor);
+        notificationSubscriber.unsubscribeByDeviceGroup(tenant, groupMor);
 
         // Devices still covered by another subscribed group or a configured type keep their subscription
         String deletedId = groupMor.getId().getValue();
-        List<Device> remainingGroups = new ArrayList<>(serviceRegistry.getNotificationSubscriber()
+        List<Device> remainingGroups = new ArrayList<>(notificationSubscriber
                 .getSubscriptionsByDeviceGroup(tenant).getDevices());
         remainingGroups.removeIf(g -> deletedId.equals(g.getId()));
 
@@ -259,7 +259,7 @@ public class NotificationSubscriptionService {
             if (mor == null) {
                 continue;
             }
-            for (Device d : serviceRegistry.getNotificationSubscriber()
+            for (Device d : notificationSubscriber
                     .findAllRelatedDevicesByMO(tenant, mor, new ArrayList<>(), false)) {
                 ids.add(d.getId());
             }
@@ -268,7 +268,7 @@ public class NotificationSubscriptionService {
     }
 
     private Set<String> configuredTypes(String tenant) {
-        List<String> types = serviceRegistry.getNotificationSubscriber().getSubscriptionsByDeviceType(tenant)
+        List<String> types = notificationSubscriber.getSubscriptionsByDeviceType(tenant)
                 .getTypes();
         return types == null ? Set.of() : new HashSet<>(types);
     }
@@ -277,7 +277,7 @@ public class NotificationSubscriptionService {
     private int unsubscribeGroupDevices(String tenant, ManagedObjectRepresentation groupMor,
             Set<String> protectedIds, Set<String> configuredTypes) {
         int count = 0;
-        List<Device> devices = serviceRegistry.getNotificationSubscriber()
+        List<Device> devices = notificationSubscriber
                 .findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false);
         for (Device device : devices) {
             if (protectedIds.contains(device.getId())) {
@@ -287,7 +287,7 @@ public class NotificationSubscriptionService {
             if (deviceMor == null || configuredTypes.contains(deviceMor.getType())) {
                 continue;
             }
-            serviceRegistry.getNotificationSubscriber()
+            notificationSubscriber
                     .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
             count++;
         }
@@ -358,7 +358,7 @@ public class NotificationSubscriptionService {
             ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
-                pending.put(device.getId(), serviceRegistry.getNotificationSubscriber()
+                pending.put(device.getId(), notificationSubscriber
                         .subscribeDeviceAndConnect(tenant, mor, api, subscription));
 
                 // Pre-populate inventory cache for this device to ensure inventory filters work correctly
@@ -375,11 +375,11 @@ public class NotificationSubscriptionService {
             ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
-                serviceRegistry.getNotificationSubscriber()
+                notificationSubscriber
                         .unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             } else {
                 // Device was deleted in Cumulocity: drop the stale subscription by id.
-                int deleted = serviceRegistry.getNotificationSubscriber()
+                int deleted = notificationSubscriber
                         .deleteSubscriptionsForDevice(tenant, device.getId(), subscription);
                 log.info("{} - Device {} not found, deleted {} stale subscription(s)",
                         tenant, device.getId(), deleted);

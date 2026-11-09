@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
@@ -29,6 +30,7 @@ import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DocMarkdownService } from './doc-markdown.service';
 import { handleDocLinkClick, scrollToDocElement } from './doc-links';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-doc-overview',
@@ -42,6 +44,7 @@ import { handleDocLinkClick, scrollToDocElement } from './doc-links';
   encapsulation: ViewEncapsulation.None
 })
 export class DocOverviewComponent implements OnInit {
+  private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
@@ -89,15 +92,15 @@ export class DocOverviewComponent implements OnInit {
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+        gettext("You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator.")
       );
     } else if (!this.feature?.userHasMappingAdminRole) {
       this.alertService.warning(
-        "You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator."
+        gettext("You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator.")
       );
     } else if (!this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator."
+        gettext("You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator.")
       );
     }
   }
@@ -109,12 +112,11 @@ export class DocOverviewComponent implements OnInit {
     ]);
     this.htmlIntro = this.sanitizer.bypassSecurityTrustHtml(intro.html);
     this.htmlNextSteps = this.sanitizer.bypassSecurityTrustHtml(nextSteps.html);
-    // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
-    // committed the [innerHTML] bindings to the DOM, so docBodyRef.nativeElement actually
-    // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
-    setTimeout(() => {
+    // After the render that commits the [innerHTML] bindings, docBodyRef.nativeElement contains
+    // the <pre class="mermaid"> nodes mermaid.run() needs to find.
+    afterNextRenderInZone(this.injector, () => {
       const body = this.docBodyRef?.nativeElement;
-      if (!body) return; // navigated away before the macrotask ran
+      if (!body) return; // navigated away before the render happened
       this.markdownService.highlightCodeBlocks(body);
       this.markdownService.renderMermaidDiagrams(body);
     });

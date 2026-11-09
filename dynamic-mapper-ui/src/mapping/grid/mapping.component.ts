@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,7 +32,6 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
-  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DisplayOptions,
@@ -40,26 +39,20 @@ import {
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
-  API,
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
   ExtensionEntry,
   Feature,
   isSubstitutionsAsCode,
-  LabelTaggedRendererComponent,
   Mapping,
   MappingEnriched,
   MappingType,
   MappingTypeDescriptionMap,
-  nextIdAndPad,
   Operation,
-  Qos,
-  SAMPLE_TEMPLATES_C8Y,
   SharedModule,
   SharedService,
   StepperConfiguration,
-  Substitution,
   TransformationType
 } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
@@ -67,17 +60,20 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from '../../shared/mapping/stepper-configuration.strategy';
-
 import { HttpStatusCode } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
+import { BehaviorSubject, finalize, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
 import { MappingService } from '../core/mapping.service';
+import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
+import { buildMappingColumns } from './mapping-grid.columns';
+import { buildNewMapping, ExplorerPreFill } from './new-mapping.factory';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-mappings.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
@@ -85,25 +81,21 @@ import { MappingPublishService } from '../versions/mapping-publish.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
-import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
-import { MappingStatusActivationRendererComponent } from '../renderer/mapping-status-activation.renderer.component';
-import { StatusRendererComponent } from '../renderer/status.renderer.component';
-import {
-  PayloadWrapper
-} from '../../shared/mapping/mapping.model';
 import { MappingPersistence } from '../../shared/mapping/stepper.model';
-import { applyCodeTemplateSample, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
-import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
+import { serializeMappingsForExport } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
+import { isRawPayload } from '../message-explorer/message-explorer.service';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
+import { MappingStepperService } from '../service/mapping-stepper.service';
 import {
   CommitEditorState,
   commitSuccessMessage,
-  MappingStepperService,
+  MappingCommitService,
   snapshotConnectors
-} from '../service/mapping-stepper.service';
+} from '../service/mapping-commit.service';
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
+
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -155,7 +147,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; key?: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: ExplorerPreFill | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -176,9 +168,11 @@ export class MappingComponent implements OnInit, OnDestroy {
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly mappingService = inject(MappingService);
   private readonly stepperService = inject(MappingStepperService);
+  private readonly commitService = inject(MappingCommitService);
   private readonly mappingBulkOpsService = inject(MappingBulkOperationsService);
   private readonly sharedService = inject(SharedService);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly bsModalService = inject(BsModalService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly confirmationService = inject(ConfirmationModalService);
@@ -242,13 +236,28 @@ export class MappingComponent implements OnInit, OnDestroy {
           sessionTopic: explorerHandoff.sessionTopic,
           topic: explorerHandoff.topic ?? '',
           payload: explorerHandoff.payload ?? '{}',
+          binary: explorerHandoff.binary,
+          payloadType: explorerHandoff.payloadType,
+          binaryFormat: explorerHandoff.binaryFormat,
+          payloadSize: explorerHandoff.payloadSize,
+          clientId: explorerHandoff.clientId,
+          connectorType: explorerHandoff.connectorType,
           key: explorerHandoff.key,
+          metadata: explorerHandoff.metadata,
+          additionalMessages: explorerHandoff.additionalMessages,
           targetAPI: explorerHandoff.targetAPI,
           publishTopic: explorerHandoff.publishTopic,
           publishTopicSample: explorerHandoff.publishTopicSample
         };
         this.mappingType = explorerHandoff.mappingType;
         this.transformationType = explorerHandoff.transformationType;
+        // A binary, XML or plain-text payload cannot be parsed as JSON; the backend only passes raw
+        // bytes (as base64 in msg.payload) to ANY_PAYLOAD + Smart Function mappings.
+        if (isRawPayload({ binary: !!explorerHandoff.binary, payloadType: explorerHandoff.payloadType })
+            && this.mappingType === MappingType.JSON
+            && this.transformationType === TransformationType.SMART_FUNCTION) {
+          this.mappingType = MappingType.ANY_PAYLOAD;
+        }
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = explorerHandoff.codeTemplate;
         this.generateSmartFunctionWithAI = !!explorerHandoff.generateSmartFunctionWithAI;
@@ -289,13 +298,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'VIEW_DEPRECATED',
-        text: 'View (deprecated)',
+        text: gettext('View (deprecated)'),
         icon: 'eye',
         callback: this.updateMapping.bind(this),
         showIf: item => this.isDeprecatedMapping(item)
       },
       {
-        text: 'Duplicate',
+        text: gettext('Duplicate'),
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
@@ -305,7 +314,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         // Only offered when there is actually something to publish. Publishing otherwise lives
         // inside the version drawer, which makes the required follow-up after editing a mapping
         // easy to miss — this brings it one click from the grid.
-        text: 'Publish draft',
+        text: gettext('Publish draft'),
         type: 'PUBLISH_DRAFT',
         icon: 'upload',
         callback: this.publishDraft.bind(this),
@@ -313,7 +322,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           && !this.isDeprecatedMapping(item)
       },
       {
-        text: 'Versions',
+        text: gettext('Versions'),
         type: 'VERSIONS',
         icon: 'list',
         callback: this.openVersions.bind(this),
@@ -326,21 +335,21 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ENABLE_DEBUG',
-        text: 'Enable debugging',
+        text: gettext('Enable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
         showIf: item => !item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_DEBUG',
-        text: 'Disable debugging',
+        text: gettext('Disable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
         showIf: item => item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'EXPORT',
-        text: 'Export mapping',
+        text: gettext('Export mapping'),
         icon: 'export',
         callback: this.exportSingle.bind(this)
       }
@@ -364,35 +373,35 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Activate',
+        text: gettext('Activate'),
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEACTIVATE',
-        text: 'Deactivate',
+        text: gettext('Deactivate'),
         icon: 'toggle-off',
         callback: this.deactivateMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEBUG_ENABLE',
-        text: 'Enable debug',
+        text: gettext('Enable debug'),
         icon: 'bug',
         callback: this.enableDebugMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'DEBUG_DISABLE',
-        text: 'Disable debug',
+        text: gettext('Disable debug'),
         icon: 'ban',
         callback: this.disableDebugMappingBulk.bind(this),
         showIf: () => this.canManageMappings
       },
       {
         type: 'EXPORT',
-        text: 'Export mapping',
+        text: gettext('Export mapping'),
         icon: 'export',
         callback: this.exportMappingBulk.bind(this)
       }
@@ -400,96 +409,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   getColumnsMappings(): Column[] {
-    const cols: (Column | undefined)[] = [
-      {
-        name: 'name',
-        header: 'Name',
-        path: 'mapping.name',
-        filterable: true,
-        sortable: true,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: MappingIdCellRendererComponent,
-        // No sortOrder here: the grid sorts by *every* column that carries one, in column
-        // order, and clicking a header only changes that one column. A pre-set 'asc' on the
-        // first column therefore stays the primary key forever and makes sorting by API or
-        // Activate look broken. The default alphabetical order is produced by sorting the
-        // rows below instead.
-        visible: true,
-        gridTrackSize: '10%'
-      },
-      {
-        name: 'identifier',
-        header: 'Identifier',
-        path: 'mapping.identifier',
-        filterable: false,
-        dataType: ColumnDataType.TextShort,
-        visible: false,
-        gridTrackSize: '0%'
-      },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? undefined
-        : {
-          header: 'Publish topic',
-          name: 'publishTopic',
-          path: 'mapping.publishTopic',
-          dataType: ColumnDataType.TextShort,
-          filterable: true,
-          sortable: true
-        },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          header: 'Mapping topic',
-          name: 'mappingTopic',
-          path: 'mapping.mappingTopic',
-          dataType: ColumnDataType.TextShort,
-          filterable: true,
-          sortable: true
-        }
-        : undefined,
-      {
-        name: 'targetAPI',
-        header: 'API',
-        path: 'mapping.targetAPI',
-        filterable: true,
-        sortable: true,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: LabelTaggedRendererComponent,
-        gridTrackSize: '9%'
-      },
-      {
-        header: 'For connectors',
-        name: 'connectors',
-        path: 'connectors',
-        filterable: true,
-        sortable: false,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: MappingDeploymentRendererComponent
-      },
-      {
-        header: 'Version/Status',
-        name: 'status',
-        path: 'mapping',
-        filterable: false,
-        sortable: false,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: StatusRendererComponent,
-        // Makes the cell a link that opens the version drawer for this row. Read by
-        // StatusRendererComponent as context.property['callback'] — 'callback' is not part of
-        // the Column interface, hence the cast, matching how the connector grid does it.
-        callback: this.openVersions.bind(this),
-        gridTrackSize: '16%'
-      } as Column,
-      {
-        header: 'Activate',
-        name: 'active',
-        path: 'mapping.active',
-        filterable: false,
-        sortable: true,
-        cellRendererComponent: MappingStatusActivationRendererComponent,
-        gridTrackSize: '9%'
-      }
-    ];
-    return cols.filter((c): c is Column => !!c);
+    return buildMappingColumns(this.stepperConfiguration.direction, row => this.openVersions(row));
   }
 
   async onAddMapping() {
@@ -526,178 +446,27 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.generateSmartFunctionWithAI = false;
     }
 
-    const identifier = createCustomUuid();
-    const sub: Substitution[] = [];
     const direction = this.stepperConfiguration.direction;
-
-    // Only the Cumulocity-side field has a well-known, schema-valid sample (SAMPLE_TEMPLATES_C8Y)
-    // — the broker/external-side field is always blank, since no generic schema exists for an
-    // arbitrary device payload. Which physical field ("sourceTemplate" vs "targetTemplate") is
-    // the Cumulocity side flips with direction: target for INBOUND, source for OUTBOUND — matching
-    // the "Source/Target Template - Cumulocity/Broker" panel labels and
-    // MappingStepperService.expandTemplates()'s direction-aware swap.
-    // Code/extension-based transformations (Smart Function, Java extension) get '{}' even on the
-    // Cumulocity side: the actual shape is produced by code, not a template, and seeding a generic
-    // sample there previously misled both users and the AI generation flow.
-    const cumulocitySample = isCodeOrExtensionTransformation(this.transformationType)
-      ? '{}'
-      : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name];
-    const defaultSourceTemplate = direction === Direction.OUTBOUND ? cumulocitySample : '{}';
-    const defaultTargetTemplate = direction === Direction.OUTBOUND ? '{}' : cumulocitySample;
-
-    let mapping: Mapping;
-    if (direction == Direction.INBOUND) {
-      let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
-      mapping = {
-        // name: `Mapping - ${identifier.substring(0, 7)}`,
-        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
-        id: 'any',
-        identifier: identifier,
-        mappingTopic: '',
-        mappingTopicSample: '',
-        targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: defaultSourceTemplate,
-        targetTemplate: defaultTargetTemplate,
-        active: false,
-        maxFailureCount: 0,
-        qos: Qos.AT_LEAST_ONCE,
-        substitutions: sub,
-        useExternalId: false,
-        createNonExistingDevice: false,
-        mappingType: this.mappingType,
-        transformationType: this.transformationType,
-        updateExistingDevice: false,
-        externalIdType: 'c8y_Serial',
-        code,
-        direction: direction,
-        autoAckOperation: true,
-        debug: false,
-        filterMapping: 'true',
-        lastUpdate: Date.now()
-      };
-    } else {
-      let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
-      mapping = {
-        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
-        id: identifier,
-        identifier: identifier,
-        // publishTopic: '',
-        // publishTopicSample: '',
-        targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: defaultSourceTemplate,
-        targetTemplate: defaultTargetTemplate,
-        active: false,
-        maxFailureCount: 0,
-        qos: Qos.AT_LEAST_ONCE,
-        substitutions: sub,
-        useExternalId: false,
-        createNonExistingDevice: false,
-        mappingType: this.mappingType,
-        transformationType: this.transformationType,
-        updateExistingDevice: false,
-        externalIdType: 'c8y_Serial',
-        code,
-        direction: direction,
-        autoAckOperation: true,
-        debug: false,
-        filterMapping: 'true',
-        lastUpdate: Date.now()
-      };
-    }
+    const { mapping, sampleMessageInfo, sampleTransportFields, additionalSamples } = buildNewMapping({
+      direction,
+      mappingType: this.mappingType,
+      transformationType: this.transformationType,
+      substitutionsAsCode: this.substitutionsAsCode,
+      codeTemplate: this.codeTemplate,
+      extension: this.extension,
+      mappingsCount: this.mappingsCount,
+      preFill: this.explorerPreFill
+    });
     // Bump optimistically so a second "Add mapping" click before this one's save + list
     // refresh round-trips still gets a distinct name, instead of reading the same
     // not-yet-updated mappingsCount and generating a duplicate "Mapping - NN" name.
     this.mappingsCount++;
-    if (this.mappingType == MappingType.FLAT_FILE) {
-      const sampleSource = JSON.stringify({
-        payload: '10,temp,1666963367'
-      } as PayloadWrapper);
-      mapping = {
-        ...mapping,
-        sourceTemplate: sampleSource
-      };
-    }
-
-    // Seed the sample from the chosen code template (see applyCodeTemplateSample); the Message
-    // Explorer pre-fill below still takes precedence.
-    if (this.substitutionsAsCode) {
-      applyCodeTemplateSample(mapping, this.codeTemplate, this.mappingType, direction);
-    }
-
-    // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
-    if (this.explorerPreFill) {
-      const isInbound = direction === Direction.INBOUND;
-      if (isInbound) {
-        // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
-        // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
-        // mappingTopic so wildcards are preserved, and the concrete topic as sample.
-        mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
-        mapping.mappingTopicSample = this.explorerPreFill.topic;
-      }
-      // The Message Explorer always captures the "source" side of the mapping — the broker/
-      // device payload for INBOUND sessions, or the real Cumulocity event for OUTBOUND
-      // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
-      // So the captured payload always belongs on sourceTemplate, regardless of direction.
-      mapping.sourceTemplate = this.explorerPreFill.payload;
-      // Seed the captured broker message key (e.g. a Kafka record key) so the sample mirrors what
-      // the mapping actually sees at runtime. Only for JSONata-style transformations, where the
-      // backend injects the key into the payload as _CONTEXT_DATA_.key: Smart Functions and Java
-      // extensions instead receive it out-of-band via the message's transport fields, so putting
-      // it in the payload sample there would misrepresent the input (and mislead AI generation).
-      if (this.explorerPreFill.key) {
-        if (isCodeOrExtensionTransformation(mapping.transformationType)) {
-          // Code/extension transformations read the key from msg.transportFields, which is not part
-          // of the payload — carry it as stepper state so AI generation still sees a real example.
-          this.stepperConfiguration.sampleTransportFields = {
-            [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
-          };
-        } else {
-          try {
-            const parsed = JSON.parse(mapping.sourceTemplate);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-              parsed[MappingTokens.CONTEXT_DATA] = {
-                ...(parsed[MappingTokens.CONTEXT_DATA] ?? {}),
-                [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
-              };
-              mapping.sourceTemplate = JSON.stringify(parsed);
-            }
-          } catch {
-            // sample is not a JSON object — nothing to attach the key to, leave it untouched
-          }
-        }
-      }
-      if (this.explorerPreFill.targetAPI) {
-        mapping.targetAPI = this.explorerPreFill.targetAPI;
-        // Only INBOUND's target side (Cumulocity) has a generic schema sample to seed with.
-        // OUTBOUND's target side (Broker) has no generic schema, and its source already holds
-        // the real captured Cumulocity payload — nothing further needs seeding there.
-        if (isInbound) {
-          const sample = isCodeOrExtensionTransformation(mapping.transformationType)
-            ? '{}'
-            : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
-          mapping.targetTemplate = sample ?? mapping.targetTemplate;
-        }
-      }
-      if (this.explorerPreFill.publishTopic) {
-        mapping.publishTopic = this.explorerPreFill.publishTopic;
-        mapping.useExternalId = true;
-      }
-      if (this.explorerPreFill.publishTopicSample) {
-        mapping.publishTopicSample = this.explorerPreFill.publishTopicSample;
-      }
-      // For OUTBOUND, pre-fill filterMapping with 'true' so at least one execution filter is set
-      if (this.stepperConfiguration.direction === Direction.OUTBOUND && !mapping.filterMapping) {
-        mapping.filterMapping = 'true';
-      }
-      this.explorerPreFill = null;
-    }
-
-    if (this.extension) {
-      mapping.extension = this.extension as ExtensionEntry;
-      this.extension = undefined;
-    }
+    this.explorerPreFill = null;
+    this.extension = undefined;
+    // Stepper state about the captured message; never persisted with the mapping.
+    if (sampleMessageInfo) this.stepperConfiguration.sampleMessageInfo = sampleMessageInfo;
+    if (sampleTransportFields) this.stepperConfiguration.sampleTransportFields = sampleTransportFields;
+    if (additionalSamples) this.stepperConfiguration.additionalSamples = additionalSamples;
 
     this.mappingToUpdate = mapping;
     this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
@@ -735,7 +504,10 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async copyMapping(m: MappingEnriched) {
-    const { mapping } = m;
+    const source = await this.chooseCopySource(m.mapping);
+    if (!source) return;
+    // The list holds the active configuration; edits live in the draft until published.
+    const mapping = source === 'draft' ? await this.mappingService.getDraft(m.mapping.id) ?? m.mapping : m.mapping;
     this.setStepperConfiguration(
       mapping.mappingType,
       mapping.transformationType,
@@ -772,6 +544,18 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = true;
   }
 
+  /**
+   * A line with unpublished changes has two candidates to copy. Resolves to the choice, to
+   * 'active' without asking when there is no draft, or to null when the user cancels.
+   */
+  private async chooseCopySource(mapping: Mapping): Promise<CopySource | null> {
+    if (!mapping.draftDirty) return 'active';
+    const modalRef = this.bsModalService.show(CopySourceModalComponent, {
+      initialState: { mappingName: mapping.name, activeVersion: mapping.version }
+    });
+    return (await firstValueFrom(modalRef.content!.closeSubject, { defaultValue: null })) ?? null;
+  }
+
   async toggleDebugMapping(m: MappingEnriched) {
     const { mapping } = m;
     const newDebug = !mapping.debug;
@@ -800,16 +584,20 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     try {
       await this.mappingService.deleteMapping(mapping.id, mapping.direction);
-      this.alertService.success(gettext(`Mapping ${mapping.name} deleted successfully`));
+      this.alertService.success(
+        this.translateService.instant(gettext('Mapping {{name}} deleted successfully'), { name: mapping.name })
+      );
       return true;
     } catch (error) {
-      this.alertService.danger(gettext(`Failed to delete mapping ${mapping.name}:`) + error);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Failed to delete mapping {{name}}:'), { name: mapping.name }) + error
+      );
       return false;
     }
   }
 
   async onCommitMapping(editorState: CommitEditorState): Promise<void> {
-    const result = await this.stepperService.commitMapping({
+    const result = await this.commitService.commitMapping({
       ...editorState,
       deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors
@@ -835,7 +623,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     const alert = commitSuccessMessage(
       result,
       editorState.mapping.name,
-      this.stepperConfiguration.persistence
+      this.stepperConfiguration.persistence,
+      this.translateService
     );
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
@@ -876,7 +665,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async exportMappings(mappings2Export: Mapping[]): Promise<void> {
-    const json = JSON.stringify(mappings2Export, undefined, 2);
+    const json = serializeMappingsForExport(mappings2Export);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
   }
@@ -956,11 +745,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     try {
       const response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
       if (response.status == HttpStatusCode.Created) {
-        this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+        this.alertService.success(
+          this.translateService.instant(gettext('Added sample mappings for {{direction}}'), { direction: this.stepperConfiguration.direction })
+        );
         this.mappingService.refreshMappings(this.stepperConfiguration.direction);
       }
     } catch (error) {
-      this.alertService.danger('Failed to add sample mappings', error);
+      this.alertService.danger(gettext('Failed to add sample mappings'), error);
     } finally {
       this.isLoading = false;
     }
@@ -981,7 +772,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           const mappings2Export = ms.map((me) => me.mapping);
           this.exportMappings(mappings2Export);
         } catch (error) {
-          this.alertService.danger('Failed to export mappings', error);
+          this.alertService.danger(gettext('Failed to export mappings'), error);
         }
       });
   }

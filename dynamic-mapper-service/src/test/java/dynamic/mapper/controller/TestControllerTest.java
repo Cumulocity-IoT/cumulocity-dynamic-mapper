@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -33,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -73,6 +74,10 @@ import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 
 /**
  * Unit tests for {@link TestController#testMapping}, which previously had no direct
@@ -87,6 +92,8 @@ class TestControllerTest {
 
     @Mock
     private ConnectorRegistry connectorRegistry;
+    @Mock
+    private dynamic.mapper.notification.OutboundDispatcherRegistry dispatcherRegistry;
 
     @Mock
     private C8YAgent c8YAgent;
@@ -101,10 +108,13 @@ class TestControllerTest {
     private GenericMessageCallback dispatcher;
 
     private TestController controller;
+    private dynamic.mapper.mapping.MappingTestService testService;
 
     @BeforeEach
     void setUp() {
-        controller = new TestController(connectorRegistry, c8YAgent, contextService, new SparkPlugBSerializer());
+        testService = new dynamic.mapper.mapping.MappingTestService(connectorRegistry, dispatcherRegistry, c8YAgent,
+                new SparkPlugBSerializer());
+        controller = new TestController(testService, contextService);
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);
@@ -585,7 +595,7 @@ class TestControllerTest {
         when(connectorClient.getDispatcher()).thenReturn(dispatcher);
         when(connectorClient.getConnectorIdentifier()).thenReturn(TestClient.TEST_CONNECTOR_IDENTIFIER);
         org.mockito.Mockito.doReturn(wrapper).when(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "testTimeoutMarginMs", 1L);
+        org.springframework.test.util.ReflectionTestUtils.setField(testService, "testTimeoutMarginMs", 1L);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.testMapping(dryRunContext()));
@@ -762,5 +772,114 @@ class TestControllerTest {
         ResponseEntity<String> response = controller.echoHealth(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    void testMapping_aRequestThatFailedWithoutAContextError_failsTheTest() throws Exception {
+        // A connector with no topic to publish to only marks the request: the Live Test used to be green.
+        ProcessingContext<Object> context = contextWithExternalId();
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(new Exception("No publish topic specified")).build())));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertTrue(!result.getSuccess());
+        assertEquals(List.of("Request 1 failed: No publish topic specified"), result.getErrors());
+    }
+
+    @Test
+    void testMapping_aRequestErrorAlreadyReportedByTheContextIsNotRepeated() throws Exception {
+        ProcessingContext<Object> context = contextWithExternalId();
+        Exception cause = new IllegalStateException("connection reset");
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(cause).build())));
+        context.addError(new dynamic.mapper.processor.ProcessingException("Failed to publish message 1/1", cause));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertEquals(1, result.getErrors().size(), result.getErrors().toString());
+    }
+
+    @Test
+    void testMapping_theResultCarriesNoStackTrace() throws Exception {
+        ProcessingContext<Object> context = contextWithExternalId();
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(new IllegalStateException("boom")).build())));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+        String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(result);
+
+        assertTrue(json.contains("\"errorMessage\":\"boom\""), json);
+        assertTrue(!json.contains("stackTrace") && !json.contains("IllegalStateException"),
+                "the exception itself must not be serialized: " + json);
+    }
+
+    @Test
+    void testMapping_anExceptionWithoutAMessage_stillYieldsAReadableMessage() throws Exception {
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))
+                .thenThrow(new NullPointerException());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.testMapping(dryRunContext()));
+
+        assertTrue(ex.getReason() != null && ex.getReason().contains("NullPointerException"), ex.getReason());
+    }
+
+    @Test
+    void testMapping_testsOfOneTenantDoNotOverlap_andTheLockIsReleasedAfterwards() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(testService, "testLockWaitMs", 50L);
+        java.util.concurrent.CountDownLatch insideFirst = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch releaseFirst = new java.util.concurrent.CountDownLatch(1);
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenAnswer(inv -> {
+            insideFirst.countDown();
+            releaseFirst.await();
+            throw new ConnectorRegistryException("stop here");
+        }).thenThrow(new ConnectorRegistryException("stop here"));
+
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            java.util.concurrent.Future<?> first = pool.submit(() -> {
+                try {
+                    controller.testMapping(dryRunContext());
+                } catch (ResponseStatusException expected) {
+                    // 404 from the stub: the point is that the run held the lock meanwhile
+                }
+            });
+            assertTrue(insideFirst.await(5, java.util.concurrent.TimeUnit.SECONDS));
+
+            ResponseStatusException busy = assertThrows(ResponseStatusException.class,
+                    () -> controller.testMapping(dryRunContext()));
+            assertEquals(HttpStatus.CONFLICT, busy.getStatusCode());
+
+            releaseFirst.countDown();
+            first.get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            ResponseStatusException afterwards = assertThrows(ResponseStatusException.class,
+                    () -> controller.testMapping(dryRunContext()));
+            assertEquals(HttpStatus.NOT_FOUND, afterwards.getStatusCode(), "the lock must be free again");
+        } finally {
+            releaseFirst.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unsubscribeDropsTheTenantTestLock() throws Exception {
+        Field f = dynamic.mapper.mapping.MappingTestService.class.getDeclaredField("tenantTestLocks");
+        f.setAccessible(true);
+        Map<String, Object> locks = (Map<String, Object>) f.get(testService);
+        locks.put(TENANT, new ReentrantLock());
+        locks.put("other", new ReentrantLock());
+        MicroserviceSubscriptionRemovedEvent event = mock(MicroserviceSubscriptionRemovedEvent.class);
+        when(event.getTenant()).thenReturn(TENANT);
+
+        testService.onTenantUnsubscribed(event);
+
+        assertFalse(locks.containsKey(TENANT));
+        assertTrue(locks.containsKey("other"));
     }
 }

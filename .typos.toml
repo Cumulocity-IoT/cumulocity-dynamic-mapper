@@ -16,4 +16,4 @@ unparameterised="unparameterised"
 prioritises="prioritises"
 
 [files]
-extend-exclude = ["**/MQTT3ClientTest.java","**/AMQPClientTest.java","**/mappings**.json", "**/*Mappings**.json" , "**/profiler/*.json", "**/SparkplugBProto.java"]
+extend-exclude = ["**/MQTT3ClientTest.java","**/AMQPClientTest.java","**/mappings**.json", "**/*Mappings**.json" , "**/profiler/*.json", "**/SparkplugBProto.java", "**/translate-props.extension.spec.ts"]

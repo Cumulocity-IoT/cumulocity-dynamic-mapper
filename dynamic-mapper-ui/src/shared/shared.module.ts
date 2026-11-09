@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,6 +19,8 @@
  */
 import { NgModule } from '@angular/core';
 import { FORMLY_CONFIG, FormlyFieldConfig } from '@ngx-formly/core';
+import { TranslateService } from '@ngx-translate/core';
+import { translateFormlyProps } from './component/formly/translate-props.extension';
 import { TextareaTypeComponent } from './component/formly/textarea.type.component';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
@@ -53,6 +55,13 @@ import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-
   ],
   providers: [CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe,
     provideEchartsCore({ echarts: () => import('echarts') }),
+    {
+      // The texts of every form field (label, placeholder, description, tooltip) are translated here.
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useFactory: translateFormlyProps,
+      deps: [TranslateService]
+    },
     {
       provide: FORMLY_CONFIG,
       multi: true,

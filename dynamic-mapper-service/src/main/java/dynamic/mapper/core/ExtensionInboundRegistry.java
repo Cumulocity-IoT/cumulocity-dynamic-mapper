@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 package dynamic.mapper.core;
 
 import java.util.Map;
@@ -10,10 +31,12 @@ import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.extension.ExtensionStatus;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 @Service
 @Slf4j
-public class ExtensionInboundRegistry {
+@Order(TenantScoped.ORDER_EXTENSIONS)
+public class ExtensionInboundRegistry implements TenantScoped {
 
     private final Map<String, Map<String, Extension>> tenantExtensionProcessors = new ConcurrentHashMap<>();
 
@@ -37,7 +60,12 @@ public class ExtensionInboundRegistry {
     /**
      * Initialize extension processor for tenant (called during bootstrap)
      */
-    public Map<String, Extension> initializeExtensions(String tenant) {
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
+    public Map<String, Extension> initializeTenant(String tenant) {
         Map<String, Extension> extensions = new ConcurrentHashMap<>();
         tenantExtensionProcessors.put(tenant, extensions);
         log.info("{} - Initialized Extensions", tenant);
@@ -79,8 +107,9 @@ public class ExtensionInboundRegistry {
         return result;
     }
 
-    public void deleteExtensions(String tenant) {
-        tenantExtensionProcessors.put(tenant, new ConcurrentHashMap<>());
+    public void removeTenant(String tenant) {
+        // remove (not re-create): getExtensions() lazily re-creates an entry on demand
+        tenantExtensionProcessors.remove(tenant);
     }
 
     public void updateStatusExtension(String tenant, String extName) {
@@ -90,16 +119,31 @@ public class ExtensionInboundRegistry {
             log.warn("{} - Cannot update status: extension {} not found in registry", tenant, extName);
             return;
         }
-        ext.setLoaded(ExtensionStatus.COMPLETE);
+        ext.setLoaded(computeStatus(ext));
+    }
+
+    /**
+     * Derive the loading status of an extension from the status of its entries:
+     * COMPLETE if all entries loaded, PARTIALLY if only some did, NOT_LOADED if none did.
+     */
+    public static ExtensionStatus computeStatus(Extension ext) {
         long countDefined = ext.getExtensionEntries().size();
-        long countLoaded = ext.getExtensionEntries().entrySet().stream()
-                .map(entry -> entry.getValue().getLoaded())
-                .filter(entry -> entry).count();
+        long countLoaded = ext.getExtensionEntries().values().stream()
+                .filter(entry -> Boolean.TRUE.equals(entry.getLoaded())).count();
         if (countLoaded == 0) {
-            ext.setLoaded(ExtensionStatus.NOT_LOADED);
+            return ExtensionStatus.NOT_LOADED;
         } else if (countLoaded < countDefined) {
-            ext.setLoaded(ExtensionStatus.PARTIALLY);
+            return ExtensionStatus.PARTIALLY;
         }
+        return ExtensionStatus.COMPLETE;
+    }
+
+    /**
+     * Atomically replace all extensions of a tenant. Readers see either the previous or the new
+     * set, never an empty registry in between.
+     */
+    public void replaceExtensions(String tenant, Map<String, Extension> extensions) {
+        tenantExtensionProcessors.put(tenant, new ConcurrentHashMap<>(extensions));
     }
 
     /**

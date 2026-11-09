@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.core.GraalHostAccessPolicy;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
@@ -37,7 +38,6 @@ import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ServiceRegistry;
-import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.status.MappingStatus;
@@ -121,15 +121,16 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 // Keep Base64 strings for backward compatibility if needed
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
                 CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
-                if (sharedTemplate == null || systemTemplate == null) {
+                if (systemTemplate == null) {
                     log.error(
-                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            "{} - SYSTEM code template missing for mapping [{}] — re-initialize code templates",
                             tenant, mapping.getIdentifier());
                     handleGraalVMError(tenant, mapping,
-                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                            new IllegalStateException("SYSTEM code template not found"), context);
                     return;
                 }
-                context.setSharedCode(sharedTemplate.getCode());
+                // SHARED is optional: engine creation treats a missing one as empty code.
+                context.setSharedCode(sharedTemplate == null ? "" : sharedTemplate.getCode());
                 context.setSystemCode(systemTemplate.getCode());
 
                 // Build the pool key: tenant:mappingId:codeHash (use a stable hash to avoid collisions)
@@ -196,7 +197,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
                 .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
-                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
+                .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass);
 
         if (supportESM) {
             builder.allowExperimentalOptions(true)
@@ -217,7 +218,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             String ppLog = null;
 
             if (pp instanceof byte[]) {
-                ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+                ppLog = dynamic.mapper.processor.util.PayloadClassifier.describeForLog((byte[]) pp);
             } else if (pp != null) {
                 ppLog = pp.toString();
             }

@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -562,6 +563,37 @@ public class HttpPollingConnectorTest {
         assertEquals(URI.create("https://api.example.com/x?page=3"), result);
     }
 
+    private URI nextLink(String headerValue) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.LINK, headerValue);
+        return HttpPollingRequestHelper.extractNextLinkUri(new ResponseEntity<>("{}", headers, 200),
+                "test-tenant", TEST_LOG);
+    }
+
+    @Test
+    public void testExtractNextLinkUri_relNotFirstParameter() {
+        assertEquals(URI.create("https://api.example.com/x?page=2"),
+                nextLink("<https://api.example.com/x?page=2>; title=\"More\"; rel=\"next\""));
+    }
+
+    @Test
+    public void testExtractNextLinkUri_relPrefixOnlyDoesNotMatch() {
+        assertNull(nextLink("<https://api.example.com/x?page=2>; rel=\"nextfoo\""));
+    }
+
+    @Test
+    public void testExtractNextLinkUri_commaInsideTarget() {
+        assertEquals(URI.create("https://api.example.com/x?ids=1,2&page=2"),
+                nextLink("<https://api.example.com/x?ids=1,2&page=2>; rel=\"next\""));
+    }
+
+    @Test
+    public void testExtractNextLinkUri_unquotedAndMultiValuedRel() {
+        assertEquals(URI.create("https://api.example.com/a"), nextLink("<https://api.example.com/a>; rel=next"));
+        assertEquals(URI.create("https://api.example.com/b"),
+                nextLink("<https://api.example.com/b>; rel=\"last next\""));
+    }
+
     @Test
     public void testExtractNextLinkUri_absentHeader_returnsNull() {
         ResponseEntity<String> response = new ResponseEntity<>("{}", new HttpHeaders(), 200);
@@ -824,6 +856,25 @@ public class HttpPollingConnectorTest {
     // -------------------------------------------------------------------------
 
     @Test
+    public void testResolveMapping_nullIdentifierDoesNotThrow() throws Exception {
+        Mapping noId = new Mapping();
+        noId.setMappingTopic("devices/measurements");
+        Mapping withId = new Mapping();
+        withId.setIdentifier("mapping-1");
+        withId.setMappingTopic("devices/measurements");
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound())
+                .thenReturn(Map.of("a", noId, "b", withId));
+
+        client = new HttpPollingConnector();
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+
+        Mapping resolved = (Mapping) invokePrivate(client, "resolveMapping",
+                new Class<?>[] { String.class }, "devices/measurements");
+        assertEquals("mapping-1", resolved.getIdentifier());
+    }
+
+    @Test
     public void testHandlePollFailure_isolatedPerTopic() throws Exception {
         // Regression: a single connector-wide consecutiveFailures counter meant a persistently
         // broken topic could push a healthy, unrelated topic on the same connector past
@@ -856,6 +907,55 @@ public class HttpPollingConnectorTest {
         Map<String, AtomicInteger> consecutiveFailuresByTopic = getField(client, "consecutiveFailuresByTopic");
         assertEquals(5, consecutiveFailuresByTopic.get(brokenTopic).get());
         assertEquals(1, consecutiveFailuresByTopic.get(healthyTopic).get());
+    }
+
+    @Test
+    public void testHandlePollFailure_keepsRetryingAfterFailedThreshold() throws Exception {
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
+
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "connectionStateManager", connectionStateManager);
+        setField(client, "connectorConfiguration", configWithProperties(minimalValidProperties()));
+
+        String topic = "devices/broken";
+        Set<String> subscribedTopics = getField(client, "subscribedTopics");
+        subscribedTopics.add(topic);
+        invokePrivate(client, "ensureScheduler", new Class<?>[] {});
+
+        try {
+            Exception failure = new RuntimeException("simulated poll failure");
+            for (int i = 0; i < 6; i++) {
+                invokePrivate(client, "handlePollFailure", new Class<?>[] { String.class, Exception.class },
+                        topic, failure);
+            }
+
+            verify(connectionStateManager).updateStatusWithError(any());
+            Map<String, ?> pollTasks = getField(client, "pollTasks");
+            assertTrue(pollTasks.containsKey(topic), "poll must stay scheduled after FAILED");
+        } finally {
+            client.close();
+        }
+    }
+
+    @Test
+    public void testMarkPollHealthy_doesNotMaskOtherFailedTopic() throws Exception {
+        ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
+
+        client = new HttpPollingConnector();
+        setField(client, "connectionStateManager", connectionStateManager);
+
+        Map<String, AtomicInteger> failures = getField(client, "consecutiveFailuresByTopic");
+        failures.put("devices/broken", new AtomicInteger(6));
+
+        invokePrivate(client, "markPollHealthy", new Class<?>[] { String.class }, "devices/healthy");
+        verify(connectionStateManager, never()).updateStatus(any(), anyBoolean(), anyBoolean());
+
+        failures.get("devices/broken").set(0);
+        invokePrivate(client, "markPollHealthy", new Class<?>[] { String.class }, "devices/healthy");
+        verify(connectionStateManager).updateStatus(any(), eq(true), eq(true));
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -73,7 +73,7 @@ export class MappingTreeNavigationFactory implements NavigatorNodeFactory {
         .then((data) => {
           if (!data.data || !feature) {
             this.alertService.danger(
-              'Microservice: dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!'
+              gettext('Microservice: dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!')
             );
             console.error('dynamic-mapper-service microservice not subscribed!');
             return [];
@@ -83,7 +83,7 @@ export class MappingTreeNavigationFactory implements NavigatorNodeFactory {
     } catch (error) {
       console.error('Error getting features:', error);
       this.alertService.danger(
-        'Failed to load resources from the backend service dynamic-mapper-service. Please check that this service is deployed and try again.'
+        gettext('Failed to load resources from the backend service dynamic-mapper-service. Please check that this service is deployed and try again.')
       );
 
       // Return empty array or handle gracefully based on your needs

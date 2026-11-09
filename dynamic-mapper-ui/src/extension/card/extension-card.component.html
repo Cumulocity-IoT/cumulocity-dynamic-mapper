@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -35,9 +35,13 @@
 
   <div class="card-block no-min-height card--d-col card-column-80">
     <div class="card-column-60 text-center-grid p-b-16">
-      <span class="label label-primary">{{
-        external ? 'External' : 'Internal'
-      }}</span>
+      <span class="label label-primary">
+        @if (external) {
+          <span translate>External</span>
+        } @else {
+          <span translate>Internal</span>
+        }
+      </span>
     </div>
 
     <div class="card-footer separator card-column-60 p-b-8">
@@ -45,24 +49,27 @@
         <div>
           <span class="badge badge-info">
             {{ app['extensionEntries'].length }}</span
-            ><span class="text-muted">&nbsp;Loaded</span>
+            ><span class="text-muted">&nbsp;<span translate>Loaded</span></span>
           </div>
         }
         @if (app['loaded'] === ExtensionStatus.NOT_LOADED) {
           <div>
-            <span class="text-muted">Not Loaded</span>
+            <span class="text-muted" translate>Not Loaded</span>
+            @if (app['message']) {
+              <p class="text-danger small m-b-0 m-t-4 text-break">{{ app['message'] }}</p>
+            }
           </div>
         }
         @if (app['loaded'] === ExtensionStatus.PARTIALLY) {
           <div>
             <span class="badge badge-info">
               {{ app['extensionEntries'].length }}</span
-              ><span class="text-muted">Partially&nbsp;</span>
+              ><span class="text-muted"><span translate>Partially</span>&nbsp;</span>
             </div>
           }
           @if (app['loaded'] === ExtensionStatus.UNKNOWN) {
             <div>
-              <span class="text-muted">Not Known</span>
+              <span class="text-muted" translate>Not Known</span>
             </div>
           }
         </div>
@@ -81,7 +88,7 @@
             <li>
               <button
                 (click)="delete()"
-                title="{{ 'Delete' }}"
+                [title]="'Delete' | translate"
                 [disabled]="!external || !feature?.userHasMappingAdminRole"
                 >
                 <i c8yIcon="trash" class="m-r-4"></i>
@@ -91,7 +98,7 @@
             <li>
               <button
                 (click)="detail()"
-                title="{{ 'Details' }}"
+                [title]="'Details' | translate"
                 >
                 <i c8yIcon="more-details" class="m-r-4"></i>
                 {{ 'Details' | translate }}

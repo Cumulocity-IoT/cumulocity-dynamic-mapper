@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -18,7 +18,7 @@
 ~  @authors Christof Strack, Stefan Witschel
 ~
 -->
-<c8y-modal title="Import Mapping" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
+<c8y-modal [title]="'Import Mapping' | translate" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="false"
   [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'data-import'"></span>
@@ -26,11 +26,19 @@
   <div class=" p-24 modal-inner-scroll animated fadeIn">
     <div class="modal-body">
       @if (isAppCreated) {
-        <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
-          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
-            type="success">
+        <div class="d-flex a-i-center j-c-center" style="min-height: 240px">
+          <c8y-operation-result [text]="resultText | translate" [vertical]="true" [size]="84" class="lead"
+            [type]="resultType" data-cy="dm-import-result">
           </c8y-operation-result>
         </div>
+        @if (failedMappings.length) {
+          <div class="m-t-16 text-center" data-cy="dm-import-failed">
+            <p class="text-muted m-b-4" translate>Failed mappings:</p>
+            @for (name of failedMappings; track $index) {
+              <div class="text-danger">{{ name }}</div>
+            }
+          </div>
+        }
       } @else {
         <c8y-form-group [hasError]="!!errorMessage" class="m-auto"
           style="max-width: 285px">

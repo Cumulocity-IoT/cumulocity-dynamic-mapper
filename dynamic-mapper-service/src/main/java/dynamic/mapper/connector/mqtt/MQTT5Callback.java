@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,7 +24,9 @@ package dynamic.mapper.connector.mqtt;
 import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.TransportMetadata;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,9 +38,10 @@ import lombok.extern.slf4j.Slf4j;
 public class MQTT5Callback extends AbstractMqttCallback<Mqtt5Publish> {
 
     MQTT5Callback(String tenant, ServiceRegistry serviceRegistry,
+            ConnectorConfigurationService connectorConfigurationService,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName,
             Runnable reconnectTrigger) {
-        super(tenant, serviceRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
+        super(tenant, serviceRegistry, connectorConfigurationService, callback, connectorIdentifier, connectorName, reconnectTrigger);
     }
 
     @Override
@@ -71,9 +74,16 @@ public class MQTT5Callback extends AbstractMqttCallback<Mqtt5Publish> {
         if (publisherClientId != null && serviceConfiguration.getLogPayload()) {
             log.info("{} - Publisher client ID from user properties: {}", tenant, publisherClientId);
         }
+        TransportMetadata metadata = new TransportMetadata();
+        message.getUserProperties().asList()
+                .forEach(p -> metadata.put(TransportMetadata.PROPERTY, p.getName().toString(), p.getValue().toString()));
+        message.getContentType().ifPresent(v -> metadata.put("", "contentType", v.toString()));
+        message.getCorrelationData().ifPresent(v -> metadata.put("", "correlationData", toBytes(v)));
+        message.getResponseTopic().ifPresent(v -> metadata.put("", "responseTopic", v.toString()));
         return ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
+                .metadata(metadata.build())
                 .clientId(publisherClientId)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
@@ -84,5 +94,11 @@ public class MQTT5Callback extends AbstractMqttCallback<Mqtt5Publish> {
     @Override
     protected void acknowledgeMessage(Mqtt5Publish message) {
         message.acknowledge();
+    }
+
+    private static byte[] toBytes(java.nio.ByteBuffer buffer) {
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.duplicate().get(bytes);
+        return bytes;
     }
 }

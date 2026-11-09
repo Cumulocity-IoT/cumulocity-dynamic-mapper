@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -123,7 +123,7 @@ class MappingStatusPersistenceCompatibilityTest {
     @Test
     @DisplayName("statuses written by an older release load with their counters intact")
     void oldStatusesAreLoaded() {
-        service.initializeTenantStatus(TENANT, false);
+        service.initializeTenant(TENANT, false);
 
         List<MappingStatus> loaded = service.getAllStatuses(TENANT);
 
@@ -142,7 +142,7 @@ class MappingStatusPersistenceCompatibilityTest {
     @Test
     @DisplayName("the persisted catch-all entry is reused, not replaced by a fresh empty one")
     void persistedUnspecifiedEntryIsNotOverwritten() {
-        service.initializeTenantStatus(TENANT, false);
+        service.initializeTenant(TENANT, false);
 
         MappingStatus unspecified = service.getAllStatuses(TENANT).stream()
                 .filter(MappingStatus::isUnspecified).findFirst().orElseThrow();
@@ -167,7 +167,7 @@ class MappingStatusPersistenceCompatibilityTest {
             return null;
         }).when(subscriptionsService).runForTenant(anyString(), any(Runnable.class));
 
-        service.initializeTenantStatus(TENANT, false);
+        service.initializeTenant(TENANT, false);
         service.sendStatusToInventory(TENANT);
 
         ArgumentCaptor<ManagedObjectRepresentation> captor =

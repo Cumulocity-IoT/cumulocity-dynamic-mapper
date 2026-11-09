@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification.task;
 
+import dynamic.mapper.notification.NotificationClientOperations;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.core.ServiceRegistry;
@@ -45,14 +46,17 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
 
     private final C8YMessage c8yMessage;
     private final ServiceRegistry serviceRegistry;
+    private final NotificationClientOperations notificationSubscriber;
     private final GroupCacheManager groupCacheManager;
 
     public UpdateSubscriptionDeviceGroupTask(
             ServiceRegistry serviceRegistry,
+            NotificationClientOperations notificationSubscriber,
             C8YMessage c8yMessage,
             GroupCacheManager groupCacheManager) {
         this.c8yMessage = c8yMessage;
         this.serviceRegistry = serviceRegistry;
+        this.notificationSubscriber = notificationSubscriber;
         this.groupCacheManager = groupCacheManager;
     }
 
@@ -265,8 +269,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
-                Future<NotificationSubscriptionRepresentation> future = serviceRegistry
-                        .getNotificationSubscriber()
+                Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
                         // API.ALL, not c8yMessage.getApi(): that is INVENTORY (the group's own
                         // notification channel) and would restrict the device to inventory data.
                         .subscribeDeviceAndConnect(tenant, childMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
@@ -294,7 +297,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 if (childMO == null) {
                     log.warn("{} - Child device {} not found for unsubscription, deleting stale subscriptions",
                             tenant, childId);
-                    int deleted = serviceRegistry.getNotificationSubscriber()
+                    int deleted = notificationSubscriber
                             .deleteSubscriptionsForDevice(tenant, childId, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                     if (deleted > 0) {
                         log.info("{} - Deleted {} stale subscription(s) for non-existent device {}",
@@ -312,7 +315,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
-                serviceRegistry.getNotificationSubscriber()
+                notificationSubscriber
                         .unsubscribeDeviceAndDisconnect(tenant, childMO, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 resultBuilder.addUnsubscription(childId);
@@ -340,7 +343,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             }
         }
         try {
-            List<String> types = serviceRegistry.getNotificationSubscriber()
+            List<String> types = notificationSubscriber
                     .getSubscriptionsByDeviceType(tenant).getTypes();
             return types != null && childMO.getType() != null && types.contains(childMO.getType());
         } catch (Exception e) {

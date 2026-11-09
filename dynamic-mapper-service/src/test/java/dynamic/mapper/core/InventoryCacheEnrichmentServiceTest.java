@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -33,11 +33,9 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import dynamic.mapper.notification.NotificationSubscriber;
 
 /**
  * Covers the eviction-on-delete fix from {@code attic/fix/inconsistant-cache/ISSUE.md}:
@@ -53,17 +51,15 @@ class InventoryCacheEnrichmentServiceTest {
 
     private CacheManager cacheManager;
     private TenantRegistry tenantRegistry;
-    private NotificationSubscriber notificationSubscriber;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private IdentityResolver identityResolver;
     private InventoryCacheEnrichmentService service;
 
     @BeforeEach
     void setUp() {
-        notificationSubscriber = mock(NotificationSubscriber.class);
-        when(notificationSubscriber.subscribeMOForInventoryCacheUpdates(anyString(), any()))
-                .thenReturn(mock(Future.class));
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
-        cacheManager = new CacheManager(mock(C8YAgent.class), notificationSubscriber);
+        cacheManager = new CacheManager(eventPublisher);
         cacheManager.initializeInventoryCache(TENANT, 1000);
 
         tenantRegistry = new TenantRegistry();
@@ -72,7 +68,7 @@ class InventoryCacheEnrichmentServiceTest {
 
         identityResolver = mock(IdentityResolver.class);
 
-        service = new InventoryCacheEnrichmentService(cacheManager, tenantRegistry, notificationSubscriber);
+        service = new InventoryCacheEnrichmentService(cacheManager, tenantRegistry, eventPublisher);
 
         // Simulate the device having been created earlier via the implicit-device path:
         // the external-ID cache already resolves "dmtest" to SOURCE_ID.
@@ -124,8 +120,8 @@ class InventoryCacheEnrichmentServiceTest {
                 "testing mode must never evict the production external-ID cache");
 
         // Notification subscription must NOT be invoked in testing mode
-        org.mockito.Mockito.verify(notificationSubscriber, org.mockito.Mockito.never())
-                .subscribeMOForInventoryCacheUpdates(anyString(), any());
+        org.mockito.Mockito.verify(eventPublisher, org.mockito.Mockito.never())
+                .publishEvent(any(dynamic.mapper.core.InventoryCacheSubscriptionRequest.class));
 
         // Production inventory cache must NOT be populated in testing mode
         assertNull(cacheManager.getInventoryCache(TENANT).getMOBySource(SOURCE_ID),

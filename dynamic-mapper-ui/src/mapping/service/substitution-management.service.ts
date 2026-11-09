@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,15 +18,23 @@
  * @authors Christof Strack
  */
 
-import { Injectable, inject } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
-import { Substitution, Mapping } from '../../shared';
+import { Injectable } from '@angular/core';
+import { Substitution } from '../../shared';
 import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 
+/** The substitution list after a change, plus a message for the user when the change had a side effect. */
+export interface SubstitutionsUpdate {
+  substitutions: Substitution[];
+  notice?: string;
+}
+
+/**
+ * Substitution list operations. Pure: every method takes the current list and returns a new one,
+ * and none touches the mapping. The caller emits the result and the host that owns the mapping
+ * applies it, so there is a single writer of `mapping.substitutions`.
+ */
 @Injectable()
 export class SubstitutionManagementService {
-  private alertService = inject(AlertService);
-
   isSubstitutionValid(substitutionModel: SubstitutionModel): boolean {
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
     return sourceExpression?.valid &&
@@ -36,19 +44,12 @@ export class SubstitutionManagementService {
   }
 
   /**
-   * Bulk-replaces all substitutions in one shot — appropriate for programmatic replacement
-   * (e.g. applying a freshly AI-generated set) where the caller means to replace the full set
-   * atomically, without the per-item duplicate handling (and its alert) that
-   * `addSubstitution()` applies.
+   * Replaces the whole list, for programmatic replacement (e.g. applying a freshly AI-generated
+   * set) where the caller means to replace the full set atomically, without the per-item
+   * duplicate handling (and its notice) that `addSubstitution()` applies.
    */
-  replaceAllSubstitutions(
-    substitutionModels: SubstitutionModel[],
-    mapping: Mapping,
-    onSuccess: () => void
-  ): void {
-    const substitutions = substitutionModels.map(model => this.toSubstitution(model));
-    mapping.substitutions.splice(0, mapping.substitutions.length, ...substitutions);
-    onSuccess();
+  replaceAllSubstitutions(substitutionModels: SubstitutionModel[]): Substitution[] {
+    return substitutionModels.map(model => this.toSubstitution(model));
   }
 
   private toSubstitution(substitutionModel: SubstitutionModel): Substitution {
@@ -66,75 +67,76 @@ export class SubstitutionManagementService {
   /**
    * A substitution whose `pathTarget` already exists replaces that entry in place: two
    * substitutions writing the same target path are never both meaningful, and the last one
-   * defined is what the user just asked for. This used to open a confirmation modal; the
-   * substitution grid now shows the full set inline (including expandArray/repairStrategy),
-   * so the replaced row is visible right there and an alert is enough to flag what happened.
+   * defined is what the user just asked for. The substitution grid shows the full set inline, so
+   * the replaced row is visible right there and a notice is enough to flag what happened.
    */
-  addSubstitution(
-    substitutionModel: SubstitutionModel,
-    mapping: Mapping,
-    onSuccess: () => void
-  ): void {
-    const substitution: Substitution = this.toSubstitution(substitutionModel);
-    const duplicateIndex = mapping.substitutions.findIndex(
-      sub => sub.pathTarget === substitution.pathTarget
-    );
+  addSubstitution(substitutionModel: SubstitutionModel, current: readonly Substitution[]): SubstitutionsUpdate {
+    const substitution = this.toSubstitution(substitutionModel);
+    const duplicateIndex = current.findIndex(sub => sub.pathTarget === substitution.pathTarget);
 
     if (duplicateIndex === -1) {
-      mapping.substitutions.push(substitution);
-    } else {
-      mapping.substitutions[duplicateIndex] = substitution;
-      this.alertService.info(
-        `Replaced substitution # ${duplicateIndex + 1}: it already targeted [${substitution.pathTarget}].`
-      );
+      return { substitutions: [...current, substitution] };
     }
-
-    onSuccess();
+    const substitutions = [...current];
+    substitutions[duplicateIndex] = substitution;
+    return {
+      substitutions,
+      notice: `Replaced substitution # ${duplicateIndex + 1}: it already targeted [${substitution.pathTarget}].`
+    };
   }
 
   /**
    * Re-pointing pathSource/pathTarget can collide with a *different* substitution's pathTarget.
    * As in addSubstitution(), the two collapse into a single entry at the colliding index rather
-   * than leaving two substitutions writing the same target, and an alert reports it.
+   * than leaving two substitutions writing the same target, and a notice reports it.
+   *
+   * @returns `undefined` when nothing is selected (index -1 or out of range)
    */
   updateSubstitution(
     selectedSubstitution: number,
     substitutionModel: SubstitutionModel,
-    mapping: Mapping,
-    onSuccess: () => void
-  ): void {
-    if (selectedSubstitution === -1) return;
+    current: readonly Substitution[]
+  ): SubstitutionsUpdate | undefined {
+    if (selectedSubstitution < 0 || selectedSubstitution >= current.length) return undefined;
 
-    const existing = mapping.substitutions[selectedSubstitution];
+    const existing = current[selectedSubstitution];
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
-    const updatedSubstitution: Substitution = (sourceExpression.valid && targetExpression.valid)
+    const updated: Substitution = (sourceExpression.valid && targetExpression.valid)
       ? { ...existing, pathSource, pathTarget }
       : { ...existing };
 
-    const duplicateIndex = mapping.substitutions.findIndex(
-      (sub, index) => index !== selectedSubstitution && sub.pathTarget === updatedSubstitution.pathTarget
+    const duplicateIndex = current.findIndex(
+      (sub, index) => index !== selectedSubstitution && sub.pathTarget === updated.pathTarget
     );
 
+    const substitutions = [...current];
     if (duplicateIndex === -1) {
-      mapping.substitutions[selectedSubstitution] = updatedSubstitution;
-      onSuccess();
-      return;
+      substitutions[selectedSubstitution] = updated;
+      return { substitutions };
     }
 
     // Assign before splicing so the edited value survives the index shift regardless of which
     // of the two indices is larger.
-    mapping.substitutions[duplicateIndex] = updatedSubstitution;
-    mapping.substitutions.splice(selectedSubstitution, 1);
-    this.alertService.info(
-      `Merged into substitution # ${duplicateIndex + 1}: it already targeted [${updatedSubstitution.pathTarget}].`
-    );
-    onSuccess();
+    substitutions[duplicateIndex] = updated;
+    substitutions.splice(selectedSubstitution, 1);
+    return {
+      substitutions,
+      notice: `Merged into substitution # ${duplicateIndex + 1}: it already targeted [${updated.pathTarget}].`
+    };
   }
 
-  deleteSubstitution(selected: number, mapping: Mapping, onSuccess: () => void): void {
-    if (selected < mapping.substitutions.length) {
-      mapping.substitutions.splice(selected, 1);
-      onSuccess();
-    }
+  /** @returns the list without the substitution at `selected`, or `undefined` when out of range */
+  deleteSubstitution(selected: number, current: readonly Substitution[]): Substitution[] | undefined {
+    if (selected < 0 || selected >= current.length) return undefined;
+    return current.filter((_, index) => index !== selected);
+  }
+
+  /** In-grid edit of a single substitution (expandArray / repairStrategy). */
+  patchSubstitution(
+    current: readonly Substitution[],
+    index: number,
+    patch: Partial<Substitution>
+  ): Substitution[] {
+    return current.map((sub, i) => (i === index ? { ...sub, ...patch } : sub));
   }
 }

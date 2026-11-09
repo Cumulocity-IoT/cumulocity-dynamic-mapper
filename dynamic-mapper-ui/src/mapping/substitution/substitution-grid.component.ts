@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,6 +26,8 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
   ConfirmationModalComponent,
@@ -69,32 +71,37 @@ export class SubstitutionGridComponent implements OnDestroy {
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
-  @Output() editSub = new EventEmitter<number>();
-  /** Fired after an in-grid edit of expandArray/repairStrategy so the parent can re-run validity checks. */
-  @Output() substitutionChange = new EventEmitter<void>();
+  /** An in-grid edit of expandArray/repairStrategy. The grid never changes the mapping itself. */
+  @Output() substitutionPatch = new EventEmitter<{ index: number; patch: Partial<Substitution> }>();
   /** Fired from the "Cancel / New substitution" control in the header, next to the selection count. */
   @Output() cancelEdit = new EventEmitter<void>();
 
-  constructor(private bsModalService: BsModalService) { }
+  constructor(
+    private bsModalService: BsModalService,
+    private translateService: TranslateService
+  ) { }
 
   readonly id = Math.floor(Math.random() * 1000000);
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
-  readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.';
-  readonly targetHelp = 'The JSON path in the target template where the value extracted from the source is written to.';
-  readonly expandArrayHelp = 'When the source expression extracts an array, create one substitution per array element instead of a single combined value. Not available for outbound mappings.';
-  readonly repairStrategyHelp = 'How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array.';
+  readonly substitutionTemplateHelp = gettext('Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.');
+  readonly targetHelp = gettext('The JSON path in the target template where the value extracted from the source is written to.');
+  readonly expandArrayHelp = gettext('When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings.');
+  readonly repairStrategyHelp = gettext('How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array.');
   /**
    * One combined popover for all column meanings, shown above the table, rather than one
    * popover per header cell. A popover inside a narrow, table-layout: fixed <th> nested in a
    * position: sticky header consistently mispositioned itself (even with container="body") -
    * this sidesteps that fragile combination entirely instead of continuing to chase it.
    */
-  readonly columnsHelpText = `
-    <p><strong>Source</strong> - ${this.substitutionTemplateHelp}</p>
-    <p><strong>Target</strong> - ${this.targetHelp}</p>
-    <p><strong>Expand as array</strong> - ${this.expandArrayHelp}</p>
-    <p><strong>Repair strategy</strong> - ${this.repairStrategyHelp}</p>
+  get columnsHelpText(): string {
+    const t = (text: string) => this.translateService.instant(text);
+    return `
+    <p><strong>${t(gettext('Source'))}</strong> - ${t(this.substitutionTemplateHelp)}</p>
+    <p><strong>${t(gettext('Target'))}</strong> - ${t(this.targetHelp)}</p>
+    <p><strong>${t(gettext('Expand as array'))}</strong> - ${t(this.expandArrayHelp)}</p>
+    <p><strong>${t(gettext('Repair strategy'))}</strong> - ${t(this.repairStrategyHelp)}</p>
   `;
+  }
 
   private static readonly ARRAY_ONLY_STRATEGIES: string[] = [
     RepairStrategy.USE_FIRST_VALUE_OF_ARRAY,
@@ -104,17 +111,17 @@ export class SubstitutionGridComponent implements OnDestroy {
   /** Kept in sync with the backend enum `dynamic.mapper.processor.model.RepairStrategy`. */
   private static readonly REPAIR_STRATEGY_DESCRIPTIONS: Record<string, string> = {
     [RepairStrategy.DEFAULT]:
-      'Write the extracted value to the target path as-is. The path must already exist in the target template.',
+      gettext('Write the extracted value to the target path as-is. The path must already exist in the target template.'),
     [RepairStrategy.USE_FIRST_VALUE_OF_ARRAY]:
-      'If the extracted value is an array, use only its first element. Not applicable when "Expand as array" is set.',
+      gettext('If the extracted value is an array, use only its first element. Not applicable when "Expand as array" is set.'),
     [RepairStrategy.USE_LAST_VALUE_OF_ARRAY]:
-      'If the extracted value is an array, use only its last element. Not applicable when "Expand as array" is set.',
+      gettext('If the extracted value is an array, use only its last element. Not applicable when "Expand as array" is set.'),
     [RepairStrategy.IGNORE]:
-      'If the extracted value is missing or null, skip the substitution and keep whatever the target template defines.',
+      gettext('If the extracted value is missing or null, skip the substitution and keep whatever the target template defines.'),
     [RepairStrategy.REMOVE_IF_MISSING_OR_NULL]:
-      'If the extracted value is missing or null, delete the target node from the target template.',
+      gettext('If the extracted value is missing or null, delete the target node from the target template.'),
     [RepairStrategy.CREATE_IF_MISSING]:
-      'Create the target node, including missing parent nodes, if it does not exist in the target template.'
+      gettext('Create the target node, including missing parent nodes, if it does not exist in the target template.')
   };
 
   private destroy$ = new Subject<void>();
@@ -125,13 +132,8 @@ export class SubstitutionGridComponent implements OnDestroy {
   }
 
   onSubstitutionSelect(index: number): void {
-    this.settings.selectedSubstitutionIndex = index;
+    // The host owns the selected index and hands it back through `settings`.
     this.selectSub.emit(index);
-  }
-
-  onSubstitutionEdit(index: number): void {
-    this.settings.selectedSubstitutionIndex = index;
-    this.editSub.emit(index);
   }
 
   /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
@@ -148,7 +150,7 @@ export class SubstitutionGridComponent implements OnDestroy {
     return Object.keys(RepairStrategy).map(key => ({
       label: key,
       value: key,
-      description: SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
+      description: this.describeStrategy(key),
       // USE_FIRST/LAST_VALUE_OF_ARRAY collapse an extracted array to a single element - meaningless
       // once "Expand as array" already splits the array into N substitutions.
       disabled: this.isRepairStrategyDisabled() ||
@@ -156,32 +158,35 @@ export class SubstitutionGridComponent implements OnDestroy {
     }));
   }
 
+  private describeStrategy(strategy: string): string {
+    const description = SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[strategy];
+    return description ? this.translateService.instant(description) : '';
+  }
+
   /** Tooltip on the select itself: what the currently chosen strategy does. */
   repairStrategyDescriptionFor(sub: Substitution): string {
-    return SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
+    return this.describeStrategy(sub.repairStrategy);
   }
 
-  onExpandArrayChange(sub: Substitution, expandArray: boolean): void {
-    sub.expandArray = expandArray;
+  onExpandArrayChange(index: number, sub: Substitution, expandArray: boolean): void {
+    const patch: Partial<Substitution> = { expandArray };
     if (expandArray && SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
-      sub.repairStrategy = RepairStrategy.DEFAULT;
+      patch.repairStrategy = RepairStrategy.DEFAULT;
     }
-    this.substitutionChange.emit();
+    this.substitutionPatch.emit({ index, patch });
   }
 
-  onRepairStrategyChange(sub: Substitution, repairStrategy: string): void {
-    sub.repairStrategy = repairStrategy as RepairStrategy;
-    this.substitutionChange.emit();
+  onRepairStrategyChange(index: number, repairStrategy: string): void {
+    this.substitutionPatch.emit({ index, patch: { repairStrategy: repairStrategy as RepairStrategy } });
   }
 
   onSubstitutionDelete(index: number): void {
     const initialState = {
-      title: 'Delete substitution',
-      message:
-        'You are about to delete a substitution. Do you want to proceed?',
+      title: gettext('Delete substitution'),
+      message: gettext('You are about to delete a substitution. Do you want to proceed?'),
       labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
+        ok: gettext('Delete'),
+        cancel: gettext('Cancel')
       }
     };
     const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
@@ -191,7 +196,6 @@ export class SubstitutionGridComponent implements OnDestroy {
     confirmDeletionModalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(
       (result: boolean) => {
         if (result) {
-          this.settings.selectedSubstitutionIndex = index;
           this.deleteSub.emit(index);
         }
         confirmDeletionModalRef.hide();

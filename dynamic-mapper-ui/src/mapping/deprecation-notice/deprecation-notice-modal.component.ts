@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,6 +21,7 @@
 import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { DEPRECATION_NOTICE_VERSION, SharedService } from '../../shared';
 
 /** Semver string where SUBSTITUTION_AS_CODE was removed completely (see the v6.3.0
@@ -98,7 +99,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
     } catch (error) {
       console.error('Failed to save deprecation notice acceptance:', error);
       this.alertService.warning(
-        'Could not save acceptance. The notice may appear again next time.'
+        gettext('Could not save acceptance. The notice may appear again next time.')
       );
       this.isPending = false;
       this.isClosing = false;

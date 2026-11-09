@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -123,7 +123,7 @@ class InboundTransformationValidationTest {
         lenient().when(connectorClient.getTenant()).thenReturn(TEST_TENANT);
         lenient().when(connectorClient.getConnectorIdentifier()).thenReturn(TEST_CONNECTOR);
         lenient().when(connectorClient.getC8yAgent()).thenReturn(c8yAgent);
-        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient);
+        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient, null);
     }
 
     /**

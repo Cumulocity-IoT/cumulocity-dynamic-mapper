@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,15 +17,13 @@
  *
  * @authors Christof Strack
  */
-
-import { MappingTokens } from './processor/processor.model';
+import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 // `import type`, deliberately: MappingPersistence is only ever used in type position here, while
 // stepper.model.ts imports Direction from this file as a *value*. A value import in both
-// directions is a runtime cycle — and because this module builds objects with computed keys like
-// `[Direction.INBOUND]` at module scope, whichever file loads second can see the enum as
-// undefined. `import type` is erased at compile time, which breaks the cycle at runtime.
+// directions is a runtime cycle. Modules that build objects with computed keys like
+// `[Direction.INBOUND]` at module scope can see the enum as undefined when they load second, so
+// this file must stay a leaf: it imports nothing back from the modules split out of it.
 import type { MappingPersistence } from './stepper.model';
-import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
 /**
  * Field substitution configuration for transforming data between source and target formats during mapping execution.
@@ -291,75 +289,6 @@ export enum Qos {
   EXACTLY_ONCE = 'EXACTLY_ONCE'
 }
 
-/** Default applied when a mapping carries no explicit QoS — mirrors `Qos.DEFAULT` in the backend. */
-export const QOS_DEFAULT = Qos.AT_LEAST_ONCE;
-
-/**
- * Presentation metadata for the QoS levels, kept in one place so the mapping grid, the
- * properties step and any future view label a level identically. `level` is the numeric MQTT
- * QoS and defines the ordering: a connector that cannot honour a level falls back to the
- * strongest level below it.
- */
-export const QOS_OPTIONS: ReadonlyArray<{
-  value: Qos;
-  label: string;
-  level: number;
-  description: string;
-}> = [
-  {
-    value: Qos.AT_MOST_ONCE,
-    label: 'At most once',
-    level: 0,
-    description:
-      'Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency.'
-  },
-  {
-    value: Qos.AT_LEAST_ONCE,
-    label: 'At least once',
-    level: 1,
-    description:
-      'The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once.'
-  },
-  {
-    value: Qos.EXACTLY_ONCE,
-    label: 'Exactly once',
-    level: 2,
-    description:
-      'As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once.'
-  }
-];
-
-/** Label for a QoS level, falling back to the raw value for unknown input. */
-export function qosLabel(qos: Qos | string): string {
-  return QOS_OPTIONS.find((option) => option.value === qos)?.label ?? qos;
-}
-
-/** Numeric MQTT level of a QoS value; -1 for unknown input. */
-export function qosLevel(qos: Qos | string): number {
-  return QOS_OPTIONS.find((option) => option.value === qos)?.level ?? -1;
-}
-
-/**
- * Mirrors the backend's `Qos.clampTo`: the strongest supported level that is not stronger than
- * `requested`; if the connector supports nothing that weak, its weakest supported level (the
- * connector then over-delivers rather than running at a level it cannot implement).
- *
- * @param supported the connector's `supportedQos`; empty/undefined means "no restriction"
- */
-export function clampQos(requested: Qos, supported?: Qos[]): Qos {
-  if (!supported?.length || supported.includes(requested)) {
-    return requested;
-  }
-  const requestedLevel = qosLevel(requested);
-  const weaker = supported.filter((qos) => qosLevel(qos) < requestedLevel);
-  const candidates = weaker.length ? weaker : supported;
-  return candidates.reduce((best, qos) =>
-    weaker.length
-      ? qosLevel(qos) > qosLevel(best) ? qos : best
-      : qosLevel(qos) < qosLevel(best) ? qos : best
-  );
-}
-
 export interface StepperConfiguration {
   showEditorSource?: boolean;
   showEditorTarget?: boolean;
@@ -390,6 +319,22 @@ export interface StepperConfiguration {
    *  rather than in the payload, so they cannot be conveyed through the source template — this
    *  carries them to AI generation as an example of what the mapping will see at runtime. */
   sampleTransportFields?: Record<string, string>;
+  /** What is known about the captured message the sample comes from (payload type/size/format,
+   *  sender client ID); carried to AI generation, see {@link SampleMessageInfo}. */
+  sampleMessageInfo?: SampleMessageInfo;
+  /** Further captured messages of the same payload type as the primary sample (Message Explorer
+   *  multi-select). Stepper state only, never persisted: used solely to give AI generation more
+   *  than one example so it can generalize (optional fields, varying array lengths). */
+  additionalSamples?: AdditionalSample[];
+}
+
+/** One extra sample message handed to AI generation, see {@link StepperConfiguration.additionalSamples}. */
+export interface AdditionalSample {
+  /** Concrete topic the message was received on. */
+  topic: string;
+  /** Sample in the same shape as the mapping's sourceTemplate (JSON text; raw payloads wrapped as {"payload": ...}). */
+  payload: string;
+  transportFields?: Record<string, string>;
 }
 
 export enum TransformationType {
@@ -402,6 +347,25 @@ export enum TransformationType {
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
   EXTENSION_JAVA = 'EXTENSION_JAVA',
+}
+
+export type SamplePayloadType = 'EMPTY' | 'JSON' | 'XML' | 'TEXT' | 'BINARY';
+
+/** Facts about the real message a mapping's sample was captured from (Message Explorer). Kept as
+ *  stepper state only, never persisted on the mapping. Sent to AI generation so the agent does not
+ *  have to guess from the sample how to read the message. */
+export interface SampleMessageInfo {
+  payloadType?: SamplePayloadType;
+  /** Well-known binary container recognized by magic bytes (e.g. GZIP); absent if unknown. */
+  binaryFormat?: string;
+  /** Size of the raw message in bytes. */
+  payloadSize?: number;
+  /** Client ID of the sender; delivered at runtime as msg.clientId. */
+  clientId?: string;
+  /** Concrete topic the message was received on. */
+  topic?: string;
+  /** Type of the connector the message was captured on (e.g. MQTT, KAFKA, PULSAR); inbound only. */
+  connectorType?: string;
 }
 
 export enum MappingType {
@@ -420,330 +384,14 @@ export enum MappingType {
   SPARKPLUGB = 'SPARKPLUGB',
 }
 
-export const TransformationTypeLabels = {
-  [Direction.INBOUND]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
-    [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
-    [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
-    [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
-  },
-  [Direction.OUTBOUND]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
-    [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
-    [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
-    [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
-  }
-} as const;
-
-export const TransformationTypeDescriptions = {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  [TransformationType.DEFAULT]: 'Deprecated — uses the legacy substitution logic without custom processing. Use JSONata instead for new mappings.',
-  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
-  [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
-  [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
-} as const;
-
-export const MappingTypeLabels = {
-  [MappingType.JSON]: 'JSON Payload',
-  [MappingType.FLAT_FILE]: 'Flat File Payload',
-  [MappingType.HEX]: 'Hexadecimal Payload',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload (deprecated — use Any Payload)',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
-  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
-  [MappingType.SPARKPLUGB]: 'SparkPlug B Payload',
-} as const;
-
-export const MappingTypeDescriptions = {
-  [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
-  [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
-  [MappingType.HEX]: 'Hexadecimal data processing and conversion',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: 'Deprecated — use Any Payload with a Smart Function or Java Extension, which decode Protobuf against your own schema',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
-  [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
-  [MappingType.SPARKPLUGB]: 'SparkPlug B binary payload. Inbound: decoded automatically via Eclipse Tahu; outbound NCMD/DCMD: metric object serialized to protobuf binary. Only Smart Function transformations are supported.',
-} as const;
-
-export interface MappingTypeProperties {
-  directionSupported: boolean;
-  substitutionsAsCodeSupported: boolean;
-  supportedTransformationTypes: TransformationType[]; // Add this line
-}
-
-export interface MappingTypeDescriptionInterface {
-  key: MappingType;
-  description: string;
-  enabled: boolean;
-  properties: Record<Exclude<Direction, Direction.UNSPECIFIED>, MappingTypeProperties>;
-  stepperConfiguration: StepperConfiguration;
-}
-
-/**
- * Base defaults for all stepper configurations.
- * These represent the most common case (JSON inbound mapping).
- * All mapping types inherit from these defaults unless explicitly overridden.
- */
-const BASE_STEPPER_CONFIGURATION: StepperConfiguration = {
-  showCodeEditor: false,
-  showEditorSource: true,
-  showEditorTarget: true,
-  showFilterExpression: true,
-  allowNoDefinedIdentifier: false,
-  allowDefiningSubstitutions: true,
-  showProcessorExtensionsSource: false,
-  showProcessorExtensionsTarget: false,
-  showProcessorExtensionsInternal: false,
-  allowTestTransformation: true,
-  allowTestSending: true,
-  advanceFromStepToEndStep: undefined
-};
-
-/**
- * Helper to create stepper configuration with only differences from base.
- * This ensures consistency and reduces duplication across mapping types.
- *
- * @param overrides - Properties that differ from base configuration
- * @returns Complete stepper configuration with base defaults and overrides applied
- */
-function createStepperConfig(overrides: Partial<StepperConfiguration>): StepperConfiguration {
-  return { ...BASE_STEPPER_CONFIGURATION, ...overrides };
-}
-
-export const MappingTypeDescriptionMap: Record<
-  MappingType,
-  MappingTypeDescriptionInterface
-> = {
-  [MappingType.JSON]: {
-    key: MappingType.JSON,
-    enabled: true,
-    description: 'Mapping handles payloads in JSON format.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION,
-          TransformationType.EXTENSION_JAVA
-        ]
-      },
-    },
-    // JSON uses base configuration as-is (no overrides needed)
-    stepperConfiguration: createStepperConfig({})
-  },
-  [MappingType.FLAT_FILE]: {
-    key: MappingType.FLAT_FILE,
-    enabled: true,
-    description: `Mapping handles payloads in CSV format. Any separator can be defined.\nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
-      [
-        "165",
-        "14.5",
-        "2022-08-06T00:14:50.000+02:00",
-        "c8y_FuelMeasurement"
-      ]
-      .`,
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-    },
-    // FLAT_FILE uses same config as JSON (no overrides needed)
-    stepperConfiguration: createStepperConfig({})
-  },
-  [MappingType.HEX]: {
-    key: MappingType.HEX,
-    enabled: true,
-    description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x".
-Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: true,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [
-          TransformationType.JSONATA,
-          TransformationType.SMART_FUNCTION
-        ]
-      }
-    },
-    // HEX uses same config as JSON (no overrides needed)
-    stepperConfiguration: createStepperConfig({})
-  },
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    key: MappingType.PROTOBUF_INTERNAL,
-    // Deprecated: not offered when creating a mapping, but still rendered for existing ones.
-    enabled: false,
-    description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        supportedTransformationTypes: [TransformationType.DEFAULT]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [] // No transformation types supported for outbound
-      },
-    },
-    // PROTOBUF has significant differences: only specify what changes from base
-    stepperConfiguration: createStepperConfig({
-      showProcessorExtensionsInternal: true,
-      allowDefiningSubstitutions: false,
-      showEditorSource: false,
-      showFilterExpression: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
-    })
-  },
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  [MappingType.EXTENSION_JAVA]: {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    key: MappingType.EXTENSION_JAVA,
-    // Hidden from the creation UI — existing mappings are migrated to ANY_PAYLOAD on load.
-    enabled: false,
-    description: 'Deprecated — use Any Payload with Java Extension transformation type instead.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
-      },
-    },
-    stepperConfiguration: createStepperConfig({
-      showProcessorExtensionsSource: true,
-      allowDefiningSubstitutions: false,
-      showEditorSource: false,
-      showFilterExpression: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: true,
-      advanceFromStepToEndStep: 2
-    })
-  },
-  [MappingType.ANY_PAYLOAD]: {
-    key: MappingType.ANY_PAYLOAD,
-    enabled: true,
-    description:
-      'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). ' +
-      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: false,
-        substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: []
-      },
-    },
-    // ANY_PAYLOAD base config: no source/target editors, no substitutions, skip to step 2.
-    // Per-transformation overrides in stepper-configuration.strategy.ts apply on top:
-    //   SMART_FUNCTION — testing disabled (binary payload cannot be test-sent as JSON)
-    //   EXTENSION_JAVA — testing enabled, processor-extension selector shown
-    stepperConfiguration: createStepperConfig({
-      showEditorSource: false,
-      showEditorTarget: false,
-      showFilterExpression: false,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
-    })
-  },
-  [MappingType.SPARKPLUGB]: {
-    key: MappingType.SPARKPLUGB,
-    enabled: true,
-    description:
-      'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
-      'For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
-      'passes a rich JSON object to your Smart Function. ' +
-      'For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized ' +
-      'to SparkPlug B protobuf binary before publishing. ' +
-      'NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent ' +
-      'NDATA / DDATA messages can resolve metric aliases. ' +
-      'The aliasMap (metric name → alias) is available in the outbound Smart Function via ' +
-      'context.getConfig().aliasMap.',
-    properties: {
-      [Direction.INBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
-      },
-      [Direction.OUTBOUND]: {
-        directionSupported: true,
-        substitutionsAsCodeSupported: false,
-        // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
-      },
-    },
-    stepperConfiguration: createStepperConfig({
-      showEditorSource: false,
-      showEditorTarget: false,
-      showFilterExpression: false,
-      allowDefiningSubstitutions: false,
-      allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
-      allowTestSending: false,
-      advanceFromStepToEndStep: 2
-    })
-  }
-};
-
 export interface Extension {
   id?: string;
   name: string;
   // Deserialized from JSON as a plain object, not a real ES Map — do not treat as one.
   extensionEntries: Record<string, ExtensionEntry>;
-  loaded: boolean;
+  loaded: ExtensionStatus;
+  /** Why the whole extension could not be loaded (e.g. missing registration file); per-event reasons are on the entries. */
+  message?: string;
   external: boolean;
 }
 
@@ -864,102 +512,6 @@ export interface Feature {
  *  otherwise previously-accepted users would see the modal again on every upgrade. */
 export const DEPRECATION_NOTICE_VERSION = '6.4.0';
 
-export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
-  return mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping, sub));
-}
-
-export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
-  let pss;
-  if (isSubstitutionsAsCode(mapping)) {
-    pss = [getGenericDeviceIdentifier(mapping)];
-  } else {
-    pss = mapping.substitutions
-      .filter(sub => definesDeviceIdentifier(mapping, sub))
-      .map(sub => sub.pathTarget);
-  }
-  return pss;
-}
-
-export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
-  // "_IDENTITY_.externalId" => source.id
-  if (getGenericDeviceIdentifier(mapping) === originalPath) {
-    return API[mapping.targetAPI].identifier;
-  } else {
-    return originalPath;
-  }
-}
-
-export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: string): string {
-  // source.id => "_IDENTITY_.externalId" source.id
-  if (API[mapping.targetAPI].identifier === originalPath) {
-    return getGenericDeviceIdentifier(mapping);
-  } else {
-    return originalPath;
-  }
-}
-export function cloneSubstitution(
-  sub: Substitution
-): Substitution {
-  return {
-    pathSource: sub.pathSource,
-    pathTarget: sub.pathTarget,
-    repairStrategy: sub.repairStrategy,
-    expandArray: sub.expandArray,
-  };
-}
-function referencesIdentityToken(text: string, token: string): boolean {
-  if (!text) {
-    return false;
-  }
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^\\w])${escaped}(?![\\w])`).test(text);
-}
-
-export function definesDeviceIdentifier(
-  mapping: Mapping,
-  sub: Substitution
-): boolean {
-  // A substitution defines the device identifier if it references either
-  // _IDENTITY_.externalId or _IDENTITY_.c8ySourceId, be it as the whole
-  // path or embedded in a larger expression (e.g. a concatenation).
-  const path = mapping.direction === Direction.INBOUND
-    ? sub?.pathTarget
-    : sub?.pathSource;
-  return (
-    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.externalId`) ||
-    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.c8ySourceId`)
-  );
-}
-export function isSubstitutionValid(mapping: Mapping): boolean {
-  const count = mapping.substitutions
-    .filter((sub) => definesDeviceIdentifier(mapping, sub)).length;
-  return (
-    (mapping.direction !== Direction.OUTBOUND && count === 1) ||
-    mapping.direction === Direction.OUTBOUND
-  );
-}
-
-export function countDeviceIdentifiers(mapping: Mapping): number {
-  const n = mapping.substitutions.filter((sub) => definesDeviceIdentifier(mapping, sub)
-  ).length;
-  return n;
-}
-export function getGenericDeviceIdentifier(mapping: Mapping): string {
-  if (mapping.useExternalId && mapping.externalIdType !== '') {
-    return `${MappingTokens.IDENTITY}.externalId`;
-  } else {
-    return `${MappingTokens.IDENTITY}.c8ySourceId`;
-  }
-}
-
-export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  return mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
-    mapping.transformationType === TransformationType.SMART_FUNCTION;
-}
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Merged from mapping/shared/mapping.model.ts. That directory mirrored this one —
 // same filenames (mapping.model.ts, util.ts), no shared purpose — and was folded in.
@@ -969,180 +521,4 @@ export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
 
 export interface PayloadWrapper {
   payload: string;
-}
-
-/**
- * Human-readable messages for every `ValidationError` code the backend's
- * `MappingValidator` can actually produce — kept 1:1 in sync with
- * `dynamic-mapper-service/.../model/ValidationError.java`.
- *
- * Used both to translate a raw backend error code (see `translateValidationErrorCode`
- * in util.ts) and to build the client-side topic-form validators' error objects
- * (`checkTopicsInboundAreValid`/`checkTopicsOutboundAreValid`).
- */
-export const ValidationFormlyError = {
-  Only_One_Multi_Level_Wildcard: {
-    message: 'Only one MultiLevel wildcard "#" is allowed.'
-  },
-  Multi_Level_Wildcard_Only_At_End: {
-    message: 'MultiLevel wildcard "#" can only appear at the end.'
-  },
-  Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
-    message: 'Only one substitution defining the DeviceIdentifier can be used.'
-  },
-  One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
-    message: 'A substitution defining the DeviceIdentifier must be used.'
-  },
-  Target_Template_Must_Be_Valid_JSON: {
-    message: 'TargetTemplate must be valid JSON.'
-  },
-  Source_Template_Must_Be_Valid_JSON: {
-    message: 'SourceTemplate must be valid JSON.'
-  },
-  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-    {
-      message:
-        'The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name'
-    },
-  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-    {
-      message:
-        'MappingTopic and MappingTopicSample do not have same structure in the Topic Name.'
-    },
-  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-    {
-      message:
-        'The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name'
-    },
-  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-    {
-      message:
-        'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
-    },
-  Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function:
-    {
-      message:
-        'When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function.'
-    },
-  Extension_Must_Be_Defined_For_Extension_Java_Mapping: {
-    message: 'An extension must be selected for an Extension (Java) mapping.'
-  },
-  Unparsed_MappingType_Requires_Smart_Function_Transformation_Type: {
-    message: 'This payload format requires the Smart Function transformation type.'
-  },
-  Substitution_Source_Expression_Must_Be_Valid_JSONata: {
-    message:
-      'At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression.'
-  },
-  Substitution_Paths_Must_Not_Be_Empty: {
-    message:
-      'At least one substitution has an empty source or target path. Both must be set.'
-  }
-};
-
-/**
- * Device information for subscription
- */
-export interface Device {
-  /** Unique device identifier */
-  id: string;
-  /** Human-readable device name */
-  name?: string;
-  /** Device type classification */
-  type?: string;
-  /** Names of device groups this device belongs to */
-  groups?: string[];
-}
-
-/**
- * Request payload for creating or updating notification subscriptions.
- * Either devices OR types should be provided, but not both.
- */
-export interface NotificationSubscriptionRequest {
-  /** 
-   * Cumulocity IoT API type to subscribe to for notifications 
-   * @example NotificationAPI.MEASUREMENT
-   */
-  api: string;
-
-  /** 
-   * Optional name for the subscription to help identify it
-   * @maxLength 100
-   * @example "temperature-sensors"
-   */
-  subscriptionName?: string;
-
-  /** 
-   * List of specific devices to include in the subscription.
-   * Child devices will be automatically discovered and included.
-   * @maxItems 1000
-   * @example [{ id: "12345", name: "Temperature Sensor 01" }]
-   */
-  devices?: Device[];
-
-  /** 
-   * List of device types to monitor dynamically.
-   * All devices of these types will be automatically included.
-   * @maxItems 50
-   * @example ["c8y_TemperatureSensor", "c8y_HumiditySensor"]
-   */
-  types?: string[];
-
-}
-
-
-/**
- * Subscription status enumeration
- */
-export enum SubscriptionStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  ERROR = 'ERROR',
-  PENDING = 'PENDING'
-}
-
-/**
- * Response containing notification subscription details and status
- */
-export interface NotificationSubscriptionResponse {
-  /** Cumulocity IoT API type */
-  api?: string;
-
-  /** Name of the subscription */
-  subscriptionName?: string;
-
-  /** List of subscribed devices */
-  devices?: Device[];
-
-  /** List of subscribed device types */
-  types?: string[];
-
-  /** Unique subscription identifier */
-  subscriptionId?: string;
-
-  /** Current subscription status */
-  status?: SubscriptionStatus;
-
-  /** Ids of devices whose subscription could not be created (status ERROR) */
-  failedDeviceIds?: string[];
-
-  /** Pagination metadata; only present when the request opted into paging */
-  paging?: NotificationSubscriptionPaging;
-
-}
-
-/**
- * Pagination metadata for a paged device subscription response.
- */
-export interface NotificationSubscriptionPaging {
-  /** Current page (1-based) */
-  currentPage: number;
-  /** Items requested per page */
-  pageSize: number;
-  /** Total pages; only set when withTotalPages was requested */
-  totalPages?: number;
-  /** Total subscriptions; only set when withTotalPages was requested */
-  totalElements?: number;
-  /** True when another page can be loaded */
-  hasNext: boolean;
 }

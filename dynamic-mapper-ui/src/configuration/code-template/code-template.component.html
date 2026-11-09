@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -26,7 +26,7 @@
     <div class="c8y-select-wrapper" style="max-width: 500px">
       <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="template" name="templateSelect"
         required>
-        <option [ngValue]="null" disabled>Select template...</option>
+        <option [ngValue]="null" disabled translate>Select template...</option>
         @for (item of codeTemplateEntries$ | async; track item) {
         <option [ngValue]="item.key">
           {{ item.name }} ({{ item.readonly ? 'read-only' : 'editable' }})
@@ -80,7 +80,7 @@
     <div [innerHtml]="codeEditorHelp"></div>
   </ng-template>
   <button type="button" placement="left" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
-    containerClass="wide-popover" container="body" aria-label="Help content"></button>
+    containerClass="wide-popover" container="body" [attr.aria-label]="'Help content' | translate"></button>
 </c8y-action-bar-item>
 <div class="card content-fullpage d-grid">
   @if (isLoading) {

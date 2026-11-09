@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -55,6 +55,8 @@ export class DocMainComponent implements OnInit, OnDestroy {
 
     this.fragmentSubscription = this.route.fragment.subscribe(fragment => {
       if (fragment) {
+        // The target sits in a page that loads its markdown asynchronously, so no single render
+        // guarantees it exists yet; this short wait is a timing estimate, not a render hook.
         setTimeout(() => { this.scrollToElement(fragment); }, 150);
       }
     });

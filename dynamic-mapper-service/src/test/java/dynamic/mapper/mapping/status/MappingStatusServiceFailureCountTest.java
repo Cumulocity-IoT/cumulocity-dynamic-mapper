@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -155,8 +155,8 @@ class MappingStatusServiceFailureCountTest {
     @Test
     @DisplayName("each tenant gets its own catch-all status")
     void unspecifiedStatusIsNotSharedBetweenTenants() {
-        service.initializeTenantStatus("tenant-a", true);
-        service.initializeTenantStatus("tenant-b", true);
+        service.initializeTenant("tenant-a", true);
+        service.initializeTenant("tenant-b", true);
 
         MappingStatus a = service.getAllStatuses("tenant-a").stream()
                 .filter(MappingStatus::isUnspecified).findFirst().orElseThrow();

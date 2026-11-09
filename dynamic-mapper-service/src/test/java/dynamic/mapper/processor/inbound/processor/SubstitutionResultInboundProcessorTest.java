@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -47,7 +47,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Direction;
@@ -78,7 +78,7 @@ class SubstitutionResultInboundProcessorTest {
     private C8YAgent c8yAgent;
 
         @Mock
-    private ServiceRegistry serviceRegistry;
+    private DeviceToClientRegistry deviceToClientRegistry;
 
     @Mock
     private IdentityResolutionService identityResolutionService;
@@ -96,7 +96,7 @@ class SubstitutionResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, serviceRegistry, identityResolutionService);
+        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, deviceToClientRegistry, identityResolutionService);
 
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(

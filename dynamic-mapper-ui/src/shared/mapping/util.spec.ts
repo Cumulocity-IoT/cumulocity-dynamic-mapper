@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -732,27 +732,25 @@ describe('tryGetLiveEditorContent', () => {
 });
 
 describe('updateTemplatesInEditors', () => {
-  it('prefers live editor content over the change-mirror and the current value', () => {
+  it('prefers what the template step reports over the current value', () => {
     const templateStepRef: TemplateEditorRef = {
-      editorSourceStepTemplate: { get: () => ({ live: 'source' }) } as any,
-      editorTargetStepTemplate: { get: () => ({ live: 'target' }) } as any,
-      sourceTemplateUpdated: { mirror: 'source' },
-      targetTemplateUpdated: { mirror: 'target' }
+      getSourceTemplate: () => ({ step: 'source' }),
+      getTargetTemplate: () => ({ step: 'target' })
     };
     const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
-    expect(result).toEqual({ sourceTemplate: { live: 'source' }, targetTemplate: { live: 'target' } });
+    expect(result).toEqual({ sourceTemplate: { step: 'source' }, targetTemplate: { step: 'target' } });
   });
 
-  it('falls back to the change-mirror when live content is unavailable', () => {
+  it('falls back to the current value for a side the step cannot report', () => {
     const templateStepRef: TemplateEditorRef = {
-      sourceTemplateUpdated: { mirror: 'source' },
-      targetTemplateUpdated: { mirror: 'target' }
+      getSourceTemplate: () => undefined,
+      getTargetTemplate: () => ({ step: 'target' })
     };
     const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
-    expect(result).toEqual({ sourceTemplate: { mirror: 'source' }, targetTemplate: { mirror: 'target' } });
+    expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { step: 'target' } });
   });
 
-  it('falls back to the current value when neither live content nor a mirror is available', () => {
+  it('falls back to the current value when the step is not rendered', () => {
     const result = updateTemplatesInEditors(undefined, { current: 'source' }, { current: 'target' });
     expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
   });

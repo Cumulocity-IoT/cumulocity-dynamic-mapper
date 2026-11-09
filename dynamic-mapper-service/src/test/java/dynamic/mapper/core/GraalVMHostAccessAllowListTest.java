@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -53,9 +53,9 @@ class GraalVMHostAccessAllowListTest {
         GraalVMContextService service = new GraalVMContextService();
         context = Context.newBuilder("js")
                 .allowHostAccess(service.getHostAccess())
-                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass)
+                .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass)
                 .build();
-        GraalVMContextService.installBase64Functions(context);
+        GraalHostAccessPolicy.installBase64Functions(context);
     }
 
     @AfterEach
@@ -177,7 +177,7 @@ class GraalVMHostAccessAllowListTest {
 
     @Test
     void allowList_neverIncludesObjectMembers() {
-        List<Class<?>> classes = GraalVMContextService.SCRIPT_ACCESSIBLE_CLASSES;
+        List<Class<?>> classes = GraalHostAccessPolicy.SCRIPT_ACCESSIBLE_CLASSES;
         assertTrue(!classes.contains(Object.class));
         assertTrue(!classes.contains(Class.class));
         assertTrue(!classes.contains(Runtime.class));

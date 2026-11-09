@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -23,13 +23,9 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,14 +34,8 @@ import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.client.RestTemplate;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -60,21 +50,16 @@ import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.rest.representation.measurement.MeasurementCollectionRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
-import com.cumulocity.sdk.client.event.EventFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -87,15 +72,13 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
-import dynamic.mapper.model.status.ConnectorStatus;
-import dynamic.mapper.model.status.ConnectorStatusEvent;
-import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
@@ -103,15 +86,12 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
 import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;
 
 @Slf4j
 @Component
 public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient, IdentityResolver {
-
-    ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
     private final EventApi eventApi;
     private final InventoryFacade inventoryApi;
@@ -131,6 +111,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     final CumulocityClientProperties clientProperties;
     private final ObjectMapper objectMapper;
     private final TenantRegistry tenantRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final ExtensionManager extensionManager;
     private final CacheManager cacheManager;
     private final CertificateService certificateService;
@@ -141,13 +122,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private final String version;
     private final Integer maxConnections;
     private final Semaphore c8ySemaphore;
+    // Sends the requests of a mapping to Cumulocity; shares this agent's semaphore and API clients
+    private final ApiRequestSender apiRequestSender;
 
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
     public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
 
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
-            .description("C8Y Request Processing time").register(Metrics.globalRegistry);
+            .description("C8Y Request Processing time")
+            .publishPercentileHistogram()
+            .register(Metrics.globalRegistry);
 
     public C8YAgent(
             EventApi eventApi,
@@ -165,6 +150,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             CumulocityClientProperties clientProperties,
             ObjectMapper objectMapper,
             TenantRegistry tenantRegistry,
+            DeviceToClientRegistry deviceToClientRegistry,
             ExtensionManager extensionManager,
             CacheManager cacheManager,
             CertificateService certificateService,
@@ -188,6 +174,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         this.clientProperties = clientProperties;
         this.objectMapper = objectMapper;
         this.tenantRegistry = tenantRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.extensionManager = extensionManager;
         this.cacheManager = cacheManager;
         this.certificateService = certificateService;
@@ -197,6 +184,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         this.version = version;
         this.maxConnections = maxConnections;
         this.c8ySemaphore = new Semaphore(maxConnections, false);
+        this.apiRequestSender = new ApiRequestSender(c8ySemaphore, eventApi, alarmApi, measurementApi,
+                deviceControlApi, processingModeService, objectMapper, contextService, clientProperties);
     }
 
     @PostConstruct
@@ -348,6 +337,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return alarmRepresentation;
     }
 
+    /** Writes the events other beans publish instead of calling this agent, which would close a dependency cycle. */
+    @EventListener
+    public void onLoggingEventRequest(LoggingEventRequest request) {
+        createLoggingEvent(request.message(), request.type(), request.eventTime(), request.tenant(),
+                request.properties());
+    }
+
     public void createLoggingEvent(String message, LoggingEventType loggingType, DateTime eventTime,
             String tenant, Map<String, String> properties) {
         createLoggingEvent(message, loggingType, null, eventTime, tenant, properties);
@@ -410,341 +406,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         });
     }
 
-    /**
-     * Creates the Event that opens a new connector connection-lifecycle session, carrying a
-     * {@code d11r_connectorStatusLog} fragment with the session's first {@link ConnectorStatusHistory}
-     * entry. Returns the created Event's id (synchronously) so the caller can remember it and
-     * append further transitions of the same session via {@link #updateConnectorStatusEvent}
-     * instead of creating a new, independent Event per status change.
-     *
-     * @return the created event's id, or {@code null} if creation failed (logged, not thrown —
-     *         callers treat a missing id as "start a fresh session on the next transition").
-     */
-    public GId createConnectorStatusEvent(String message, String severity, DateTime eventTime, String tenant,
-            Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
-        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
-        return subscriptionsService.callForTenant(tenant, () -> {
-            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
-            return contextService.callWithinContext(context, () -> {
-                EventRepresentation er = new EventRepresentation();
-                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-                mor.setId(new GId(source.getId()));
-                er.setSource(mor);
-                er.setDateTime(eventTime);
-                er.setType(LoggingEventType.CONNECTOR_EVENT_TYPE.getType());
-                applyConnectorStatusFragments(er, message, severity, properties, session);
-
-                try {
-                    c8ySemaphore.acquire();
-                    EventRepresentation created = this.eventApi.create(er);
-                    return created.getId();
-                } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for creating connector status event", tenant, e);
-                    return null;
-                } catch (SDKException e) {
-                    log.warn("{} - Failed to create connector status event: {}", tenant, e.getMessage());
-                    return null;
-                } finally {
-                    c8ySemaphore.release();
-                }
-            });
-        });
-    }
-
-    /**
-     * Appends a further transition to an already-open connector connection-lifecycle session by
-     * updating (PUT) the existing Event identified by {@code eventId} in place, instead of
-     * creating a new Event — analogous to how a Cumulocity Operation accumulates its
-     * "history of changes" via repeated PUTs to the same operation id.
-     */
-    public void updateConnectorStatusEvent(GId eventId, String message, String severity, DateTime eventTime,
-            String tenant, Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
-            contextService.runWithinContext(context, () -> {
-                EventRepresentation er = new EventRepresentation();
-                er.setId(eventId);
-                applyConnectorStatusFragments(er, message, severity, properties, session);
-
-                try {
-                    c8ySemaphore.acquire();
-                    this.eventApi.update(er);
-                } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for updating connector status event", tenant, e);
-                } catch (SDKException e) {
-                    log.warn("{} - Failed to update connector status event {}: {}",
-                            tenant, eventId.getValue(), e.getMessage());
-                } finally {
-                    c8ySemaphore.release();
-                }
-            });
-        });
-    }
-
-    private void applyConnectorStatusFragments(EventRepresentation er, String message, String severity,
-            Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
-        er.setText(message);
-        if (properties != null) {
-            er.setProperty(LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(), properties);
-        }
-        er.setProperty("d11r_connectorStatusLog", session);
-
-        Map<String, String> metadata = Map.of(
-            "component", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(),
-            "componentDisplayName", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponentDisplayName(),
-            "severity", severity != null ? severity : LoggingEventType.CONNECTOR_EVENT_TYPE.getSeverity(),
-            "description", LoggingEventType.CONNECTOR_EVENT_TYPE.getDescription()
-        );
-        er.setProperty("d11r_metadata", metadata);
-    }
-
-    /** Bounds how many of the agent's most recent connector status events {@link
-     * #closeOrphanedConnectorSession} scans looking for this connector's newest one. A session
-     * normally has only a handful of entries and connectors don't reconnect constantly, so the
-     * target event is almost always within the first few; this is just a safety cap against
-     * scanning unboundedly on a tenant with many connectors sharing the same agent source. */
-    private static final int ORPHAN_SESSION_SCAN_LIMIT = 100;
-
-    /**
-     * Closes a connection-lifecycle session left open (sessionClosed=false) by a connector's
-     * PREVIOUS run, if one exists. Called once per {@link dynamic.mapper.connector.core.client.AConnectorClient}
-     * construction (see {@code initializeManagers()}), before that run's first status transition.
-     * <p>
-     * The in-memory {@link dynamic.mapper.connector.core.client.ConnectionStateManager} always
-     * starts with no active session — not just after a microservice restart, but also whenever a
-     * connector is disabled and re-enabled (a fresh client instance is created either way, see
-     * {@code ConnectorClientFactory}). If that previous run's last transition wasn't a clean
-     * DISCONNECTED/FAILED (e.g. the process was killed mid-flap, CONNECTED -> RETRYING), the old
-     * Event is left at {@code sessionClosed=false} forever, since nothing will ever append to it
-     * again — it would otherwise keep showing up under "only open sessions" filtering (see
-     * MappingServiceEventComponent) indefinitely, with no link to this new run's session.
-     */
-    public void closeOrphanedConnectorSession(String tenant, String connectorName, String connectorIdentifier) {
-        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
-        subscriptionsService.runForTenant(tenant, () -> {
-            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
-            contextService.runWithinContext(context, () -> {
-                try {
-                    EventFilter filter = new EventFilter()
-                            .byType(LoggingEventType.CONNECTOR_EVENT_TYPE.getType())
-                            .bySource(new GId(source.getId()));
-                    List<EventRepresentation> events = new ArrayList<>();
-                    for (EventRepresentation e : eventApi.getEventsByFilter(filter)
-                            .get(ORPHAN_SESSION_SCAN_LIMIT).elements(ORPHAN_SESSION_SCAN_LIMIT)) {
-                        events.add(e);
-                    }
-                    events.sort(Comparator.comparing(EventRepresentation::getDateTime).reversed());
-
-                    for (EventRepresentation event : events) {
-                        Object rawLog = event.getProperty("d11r_connectorStatusLog");
-                        if (rawLog == null) {
-                            continue;
-                        }
-                        ConnectorStatusHistory session = objectMapper.convertValue(rawLog, ConnectorStatusHistory.class);
-                        if (!connectorIdentifier.equals(session.getConnectorIdentifier())) {
-                            continue;
-                        }
-                        // Newest event for THIS connector found. Any earlier one can't possibly
-                        // still be open (a session hard-closes before a later one opens), so this
-                        // is the only candidate — close it if needed, then stop scanning either way.
-                        if (!session.isSessionClosed()) {
-                            ConnectorStatusEvent closing = new ConnectorStatusEvent(ConnectorStatus.DISCONNECTED);
-                            closing.setConnectorName(connectorName);
-                            closing.setConnectorIdentifier(connectorIdentifier);
-                            closing.setMessage("Session ended: connector restarted before this session reached a terminal status");
-                            session.append(closing);
-                            session.setSessionClosed(true);
-
-                            EventRepresentation update = new EventRepresentation();
-                            update.setId(event.getId());
-                            Map<String, String> statusMap = Map.ofEntries(
-                                    entry("status", session.getCurrentStatus().name()),
-                                    entry("message", closing.getMessage()),
-                                    entry("connectorName", connectorName),
-                                    entry("connectorIdentifier", connectorIdentifier));
-                            applyConnectorStatusFragments(update, closing.getMessage(),
-                                    ConnectorStatus.DISCONNECTED.toSeverity(), statusMap, session);
-
-                            c8ySemaphore.acquire();
-                            try {
-                                this.eventApi.update(update);
-                            } finally {
-                                c8ySemaphore.release();
-                            }
-                            log.info("{} - Closed orphaned connector status session for connector {} (event {})",
-                                    tenant, connectorIdentifier, event.getId().getValue());
-                        }
-                        return;
-                    }
-                } catch (Exception e) {
-                    log.warn("{} - Failed to reconcile orphaned connector status session for connector {}: {}",
-                            tenant, connectorIdentifier, e.getMessage());
-                }
-            });
-        });
-    }
-
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
         return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);
     }
 
-    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
-            int requestIndex)
-            throws ProcessingException {
-        return CompletableFuture.supplyAsync(() -> {
-            String tenant = context.getTenant();
-            StringBuffer error = new StringBuffer("");
-            DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
-            String payload = currentRequest.getRequest();
-            // API is now always initialized when creating DynamicMapperRequest
-            API targetAPI = currentRequest.getApi();
-            AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
-                MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
-                return contextService.callWithinContext(contextCredentials, () -> {
-                    AbstractExtensibleRepresentation rt = null;
-                    try {
-                        if (targetAPI.equals(API.EVENT)) {
-                            EventRepresentation eventRepresentation = objectMapper.readValue(
-                                    payload,
-                                    EventRepresentation.class);
-                            // Set processing mode for events
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.EVENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (EventRepresentation) connector.post("/event/events",
-                                                EVENT,
-                                                eventRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
-                            } else {
-                                rt = eventApi.create(eventRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
-                            }
-                            log.info("{} - SEND: event posted with Id {}", tenant,
-                                    ((EventRepresentation) rt).getId().getValue());
-                        } else if (targetAPI.equals(API.ALARM)) {
-                            AlarmRepresentation alarmRepresentation = objectMapper.readValue(
-                                    payload,
-                                    AlarmRepresentation.class);
-                            // Set processing mode for alarms
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.ALARM)) {
-                                        // Now use the connector with the processing mode header
-                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
-                                                ALARM,
-                                                alarmRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
-                            } else {
-                                rt = alarmApi.create(alarmRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
-                            }
-                            log.info("{} - SEND: alarm posted with Id {}", tenant,
-                                    ((AlarmRepresentation) rt).getId().getValue());
-                        } else if (targetAPI.equals(API.MEASUREMENT)) {
-                            // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
-                            // Always POST via createBulk — single measurements are wrapped in a one-element collection.
-                            MeasurementCollectionRepresentation collectionRepresentation;
-                            if (objectMapper.readTree(payload).has("measurements")) {
-                                collectionRepresentation = objectMapper
-                                        .readValue(payload, MeasurementCollectionRepresentation.class);
-                            } else {
-                                MeasurementRepresentation mr = objectMapper
-                                        .readValue(payload, MeasurementRepresentation.class);
-                                collectionRepresentation = new MeasurementCollectionRepresentation();
-                                collectionRepresentation.setMeasurements(List.of(mr));
-                            }
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final MeasurementCollectionRepresentation col = collectionRepresentation;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (MeasurementCollectionRepresentation) connector.post(
-                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
-                            } else {
-                                rt = measurementApi.createBulk(collectionRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
-                            }
-                            int count = collectionRepresentation.getMeasurements() != null
-                                    ? collectionRepresentation.getMeasurements().size() : 0;
-                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
-                        } else if (targetAPI.equals(API.OPERATION)) {
-                            OperationRepresentation operationRepresentation = objectMapper
-                                    .readValue(
-                                            payload, OperationRepresentation.class);
-                            rt = deviceControlApi.create(operationRepresentation);
-                            log.info("{} - SEND: operation posted with Id {}", tenant,
-                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
-                        } else if (targetAPI.equals(API.CUSTOM)) {
-                            String customPath = currentRequest.getPathCumulocity();
-                            RequestMethod requestMethod = currentRequest.getMethod();
-                            HttpMethod httpMethod;
-                            switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
-                                case PUT: httpMethod = HttpMethod.PUT; break;
-                                case PATCH: httpMethod = HttpMethod.PATCH; break;
-                                case DELETE: httpMethod = HttpMethod.DELETE; break;
-                                case GET: httpMethod = HttpMethod.GET; break;
-                                default: httpMethod = HttpMethod.POST; break;
-                            }
-                            HttpHeaders customHeaders = new HttpHeaders();
-                            customHeaders.set("Authorization",
-                                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-                            customHeaders.setContentType(MediaType.APPLICATION_JSON);
-                            String customUrl = clientProperties.getBaseURL() + customPath;
-                            HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
-                            ResponseEntity<String> customResponse = new RestTemplate().exchange(
-                                    customUrl, httpMethod, customEntity, String.class);
-                            currentRequest.setResponse(customResponse.getBody());
-                            log.info("{} - SEND: custom route called: path={}, method={}, status={}",
-                                    tenant, customPath, requestMethod, customResponse.getStatusCode());
-                        } else {
-                            log.error("{} - Not existing API!", tenant);
-                        }
-                    } catch (JsonProcessingException e) {
-                        log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
-                        error.append("Could not map payload: " + targetAPI + "/" + payload);
-                    } catch (SDKException s) {
-                        logSendFailure(tenant, targetAPI + " " + payload, s);
-                        error.append(sendFailureText(targetAPI, payload, s));
-                    }
-                    return rt;
-                });
-            });
-            if (!error.toString().equals("")) {
-                throw new CompletionException(new ProcessingException(error.toString()));
-            }
-            return result;
-        });
-
-    }
-
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context, int requestIndex)
             throws ProcessingException {
-        // initializeTransientApis();
-        // log.info("{} - C8Y Connections available: {}",
-        // context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
-        // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
-        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
+        boolean logPayload = tenantRegistry.getServiceConfiguration(tenant).getLogPayload();
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
 
         // Check for cancellation BEFORE starting any C8Y API calls
         // This prevents unnecessary HTTP requests when the processing has already timed out
-        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
+        ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation detected in createMEAO before API call, aborting C8Y request for API: {}",
                     tenant, targetAPI);
@@ -756,206 +436,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return contextService.callWithinContext(contextCredentials, () -> {
                 AbstractExtensibleRepresentation rt = null;
                 try {
-                    if (targetAPI.equals(API.EVENT)) {
-                        EventRepresentation eventRepresentation = objectMapper.readValue(
-                                payload,
-                                EventRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before EVENT API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before EVENT API call");
+                    switch (targetAPI) {
+                        case EVENT -> rt = apiRequestSender.sendEvent(context, payload, logPayload, event -> {
+                            if (context.getMapping().getEventWithAttachment()) {
+                                uploadEventAttachment(context.getBinaryInfo(), event.getId().getValue(), false);
                             }
-
-                            // Set processing mode for events
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.EVENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (EventRepresentation) connector.post("/event/events",
-                                                EVENT,
-                                                eventRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
-                            } else {
-                                rt = eventApi.create(eventRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
-                            }
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating event", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        GId eventId = ((EventRepresentation) rt).getId();
-                        if (context.getMapping().getEventWithAttachment()) {
-                            BinaryInfo binaryInfo = context.getBinaryInfo();
-                            uploadEventAttachment(binaryInfo, eventId.getValue(), false);
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: event posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: event posted with Id {}", tenant,
-                                    ((EventRepresentation) rt).getId().getValue());
-
-                    } else if (targetAPI.equals(API.ALARM)) {
-                        AlarmRepresentation alarmRepresentation = objectMapper.readValue(
-                                payload,
-                                AlarmRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before ALARM API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before ALARM API call");
-                            }
-
-                            // Set processing mode for alarms
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.ALARM)) {
-                                        // Now use the connector with the processing mode header
-                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
-                                                ALARM,
-                                                alarmRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
-                            } else {
-                                rt = alarmApi.create(alarmRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
-                            }
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating alarm", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: alarm posted with Id {}", tenant,
-                                    ((AlarmRepresentation) rt).getId().getValue());
-                    } else if (targetAPI.equals(API.MEASUREMENT)) {
-                        // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
-                        // Always POST via createBulk — single measurements are wrapped in a one-element collection.
-                        MeasurementCollectionRepresentation collectionRepresentation;
-                        if (objectMapper.readTree(payload).has("measurements")) {
-                            collectionRepresentation = objectMapper
-                                    .readValue(payload, MeasurementCollectionRepresentation.class);
-                        } else {
-                            MeasurementRepresentation mr = objectMapper
-                                    .readValue(payload, MeasurementRepresentation.class);
-                            collectionRepresentation = new MeasurementCollectionRepresentation();
-                            collectionRepresentation.setMeasurements(List.of(mr));
-                        }
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before MEASUREMENT API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before MEASUREMENT API call");
-                            }
-
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final MeasurementCollectionRepresentation col = collectionRepresentation;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (MeasurementCollectionRepresentation) connector.post(
-                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
-                            } else {
-                                rt = measurementApi.createBulk(collectionRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
-                            }
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating measurement(s)", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        int count = collectionRepresentation.getMeasurements() != null
-                                ? collectionRepresentation.getMeasurements().size() : 0;
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: measurement(s) posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
-                    } else if (targetAPI.equals(API.OPERATION)) {
-                        // C8Y DeviceControl API rejects 'status' on create (HTTP 422 "status is not allowed here")
-                        JsonNode opNode = objectMapper.readTree(payload);
-                        if (opNode.isObject()) {
-                            ((ObjectNode) opNode).remove("status");
-                        }
-                        OperationRepresentation operationRepresentation = objectMapper
-                                .treeToValue(opNode, OperationRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before OPERATION API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before OPERATION API call");
-                            }
-
-                            rt = deviceControlApi.create(operationRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Operation", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: operation posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: operation posted with Id {}", tenant,
-                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
-                    } else if (targetAPI.equals(API.CUSTOM)) {
-                        // Check cancellation before making HTTP call
-                        if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                            log.info("{} - Cancellation detected before CUSTOM API call, aborting", tenant);
-                            throw new ProcessingException("Processing cancelled before CUSTOM API call");
-                        }
-
-                        String customPath = currentRequest.getPathCumulocity();
-                        RequestMethod requestMethod = currentRequest.getMethod();
-                        HttpMethod httpMethod;
-                        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
-                            case PUT: httpMethod = HttpMethod.PUT; break;
-                            case PATCH: httpMethod = HttpMethod.PATCH; break;
-                            case DELETE: httpMethod = HttpMethod.DELETE; break;
-                            case GET: httpMethod = HttpMethod.GET; break;
-                            default: httpMethod = HttpMethod.POST; break;
-                        }
-                        HttpHeaders customHeaders = new HttpHeaders();
-                        customHeaders.set("Authorization",
-                                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-                        customHeaders.setContentType(MediaType.APPLICATION_JSON);
-                        String customUrl = clientProperties.getBaseURL() + customPath;
-                        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
-                        ResponseEntity<String> customResponse = new RestTemplate().exchange(
-                                customUrl, httpMethod, customEntity, String.class);
-                        currentRequest.setResponse(customResponse.getBody());
-                        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
-                                tenant, customPath, requestMethod, customResponse.getStatusCode());
-                    } else {
-                        log.error("{} - Not existing API!", tenant);
+                        });
+                        case ALARM -> rt = apiRequestSender.sendAlarm(context, payload, logPayload);
+                        case MEASUREMENT -> rt = apiRequestSender.sendMeasurements(context, payload, logPayload);
+                        case OPERATION -> rt = apiRequestSender.sendOperation(context, payload, logPayload);
+                        case CUSTOM -> apiRequestSender.sendCustom(context, currentRequest);
+                        default -> log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
                     log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
-                    // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
                     logSendFailure(tenant, targetAPI + " " + payload, s);
                     pe.set(new ProcessingException(sendFailureText(targetAPI, payload, s), s));
 
                     // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
-                        ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
+                        ID identity = new ID(currentRequest.getExternalIdType(), currentRequest.getExternalId());
                         cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
                     }
                 }
@@ -1421,23 +923,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return deviceBootstrapService.initializeDeviceToClientMapRepresentation(tenant, this);
     }
 
-    public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
-                && !(connectorStatus.equals(previousConnectorStatus))) {
-            previousConnectorStatus = connectorStatus;
-            Map<String, String> stMap = Map.ofEntries(
-                    entry("status", connectorStatus.name()),
-                    entry("message",
-                            message == null ? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name() : message),
-                    entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
-                    entry("connectorIdentifier", "000000"));
-            createLoggingEvent(String.format("Connector status: %s", connectorStatus.name()),
-                    LoggingEventType.NOTIFICATION_EVENT_TYPE, connectorStatus.toSeverity(), DateTime.now(),
-                    tenant,
-                    stMap);
-        }
-    }
-
     public static MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
         final MicroserviceCredentials clonedContext = new MicroserviceCredentials(
                 context.getTenant(),
@@ -1446,26 +931,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 context.getTfaToken(), null);
         return clonedContext;
     }
-
-
-
-
-
-
-
-
-    /**
-     * Drops the cached {@code RestConnector} for a tenant.
-     *
-     * <p>That connector holds the tenant's service-user credentials, so it must not outlive the
-     * subscription: without this, an unsubscribed tenant's credentials stay resident for the
-     * lifetime of the process, and a credential rotation is never picked up.
-     */
-    public void clearProcessingModeConnectorCache(String tenant) {
-        processingModeService.clearConnectorCache(tenant);
-    }
-
-
 
 
 
@@ -1502,6 +967,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             inventoryCache.removeMO(sourceId);
         }
         tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
+        // Device isolation: a deleted device must not stay registered to a client
+        deviceToClientRegistry.removeClientRelation(tenant, sourceId);
         cacheManager.removeSourceIdFromExternalIdCaches(tenant, sourceId);
     }
 

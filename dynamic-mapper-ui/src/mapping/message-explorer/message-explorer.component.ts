@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,19 +18,15 @@
  * @authors Christof Strack
  */
 
-import {
-  AfterViewInit,
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
   ActionControl,
+  BulkActionControl,
   AlertService,
   BottomDrawerService,
   Column,
@@ -46,7 +42,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { InventoryService, IdentityService } from '@c8y/client';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
-import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
+import { ExplorerMessage, isRawPayload, MAX_EXPLORER_SAMPLES, MessageExplorerService, samplePayloadKind, SessionExpiredError } from './message-explorer.service';
 
 export type IndexedMessage = ExplorerMessage & { id: number; seqNo: number };
 import {
@@ -56,10 +52,11 @@ import {
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
-import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
-import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
+import { ExplorerMappingHandoffService, ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
+import { ALERT_INFO_TIMEOUT, Direction, MappingType } from '../../shared';
 import {
   MessageExplorerDateRendererComponent,
+  MessageExplorerTruncateRendererComponent,
   MessageExplorerPayloadRendererComponent
 } from './message-explorer-payload.renderer.component';
 
@@ -75,6 +72,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   imports: [CoreModule, CommonModule, ReactiveFormsModule]
 })
 export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly injector = inject(Injector);
 
   // ---- state ----------------------------------------------------------------
   sessionId: string | null = null;
@@ -110,48 +108,50 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '60px'
+      gridTrackSize: '5%'
     },
     {
       name: 'receivedAt',
-      header: 'Received at',
+      header: gettext('Received at'),
       path: 'receivedAt',
       dataType: ColumnDataType.TextShort,
       sortable: true,
       filterable: false,
       cellRendererComponent: MessageExplorerDateRendererComponent,
-      gridTrackSize: '200px'
+      gridTrackSize: '12%'
     },
     {
       name: 'clientId',
-      header: 'Client ID',
+      header: gettext('Client ID'),
       path: 'clientId',
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '140px'
+      cellRendererComponent: MessageExplorerTruncateRendererComponent,
+      gridTrackSize: '12%'
     },
     {
       name: 'key',
-      header: 'Key',
+      header: gettext('Key'),
       path: 'key',
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: false,
-      gridTrackSize: '140px'
+      cellRendererComponent: MessageExplorerTruncateRendererComponent,
+      gridTrackSize: '14%'
     },
     {
       name: 'topic',
-      header: 'Topic',
+      header: gettext('Topic'),
       path: 'topic',
       dataType: ColumnDataType.TextShort,
       sortable: false,
       filterable: true,
-      gridTrackSize: '220px'
+      gridTrackSize: '12%'
     },
     {
       name: 'payload',
-      header: 'Payload',
+      header: gettext('Payload'),
       path: 'payload',
       dataType: ColumnDataType.TextShort,
       sortable: false,
@@ -166,12 +166,28 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
   actionControls: ActionControl[] = [
     {
-      text: 'Create mapping',
+      text: gettext('Create mapping'),
       type: 'CREATE_MAPPING',
       icon: 'plus-circle',
       callback: (item: object) => this.onCreateMappingFromMessage(item as IndexedMessage)
     }
   ];
+
+  /** Bulk action on the selected rows: one Smart Function generated by AI from several messages.
+   *  Offered only for 2..MAX_EXPLORER_SAMPLES messages of the same payload type (JSON with JSON,
+   *  binary with binary, ...), since one function has to read all of them. */
+  bulkActionControls: BulkActionControl[] = [
+    {
+      text: gettext('Create mapping from selected messages'),
+      type: 'CREATE_MAPPING_FROM_SELECTION',
+      icon: 'plus-circle',
+      showIf: (selectedItemIds: (string | number)[]) => this.canCombine(this.selectedMessages(selectedItemIds)),
+      callback: (selectedItemIds: (string | number)[]) =>
+        this.onCreateMappingFromMessages(this.selectedMessages(selectedItemIds))
+    }
+  ];
+
+  readonly maxSamples = MAX_EXPLORER_SAMPLES;
 
   pagination: Pagination = {
     pageSize: 50,
@@ -193,6 +209,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   // ---- DI -------------------------------------------------------------------
   private readonly fb = inject(FormBuilder);
   private readonly alertService = inject(AlertService);
+  private readonly translateService = inject(TranslateService);
   private readonly explorerService = inject(MessageExplorerService);
   private readonly connectorConfigService = inject(ConnectorConfigurationService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
@@ -218,7 +235,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       .subscribe(value => {
         this.currentPollingInterval = value;
         this.connectorConfigService.setPollingInterval(value);
-        setTimeout(() => {
+        // After the render that hands the new interval to the countdown component.
+        afterNextRenderInZone(this.injector, () => {
           this.nextTriggerCountdown$.next(this.currentPollingInterval);
           this.resetCountdown();
         });
@@ -228,7 +246,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.startCountdown());
+    afterNextRenderInZone(this.injector, () => this.startCountdown());
   }
 
   private persistSession(): void {
@@ -284,8 +302,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         return { ...m, id: seqNo, seqNo };
       });
       this.setMessages(indexed.slice().reverse());
-      // Defer countdown start — @ViewChild is not available until ngAfterViewInit
-      setTimeout(() => {
+      // The countdown component (@ViewChild) exists only after the first render.
+      afterNextRenderInZone(this.injector, () => {
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
         if (this.shouldRefreshAutomatic) {
           this.countdownIntervalComponent?.start();
@@ -368,7 +386,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.paused = false;
         this.countdownIntervalComponent?.stop();
         this.clearPersistedSession();
-        this.alertService.warning('Explorer session has expired. Start a new session.');
+        this.alertService.warning(gettext('Explorer session has expired. Start a new session.'));
       } else {
         // Transient network error — leave session alive, try again next tick
         console.warn('Explorer poll error:', e);
@@ -429,7 +447,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.persistSession();
 
       if (this.sessionSubscriptionWarning) {
-        this.alertService.warning(`Explorer session started, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+        this.alertService.warning(
+          this.translateService.instant(gettext('Explorer session started, but subscribing to the topic failed: {{warning}}'), { warning: this.sessionSubscriptionWarning })
+        );
       }
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
@@ -437,7 +457,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.countdownIntervalComponent?.start();
       }
     } catch (e: any) {
-      this.alertService.danger(`Failed to start explorer session: ${e.message}`);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Failed to start explorer session: {{error}}'), { error: e.message })
+      );
     }
   }
 
@@ -491,9 +513,11 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.persistSession();
 
       if (this.sessionSubscriptionWarning) {
-        this.alertService.warning(`Explorer session updated, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+        this.alertService.warning(
+          this.translateService.instant(gettext('Explorer session updated, but subscribing to the topic failed: {{warning}}'), { warning: this.sessionSubscriptionWarning })
+        );
       } else {
-        this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
+        this.alertService.add({ text: gettext('Explorer session updated.'), type: 'success', timeout: ALERT_INFO_TIMEOUT });
       }
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
@@ -501,7 +525,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.countdownIntervalComponent?.start();
       }
     } catch (e: any) {
-      this.alertService.danger(`Failed to update explorer session: ${e.message}`);
+      this.alertService.danger(
+        this.translateService.instant(gettext('Failed to update explorer session: {{error}}'), { error: e.message })
+      );
     }
   }
 
@@ -533,7 +559,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.paused = false;
     this.countdownIntervalComponent?.stop();
     this.clearPersistedSession();
-    this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    this.alertService.add({ text: gettext('Explorer session stopped.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 
   async onClear(): Promise<void> {
@@ -545,12 +571,40 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
   // ---- create mapping from captured message ---------------------------------
 
-  async onCreateMappingFromMessage(msg: ExplorerMessage): Promise<void> {
+  private selectedMessages(selectedItemIds: (string | number)[] | undefined): IndexedMessage[] {
+    const ids = new Set((selectedItemIds ?? []).map(String));
+    return this.messages.filter(m => ids.has(String(m.id)));
+  }
+
+  private canCombine(msgs: IndexedMessage[]): boolean {
+    return msgs.length >= 2
+      && msgs.length <= MAX_EXPLORER_SAMPLES
+      && msgs.every(m => samplePayloadKind(m) === samplePayloadKind(msgs[0]))
+      && msgs.every(m => m.direction === msgs[0].direction);
+  }
+
+  /** Several selected messages: the oldest becomes the primary sample, the rest are extra examples. */
+  async onCreateMappingFromMessages(msgs: IndexedMessage[]): Promise<void> {
+    if (!this.canCombine(msgs)) {
+      this.alertService.warning(
+        this.translateService.instant(
+          gettext('Select between 2 and {{max}} messages of the same type, for example only JSON or only binary.'),
+          { max: MAX_EXPLORER_SAMPLES }
+        )
+      );
+      return;
+    }
+    const ordered = [...msgs].sort((a, b) => a.receivedAt - b.receivedAt);
+    await this.onCreateMappingFromMessage(ordered[0], ordered.slice(1));
+  }
+
+  async onCreateMappingFromMessage(msg: ExplorerMessage, extraMsgs: ExplorerMessage[] = []): Promise<void> {
     const direction = msg.direction === 'OUTBOUND' ? Direction.OUTBOUND : Direction.INBOUND;
 
     // Step 1: pick mapping format / transformation type
     const typeDrawer = this.bottomDrawerService.openDrawer(MappingTypeDrawerComponent, {
-      initialState: { direction }
+      // Binary, XML and plain-text payloads cannot be parsed as JSON, so preselect Any Payload.
+      initialState: { direction, preferredMappingType: isRawPayload(msg) ? MappingType.ANY_PAYLOAD : undefined }
     });
     let mappingResult: any;
     try {
@@ -603,6 +657,15 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       // subscription was either skipped or created inside the drawer — nothing more to do here
     }
 
+    // Extra samples only help AI generation of a Smart Function; any other choice uses the primary alone.
+    const useExtras = extraMsgs.length > 0 && !!mappingResult.generateSmartFunctionWithAI;
+    if (extraMsgs.length > 0 && !useExtras) {
+      this.alertService.info(gettext('Only the first selected message is used, because the mapping is not generated with AI.'));
+    }
+    const additionalMessages: ExplorerSampleMessage[] | undefined = useExtras
+      ? extraMsgs.map(m => ({ topic: m.topic, payload: m.payload, binary: m.binary, key: m.key, metadata: m.metadata }))
+      : undefined;
+
     // Infer the C8Y API type from the outbound message topic (e.g. "EVENT/CREATE" → "EVENT")
     const targetAPI = direction === Direction.OUTBOUND ? this.inferTargetAPIFromTopic(msg.topic) : undefined;
 
@@ -637,7 +700,15 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sessionTopic: this.sessionTopic,
       topic: msg.topic,
       payload: msg.payload,
+      binary: msg.binary,
+      payloadType: msg.payloadType,
+      binaryFormat: msg.binaryFormat,
+      payloadSize: msg.payloadSize,
+      clientId: msg.clientId,
+      connectorType: msg.connectorType,
       key: msg.key,
+      metadata: msg.metadata,
+      additionalMessages,
       mappingType: mappingResult.mappingType,
       transformationType: mappingResult.transformationType,
       codeTemplate: mappingResult.codeTemplate,

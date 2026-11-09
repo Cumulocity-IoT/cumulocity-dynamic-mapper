@@ -1,6 +1,6 @@
 # DeploymentControllerApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to */service/dynamic-mapper-service*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -12,14 +12,17 @@ All URIs are relative to *http://localhost:8080*
 
 <a name="getDeploymentMap"></a>
 # **getDeploymentMap**
-> Object getDeploymentMap()
+> Object getDeploymentMap(expand)
 
 Get complete deployment configuration
 
-    Retrieves the complete deployment configuration map showing all mappings and which connectors they are configured to be deployed to.  **Response Format:** - Key: Mapping identifier - Value: List of connector identifiers  **Use Cases:** - Get overview of all deployment configurations - Export/backup deployment settings - Audit deployment assignments - Bulk deployment management 
+    Retrieves the complete deployment configuration map showing all mappings and which connectors they are configured to be deployed to.  **Response Format:** - Key: Mapping identifier - Value: List of connector identifiers  **Query Parameter:** - &#x60;expand&#x3D;true&#x60;: Value is a DeploymentMapEntryExpanded with the mapping name and   direction next to the identifier, and each connector as identifier, name, and   connector type  **Use Cases:** - Get overview of all deployment configurations - Export/backup deployment settings - Audit deployment assignments - Bulk deployment management 
 
 ### Parameters
-This endpoint does not need any parameter.
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **expand** | **Boolean**| Resolve mapping and connector names | [optional] [default to false] |
 
 ### Return type
 
@@ -63,14 +66,17 @@ Get deployment configuration for mapping
 
 <a name="getMappingsDeployed"></a>
 # **getMappingsDeployed**
-> Object getMappingsDeployed()
+> Object getMappingsDeployed(expand)
 
 Get effective deployments
 
-    Retrieves the current effective deployment state by querying all active connectors to see which mappings are actually deployed and running. This shows the real-time deployment status across all connectors.  **Use Case:** - Monitor which mappings are currently active on each connector - Verify deployment consistency across connectors - Troubleshoot deployment issues  **Response Format:** - Key: Mapping identifier - Value: DeploymentMapEntry with connector details 
+    Retrieves the current effective deployment state by querying all active connectors to see which mappings are actually deployed and running. This shows the real-time deployment status across all connectors.  **Use Case:** - Monitor which mappings are currently active on each connector - Verify deployment consistency across connectors - Troubleshoot deployment issues  **Response Format:** - Key: Mapping identifier - Value: DeploymentMapEntry with connector details  **Query Parameter:** - &#x60;expand&#x3D;true&#x60;: Value is a DeploymentMapEntryExpanded with the mapping name and   direction next to the identifier, and each connector reduced to identifier, name,   and connector type 
 
 ### Parameters
-This endpoint does not need any parameter.
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **expand** | **Boolean**| Resolve mapping and connector names | [optional] [default to false] |
 
 ### Return type
 

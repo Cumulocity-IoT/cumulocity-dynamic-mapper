@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 // mapping-substitution-step.component.ts
 import {
   Component,
@@ -11,6 +32,8 @@ import {
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
 import {
@@ -22,14 +45,14 @@ import {
   Feature,
   isSubstitutionsAsCode,
   RepairStrategy,
-  ALERT_INFO_TIMEOUT
+  Substitution
 } from '../../shared';
 import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepperService } from '../service/mapping-stepper.service';
-import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { SubstitutionManagementService, SubstitutionsUpdate } from '../service/substitution-management.service';
 import { isExpression } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -64,6 +87,11 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() isBeforeSubstitutionStep: boolean;
 
   @Output() mappingCodeChange = new EventEmitter<string>();
+  /**
+   * The substitution list after the user changed it. The host owns the mapping and applies it:
+   * this step reads `mapping.substitutions` but never writes it.
+   */
+  @Output() substitutionsChange = new EventEmitter<Substitution[]>();
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution!: JsonEditorComponent;
@@ -72,6 +100,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   editorTargetStepSubstitution!: JsonEditorComponent;
 
   private alertService = inject(AlertService);
+  private translateService = inject(TranslateService);
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
   private substitutionService = inject(SubstitutionManagementService);
@@ -94,7 +123,14 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   substitutionModel: SubstitutionModel = {};
   selectedSubstitution: number = -1;
   expertMode: boolean = false;
-  targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code>...';
+  targetTemplateHelp = gettext('The template contains the dummy field <code>_TOPIC_LEVEL_</code>...');
+
+  /** Help shown next to the disabled AI button. */
+  get aiDisabledHelp(): string {
+    return this.aiCapabilitiesDisabled
+      ? gettext('AI capabilities are disabled in this tenant.')
+      : gettext('AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.');
+  }
 
   isSubstitutionValid$: Observable<boolean>;
   sourceCustomMessage$: Observable<string>;
@@ -170,8 +206,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
 
-        templateOptions: {
-          label: 'Source Expression',
+        props: {
+          label: gettext('Source Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -189,22 +225,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
             ).subscribe(path => this.updateSourceExpressionResult(path));
           }
         }
-      },
-      {
-        key: 'sourceExpression.result',
-        type: 'd11r-textarea',
-        wrappers: ['c8y-form-field'],
-        props: {
-          readonly: true,
-          required: false,
-          rows: 2,
-          class: 'font-smaller',
-          label: ' Source Result [empty]'
-        },
-        expressions: {
-          'props.label': (field: FormlyFieldConfig) =>
-            ` Source Result [${field.model?.sourceExpression?.resultType ?? 'empty'}]`
-        }
       }
     ];
     this.substitutionFormlyFieldsTarget = [
@@ -212,8 +232,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         key: 'pathTarget',
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
-        templateOptions: {
-          label: 'Target Expression',
+        props: {
+          label: gettext('Target Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -230,22 +250,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
             ).subscribe(path => this.updateTargetExpressionResult(path));
           }
         }
-      },
-      {
-        key: 'targetExpression.result',
-        type: 'd11r-textarea',
-        wrappers: ['c8y-form-field'],
-        props: {
-          readonly: true,
-          required: false,
-          rows: 2,
-          class: 'font-smaller',
-          label: ' Target Result [empty]'
-        },
-        expressions: {
-          'props.label': (field: FormlyFieldConfig) =>
-            ` Target Result [${field.model?.targetExpression?.resultType ?? 'empty'}]`
-        }
       }
     ];
   }
@@ -257,6 +261,16 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * The source expression yields an array but "Expand as array" is off: shown as a hint, not a toast.
+   * Not while the expression is invalid: the field's own error message occupies the same space and
+   * the model then still holds the previous, stale result.
+   */
+  get showExpandArrayHint(): boolean {
+    const source = this.substitutionModel?.sourceExpression;
+    return source?.resultType === 'Array' && source.valid !== false && !this.substitutionModel.expandArray;
+  }
+
   async updateSourceExpressionResult(path: string): Promise<void> {
     try {
       const result = await this.stepperService.evaluateSourceExpression(
@@ -266,10 +280,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionModel.sourceExpression = result;
       this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
       this.substitutionFormly.get('pathSource').setErrors(null);
-
-      if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
-      }
     } catch (error) {
       // sourceExpression can still be unset here (e.g. right after selecting an existing
       // substitution, whose persisted form never carries it) - default it rather than assume it.
@@ -295,8 +305,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathTarget').setErrors(null);
 
       if (path == '$') {
-        this.stepperService.targetCustomMessage$.next(
-          'By specifying "$" you selected the root of the target template...'
+        this.stepperService.setTargetCustomMessage(
+          this.translateService.instant(gettext('By specifying "$" you selected the root of the target template...'))
         );
       }
     } catch (error) {
@@ -325,34 +335,43 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   onAddSubstitution(): void {
     if (!this.isSubstitutionValid()) {
-      this.alertService.warning('Please select nodes in both templates to define a substitution.');
+      this.alertService.warning(gettext('Please select nodes in both templates to define a substitution.'));
       return;
     }
 
     this.substitutionModel.expandArray = false;
     this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
 
-    this.substitutionService.addSubstitution(
-      this.substitutionModel,
-      this.mapping,
-      this.refreshSubstitutionValidity
+    this.applySubstitutions(
+      this.substitutionService.addSubstitution(this.substitutionModel, this.mapping.substitutions)
     );
 
     this.selectedSubstitution = -1;
   }
 
   onUpdateSubstitution(): void {
-    this.substitutionService.updateSubstitution(
+    const update = this.substitutionService.updateSubstitution(
       this.selectedSubstitution,
       this.substitutionModel,
-      this.mapping,
-      () => {
-        this.refreshSubstitutionValidity();
-        // A completed update is a natural end to the editing session - return to "add" state
-        // rather than leaving the just-saved row selected and both buttons still enabled.
-        this.cancelEditSubstitution();
-      }
+      this.mapping.substitutions
     );
+    if (!update) return;
+
+    this.applySubstitutions(update);
+    // A completed update is a natural end to the editing session - return to "add" state
+    // rather than leaving the just-saved row selected and both buttons still enabled.
+    this.cancelEditSubstitution();
+  }
+
+  /**
+   * Hands a changed substitution list to the host, which owns the mapping and applies it, then
+   * re-runs validity against the result. The step never writes `mapping.substitutions` itself.
+   */
+  private applySubstitutions(update: SubstitutionsUpdate | Substitution[]): void {
+    const { substitutions, notice } = Array.isArray(update) ? { substitutions: update, notice: undefined } : update;
+    this.substitutionsChange.emit(substitutions);
+    if (notice) this.alertService.info(notice);
+    this.refreshSubstitutionValidity();
   }
 
   /** Leaves edit mode: clears the selected row, resets the form back to its "add" state, and
@@ -366,18 +385,16 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.editorTargetStepSubstitution?.clearSelection();
   }
 
-  /** Inline expandArray/repairStrategy edits in the grid mutate the substitution in place -
-   *  no selection/model change is needed, just re-run validity. */
-  onGridSubstitutionChange(): void {
-    this.refreshSubstitutionValidity();
+  /** Inline expandArray/repairStrategy edit in the grid: no selection/model change is needed. */
+  onGridSubstitutionPatch(change: { index: number; patch: Partial<Substitution> }): void {
+    this.applySubstitutions(
+      this.substitutionService.patchSubstitution(this.mapping.substitutions, change.index, change.patch)
+    );
   }
 
   onDeleteSubstitution(selected: number): void {
-    this.substitutionService.deleteSubstitution(
-      selected,
-      this.mapping,
-      this.refreshSubstitutionValidity
-    );
+    const remaining = this.substitutionService.deleteSubstitution(selected, this.mapping.substitutions);
+    if (remaining) this.applySubstitutions(remaining);
     // Deleting shifts every later index down by one, so a stale selectedSubstitution would
     // otherwise point at the wrong row (or go out of range) for "Update substitution".
     if (this.selectedSubstitution === selected) {
@@ -440,6 +457,13 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
     }
 
+    if (this.stepperConfiguration.sampleMessageInfo) {
+      testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+    }
+      if (this.stepperConfiguration.additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      }
+
     const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
     });
@@ -451,22 +475,20 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
         } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
+          this.alertService.warning(gettext('No valid JavaScript code was generated.'));
         }
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
-          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+          this.alertService.success(
+            this.translateService.instant(gettext('Generated {{count}} substitutions.'), { count: resultOf.length })
+          );
           this.selectedSubstitution = -1;
           // Bulk-replace rather than looping addSubstitution(): that method collapses duplicate
           // targets and raises an info alert per hit, which is noise when applying a
           // freshly-generated set wholesale.
-          this.substitutionService.replaceAllSubstitutions(
-            resultOf,
-            this.mapping,
-            this.refreshSubstitutionValidity
-          );
+          this.applySubstitutions(this.substitutionService.replaceAllSubstitutions(resultOf));
         } else {
-          this.alertService.warning('No substitutions were generated.');
+          this.alertService.warning(gettext('No substitutions were generated.'));
         }
       }
     } catch (ex) {

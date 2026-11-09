@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~ Copyright (c) 2022-2026 Cumulocity GmbH.
 ~
 ~ SPDX-License-Identifier: Apache-2.0
 ~
@@ -59,7 +59,7 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-payload-format-select" [items]="mappingTypeOptions" formControlName="mappingType" [filterItems]="true"
-              labelProperty="label" aria-label="Payload Format">
+              labelProperty="label" [attr.aria-label]="'Payload Format' | translate">
             </c8y-select>
             @if (formGroup.get('mappingType')?.value) {
             <small class="text-muted">
@@ -73,7 +73,7 @@
             [class.has-error]="formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-transformation-type-select" [items]="transformationTypeOptions" formControlName="transformationType" [filterItems]="true"
-              labelProperty="label" aria-label="Transformation Type">
+              labelProperty="label" [attr.aria-label]="'Transformation Type' | translate">
             </c8y-select>
             @if (formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched) {
             <span class="help-block">{{ 'Transformation type is required' | translate }}</span>
@@ -112,7 +112,7 @@
             [class.has-error]="formGroup.get('extensionName')?.invalid && formGroup.get('extensionName')?.touched">
             <label>{{ 'Extensions' | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-extension-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
-              aria-label="Extension Name">
+              [attr.aria-label]="'Extension Name' | translate">
             </c8y-select>
             @if (formGroup.get('extensionName')?.invalid && formGroup.get('extensionName')?.touched) {
             <span class="help-block">{{ 'Extension is required' | translate }}</span>
@@ -122,7 +122,7 @@
             [class.has-error]="formGroup.get('eventName')?.invalid && formGroup.get('eventName')?.touched">
             <label>{{ ('Events for ' + getExtensionNameString()) | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-extension-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
-              aria-label="Event Name">
+              [attr.aria-label]="'Event Name' | translate">
             </c8y-select>
             @if (formGroup.get('eventName')?.invalid && formGroup.get('eventName')?.touched) {
             <span class="help-block">{{ 'Event is required' | translate }}</span>
@@ -207,10 +207,10 @@
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
               <c8y-select data-cy="dm-mapping-type-code-template-select" [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label"
-                [filterItems]="true" style="width: 100%" aria-label="JavaScript Code Template">
+                [filterItems]="true" style="width: 100%" [attr.aria-label]="'JavaScript Code Template' | translate">
               </c8y-select>
               <span class="input-group-btn">
-                <button class="btn btn-primary" data-cy="dm-mapping-type-view-code" type="button" aria-label="View Code" (click)="viewCode()"
+                <button class="btn btn-primary" data-cy="dm-mapping-type-view-code" type="button" [attr.aria-label]="'View Code' | translate" (click)="viewCode()"
                   [disabled]="!formGroup.get('codeTemplate')?.value">
                   {{ 'View Code' | translate }}
                 </button>

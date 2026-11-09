@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -156,8 +156,18 @@ public class ServiceLogCollector {
                     buffer.restoreDropped(tenant, lost); // nothing to carry the count on yet
                     continue;
                 }
-                ServiceLogChunker.TenantChunks plan = ServiceLogChunker.chunkTenant(tenant, records,
-                        ServiceLogPolicy.of(settings));
+                ServiceLogChunker.TenantChunks plan;
+                try {
+                    plan = ServiceLogChunker.chunkTenant(tenant, records, ServiceLogPolicy.of(settings));
+                } catch (RuntimeException e) {
+                    // The records are already out of the buffer: put them back instead of losing them, and carry
+                    // on with the other tenants, whose records are drained too.
+                    failed = true;
+                    remember(tenant, e);
+                    buffer.restore(tenant, records, settings.maxBufferedRecords());
+                    buffer.restoreDropped(tenant, lost);
+                    continue;
+                }
                 List<ServiceLogChunk> chunks = plan.chunks();
                 List<ServiceLogRecord> notStored = new ArrayList<>();
                 boolean lostReported = false;

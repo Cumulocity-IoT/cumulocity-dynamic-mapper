@@ -119,11 +119,14 @@ before the router sees any mapping. A mapping is selected only if, in order:
    possibly-partial notification body described above — and any evaluation error is treated
    as "no match" (fails closed).
 4. If `filterInventory` is set: `evaluateInventoryFilter()` evaluates a separate JSONata
-   expression against the **source device's full inventory representation** (looked up by
+   expression against the **source device's cached inventory fragments** (looked up by
    `sourceId` via
-   [`InventoryFilterEvaluator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/InventoryFilterEvaluator.java)),
-   independent of whatever fields happen to be present in the notification delta. A missing
-   `sourceId` fails the filter.
+   [`InventoryFilterEvaluator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/InventoryFilterEvaluator.java)
+   and `C8YAgent.getMOFromInventoryCache()`), independent of whatever fields happen to be
+   present in the notification delta. The map holds only the fragments listed in the service
+   configuration `inventoryFragmentsToCache` (default `type`, `name`, `id`), so a filter can
+   reference only those fragments. A missing `sourceId`, an evaluation error or a failed lookup
+   fails the filter.
 
 A test run (`onTestNotification()` with a mapping) skips resolution entirely: the mapping under
 test is used as the only candidate, so neither filter is applied.
@@ -132,9 +135,11 @@ test is used as the only candidate, so neither filter is applied.
 [user guide](../../dynamic-mapper-ui/public/docs/define-subscription-for-outbound.md#outbound-filters)),
 so a condition that depends on a fragment not included in a given `UPDATE` delta will not see
 that fragment and will evaluate as if it were absent — even if the fragment does exist on the
-object in Cumulocity. `filterInventory`, by contrast, always sees the complete current inventory
-representation because it queries it separately. A filter that must be robust to partial
-updates should use `filterInventory` rather than `filterMapping`.
+object in Cumulocity. `filterInventory`, by contrast, does not depend on the delta: it reads the device's inventory
+cache, which Notification 2.0 inventory updates keep current. It sees the cached fragments only
+(see the list above), not the complete managed object, so add every fragment a filter needs to
+`inventoryFragmentsToCache`. A filter that must be robust to partial updates should use
+`filterInventory` rather than `filterMapping`.
 
 There is deliberately **no** outbound equivalent of `FilterInboundProcessor` in the router:
 mapping/inventory filtering for outbound is a resolution-time concern, not a post-enrichment
@@ -159,15 +164,23 @@ Waiting, acknowledging and cancelling are done by the caller of `onNotification(
 `CustomWebSocketClient`:
 
 - QoS 0: the notification is acknowledged immediately, without waiting for the pipeline.
-- QoS > 0: it waits for the future with the pipeline timeout, multiplied by the retransmission
-  attempt (`attempt + 1`, capped at 3x). With timeout `0` it waits up to
-  `ServiceConfiguration.PROCESSING_HARD_CEILING_MS`.
+- QoS > 0: it applies the shared rule, `ProcessingResultHelper.awaitOutcome`, with the pipeline
+  timeout multiplied by the retransmission attempt (`attempt + 1`, capped at 3x). With timeout
+  `0` it waits up to `ServiceConfiguration.PROCESSING_HARD_CEILING_MS`. Unlike inbound, it also
+  reads the HTTP status from the errors recorded on the individual requests, because outbound
+  publishing records its failures there (a webhook answering 503 is retried, a 400 is not).
 - Success, or errors whose HTTP status is below 500: the notification is acknowledged. Server
   errors (500 and above), timeouts, or a cancellation requested by the JS CPU limit: no ack; a
   failure counter per message decides between WebSocket reconnect/retransmission and giving up.
-- On timeout `ProcessingResultWrapper.cancelProcessing()` interrupts the pipeline futures and
-  closes active GraalVM contexts; `SendOutboundProcessor` checks the cancellation flag first and
-  skips sending if it is set.
+  After `maxProcessingAttempts` failures (default 5) the notification is acknowledged and dropped.
+- On timeout the shared rule calls `cancelAndDrain()`, which interrupts the pipeline futures,
+  closes active GraalVM contexts, and waits for the worker to actually leave (see
+  [reliability.md](reliability.md)). Until 2026-11-01 `CustomWebSocketClient` called
+  `cancelProcessing()` and polled `Future.isDone()` instead, which cannot tell whether the worker left.
+  `SendOutboundProcessor` checks the cancellation flag first and skips sending if it is set.
+- A notification that no outbound mapping selects is dropped without any counter moving; the
+  catch-all "Unmapped messages" status counts it only on the inbound side. Only a resolution
+  failure increments that status's error counter.
 
 ### Router and per-mapping chain (`OutboundMessageRouter`)
 
@@ -225,7 +238,7 @@ INVENTORY, `deviceId` for OPERATION). If no source ID can be extracted, a live r
 - **Smart Function / Java extension mappings:** the payload is not expanded. Identity is given to
   the function or extension through its context instead (read-only config for Smart Functions,
   `JavaExtensionContext.setExternalId` for extensions).
-- If `mapping.getUseExternalId()` is set, the external ID of the configured `externalIdType` is
+- If `mapping.getUseExternalId()` is set and `externalIdType` is not empty, the external ID of the configured `externalIdType` is
   resolved via `C8YAgent.resolveGlobalId2ExternalId()`. If the device has none, a live run
   skips the mapping for this device (`ignoreFurtherProcessing = true`, logged at info, not
   counted as an error) — a missing enrollment is a device-configuration gap, not a mapping bug.
@@ -263,7 +276,8 @@ variant can also create `API.CUSTOM` requests.
   EXECUTING is set before sending; afterwards SUCCESSFUL, or FAILED if `context.hasError()`
   (also FAILED if the send step itself throws).
 - No requests in the context: nothing to send. `sendPayload` false (a Dry Run): requests are
-  built but not sent.
+  built but not sent. In both cases, and when the connector is not connected, no error is
+  recorded, so a creating operation with `autoAckOperation` is still acknowledged as SUCCESSFUL.
 - `API.CUSTOM` requests (a `pathCumulocity` REST call rather than a broker publish) are
   routed to `C8YAgent.createMEAO()`; a failure is recorded on the request and on the context.
 - The remaining requests go through `connectorClient.publishMEAO(context)` — the connector
@@ -275,6 +289,11 @@ variant can also create `API.CUSTOM` requests.
   (`publishToRealConnectors()`), since a test invocation has no single "originating"
   connector the way a live notification does.
 - Processing alarms are raised for context alarms, except for test runs.
+- Failure bookkeeping differs from inbound: a failed publish or `API.CUSTOM` request is recorded
+  on the request and the context (so the operation is acknowledged as FAILED and the leg is
+  booked as failed), but only an exception escaping the whole send step calls
+  `incrementErrors()` and `increaseAndHandleFailureCount()`. Publish failures therefore do not
+  extend the mapping's failure streak.
 
 ### Transformation dispatch
 

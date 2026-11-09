@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,6 +24,7 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf } from '../shared/mapping/util';
 import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT } from '../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable({ providedIn: 'root' })
 export class MappingTreeService {
@@ -58,7 +59,7 @@ export class MappingTreeService {
       // the backend can return a truncated/invalid body if serializing the tree fails
       console.error('Failed to parse mapping tree response', error);
       this.alert.danger(
-        'Failed to load the mapping tree: the server returned an invalid response. Check the microservice logs.'
+        gettext('Failed to load the mapping tree: the server returned an invalid response. Check the microservice logs.')
       );
       return undefined;
     }

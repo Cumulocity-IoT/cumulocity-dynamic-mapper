@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { TranslateService } from '@ngx-translate/core';
 import {
   Component,
   inject,
@@ -58,7 +59,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Device, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/mapping.model';
+import { Device, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -97,6 +98,7 @@ export class MappingSubscriptionComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly confirmationService = inject(ConfirmationModalService);
   private readonly router = inject(Router);
+  private readonly translateService = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
 
   showConfigSubscription1 = false;
@@ -126,7 +128,7 @@ export class MappingSubscriptionComponent implements OnInit {
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
-      header: 'System ID',
+      header: gettext('System ID'),
       path: 'id',
       filterable: true,
       sortable: true,
@@ -134,7 +136,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.Numeric,
     },
     {
-      header: 'Name',
+      header: gettext('Name'),
       name: 'name',
       path: 'name',
       filterable: true,
@@ -142,7 +144,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Type',
+      header: gettext('Type'),
       name: 'type',
       path: 'type',
       filterable: true,
@@ -150,7 +152,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Groups',
+      header: gettext('Groups'),
       name: 'groupNames',
       path: 'groupNames',
       filterable: true,
@@ -158,7 +160,7 @@ export class MappingSubscriptionComponent implements OnInit {
       dataType: ColumnDataType.TextShort,
     },
     {
-      header: 'Subscription by',
+      header: gettext('Subscription by'),
       name: 'subscriptionSource',
       path: 'subscriptionSource',
       filterable: true,
@@ -438,8 +440,10 @@ export class MappingSubscriptionComponent implements OnInit {
     if (response?.status === SubscriptionStatus.ERROR) {
       const failed = response.failedDeviceIds ?? [];
       this.alertService.warning(
-        gettext('Some subscriptions could not be created:') + ` ${failed.length} ` +
-        gettext('device(s) failed. Check Service Events for details.'),
+        this.translateService.instant(
+          gettext('Some subscriptions could not be created: {{count}} device(s) failed. Check Service Events for details.'),
+          { count: failed.length }
+        ),
         failed.join(', ')
       );
       return;
@@ -516,8 +520,10 @@ export class MappingSubscriptionComponent implements OnInit {
   async resyncType(type: string): Promise<void> {
     const confirmed = await this.confirmationService.confirmWarning(
       gettext('Resync existing devices'),
-      gettext('This rescans the full inventory for type') + ` "${type}" ` +
-      gettext('and subscribes any existing device not already covered. This can take a while on large inventories. Continue?')
+      this.translateService.instant(
+        gettext('This rescans the full inventory for type "{{type}}" and subscribes any existing device not already covered. This can take a while on large inventories. Continue?'),
+        { type }
+      )
     );
     if (!confirmed) {
       return;

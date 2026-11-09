@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,10 +18,12 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, OnInit, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ActionControl,
   BulkActionControl,
   Column,
+  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DataSourceModifier,
@@ -31,10 +33,12 @@ import {
   ServerSideDataResult
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../testing-device.service';
+import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
 import { ActivatedRoute } from '@angular/router';
 import { Feature } from '../../shared';
 
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-testing-grid',
@@ -50,12 +54,60 @@ export class TestingComponent implements OnInit {
   ) {
     // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
-    this.service.refreshData$.subscribe(() => {
-      this.deviceGrid.reload();
+    // refreshData$ lives on a root service: without this, every grid ever created keeps reloading.
+    this.service.refreshData$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.deviceGrid?.reload();
     });
-    this.columns = this.service.getColumns();
+    this.columns = this.getColumns();
     this.pagination = this.service.getPagination();
   }
+  /**
+   * Returns a list of columns.
+   * We define 2 columns with inline objects (they display simple properties
+   * and use default header, cell and filtring form).
+   * The last column is defined via a class instance (it displays a value based on
+   * several properties of the row item and has custom header, cell and filtering form).
+   */
+  private getColumns(): Column[] {
+    const columns = [
+      {
+        name: 'id',
+        header: 'ID',
+        path: 'id',
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.Numeric,
+        cellRendererComponent: DeviceIdCellRendererComponent
+      },
+      {
+        name: 'name',
+        header: gettext('Name'),
+        path: 'name',
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.TextShort
+      },
+      {
+        name: 'creationTime',
+        header: gettext('Date Created'),
+        path: 'creationTime',
+        filterable: false,
+        sortable: true,
+        dataType: ColumnDataType.TextLong
+      },
+      {
+        name: 'type',
+        header: gettext('Type'),
+        path: 'type',
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.TextShort
+      },
+    ];
+
+    return columns;
+  }
+
   async ngOnInit(): Promise<void> {
     this.feature = await this.route.snapshot.data['feature'];
     // Deleting a test device is an admin action, for a single row as well as in bulk.

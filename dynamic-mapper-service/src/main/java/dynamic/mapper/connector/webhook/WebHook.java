@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -36,6 +36,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientServices;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.status.ConnectorStatus;
@@ -109,13 +110,14 @@ public class WebHook extends AConnectorClient {
      * Full constructor with dependencies
      */
     public WebHook(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal if needed
@@ -168,7 +170,7 @@ public class WebHook extends AConnectorClient {
             props.put("baseUrlHealthEndpoint",
                     new ConnectorProperty("Endpoint called with a GET request to test the connection.", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
-                            "http://cumulocity:8111/notification2", null, null));
+                            "/notification2", null, null));
         }
     }
 
@@ -424,6 +426,11 @@ public class WebHook extends AConnectorClient {
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
+            if (dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+                // unsubscribed: mappings can no longer be read, and nothing will use the caches
+                log.info("{} - WebHook connector disconnected (tenant unsubscribed)", tenant);
+                return;
+            }
             // Rebuild caches
             mappingService.rebuildMappingCaches(tenant, connectorId);
             List<Mapping> outboundMappings = new ArrayList<>(

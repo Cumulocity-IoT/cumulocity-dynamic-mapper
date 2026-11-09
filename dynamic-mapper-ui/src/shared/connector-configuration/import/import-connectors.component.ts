@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,7 +22,8 @@ import {
   Component,
   NgZone,
   OnDestroy,
-  ViewEncapsulation
+  ViewEncapsulation,
+  inject
 } from '@angular/core';
 import {
   AlertService,
@@ -33,6 +34,8 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 import { createCustomUuid } from '../../mapping/mapping.constants';
 import { ConnectorConfiguration, ConnectorType } from '../connector.model';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 
 const SENSITIVE_PLACEHOLDER = '****';
 
@@ -45,6 +48,7 @@ const SENSITIVE_PLACEHOLDER = '****';
   imports: [CoreModule]
 })
 export class ImportConnectorsComponent implements OnDestroy {
+  private readonly translateService = inject(TranslateService);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   isLoading: boolean = false;
   isAppCreated: boolean = false;
@@ -67,7 +71,7 @@ export class ImportConnectorsComponent implements OnDestroy {
         await this.onFile(file);
       }
     } catch (error) {
-      this.alertService.warning(`Import failed. Verify the format of the import file!`);
+      this.alertService.warning(gettext('Import failed. Verify the format of the import file!'));
     }
   }
 
@@ -136,29 +140,32 @@ export class ImportConnectorsComponent implements OnDestroy {
 
       const errorDetail = errors.map(e => `${e.name} (${e.message})`).join('; ');
       if (successCount === 0 && errors.length === 0) {
-        this.alertService.warning('No connectors found to import.');
+        this.alertService.warning(gettext('No connectors found to import.'));
       } else if (errors.length === 0) {
-        this.alertService.success(`Imported ${successCount} connector(s) successfully.`);
+        this.alertService.success(this.translateService.instant(gettext('Imported {{successCount}} connector(s) successfully.'), { successCount }));
         successScreenShown = true;
       } else if (successCount === 0) {
-        this.errorMessage = `Failed to import connectors: ${errorDetail}`;
+        this.errorMessage = this.translateService.instant(gettext('Failed to import connectors: {{errorDetail}}'), { errorDetail });
       } else {
-        this.errorMessage = `Import completed: ${successCount} succeeded, ${errors.length} failed: ${errorDetail}`;
+        this.errorMessage = this.translateService.instant(gettext('Import completed: {{successCount}} succeeded, {{errorCount}} failed: {{errorDetail}}'), { successCount, errorCount: errors.length, errorDetail });
       }
 
       if (maskedSecretsFound) {
         this.alertService.warning(
-          'Imported connectors were disabled because sensitive properties (e.g. passwords, tokens) are not exported. Please edit them and re-enter the real values before enabling.'
+          gettext('Imported connectors were disabled because sensitive properties (e.g. passwords, tokens) are not exported. Please edit them and re-enter the real values before enabling.')
         );
       }
 
       if (skippedCount > 0) {
         this.alertService.warning(
-          `Skipped ${skippedCount} HTTP connector(s): the HTTP connector is created automatically and cannot be imported.`
+          this.translateService.instant(
+            gettext('Skipped {{skippedCount}} HTTP connector(s): the HTTP connector is created automatically and cannot be imported.'),
+            { skippedCount }
+          )
         );
       }
     } catch (error) {
-      this.errorMessage = `Import failed: ${error?.message ?? 'invalid file'}`;
+      this.errorMessage = this.translateService.instant(gettext('Import failed: {{message}}'), { message: error?.message ?? this.translateService.instant(gettext('invalid file')) });
     } finally {
       this.ngZone.run(() => {
         this.isLoading = false;

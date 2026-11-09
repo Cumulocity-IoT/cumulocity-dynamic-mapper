@@ -52,30 +52,29 @@ Inventory API call used to rebuild subscriptions.
 | Problem | Fix | Key files |
 |---|---|---|
 | 401 WebSocket reconnect loop | Detect unauthorized close via `statusCode == 401` **or** `reason.contains("401")`; prefer a stored/refreshed token on reconnect and only mint a fresh one if that fails | `CacheInventoryUpdateClient.java`, `ManagementSubscriptionClient.java`, `NotificationConnectionManager.java`, `TokenManager.java` |
-| 502/503/504 on subscription init | Detect retryable `SDKException` status codes (502/503/504); mark the connector `RETRYING` (new `ConnectorStatus` value) instead of `FAILED`; retry `doInitializeSubscriptionsAfterConnect()` with exponential backoff (10s initial, doubling, capped at 300s) until it succeeds or a non-retryable error occurs | `AConnectorClient.java` (`initializeSubscriptionsAfterConnect`, `isRetryableConnectorError`, `scheduleSubscriptionInitRetry`, `runSubscriptionInitRetry`), `ConnectionStateManager.java`, `ConnectorStatus.java` |
+| 502/503/504 on subscription init | Detect transient platform errors (`CumulocityErrors.isTransientPlatformError`: `SDKException` with 502/503/504, also as a cause); mark the connector `RETRYING` instead of `FAILED`; retry `doInitializeSubscriptionsAfterConnect()` with exponential backoff (10 s initial, doubling, capped at 300 s) until it succeeds or a non-retryable error occurs | `AConnectorClient.java` (`initializeSubscriptionsAfterConnect`, `isRetryableConnectorError`, `scheduleSubscriptionInitRetry`, `runSubscriptionInitRetry`), `CumulocityErrors.java`, `ConnectionStateManager.java` (`updateStatusRetrying`), `model/status/ConnectorStatus.java` |
 
 Relevant call chain for the 502 case:
 
 `AConnectorClient.doInitializeSubscriptionsAfterConnect()` →
-`MappingService.rebuildMappingCaches()` (`MappingService.java:780`) →
-`MappingService.getMappings()` (`MappingService.java:269-277`) →
+`MappingService.rebuildMappingCaches()` → `MappingService.getMappings()` →
 `subscriptionsService.callForTenant(...)` → `inventoryApi.getManagedObjectsByFilter(...)` →
-`MappingRepository.findAll()` (`MappingRepository.java:100-103`), which iterates
-`moc.get().allPages()` — this is where a real `502/503/504` surfaces as
-`com.cumulocity.sdk.client.SDKException`.
+`MappingRepository.findAll()`, which iterates `moc.get().allPages()` — this is where a real
+`502/503/504` surfaces as `com.cumulocity.sdk.client.SDKException`.
 
-## Test Coverage Gap (before Path A was implemented)
+## What the tests cover
 
-- `ConnectorRetryReconnectTest` (`dynamic-mapper-service/src/test/java/dynamic/mapper/connector/core/client/`)
-  exists but only tests the unrelated generic helper `AConnectorClient.retryOperation()`, used by
-  `KafkaClientV2`/`PulsarConnectorClient` for connection retries — **not** the
-  `initializeSubscriptionsAfterConnect` retry/backoff path added for the 502 fix.
-- No `ConnectionStateManagerTest` exists, so `updateStatusRetrying()` had no dedicated test.
-- `AConnectorClient` has no test-friendly constructor/setters for `mappingService`,
-  `connectionStateManager`, `housekeepingExecutor`. `MQTT3ClientTest` builds a full concrete
-  `MQTT3Client` with mocked `ConfigurationRegistry`/`MappingService`/`ConnectorRegistry` to work
-  around this; the new test below reuses that pattern (direct field assignment on a package-local
-  subclass) rather than inventing a new test seam.
+| Layer | Test | Covers |
+|---|---|---|
+| Subscription init after connect | `AConnectorClientSubscriptionInitRetryTest` (Path A) | 502/503/504 detection, `RETRYING`, backoff, recovery, give-up, disconnect mid-retry |
+| Connector status | `ConnectionStateManagerTest` | `CONNECTED → RETRYING → CONNECTED` stays one status session |
+| Generic retry helper | `ConnectorRetryReconnectTest` | `AConnectorClient.retryOperation()` used by Kafka and Pulsar connection retries. Unrelated to the 502 path |
+| WebSocket 401 | `NotificationCallbackTest`, `TokenManagerTest` (Path C) | 1002-with-401 detection, token store/clear |
+| Message processing during the outage | `MQTT3CallbackC8yOutageTest`, `AMQPCallbackC8yOutageTest`, plus the per-connector acknowledgement tests (Path E) | A 502 from the platform is not acknowledged, is redelivered, succeeds after recovery, and is dropped at `maxProcessingAttempts` |
+
+`AConnectorClient` has no test-friendly constructor for `mappingService`, `connectionStateManager`, or
+`housekeepingExecutor`, so Path A uses a package-local subclass with direct field assignment, the same style as
+`MQTT3ClientTest`.
 
 ## Verification Plan
 
@@ -91,7 +90,7 @@ Covers:
 
 1. **Outage detection:** a `TestableConnector` (mirroring `ConnectorRetryReconnectTest`'s pattern)
    is built with mocked `ConnectorRegistry`/`MappingService`/`ServiceConfiguration`, wired via the
-   real `initializeManagers()` (`AConnectorClient.java:508-535`) and marked connected. Stubbing
+   real `initializeManagers()` and marked connected. Stubbing
    `mappingService.rebuildMappingCaches(tenant, connectorId)` to throw `SDKException(502/503/504)`
    (including wrapped inside a `RuntimeException`) and calling
    `initializeSubscriptionsAfterConnect()` asserts: it does **not** throw, the connector reports
@@ -107,8 +106,8 @@ Covers:
    status flips back to `CONNECTED` and the internal `subscriptionInitRetryScheduled` guard flag
    resets to `false`.
 4. **Backoff doubling and capping:** invoking `runSubscriptionInitRetry` again with a still-failing
-   mock asserts the next delay in the status message doubles (`10000` → `20000`), and a
-   near-the-cap delay asserts it clamps at `300000`.
+   mock asserts the next delay in the status message doubles (`Retrying in 10s` → `Retrying in 20s`), and a
+   near-the-cap delay asserts it clamps at `Retrying in 300s`.
 5. **Giving up:** a retry that fails with a non-retryable error (`403`) asserts the connector goes
    to `FAILED` via `updateStatusWithError` and the retry-in-flight flag resets — confirming the
    fix doesn't retry forever on a genuine permission problem.
@@ -116,14 +115,14 @@ Covers:
    asserts the retry is abandoned (no further `rebuildMappingCaches` call, status stays
    `DISCONNECTED`) rather than clobbering the disconnect with a stale retry result.
 
-**Testability note:** `SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS`/`_MAX_DELAY_MS` are hardcoded
-private static finals, so the test invokes the private `runSubscriptionInitRetry(long)` directly
-via reflection instead of waiting out the real 10s/20s/300s backoff on the `housekeepingExecutor`
-thread. This exercises the same logic without a slow test; only the *scheduling* of the first
-retry (delay value itself) is not asserted against a live timer.
+**Testability note:** the delays are private constants (`SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS` = 10,
+`..._MAX_DELAY_SECONDS` = 300), so the test invokes the private `runSubscriptionInitRetry(long)` via reflection
+instead of waiting out the real 10 s/20 s/300 s backoff on the `housekeepingExecutor` thread. Only the
+*scheduling* of the first retry (the delay value against a live timer) is not asserted.
 
-Verified: mutating `RETRYABLE_HTTP_STATUS_CODES` to drop `502` causes 7 of the 10 tests to fail,
-confirming the suite actually detects a regression in the fix rather than passing vacuously.
+To check that the suite detects a regression, remove `502` from `RETRYABLE_HTTP_STATUS_CODES` in
+`CumulocityErrors` and re-run: the 502 tests must fail. (This was last done before the classification moved from
+`AConnectorClient` to `CumulocityErrors`; repeat it after changing the classifier.)
 
 Run just this class: `cd dynamic-mapper-service && mvn test -Dtest=AConnectorClientSubscriptionInitRetryTest`.
 
@@ -140,7 +139,7 @@ limits) — it cannot fabricate a specific HTTP status+body. The observed issue 
 `SDKException` wrapping HTTP `502`, so an HTTP-aware proxy is needed to selectively rewrite
 responses for one endpoint while passing everything else through untouched. mitmproxy fits, and
 because `C8Y.baseURL` also drives the notification WebSocket URL
-(`NotificationConnectionManager.java:79-93`, simple `https://` → `wss://` scheme swap), the same
+(`NotificationConnectionManager`, simple `https://` → `wss://` scheme swap), the same
 proxy transparently carries the WebSocket traffic too (reverse-proxy mode handles the WS upgrade).
 
 #### Setup: mitmproxy as a reverse proxy in front of the real tenant
@@ -213,35 +212,30 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
 
 #### Verified — real run against a local backend
 
-Ran end-to-end against a local instance with this setup. On reconnect, with the fault active, the
-connector correctly entered the retry/backoff cycle instead of failing outright (tenant ID,
-connector identifiers, and hostnames below are placeholders). This run predates a later cleanup
-that changed the retry mechanism's unit from milliseconds to seconds in both the log messages and
-the `RETRYING` status message (`"Retrying in {}ms"` → `"Retrying in {}s"`) and added elapsed time
-to the recovery log line — the values below are what the ms-based version produced; current code
-logs `10s`/`20s` instead of `10000ms`/`20000ms` for the same delays:
+Run end to end against a local instance with this setup (tenant ID, connector identifiers, and hostnames are
+placeholders). On reconnect, with the fault active, the connector entered the retry/backoff cycle instead of
+failing:
 
 ```
 WARN  AConnectorClient - Transient error initializing subscriptions for connector Mqtt - Hive,
-      will retry in 10000ms: Http status code: 502
+      will retry in 10s: Http status code: 502
 WARN  AConnectorClient - Retry of subscription initialization failed for connector Mqtt - Hive,
-      next attempt in 20000ms: Http status code: 502
+      next attempt in 20s: Http status code: 502
 ```
 
-Backoff doubled 10000ms → 20000ms (now logged as 10s → 20s) exactly as asserted in
-`AConnectorClientSubscriptionInitRetryTest`'s `retryStillFailsRetryably_doublesBackoff_staysRetrying`.
-Confirms Path A's unit coverage matches real behavior, not just the mocked path.
+The backoff doubled 10 s → 20 s as asserted in `AConnectorClientSubscriptionInitRetryTest`'s
+`retryStillFailsRetryably_doublesBackoff_staysRetrying`. (The run was recorded when the code still logged
+milliseconds, `10000ms`/`20000ms`. The log lines above show the current format.)
 
-The connector status object (as exposed to the UI/API) confirms the same story end to end —
-`RETRYING` with the exact backoff message, then a clean `CONNECTED` once the fault was disabled,
-with no restart and no manual reconnect:
+The connector status object (as exposed to the UI/API) shows `RETRYING` with the backoff message, then a clean
+`CONNECTED` once the fault was disabled, with no restart and no manual reconnect:
 
 ```json
 {
   "connectorName": "Mqtt - Hive",
   "connectorIdentifier": "1lrtycb2",
   "status": "RETRYING",
-  "message": " --- com.cumulocity.sdk.client.SDKException: Http status code: 502\nReceived non-JSON error response (status=502, content-type=text/plain). Skipping JSON parse.\n tenant: <tenant> user: service_dynamic-mapper-service --- Retrying in 20000ms",
+  "message": " --- com.cumulocity.sdk.client.SDKException: Http status code: 502\nReceived non-JSON error response (status=502, content-type=text/plain). Skipping JSON parse.\n tenant: <tenant> user: service_dynamic-mapper-service --- Retrying in 20s",
   "date": "2026-07-12 14:30:15"
 }
 ```
@@ -286,7 +280,7 @@ Independent of the 502 path. Two layers:
    Re-run: `mvn test -Dtest=NotificationCallbackTest`.
 2. **Stored-token reuse / clear-and-remint-on-failure (unit-level, added):**
    `createManagementConnection`/`createCacheInventoryConnection`
-   (`NotificationConnectionManager.java:711-775`) build on `TokenManager`'s
+   build on `TokenManager`'s
    `getManagementToken`/`getCacheInventoryToken`/`getDeviceToken` getters and the
    "storing `null` removes the entry" contract of `storeManagementToken`/`storeCacheInventoryToken`/
    `storeDeviceToken` — this is the piece of the fix that's testable without a live WebSocket, and
@@ -299,15 +293,16 @@ Independent of the 502 path. Two layers:
    `mvn test -Dtest=TokenManagerTest`.
 3. **Full functional check (manual, not automated):** the actual `connect(...)` call inside
    `createManagementConnection`/`createCacheInventoryConnection`
-   (`NotificationConnectionManager.java:777-854`) opens a real `CustomWebSocketClient` and blocks
+   opens a real `CustomWebSocketClient` and blocks
    on `connectBlocking(...)` — `NotificationConnectionManagerTest`'s own docstring already notes
    this requires either a live Notification 2.0 endpoint or a deeper refactor to make it mockable,
    and is out of scope for that suite. The same limits apply here, so end-to-end verification
    stays manual: force an expired/invalid management or cache-inventory token (e.g. revoke the
    microservice user's role temporarily in a test tenant) and confirm the WS client closes with
    1002 embedding "401" in the reason, and that the manager mints a fresh token and reconnects
-   instead of looping forever reusing the stale one — check the logs for `"Stored ... token failed
-   to connect, retrying with a fresh token"`.
+   instead of looping forever reusing the stale one — check the logs for `"Stored management token
+   failed to connect, retrying with a fresh token"` (the device-token variants read `"Stored static
+   device token ..."` and `"Stored dynamic device token ..."`).
 
 ### Path D — Service log while the backend is unavailable
 
@@ -341,6 +336,77 @@ add `fault.on` to also fail the inventory call that creates the source. Then:
 4. Check the inventory for `type=d11r_serviceLogSource`: exactly one object per tenant, and with `fault.on` during
    the first-ever collection, no extra unregistered ones beyond the residual case above.
 
+### Path E — Messages arriving while the platform is unavailable
+
+Paths A to D check that the connector and its helpers recover. This path checks the data: what happens to the
+messages that arrive during the outage. A 502, 503, or 504 from Cumulocity while the pipeline runs is a server
+error, so the connector does **not** acknowledge the message and the broker redelivers it (see
+[reliability.md](../../../docs/feature/reliability.md#the-poison-pill-guard)). Each redelivery counts toward
+`maxProcessingAttempts` (**default 5**, Service configuration, Processing tab). The failure that reaches the
+limit is acknowledged and dropped. For MQTT every redelivery is a reconnect, with a back-off of 0 s, then 60 s,
+120 s, and so on up to 300 s, unless the connector property `reconnectOnProcessingError` is off.
+
+What this means during an outage:
+
+| Outage length | Expected |
+|---|---|
+| Shorter than the redeliveries the limit allows | No message is lost. Each one is redelivered and stored after `fault.off` |
+| Longer | Each message that failed `maxProcessingAttempts` times is **dropped**, and the error stays in the mapping status. A 5xx caused by the platform is counted like a 5xx caused by the message |
+
+Unit tests (run with `cd dynamic-mapper-service && mvn test -Dtest='MQTT3CallbackC8yOutageTest,AMQPCallbackC8yOutageTest'`):
+
+| Test | Asserts |
+|---|---|
+| `aMessageIsNotLostWhenThePlatformRecoversBeforeTheLimit` (MQTT) | `limit - 1` failed deliveries are not acknowledged, the next one after recovery is, and it is acknowledged once |
+| `aMessageIsDroppedWhenTheOutageOutlastsTheLimit` (MQTT, AMQP) | The delivery that reaches the limit is acknowledged and dropped, and the pipeline never sees the recovery. Documents the cost of the guard |
+| `messagesArrivingAfterTheOutageAreProcessedNormally` (MQTT) | A message from after the outage is acknowledged while the earlier one waits for redelivery |
+| `aMessageIsRequeuedDuringTheOutageAndAcknowledgedAfterRecovery` (AMQP 0-9-1) | `basicNack(requeue)` during the outage, `basicAck` after it |
+
+The same 5xx rule has its own acknowledgement tests for the other connectors:
+`KafkaClientV2AcknowledgementTest`, `GooglePubSubClientTest`, `HttpConnectorControllerAcknowledgementTest`, and
+`MQTT3CallbackMaxProcessingAttemptsIntegrationTest` (the setting itself).
+
+End to end, with the proxy from Path B. The addon faults only `/inventory/managedObjects*` (and, with
+`fault.logs.on`, events and external IDs). A mapping fails with a 5xx only if it calls a faulted path, so pick a
+mapping that writes to one, for example an INVENTORY or EVENT mapping, or add the path your mapping writes to
+(such as `/measurement/measurements`) to `FAULT_PATH_PREFIX` in `fault_inject.py`. Confirm in the mitmproxy flow
+list that the mapping's own request gets the 502 before judging the result.
+
+1. Use an MQTT connector with a mapping that writes to a faulted path and targets an existing device. Note the service
+   configuration value of `maxProcessingAttempts`.
+2. Start a publisher that sends one message every 5 s at QoS 1. Each payload carries a counter that increases by 1,
+   so a missing measurement shows up as a gap. For example:
+   ```bash
+   i=0; while true; do i=$((i+1)); mosquitto_pub -q 1 -t "<topic>" -m "{\"counter\": $i}"; sleep 5; done
+   ```
+   Keep it running through steps 3 to 5.
+3. **Short outage.** About 30 s is short enough that no message reaches `maxProcessingAttempts`.
+   1. Switch `fault.on`.
+   2. Wait about 30 s.
+   3. Switch `fault.off`.
+   4. Wait until the connector is `CONNECTED` and a few more messages have arrived.
+
+   Expected:
+   - Every counter value exists as a measurement, none missing. Messages sent during the outage may arrive late and
+     out of order.
+   - The connector may go through `RETRYING` and back to `CONNECTED`, and the log shows the reconnects.
+   - The log has no `POISON PILL` entry.
+4. **Long outage.** Switch `fault.on` for 10 min. Expected: a `POISON PILL: <n> failed attempts` entry in the log
+   per message that reached the limit, and a gap in the counter values for those messages. Record the number
+   of reconnects and the number of lost messages.
+5. After `fault.off` the connector reaches `CONNECTED` without a manual action, and new messages are stored.
+
+Residual risks to watch for in this run:
+
+- **Reconnect and subscription retry overlap.** A reconnect caused by a failed message runs
+  `initializeSubscriptionsAfterConnect` again, which can also hit the outage and go to `RETRYING`. The connector
+  must end in `CONNECTED`, not in a loop of reconnects.
+- **Blocked consumer threads.** The callbacks now wait for the pipeline result, up to the Smart Function budget
+  (about 30 s) or 120 s. With Kafka, check that a slow batch does not exceed `max.poll.interval.ms` (default 5
+  minutes) and cause a rebalance.
+- **HTTP connector.** During the outage it answers 500, where it used to answer 200. Senders that retry must
+  tolerate duplicates.
+
 ## Suggested Order of Work
 
 1. ~~Write Path A unit test first~~ — **done**, see `AConnectorClientSubscriptionInitRetryTest`
@@ -354,3 +420,5 @@ add `fault.on` to also fail the inventory call that creates the source. Then:
 4. Do the manual Path C functional check (item 3 under Path C above) only if the 401 loop
    reappears in logs after deploying the fix — the two paths are orthogonal and this one doesn't
    block on Path B.
+5. Run Path E (manual, with the proxy) before releasing a change to the acknowledgement handling or to
+   `maxProcessingAttempts`. The unit tests of Path E run with the normal backend suite.

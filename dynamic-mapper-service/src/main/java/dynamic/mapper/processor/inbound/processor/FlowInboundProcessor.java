@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 package dynamic.mapper.processor.inbound.processor;
 
 import java.time.Instant;
@@ -13,6 +34,7 @@ import org.graalvm.polyglot.Value;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
@@ -50,19 +72,15 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         // stable text representation for ANY_PAYLOAD without changing the payload type
         // for other byte-based mapping types.
         Object payload = context.getPayload();
-        Object mappingType = context.getMapping() != null ? context.getMapping().getMappingType() : null;
-        if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
+        if (payload instanceof byte[] && context.getMapping() != null
+                && MappingType.ANY_PAYLOAD.equals(context.getMapping().getMappingType())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
         // Convert nested Map/List (e.g. JSONata's LinkedHashMap/ArrayList payload tree) into
         // ProxyObject/ProxyArray so Smart Functions can use native JS array methods like
         // .forEach()/.map() instead of hitting GraalVM's List<->Consumer interop failure.
         payload = JavaScriptInteropHelper.toJsInterop(payload);
-        Map<String, String> transportFields = Collections.emptyMap();
-        if (context.getKey() != null) {
-            transportFields = new HashMap<>();
-            transportFields.put(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey());
-        }
+        Map<String, String> transportFields = context.buildTransportFields();
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 payload,
                 context.getTopic(),

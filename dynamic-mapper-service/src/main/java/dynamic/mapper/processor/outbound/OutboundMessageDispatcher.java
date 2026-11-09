@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -72,25 +72,42 @@ public class OutboundMessageDispatcher implements NotificationCallback {
     private OutboundMessageRouter outboundMessageRouter;
     private final Timer outboundProcessingTimer;
     private final Counter outboundProcessingCounter;
+    private final Counter outboundErrorCounter;
     /**
      * Constructor matching DispatcherInbound signature
      */
     public OutboundMessageDispatcher(ServiceRegistry serviceRegistry,
-            AConnectorClient connectorClient) {
-        this.mappingService = serviceRegistry.getMappingService();
+            AConnectorClient connectorClient, OutboundMessageRouter outboundMessageRouter,
+            NotificationSubscriber notificationSubscriber) {
+        this.mappingService = connectorClient.getMappingService();
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         this.serviceRegistry = serviceRegistry;
-        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
-        this.outboundMessageRouter = serviceRegistry.getOutboundMessageRouter();
+        this.notificationSubscriber = notificationSubscriber;
+        this.outboundMessageRouter = outboundMessageRouter;
 
+        String connectorNameTag = connectorClient.getConnectorName() != null
+                ? connectorClient.getConnectorName() : "unknown";
+        String connectorTypeTag = connectorClient.getConnectorType() != null
+                ? connectorClient.getConnectorType().name() : "UNKNOWN";
         this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
-                .description("Processing time of outbound messages").register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Processing time of outbound messages")
+                .publishPercentileHistogram()
+                .register(Metrics.globalRegistry);
         this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
-                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .register(Metrics.globalRegistry);
+        this.outboundErrorCounter = Counter.builder("dynmapper_outbound_processing_errors_total")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Total number of outbound messages that failed processing")
+                .register(Metrics.globalRegistry);
     }
 
     @Override
@@ -304,7 +321,7 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             }
 
             // Determine consolidated QoS
-            consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
+            consolidatedQos = connectorClient.determineMaxQos(resolvedMappings);
             result.setConsolidatedQos(consolidatedQos);
 
             // For code-based (Smart Function) mappings the JS execution is bounded by
@@ -330,6 +347,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             if (mappingStatusUnspecified != null) {
                 mappingStatusUnspecified.incrementErrors();
+            }
+            if (testMapping == null) {
+                outboundErrorCounter.increment();
             }
 
             return result;
@@ -360,6 +380,18 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             try {
                 List<ProcessingContext<Object>> contexts = outboundMessageRouter.processOutboundMessage(
                         c8yMessage, connectorIdentifier, resolvedMappings, testing, serviceConfiguration, result);
+                if (testMapping == null && contexts != null) {
+                    boolean hasError = false;
+                    for (ProcessingContext<?> context : contexts) {
+                        if (context != null && context.hasError()) {
+                            hasError = true;
+                            break;
+                        }
+                    }
+                    if (hasError) {
+                        outboundErrorCounter.increment();
+                    }
+                }
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -375,6 +407,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                             tenant, e.getMessage(), connectorIdentifier);
                     Thread.interrupted(); // clear residual interrupt flag to avoid cascading effects
                     return new ArrayList<>();
+                }
+                if (testMapping == null) {
+                    outboundErrorCounter.increment();
                 }
                 log.error("{} - Error processing outbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Outbound processing failed", e);

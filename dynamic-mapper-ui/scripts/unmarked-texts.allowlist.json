@@ -1,0 +1,127 @@
+[
+  {
+    "file": "src/shared/mapping/mapping.constants.ts",
+    "reason": "Code-editor completion help for the Smart Function API. Technical English, like the API names."
+  },
+  {
+    "file": "src/shared/mapping/stepper.model.ts",
+    "reason": "Code-editor completion help for the Smart Function API. Technical English, like the API names."
+  },
+  {
+    "file": "src/mapping/prompt/ai-prompt.component.ts",
+    "kind": "missingContextHint",
+    "reason": "Instructions sent to the AI agent, not UI text."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "plant1/+/+",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "measurements/+",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "device/110",
+    "reason": "Example topic, not prose."
+  },
+  {
+    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "text": "lora_device_type",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/service/editor-session.forms.ts",
+    "text": "$exists(c8y_TemperatureMeasurement)",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/step-transformation/mapping-substitution-step.component.ts",
+    "text": "$join(",
+    "reason": "Example JSONata expression."
+  },
+  {
+    "file": "src/mapping/editor-base/mapping-extension-selector.component.html",
+    "text": "parameter: key: value",
+    "reason": "Example YAML."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.html",
+    "text": "parameter: key: value",
+    "reason": "Example YAML."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.ts",
+    "text": "Smart Function",
+    "kind": "typeLabel",
+    "reason": "Product name."
+  },
+  {
+    "file": "src/mapping/mapping-create/mapping-type-drawer.component.ts",
+    "text": "JSONata",
+    "kind": "typeLabel",
+    "reason": "Product name."
+  },
+  {
+    "file": "src/mapping/message-explorer/message-explorer.component.ts",
+    "text": "externalId",
+    "kind": "externalIdLabel",
+    "reason": "Name of a Cumulocity concept shown as code."
+  },
+  {
+    "file": "src/shared/component/formly/custom-form-field-wrapper.component.html",
+    "text": "customMessage",
+    "reason": "A props key (props['customMessage']), not UI text."
+  },
+  {
+    "file": "src/configuration/service-configuration.component.html",
+    "reason": "Log level identifiers"
+  },
+  {
+    "file": "src/extension/card/extension-card.component.html",
+    "reason": "Property name, not text",
+    "text": "extensionEntries"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "Date format",
+    "text": "MMM d, y"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "JSON field name",
+    "text": "creationTime"
+  },
+  {
+    "file": "src/monitoring/event/mapping-service-event.component.html",
+    "reason": "JSON field name",
+    "text": "lastUpdated"
+  },
+  {
+    "file": "src/shared/connector-details/connector-details.component.html",
+    "reason": "JSON field name",
+    "text": "creationTime"
+  },
+  {
+    "file": "src/shared/connector-details/connector-details.component.html",
+    "reason": "JSON field name",
+    "text": "lastUpdated"
+  },
+  {
+    "file": "src/shared/service/connector-configuration.service.ts",
+    "reason": "Only logged to the console",
+    "text": "Unknown error occurred"
+  },
+  {
+    "file": "src/introduction/doc-markdown.service.ts",
+    "kind": "cssText",
+    "reason": "CSS, not text"
+  },
+  {
+    "file": "src/mapping/prompt/ai-prompt.component.ts",
+    "kind": "newMessage",
+    "reason": "Message sent to the AI agent, not shown as UI text"
+  }
+]

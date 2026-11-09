@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -63,6 +63,9 @@ public class TestResult {
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "External ID the test device is registered under: \"d11r_liveTest_\" + the external ID the mapping produces, so a live test never uses the external ID of the real device. Only set when testDeviceId is set.")
     private String testDeviceExternalId;
+
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Names of the connectors an outbound live test (send=true) published through: the connectors the mapping is deployed on, as saved. Empty for every other test.")
+    private List<String> publishedConnectors = new ArrayList<>();
 
     /**
      * Context-level, not per-request: a single {@code publishMEAO(context)} call reads one key for

@@ -92,14 +92,14 @@ real Cumulocity API.
 | [`InventoryFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/InventoryFacade.java) | [`MockInventory`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockInventory.java) | `InventoryApi` |
 
 Both mocks are singleton Spring components with per-tenant maps. Mock managed-object IDs count up
-from `10000` per tenant ([`MockInventory.java:91`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockInventory.java#L91)).
+from `10000` per tenant ([`MockInventory`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockInventory.java) (`idCounters`)).
 
 The mock layer is isolated. The defects are in the **caches that sit in front of it**, which are
 shared with production and are not keyed by `testing`.
 
 ### Defects found and fixed
 
-All of these are fixed on branch `fix/properIDHandling`. Each one let live state into a dry run, or a
+All of these are fixed and merged (branch `fix/properIDHandling`). Each one let live state into a dry run, or a
 dry run's state into live processing, because a cache sat in front of the mock and was not keyed by
 `testing`.
 
@@ -140,7 +140,7 @@ repeat it. The regression tests below are the safety net for that.
 | `SparkplugBDeserializerTest` | D9: a dry run never resolves live, never touches the live cache, and fetches from the mock; production is unchanged |
 | `TestControllerTest` | Clear before and after a run, after a failed run, and that a failing cleanup does not mask the result |
 | `SubstitutionResultInboundProcessorTest` | A dry run with an unknown device and `createNonExistingDevice = false` fails with the marker instead of inventing an ID |
-| `mapping-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
+| `mapping-step-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
 | `ProcessingContextLiveTestIdTest`, `ConsolidationProcessorTestRunTest`, `OutboundTestRunAccountingTest`, `DeserializationInboundProcessorErrorHandlingTest` | A test run (Dry Run or inbound Live Test) never counts toward the mapping status; a real run does |
 | `CommonProcessorLiveTestIdTest` | An outbound live test registers the mock device under the prefixed external ID; a dry run keeps it unchanged |
 | `TestRunGuardCoverageTest` | Architecture check: every `increaseAndHandleFailureCount` and `resetFailureCountOnSuccess` call site under `processor/` carries an `affectsMappingStatus()` guard, so a new call site that forgets it fails the build |

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -81,17 +81,24 @@ public class SendOutboundProcessor extends BaseProcessor {
             autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
-            processAndPrepareRequests(context, connectorIdentifier);
+            boolean delivered = processAndPrepareRequests(context, connectorIdentifier);
 
 
             // Create alarms for any processing issues
             createProcessingAlarms(context);
 
             //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
-            if(context.hasError())
+            if(context.hasError()) {
                 autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
-            else
+            } else {
+                // Commit extension state only for a fully published message; on failure the message
+                // is redelivered and must not look like a duplicate. An empty error list does not prove
+                // it: a connector can break off on interruption or record a failure only on the request.
+                if (delivered && publishedCompletely(context, wrapper)) {
+                    context.runDeferredStateCommit();
+                }
                 autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
+            }
         } catch (Exception e) {
             String errorMessage = String.format(
                     "Tenant %s - Error in SendOutboundProcessor: %s for mapping: %s",
@@ -110,6 +117,12 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
         }
 
+    }
+
+    private static boolean publishedCompletely(ProcessingContext<Object> context, ProcessingResultWrapper<?> wrapper) {
+        return (wrapper == null || !wrapper.getCancellationRequested().get())
+                && !Thread.currentThread().isInterrupted()
+                && context.getRequests().stream().noneMatch(request -> request.hasError());
     }
 
     /**
@@ -141,8 +154,10 @@ public class SendOutboundProcessor extends BaseProcessor {
 
     /**
      * Process and send all C8Y requests created during substitution
+     *
+     * @return false when the connector was not connected, so the requests were never published
      */
-    private void processAndPrepareRequests(ProcessingContext<Object> context, String connectorIdentifier) {
+    private boolean processAndPrepareRequests(ProcessingContext<Object> context, String connectorIdentifier) {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -151,12 +166,12 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         if (requests == null || requests.isEmpty()) {
             log.debug("{} - No requests to process, skipping send", tenant);
-            return;
+            return true;
         }
 
         if (!context.isSendPayload()) {
             log.warn("{} - Not sending messages: sendPayload is false", tenant);
-            return;
+            return true;
         }
 
         try {
@@ -166,14 +181,14 @@ public class SendOutboundProcessor extends BaseProcessor {
             // is always synthetic for outbound tests.
             if (Boolean.TRUE.equals(context.isTesting())) {
                 publishToRealConnectors(context, tenant);
-                return;
+                return true;
             }
 
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
             if (!connectorClient.isConnected()) {
                 log.warn("{} - Not sending messages: connector not connected", tenant);
-                return;
+                return false;
             }
 
             // Route API.CUSTOM requests via C8YAgent (HTTP POST to Cumulocity microservice endpoint).
@@ -226,6 +241,7 @@ public class SendOutboundProcessor extends BaseProcessor {
                             String.format("%s - Error processing outbound requests: %s", tenant, e.getMessage()),
                             e));
         }
+        return true;
     }
 
     /**
@@ -239,6 +255,9 @@ public class SendOutboundProcessor extends BaseProcessor {
             allClients = connectorRegistry.getClientsForTenant(tenant);
         } catch (Exception e) {
             log.error("{} - Failed to look up connectors for outbound test send: {}", tenant, e.getMessage(), e);
+            // Reported on the context: a Live Test that only logged this came back as successful.
+            context.addError(new ProcessingException(
+                    "The connectors could not be looked up, so nothing was published: " + e.getMessage(), e));
             return;
         }
 
@@ -249,25 +268,36 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
             if (!client.isConnected()) {
                 log.warn("{} - Skipping connector '{}': not connected", tenant, client.getConnectorName());
+                context.getWarnings().add(String.format("Connector '%s' was skipped: it is not connected.",
+                        client.getConnectorName()));
                 continue;
             }
-            if (!client.isMappingOutboundDeployed(mapping.getIdentifier())) {
+            // Deployment only: a Live Test must also work for a mapping that is still inactive.
+            if (!client.isMappingAssignedToConnector(mapping)) {
                 log.debug("{} - Mapping '{}' not deployed on connector '{}', skipping",
                         tenant, mapping.getName(), client.getConnectorName());
+                context.getWarnings().add(String.format(
+                        "Connector '%s' was skipped: this mapping is not deployed on it.", client.getConnectorName()));
                 continue;
             }
             try {
                 client.publishMEAO(context);
                 publishCount++;
+                context.getPublishedConnectors().add(client.getConnectorName());
                 log.info("{} - Published outbound test message via connector: {}", tenant, client.getConnectorName());
             } catch (Exception e) {
                 log.error("{} - Failed to publish via connector '{}': {}", tenant, client.getConnectorName(), e.getMessage(), e);
+                context.addError(new ProcessingException(String.format("Failed to publish via connector '%s': %s",
+                        client.getConnectorName(), e.getMessage()), e));
             }
         }
 
         if (publishCount == 0) {
             log.warn("{} - No connected real connector found to publish outbound test message for mapping: {}",
                     tenant, mapping.getName());
+            context.addError(new ProcessingException(
+                    "Nothing was published: no connected connector has this mapping deployed. "
+                            + "Connect a connector and deploy the mapping to it, or use a Dry Run."));
         }
     }
 

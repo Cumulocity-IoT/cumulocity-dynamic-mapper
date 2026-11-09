@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -64,6 +64,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MQTTServicePulsarClientTest {
+    private final dynamic.mapper.core.ConnectorClientServices clientServices =
+            org.mockito.Mockito.mock(dynamic.mapper.core.ConnectorClientServices.class);
+
 
     private static final String TEST_TENANT = "test_tenant";
     private static final String TEST_CONNECTOR_NAME = "test_mqtt_service_connector";
@@ -116,9 +119,9 @@ class MQTTServicePulsarClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry mocks
-        lenient().when(serviceRegistry.getMappingService()).thenReturn(mappingService);
-        lenient().when(serviceRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        lenient().when(serviceRegistry.getConnectorConfigurationService())
+        lenient().when(clientServices.getMappingService()).thenReturn(mappingService);
+        lenient().when(clientServices.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        lenient().when(clientServices.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
         lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
@@ -186,7 +189,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testFullConstructor() {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -340,7 +343,7 @@ class MQTTServicePulsarClientTest {
         when(connectorConfiguration.getEnabled()).thenReturn(false);
 
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -359,7 +362,7 @@ class MQTTServicePulsarClientTest {
         setupMocksForPublish();
 
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -388,7 +391,7 @@ class MQTTServicePulsarClientTest {
         setupMocksForPublish();
 
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -417,7 +420,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testPublishMEAO_ClientClosed() {
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -440,7 +443,7 @@ class MQTTServicePulsarClientTest {
     void testSupportsWildcardInTopic() {
         // Use the full constructor to initialize connectorConfiguration
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -466,7 +469,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testIsConnected() {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -483,7 +486,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testClose() {
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -550,7 +553,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testConfigureAuthentication_Basic() throws Exception {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -595,7 +598,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testConnectorSpecificHousekeeping() throws Exception {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -631,7 +634,7 @@ class MQTTServicePulsarClientTest {
 
     @Test
     void failoverConsumerChangesAreLoggedInsideTheTenantsLogContext() throws Exception {
-        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, connectorRegistry,
+        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, clientServices, connectorRegistry,
                 connectorConfiguration, dispatcher, TEST_SUBSCRIPTION_ID, TEST_TENANT);
         injectTopicNames(mqttServicePulsarClient);
         ConsumerEventListener listener = invokePrivateMethod(mqttServicePulsarClient, "platformConsumerEvents",
@@ -658,7 +661,7 @@ class MQTTServicePulsarClientTest {
 
     @Test
     void aRestoredPlatformConsumerConnectionIsReportedOnceWhenHousekeepingSeesIt() throws Exception {
-        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, connectorRegistry,
+        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, clientServices, connectorRegistry,
                 connectorConfiguration, dispatcher, TEST_SUBSCRIPTION_ID, TEST_TENANT);
         injectConsumerAndProducer(mqttServicePulsarClient, platformConsumer, deviceProducer);
         Field lost = MQTTServicePulsarClient.class.getDeclaredField("platformConsumerLost");

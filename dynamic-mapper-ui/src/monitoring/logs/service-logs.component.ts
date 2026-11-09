@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,6 +31,7 @@ import { CollectedServiceLogsService } from './collected-service-logs.service';
 import { MAPPING_IDENTIFIER } from './mapping-log-filter';
 import { NativeServiceLogsService } from './native-service-logs.service';
 import { LogRequest, LogsUnavailableError, LogWindow, ServiceLogsSource } from './service-logs.model';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 type MappingDirectionFilter = 'INBOUND' | 'OUTBOUND';
 
@@ -158,6 +159,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
 
   applyDateFrom(): void {
     if (this.dateFromInput) {
+      this.pauseAutoRefresh();
       // The picker value is interpreted as UTC, like in the Administration application.
       this.fetch({ dateFrom: new Date(`${this.dateFromInput}Z`).toISOString() });
     }
@@ -212,7 +214,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   /** The source switch: an explicit choice, so it is not undone when the mapping filter is cleared. */
-  async onSourceChange(collected: boolean): Promise<void> {
+  async onSourceChange(collected: boolean, checkbox?: { checked: boolean }): Promise<void> {
     this.sourceBeforeMapping = undefined;
     const target = collected ? this.collectedLogs : this.nativeLogs;
     if (this.source === target) return;
@@ -226,8 +228,17 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     ++this.requestSeq;
     this.inFlight = false;
     this.isLoading = true;
+    // activate() sets source/error before reporting a collected log as unavailable: keep them to restore.
+    const previous = { source: this.source, error: this.error, errorHint: this.errorHint };
     try {
-      await this.activate(target);
+      if (!(await this.activate(target))) {
+        this.source = previous.source;
+        this.error = previous.error;
+        this.errorHint = previous.errorHint;
+        // Not available: stay on the current source, and make the switch say so (Angular would not redraw an unchanged binding).
+        if (checkbox) checkbox.checked = this.isCollected;
+        this.alertService.warning(collected ? gettext('The collected log is not available.') : gettext('The platform log is not available to your tenant.'));
+      }
     } finally {
       this.isLoading = false;
     }
@@ -304,7 +315,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       await this.source.flush();
     } catch (e) {
       console.error(e);
-      this.alertService.danger('Failed to fetch the service log.');
+      this.alertService.danger(gettext('Failed to fetch the service log.'));
     } finally {
       this.isLoading = false;
     }
@@ -312,6 +323,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   loadFirst(): Promise<void> {
+    this.pauseAutoRefresh();
     return this.fetch({ dateFrom: EPOCH });
   }
 
@@ -320,6 +332,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   loadPrevious(): Promise<void> {
+    this.pauseAutoRefresh();
     return this.fetch({ dateTo: this.window?.before ?? this.window?.dateFrom });
   }
 
@@ -351,7 +364,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       saveAs(new Blob(parts, { type: 'text/plain' }), `${instance || 'service-log'}${mapping ? `-${mapping}` : ''}.log`);
     } catch (e) {
       console.error(e);
-      this.alertService.danger('Failed to download the log.');
+      this.alertService.danger(gettext('Failed to download the log.'));
     }
   }
 
@@ -410,7 +423,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       this.selectedMapping = requested;
       this.directionFilter = 'ALL';
     } else {
-      this.alertService.info('The mapping from the link was not found. Showing all lines.');
+      this.alertService.info(gettext('The mapping from the link was not found. Showing all lines.'));
     }
   }
 
@@ -434,6 +447,12 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     this.dateFromInput = window.dateFrom ? new Date(window.dateFrom).toISOString().slice(0, 19) : '';
   }
 
+  /** Auto refresh always reloads the newest lines: it must not run while the user looks at another window. */
+  private pauseAutoRefresh(): void {
+    this.stopTimer();
+    this.autoRefresh = false;
+  }
+
   private stopTimer(): void {
     clearInterval(this.timer);
     this.timer = undefined;
@@ -455,7 +474,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       if (ticket !== this.requestSeq) return; // a newer request was started meanwhile: this answer is out of date
       // With a mapping an empty window is an answer, not a failure: show it (and its cursors) so paging keeps working.
       if (!window.logs && !window.empty && !this.selectedMapping) {
-        if (!silent) this.alertService.info('No logs available.');
+        if (!silent) this.alertService.info(gettext('No logs available.'));
         return;
       }
       this.show(window);
@@ -467,7 +486,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
         this.error = 'The service log is not available to you.';
         this.errorHint = e.message;
       } else if (!silent) {
-        this.alertService.danger('Failed to load logs.');
+        this.alertService.danger(gettext('Failed to load logs.'));
       }
       console.error(e);
     } finally {

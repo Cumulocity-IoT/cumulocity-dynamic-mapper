@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -106,10 +106,25 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
     }
 
     private void trim(String tenant, Deque<ServiceLogRecord> queue, int maxPerTenant) {
-        while (!queue.isEmpty() && (queue.size() > maxPerTenant || bytes.getOrDefault(tenant, 0L) > MAX_BYTES_PER_TENANT
-                || totalBytes > MAX_BYTES_TOTAL)) {
+        while (!queue.isEmpty() && (queue.size() > maxPerTenant || bytes.getOrDefault(tenant, 0L) > MAX_BYTES_PER_TENANT)) {
             add(tenant, -sizeOf(queue.pollFirst()));
             dropped.merge(tenant, 1, Integer::sum);
+        }
+        // The shared limit is paid by whoever holds the most, not by whoever happens to add a line now: otherwise
+        // tenants that fill the buffer would make every line of a small tenant be dropped on arrival.
+        while (totalBytes > MAX_BYTES_TOTAL) {
+            String biggest = null;
+            for (Map.Entry<String, Long> e : bytes.entrySet()) {
+                Deque<ServiceLogRecord> q = queues.get(e.getKey());
+                if (q != null && !q.isEmpty() && (biggest == null || e.getValue() > bytes.get(biggest))) {
+                    biggest = e.getKey();
+                }
+            }
+            if (biggest == null) {
+                return;
+            }
+            add(biggest, -sizeOf(queues.get(biggest).pollFirst()));
+            dropped.merge(biggest, 1, Integer::sum);
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,7 +32,6 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
@@ -72,7 +71,7 @@ public class MqttPushManager {
     private final ServiceRegistry serviceRegistry;
 
     public MqttPushManager(MicroserviceSubscriptionsService subscriptionsService,
-                           @Lazy ServiceRegistry serviceRegistry) {
+                           ServiceRegistry serviceRegistry) {
         this.subscriptionsService = subscriptionsService;
         this.serviceRegistry = serviceRegistry;
     }

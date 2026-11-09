@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -51,7 +51,7 @@ class MultiTenancyIsolationTest {
 
     @BeforeEach
     void setUp() {
-        cacheManager = new CacheManager(null, null);
+        cacheManager = new CacheManager(null);
         cacheManager.initializeInboundExternalIdCache(TENANT_A, CACHE_SIZE);
         cacheManager.initializeInboundExternalIdCache(TENANT_B, CACHE_SIZE);
     }

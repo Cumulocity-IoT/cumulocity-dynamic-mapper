@@ -1,10 +1,33 @@
+/*
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { MappingVersionDrawerComponent } from './mapping-version-drawer.component';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionService } from '../core/subscription.service';
 import { Mapping, MappingVersion } from '../../shared';
 
 /**
@@ -74,9 +97,11 @@ describe('MappingVersionDrawerComponent', () => {
       imports: [MappingVersionDrawerComponent],
       providers: [
         { provide: MappingService, useValue: mockMappingService },
+        { provide: SubscriptionService, useValue: jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']) },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BsModalService, useValue: mockBsModalService },
-        { provide: BottomDrawerRef, useValue: mockDrawerRef }
+        { provide: BottomDrawerRef, useValue: mockDrawerRef },
+        provideTranslateStub()
       ]
     }).compileComponents();
 
@@ -157,6 +182,20 @@ describe('MappingVersionDrawerComponent', () => {
       expect(mockMappingService.activateVersion).toHaveBeenCalledWith('42', '2.0.0');
       expect(mockAlertService.success).toHaveBeenCalled();
       expect(component.busy).toBeFalse();
+    });
+
+    it('does not change the mapping object the opener passed in', async () => {
+      const opener = buildMapping();
+      opener.active = false;
+      const before = { version: opener.version, active: opener.active };
+      component.mapping = opener;
+      mockMappingService.activateVersion.and.resolveTo({} as any);
+
+      await component.activate({ version: '2.0.0' } as any);
+
+      expect(component.mapping.version).toBe('2.0.0'); // the drawer's own copy shows it
+      expect(component.mapping.active).toBeTrue();
+      expect({ version: opener.version, active: opener.active }).toEqual(before);
     });
 
     it('shows a danger alert and clears busy when activation fails', async () => {

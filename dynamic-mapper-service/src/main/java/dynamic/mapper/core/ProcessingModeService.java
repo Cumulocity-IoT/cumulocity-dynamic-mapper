@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -35,18 +35,20 @@ import jakarta.annotation.PreDestroy;
 import jakarta.ws.rs.client.Invocation;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.springframework.core.annotation.Order;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProcessingModeService {
+@Order(TenantScoped.ORDER_CACHES)
+public class ProcessingModeService implements TenantScoped {
 
     private final ContextService<MicroserviceCredentials> contextService;
     private final PlatformProperties platformProperties;
     
     // Cache connectors per tenant to avoid recreating expensive Client instances.
     // Each entry holds that tenant's service-user credentials, so it must be dropped when the
-    // tenant unsubscribes — see clearConnectorCache(), called from BootstrapService's cleanup.
+    // tenant unsubscribes — see removeTenant(), called from BootstrapService's cleanup.
     private final ConcurrentMap<String, RestConnector> connectorCache = new ConcurrentHashMap<>();
 
     public <T> T callWithProcessingMode(String processingMode, ConnectorFunction<T> function) throws Exception {
@@ -159,10 +161,15 @@ public class ProcessingModeService {
         return params;
     }
 
+    /** Nothing to create: the connector is cached on first use. */
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+    }
+
     /**
      * Clear cached connector for a specific tenant (useful for credential updates)
      */
-    public void clearConnectorCache(String tenant) {
+    public void removeTenant(String tenant) {
         RestConnector removed = connectorCache.remove(tenant);
         if (removed != null) {
             log.debug("Cleared connector cache for tenant: {}", tenant);

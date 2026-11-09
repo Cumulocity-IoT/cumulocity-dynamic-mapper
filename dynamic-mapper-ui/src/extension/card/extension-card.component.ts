@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH
+ * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,6 +26,7 @@ import { ExtensionService } from '../extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
@@ -63,8 +64,8 @@ export class ExtensionCardComponent implements OnInit {
 
   async delete(): Promise<void> {
     const confirmed = await this.showConfirmationModal({
-      title: 'Delete mapping extension',
-      message: 'You are about to delete a mapping extension. Do you want to proceed?',
+      title: gettext('Delete mapping extension'),
+      message: gettext('You are about to delete a mapping extension. Do you want to proceed?'),
       labels: { ok: 'Delete', cancel: 'Cancel' }
     });
 
@@ -74,7 +75,7 @@ export class ExtensionCardComponent implements OnInit {
       await this.extensionService.deleteProcessorExtension(this.app);
       this.appDeleted.emit();
     } catch (error) {
-      this.alertService.addServerFailure(error);
+      this.alertService.warning(gettext('Failed to delete Java Extension'), error?.message);
     }
   }
 
