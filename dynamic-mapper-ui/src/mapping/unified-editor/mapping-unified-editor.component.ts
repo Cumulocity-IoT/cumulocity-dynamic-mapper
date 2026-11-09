@@ -44,11 +44,7 @@ import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import {
-  STEP_DEFINE_SUBSTITUTIONS,
-  STEP_GENERAL_SETTINGS,
-  STEP_SELECT_CONNECTOR,
-  STEP_SELECT_TEMPLATES,
-  STEP_TEST_MAPPING
+  StepId
 } from '../../shared/mapping/stepper.model';
 import {
   captureMappingContentSnapshot,
@@ -74,6 +70,8 @@ import { MappingPublishService } from '../versions/mapping-publish.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
+import { MappingStepSubscriptionComponent } from '../step-subscription/mapping-step-subscription.component';
+import { emptySelection, hasPendingSubscriptionChanges } from '../step-subscription/outbound-subscription-selection.model';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
@@ -82,20 +80,13 @@ import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
 import { MappingCodeEditorSectionComponent } from '../editor-base/mapping-code-editor-section.component';
 
-// The tabs are the stepper's steps, in the same order
-const TAB_CONNECTOR = STEP_SELECT_CONNECTOR;
-const TAB_GENERAL_SETTINGS = STEP_GENERAL_SETTINGS;
-const TAB_SELECT_TEMPLATES = STEP_SELECT_TEMPLATES;
-const TAB_DEFINE_TRANSFORMATION = STEP_DEFINE_SUBSTITUTIONS;
-const TAB_TEST_MAPPING = STEP_TEST_MAPPING;
-
 /** Where a blocked commit sends the user. This is the only place that knows tabs exist —
  * {@link MappingStepperService.commitMapping} reports the blocker and owns no navigation. */
-const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
-  [CommitBlocker.NO_CONNECTOR]: TAB_CONNECTOR,
-  [CommitBlocker.MAPPING_TOPIC]: TAB_GENERAL_SETTINGS,
-  [CommitBlocker.PROPERTY_FORM]: TAB_GENERAL_SETTINGS,
-  [CommitBlocker.EXTENSION_SELECTION]: TAB_SELECT_TEMPLATES
+const STEP_FOR_BLOCKER: Partial<Record<CommitBlocker, StepId>> = {
+  [CommitBlocker.NO_CONNECTOR]: 'connector',
+  [CommitBlocker.MAPPING_TOPIC]: 'general',
+  [CommitBlocker.PROPERTY_FORM]: 'general',
+  [CommitBlocker.EXTENSION_SELECTION]: 'templates'
 };
 
 /**
@@ -116,6 +107,7 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     TabsOutletComponent,
     BsDropdownModule,
     MappingStepPropertiesComponent,
+    MappingStepSubscriptionComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
     MappingTemplateStepComponent,
@@ -155,16 +147,18 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
   readonly MappingTypeLabels = MappingTypeLabels;
 
-  // Exposed so the template can reference named tabs instead of magic numbers
-  readonly TAB_CONNECTOR = TAB_CONNECTOR;
-  readonly TAB_GENERAL_SETTINGS = TAB_GENERAL_SETTINGS;
-  readonly TAB_SELECT_TEMPLATES = TAB_SELECT_TEMPLATES;
-  readonly TAB_DEFINE_TRANSFORMATION = TAB_DEFINE_TRANSFORMATION;
-  readonly TAB_TEST_MAPPING = TAB_TEST_MAPPING;
+  // Exposed so the template can reference named tabs instead of magic numbers. They come from the
+  // layout because the Subscription tab, outbound only, moves every later tab one place.
+  get TAB_CONNECTOR(): number { return this.layout.connector; }
+  get TAB_GENERAL_SETTINGS(): number { return this.layout.general; }
+  get TAB_SUBSCRIPTION(): number { return this.layout.subscription; }
+  get TAB_SELECT_TEMPLATES(): number { return this.layout.templates; }
+  get TAB_DEFINE_TRANSFORMATION(): number { return this.layout.transformation; }
+  get TAB_TEST_MAPPING(): number { return this.layout.testing; }
 
-  currentStepIndex = TAB_CONNECTOR;
+  currentStepIndex = 0;
 
-  protected readonly substitutionStepIndex = TAB_DEFINE_TRANSFORMATION;
+  protected get substitutionStepIndex(): number { return this.layout.transformation; }
 
   // Snapshots for change detection — set once at load time
   private initialContentSnapshot: MappingContentSnapshot = { mappingJson: '', sourceTemplateJson: '', targetTemplateJson: '', mappingCode: '' };
@@ -189,8 +183,8 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
     this.currentStepIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
-      ? TAB_GENERAL_SETTINGS
-      : TAB_DEFINE_TRANSFORMATION;
+      ? this.TAB_GENERAL_SETTINGS
+      : this.TAB_DEFINE_TRANSFORMATION;
 
     const init = await this.initSession();
 
@@ -259,12 +253,13 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   isTabVisible(tabIndex: number): boolean {
     // Deprecated SUBSTITUTION_AS_CODE mappings: hide Testing tab (can't be processed)
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    if (this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === TAB_TEST_MAPPING) {
+    if (this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === this.TAB_TEST_MAPPING) {
       return false;
     }
-    const skip = this.stepperConfiguration?.advanceFromStepToEndStep;
+    // The configuration numbers the sections without the outbound-only Subscription tab.
+    const skip = this.layout.fromBase(this.stepperConfiguration?.advanceFromStepToEndStep);
     if (skip == null) return true;
-    return tabIndex <= skip || tabIndex === TAB_TEST_MAPPING;
+    return tabIndex <= skip || tabIndex === this.TAB_TEST_MAPPING;
   }
 
   /**
@@ -279,7 +274,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
   private async handleTabSelected(newIndex: number): Promise<void> {
     // Sync template changes when leaving the Templates tab
-    if (this.currentStepIndex === TAB_SELECT_TEMPLATES) {
+    if (this.currentStepIndex === this.TAB_SELECT_TEMPLATES) {
       this.updateTemplatesInEditors();
     }
 
@@ -287,17 +282,17 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     this.refreshSubstitutionValidity();
 
-    switch (newIndex) {
-      case TAB_GENERAL_SETTINGS:
+    switch (this.layout.idAt(newIndex)) {
+      case 'general':
         await this.handleGeneralSettingsTab();
         break;
-      case TAB_SELECT_TEMPLATES:
+      case 'templates':
         await this.handleSelectTemplatesTab();
         break;
-      case TAB_DEFINE_TRANSFORMATION:
+      case 'transformation':
         this.enterTransformation();
         break;
-      case TAB_TEST_MAPPING:
+      case 'testing':
         this.enterTesting();
         break;
     }
@@ -351,6 +346,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       targetTemplate: this.targetTemplate,
       mappingCode: this.mappingCode,
       initialContentSnapshot: this.initialContentSnapshot,
+      subscriptionSelection: this.subscriptionSelection,
       forms: {
         propertyFormly: this.propertyFormly,
         templateForm: this.templateForm,
@@ -363,10 +359,11 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     if (result.status === 'blocked') {
       if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
-      const tab = TAB_FOR_BLOCKER[result.blocker];
+      const blockedStep = STEP_FOR_BLOCKER[result.blocker];
+      const tab = blockedStep ? this.layout.indexOf(blockedStep) : undefined;
       // Through the normal transition (not a bare currentStepIndex assignment) so currentStepIndex
       // and the per-tab setup stay consistent — same reasoning as showValidationIssues().
-      if (tab !== undefined) await this.onTabSelected(tab);
+      if (tab !== undefined && tab >= 0) await this.onTabSelected(tab);
       return;
     }
 
@@ -409,6 +406,12 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // The mapping is saved but its connector assignment is not (error alert already raised):
     // stay in the editor so the selection isn't lost and Save can retry the deployment.
     if (result.deploymentFailed) return;
+
+    // The mapping is saved but a subscription write failed (warning already raised). Stay, so the
+    // selection survives and Save can retry it; the saved mapping itself is not rolled back.
+    if (result.subscriptionFailed) return;
+    // Written, or nothing to write: the step starts over from the server state next time.
+    this.subscriptionSelection = emptySelection();
 
     if (activateAfterSave) {
       await this.publishAndActivate();
@@ -524,7 +527,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
           : [])
       ]);
     }
-    return contentChanged || connectorsChanged;
+    return contentChanged || connectorsChanged || hasPendingSubscriptionChanges(this.subscriptionSelection);
   }
 
   /** {@link ConfirmsUnsavedChanges} — called by `unsavedChangesGuard` on every way out. */
@@ -573,7 +576,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     // Go through the normal transition rather than assigning currentStepIndex: it is queued behind
     // any in-flight tab change and performs the per-tab setup the step depends on.
-    await this.onTabSelected(TAB_DEFINE_TRANSFORMATION);
+    await this.onTabSelected(this.TAB_DEFINE_TRANSFORMATION);
     // The tab's content is rendered lazily, so the step only exists once that has been applied.
     this.cdr.detectChanges();
     await this.transformationStepRef?.onSelectSubstitution(result.index);

@@ -51,7 +51,7 @@ import {
   MessageExplorerDrawerComponent
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
-import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
+import { SubscriptionSuggestions } from '../step-subscription/outbound-subscription-selection.model';
 import { ExplorerMappingHandoffService, ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
 import { ALERT_INFO_TIMEOUT, Direction, MappingType } from '../../shared';
 import {
@@ -614,7 +614,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     }
     if (!mappingResult || typeof mappingResult === 'string') return;
 
-    // Step 2 (OUTBOUND only): optionally create a subscription inline
+    // Step 2 (OUTBOUND only): the source device's type and groups become one-click choices in the
+    // mapping's Subscription step. Nothing is subscribed here; the step writes on save.
+    let subscriptionSuggestions: SubscriptionSuggestions | undefined;
     if (direction === Direction.OUTBOUND) {
       // Use msg.sourceId if available, otherwise fall back to the session's selected device
       const effectiveDeviceId = msg.sourceId ?? this.sessionSourceId;
@@ -624,10 +626,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       // (e.g. "c8y_DeviceGroup"), not the originating device's, so it must be refetched below.
       let deviceType: string | null =
         effectiveDeviceId && effectiveDeviceId === this.sessionSourceId ? this.sessionDeviceType : null;
+      let deviceName: string | undefined;
       let deviceGroups: { id: string; name: string }[] = [];
       if (effectiveDeviceId) {
         try {
           const { data } = await this.inventoryService.detail(effectiveDeviceId, { withParents: true });
+          deviceName = data['name'];
           if (deviceType === null) {
             deviceType = data['type'] ?? null;
           }
@@ -646,15 +650,17 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
             )
           );
         } catch {
-          // non-fatal — drawer will show no device context
+          // non-fatal — the step then offers no suggestions
         }
       }
-      const subDrawer = this.bottomDrawerService.openDrawer(SubscriptionChoiceDrawerComponent, {
-        initialState: { deviceId: effectiveDeviceId ?? null, deviceType, deviceGroups }
-      });
-      const subResult = await subDrawer.instance.result;
-      if (subResult === null) return; // user cancelled
-      // subscription was either skipped or created inside the drawer — nothing more to do here
+      if (effectiveDeviceId || deviceType || deviceGroups.length > 0) {
+        subscriptionSuggestions = {
+          deviceId: effectiveDeviceId ?? undefined,
+          deviceName,
+          deviceType: deviceType ?? undefined,
+          groups: deviceGroups
+        };
+      }
     }
 
     // Extra samples only help AI generation of a Smart Function; any other choice uses the primary alone.
@@ -715,7 +721,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       generateSmartFunctionWithAI: mappingResult.generateSmartFunctionWithAI,
       targetAPI,
       publishTopic,
-      publishTopicSample
+      publishTopicSample,
+      subscriptionSuggestions
     });
     const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
     this.router.navigate(targetRoute, { relativeTo: this.route });

@@ -72,6 +72,7 @@ import { MappingService } from '../core/mapping.service';
 import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
+import { SubscriptionSuggestions } from '../step-subscription/outbound-subscription-selection.model';
 import { buildMappingColumns } from './mapping-grid.columns';
 import { buildNewMapping, ExplorerPreFill } from './new-mapping.factory';
 import { SubscriptionService } from '../core/subscription.service';
@@ -148,6 +149,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
   private explorerPreFill: ExplorerPreFill | null = null;
+  /** Source device of the Message Explorer message, offered as choices in the Subscription step. */
+  private explorerSubscriptionSuggestions: SubscriptionSuggestions | undefined;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -249,6 +252,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           publishTopic: explorerHandoff.publishTopic,
           publishTopicSample: explorerHandoff.publishTopicSample
         };
+        this.explorerSubscriptionSuggestions = explorerHandoff.subscriptionSuggestions;
         this.mappingType = explorerHandoff.mappingType;
         this.transformationType = explorerHandoff.transformationType;
         // A binary, XML or plain-text payload cannot be parsed as JSON; the backend only passes raw
@@ -446,6 +450,11 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.generateSmartFunctionWithAI = false;
     }
 
+    if (this.explorerSubscriptionSuggestions) {
+      this.stepperConfiguration.subscriptionSuggestions = this.explorerSubscriptionSuggestions;
+      this.explorerSubscriptionSuggestions = undefined;
+    }
+
     const direction = this.stepperConfiguration.direction;
     const { mapping, sampleMessageInfo, sampleTransportFields, additionalSamples } = buildNewMapping({
       direction,
@@ -599,7 +608,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(editorState: CommitEditorState): Promise<void> {
     const result = await this.commitService.commitMapping({
       ...editorState,
-      deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors
       // No `forms`: cdk-stepper enforces linear completion, so the user cannot reach Save with an
       // earlier step invalid. Those blockers are the unified editor's concern.

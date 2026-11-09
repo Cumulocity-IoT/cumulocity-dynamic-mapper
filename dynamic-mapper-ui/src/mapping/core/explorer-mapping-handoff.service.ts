@@ -20,6 +20,7 @@
 import { Injectable } from '@angular/core';
 import { MappingType, SamplePayloadType, TransformationType } from '../../shared';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
+import { SubscriptionSuggestions } from '../step-subscription/outbound-subscription-selection.model';
 
 /** A further message captured alongside the primary one (multi-select in Message Explorer). */
 export interface ExplorerSampleMessage {
@@ -57,6 +58,8 @@ export interface ExplorerMappingHandoff {
   targetAPI?: string;
   publishTopic?: string;
   publishTopicSample?: string;
+  /** Outbound only: the source device's type and groups, offered in the mapping's Subscription step. */
+  subscriptionSuggestions?: SubscriptionSuggestions;
 }
 
 /**

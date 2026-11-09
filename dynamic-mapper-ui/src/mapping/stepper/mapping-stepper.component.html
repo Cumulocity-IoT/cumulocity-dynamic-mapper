@@ -55,6 +55,22 @@
     </c8y-stepper-buttons>
   </cdk-step>
 
+  <!-- The step only exists for outbound mappings. c8y-stepper-buttons derives Back/Next from the stepper's
+       step list when it initializes, which misses a step created in an @if, so the buttons are forced. -->
+  @if (layout.hasSubscription) {
+  <cdk-step [label]="'Subscription' | translate">
+    <div class="card-block flex-grow overflow-auto fit-w">
+      <d11r-mapping-step-subscription dataCyPrefix="dm-mapping-stepper" [selection]="subscriptionSelection"
+        [suggestions]="stepperConfiguration.subscriptionSuggestions" [feature]="feature"
+        (selectionChange)="onSubscriptionSelectionChange($event)"></d11r-mapping-step-subscription>
+    </div>
+    <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-subscription" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      [showButtons]="{ cancel: true, back: true, next: true }"
+      (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" (onBack)="onBackStep($event)"
+      [labels]="labels"></c8y-stepper-buttons>
+  </cdk-step>
+  }
+
   <cdk-step [label]="'Select templates' | translate" [stepControl]="filterFormly">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
       <h5 class="text-medium text-center" translate>

@@ -413,6 +413,39 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(component.isTabVisible(TAB_TEST_MAPPING)).toBe(true); // testing always visible
     });
 
+    describe('outbound mappings (extra Subscription tab)', () => {
+      beforeEach(() => {
+        component.mapping = buildMapping({ direction: Direction.OUTBOUND });
+      });
+
+      it('has the Subscription tab between general settings and templates, and shifts the later tabs', () => {
+        component.stepperConfiguration = buildConfig({ direction: Direction.OUTBOUND });
+        expect(component.TAB_GENERAL_SETTINGS).toBe(1);
+        expect(component.TAB_SUBSCRIPTION).toBe(2);
+        expect(component.TAB_SELECT_TEMPLATES).toBe(3);
+        expect(component.TAB_DEFINE_TRANSFORMATION).toBe(4);
+        expect(component.TAB_TEST_MAPPING).toBe(5);
+        [0, 1, 2, 3, 4, 5].forEach((i) => expect(component.isTabVisible(i)).toBe(true));
+      });
+
+      it('has no Subscription tab for inbound mappings', () => {
+        component.mapping = buildMapping();
+        component.stepperConfiguration = buildConfig({ direction: Direction.INBOUND });
+        expect(component.layout.hasSubscription).toBe(false);
+        expect(component.TAB_SUBSCRIPTION).toBe(-1);
+        expect(component.TAB_SELECT_TEMPLATES).toBe(2);
+      });
+
+      it('reads advanceFromStepToEndStep in the base numbering: Java extensions skip from Templates, not from Subscription', () => {
+        // 2 = Templates in the base numbering, which is tab 3 once the Subscription tab exists
+        component.stepperConfiguration = buildConfig({ direction: Direction.OUTBOUND, advanceFromStepToEndStep: 2 });
+        expect(component.isTabVisible(component.TAB_SUBSCRIPTION)).toBe(true);
+        expect(component.isTabVisible(component.TAB_SELECT_TEMPLATES)).toBe(true);
+        expect(component.isTabVisible(component.TAB_DEFINE_TRANSFORMATION)).toBe(false);
+        expect(component.isTabVisible(component.TAB_TEST_MAPPING)).toBe(true);
+      });
+    });
+
     it('hides the Testing tab for deprecated SUBSTITUTION_AS_CODE mappings', () => {
       component.mapping = buildMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
       component.stepperConfiguration = buildConfig();

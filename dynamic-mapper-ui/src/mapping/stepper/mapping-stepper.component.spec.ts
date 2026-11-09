@@ -472,6 +472,40 @@ describe('MappingStepperComponent', () => {
       );
     });
 
+    describe('outbound mappings (extra Subscription step)', () => {
+      beforeEach(() => {
+        component.stepperConfiguration = { ...component.stepperConfiguration, direction: Direction.OUTBOUND };
+      });
+
+      it('numbers the steps with the Subscription step before the templates', () => {
+        expect(component.layout.subscription).toBe(2);
+        expect(component.layout.templates).toBe(3);
+        expect(component.STEP_DEFINE_SUBSTITUTIONS).toBe(4);
+      });
+
+      it('expands templates when entering the templates step, which is now step 3', async () => {
+        component.stepperForward = true;
+        await component.onStepChange({ selectedIndex: 3 });
+        expect(mockStepperService.expandTemplates).toHaveBeenCalled();
+      });
+
+      it('does nothing on entering the Subscription step: it needs no templates yet', async () => {
+        await component.onStepChange({ selectedIndex: 2 });
+        expect(component.currentStepIndex).toBe(2);
+        expect(mockStepperService.expandTemplates).not.toHaveBeenCalled();
+      });
+
+      it('hands the step selection over with the editor state', (done) => {
+        const selection = { ...component.subscriptionSelection, mode: 'dynamic' as const, types: ['c8y_X'] };
+        component.onSubscriptionSelectionChange(selection);
+        component.commit.subscribe((state: CommitEditorState) => {
+          expect(state.subscriptionSelection).toBe(selection);
+          done();
+        });
+        component.onCommitButton();
+      });
+    });
+
     it('loads extensions when entering the general-settings step', async () => {
       await component.onStepChange({ selectedIndex: STEP_GENERAL_SETTINGS });
       expect(mockStepperService.loadExtensions).toHaveBeenCalledWith(component.mapping);
@@ -538,7 +572,10 @@ describe('MappingStepperComponent', () => {
           stepperConfiguration: component.stepperConfiguration,
           sourceTemplate: { a: 1 },
           targetTemplate: { b: 2 },
-          mappingCode: 'code'
+          mappingCode: 'code',
+          // The step's selection travels with the state; untouched, it says "write nothing".
+          subscriptionSelection: component.subscriptionSelection,
+          deploymentMapEntry: component.deploymentMapEntry
         });
         done();
       });

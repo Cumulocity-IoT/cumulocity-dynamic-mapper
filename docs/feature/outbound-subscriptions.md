@@ -64,6 +64,22 @@ by itself; stale entries are dropped when a selection is saved.
 | [`Utils`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/Utils.java) | Subscription and subscriber names; its class comment is the reference for the five families. |
 | [`UpdateSubscriptionDeviceTypeTask`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/task/UpdateSubscriptionDeviceTypeTask.java) and the group task | React to inventory notifications from the management subscription. |
 
+### Where users manage subscriptions
+
+| Place | Scope |
+|---|---|
+| Subscription outbound page (tabs static and dynamic) | Overview, bulk management, resync of existing devices of a type. |
+| **Subscription** step of the mapping stepper and **Subscription** tab of the unified editor (outbound only) | Collects a selection while the mapping is defined and writes it on save. Plan and decisions: [integrate-subscription-mgmt-outbound](../improvements/integrate-subscription-mgmt-outbound/plan.md). |
+
+The step reuses the four selector drawers of the page. Its selection (`OutboundSubscriptionSelection`) lives on the
+editor, not on the step, because the unified editor destroys the tab on every switch. `MappingCommitService` hands
+it to `SubscriptionSelectionService.apply` after the mapping and its deployment were saved, so a rejected mapping
+never leaves a subscription behind. The writes replace the whole list, as on the page, and a type added with the
+resync option triggers `POST /subscription/type/resync/{type}` once per added type.
+
+The step is not part of the base step numbering in `stepper.model.ts` (`STEP_*`, which `advanceFromStepToEndStep`
+uses). Positions come from `StepLayout`, which adds the Subscription step for outbound.
+
 ### Subscription families
 
 | Name | Context | Used for |

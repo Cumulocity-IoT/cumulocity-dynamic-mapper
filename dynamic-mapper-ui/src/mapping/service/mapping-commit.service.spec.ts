@@ -30,6 +30,8 @@ import {
   snapshotConnectors
 } from './mapping-commit.service';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionSelectionService } from '../core/subscription-selection.service';
+import { OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
 import {
   ALERT_ACTION_REQUIRED_TIMEOUT,
   ALERT_SUCCESS_TIMEOUT,
@@ -51,6 +53,7 @@ describe('MappingCommitService', () => {
   let service: MappingCommitService;
   let mockAlertService: jasmine.SpyObj<AlertService>;
   let mockMappingService: jasmine.SpyObj<MappingService>;
+  let mockSelectionService: jasmine.SpyObj<SubscriptionSelectionService>;
 
   function makeMapping(overrides: Partial<Mapping> = {}): Mapping {
     return {
@@ -112,11 +115,15 @@ describe('MappingCommitService', () => {
     mockMappingService.createMapping.and.resolveTo(undefined as any);
     mockMappingService.updateDefinedDeploymentMapEntry.and.resolveTo(undefined as any);
 
+    mockSelectionService = jasmine.createSpyObj<SubscriptionSelectionService>('SubscriptionSelectionService', ['apply']);
+    mockSelectionService.apply.and.resolveTo({ applied: true, failed: false });
+
     TestBed.configureTestingModule({
       providers: [
         provideTranslateStub(),
         MappingCommitService,
         { provide: MappingService, useValue: mockMappingService },
+        { provide: SubscriptionSelectionService, useValue: mockSelectionService },
         { provide: AlertService, useValue: mockAlertService }
       ]
     });
@@ -249,6 +256,81 @@ describe('MappingCommitService', () => {
       expect(result.status).toBe('saved');
       return result as Extract<CommitResult, { status: 'saved' }>;
     }
+
+    describe('Subscription step selection (outbound)', () => {
+      const outboundConfig = () => makeStepperConfig({ direction: Direction.OUTBOUND });
+      const pending = (over: Partial<OutboundSubscriptionSelection> = {}): OutboundSubscriptionSelection => ({
+        mode: 'dynamic',
+        types: ['c8y_SensorPhone'],
+        groups: null,
+        devices: null,
+        resyncNewTypes: false,
+        baseline: { available: true, types: [], groups: [], devices: [] },
+        ...over
+      });
+
+      it('writes the selection after the mapping and its deployment were saved', async () => {
+        const order: string[] = [];
+        mockMappingService.saveDraft.and.callFake(async () => { order.push('mapping'); return undefined as any; });
+        mockSelectionService.apply.and.callFake(async () => { order.push('subscription'); return { applied: true, failed: false }; });
+        const mapping = makeMapping({ direction: Direction.OUTBOUND, name: 'changed' });
+        const selection = pending();
+
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          stepperConfiguration: outboundConfig(),
+          initialContentSnapshot: captureMappingContentSnapshot(makeMapping({ direction: Direction.OUTBOUND }), {}, {}, undefined),
+          subscriptionSelection: selection
+        }));
+
+        expect(expectSaved(result).subscriptionFailed).toBeUndefined();
+        expect(mockSelectionService.apply).toHaveBeenCalledOnceWith(selection);
+        expect(order).toEqual(['mapping', 'subscription']);
+      });
+
+      it('writes nothing for an untouched selection', async () => {
+        await service.commitMapping(makeRequest({
+          stepperConfiguration: outboundConfig(),
+          subscriptionSelection: pending({ types: null })
+        }));
+        expect(mockSelectionService.apply).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the user chose to skip', async () => {
+        await service.commitMapping(makeRequest({
+          stepperConfiguration: outboundConfig(),
+          subscriptionSelection: pending({ mode: 'skip' })
+        }));
+        expect(mockSelectionService.apply).not.toHaveBeenCalled();
+      });
+
+      it('never writes for INBOUND', async () => {
+        await service.commitMapping(makeRequest({ subscriptionSelection: pending() }));
+        expect(mockSelectionService.apply).not.toHaveBeenCalled();
+      });
+
+      it('leaves no subscription behind when the mapping is rejected', async () => {
+        mockMappingService.saveDraft.and.rejectWith(new Error('boom'));
+        const mapping = makeMapping({ direction: Direction.OUTBOUND, name: 'changed' });
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          stepperConfiguration: outboundConfig(),
+          initialContentSnapshot: captureMappingContentSnapshot(makeMapping({ direction: Direction.OUTBOUND }), {}, {}, undefined),
+          subscriptionSelection: pending()
+        }));
+        expect(result.status).toBe('failed');
+        expect(mockSelectionService.apply).not.toHaveBeenCalled();
+      });
+
+      it('reports a failed subscription write without undoing the saved mapping', async () => {
+        mockSelectionService.apply.and.resolveTo({ applied: false, failed: true });
+        const result = await service.commitMapping(makeRequest({
+          stepperConfiguration: outboundConfig(),
+          subscriptionSelection: pending()
+        }));
+        expect(expectSaved(result).subscriptionFailed).toBe(true);
+      });
+    });
 
     describe('preconditions block before anything is written', () => {
       it('blocks on NO_CONNECTOR when the deployment selects none', async () => {

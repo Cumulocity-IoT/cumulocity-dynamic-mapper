@@ -54,6 +54,8 @@ import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryT
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
+import { StepLayout } from '../../shared/mapping/stepper.model';
+import { emptySelection, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
 import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { StepperViewModel } from './stepper-view.model';
@@ -95,7 +97,22 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   abstract codeEditor: EditorComponent;
   abstract currentStepIndex: number;
   /** Index of the transformation step/tab; anything before it counts as "before substitutions". */
-  protected abstract readonly substitutionStepIndex: number;
+  protected abstract get substitutionStepIndex(): number;
+
+  /** Where each section sits; outbound mappings have the extra Subscription section. */
+  get layout(): StepLayout {
+    return StepLayout.for(this.stepperConfiguration?.direction);
+  }
+
+  /**
+   * What the Subscription step collected, written when the mapping is saved. Held here rather
+   * than in the step: the unified editor destroys the step on every tab switch.
+   */
+  subscriptionSelection: OutboundSubscriptionSelection = emptySelection();
+
+  onSubscriptionSelectionChange(selection: OutboundSubscriptionSelection): void {
+    this.subscriptionSelection = selection;
+  }
 
   protected readonly cdr = inject(ChangeDetectorRef);
   protected readonly bsModalService = inject(BsModalService);

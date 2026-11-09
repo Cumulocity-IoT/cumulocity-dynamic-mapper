@@ -54,6 +54,10 @@ The wizard has five steps:
 4. **Transformation**: the Smart Function editor (or the JSONata substitutions, in Expert Mode), applied at runtime.
 5. **Test mapping**: run a Dry Run or Live Test, then save the mapping.
 
+**Outbound** mappings have one more step, **Subscription**, between **General settings** and **Select templates**
+(so six steps, and the unified editor has a **Subscription** tab at the same place). It decides which devices
+trigger the mapping. See [Defining a subscription for outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#in-the-mapping-editor).
+
 For **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because the
 payload is binary. To see a real binary message, use the
 [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer).

@@ -24,6 +24,7 @@ import { ConnectorConfiguration } from '../connector-configuration/connector.mod
 // `[Direction.INBOUND]` at module scope can see the enum as undefined when they load second, so
 // this file must stay a leaf: it imports nothing back from the modules split out of it.
 import type { MappingPersistence } from './stepper.model';
+import type { SubscriptionSuggestions } from '../../mapping/step-subscription/outbound-subscription-selection.model';
 
 /**
  * Field substitution configuration for transforming data between source and target formats during mapping execution.
@@ -309,11 +310,17 @@ export interface StepperConfiguration {
   allowTestTransformation?: boolean;
   allowTestSending?: boolean;
   direction?: Direction;
+  /** Section to advance from straight to the last one, in the base numbering (`STEP_*` in
+   *  stepper.model.ts, without the outbound-only Subscription section). Editors map it through
+   *  `StepLayout.fromBase`. */
   advanceFromStepToEndStep?: number;
   allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
   /** One-shot flag: auto-launch AI generation (Smart Function code or JSONata substitutions)
    *  once the transformation step is first reached. */
   triggerAIGenerationOnStart?: boolean;
+  /** Outbound only: type, groups and device of the Message Explorer message this mapping was
+   *  created from, offered as one-click choices in the Subscription step. */
+  subscriptionSuggestions?: SubscriptionSuggestions;
   /** Transport fields observed on the message this mapping was created from (e.g. a Kafka record
    *  key). Smart Functions and Java extensions receive these out-of-band via `msg.transportFields`
    *  rather than in the payload, so they cannot be conveyed through the source template — this

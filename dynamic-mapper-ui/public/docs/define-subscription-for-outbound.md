@@ -25,6 +25,32 @@ An outbound mapping is processed only if all of the following conditions apply:
 - If an inventory filter is defined for the mapping, e.g. `type = "pressure_sensor"`, it evaluates to `true`
 - If an execution filter for the mapping is defined, e.g. `temperature > 95`, it evaluates to `true`
 
+#### In the mapping editor {#in-the-mapping-editor}
+
+The **Subscription** step of the wizard, and the **Subscription** tab of the unified editor, let you define the
+subscription while you define the mapping. They appear for outbound mappings only, after **General settings**.
+
+| Option | What it does |
+|--------|--------------|
+| **Skip for now** | Changes no subscription. This is the default. Add one later on the **Subscription outbound** page. |
+| **Dynamic** | Subscribe by device type (**Manage subscriptions (by device type)**) or by device group (**Manage subscriptions (by device groups)**). |
+| **Static** | Subscribe specific devices (**Manage subscriptions (device selection)** or **Add subscriptions (device table)**). |
+
+The selection is written when you save the mapping, after the mapping itself was saved. Cancel the editor and
+nothing changes. The lists start from the current subscriptions, so you can also remove a type, group, or device. The
+removal is applied on save. If the saving of the subscription fails, the mapping stays saved, a warning explains
+the failure, and the unified editor stays open so you can save again.
+
+With **Dynamic**, the option **Also subscribe existing devices of these types** is off by default. A device type
+rule only subscribes devices that are created afterward. Select the option to also subscribe the devices of the
+added types that already exist. This rescans the inventory in the background and can take a while on large
+inventories.
+
+When you create a mapping from the [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer), the
+step offers the type, the groups, and the device of the selected message as one-click suggestions.
+
+#### On the Subscription outbound page
+
 **Mapping → Subscription outbound** has two tabs for defining subscriptions. Subscriptions are processed
 asynchronously, so refresh the list or check **Service Events** to see the result.
 

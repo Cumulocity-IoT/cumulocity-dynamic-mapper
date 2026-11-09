@@ -46,6 +46,66 @@ export const STEP_SELECT_TEMPLATES = 2;
 export const STEP_DEFINE_SUBSTITUTIONS = 3;
 export const STEP_TEST_MAPPING = 4;
 
+/**
+ * The editors' sections. The `STEP_*` constants above number the sections every mapping has and
+ * stay what `StepperConfiguration.advanceFromStepToEndStep` is expressed in. Outbound mappings
+ * have one more section, `subscription`, between general settings and templates, so the position
+ * a section has in the stepper or the tab bar comes from {@link StepLayout}, not from the constants.
+ */
+export type StepId = 'connector' | 'general' | 'subscription' | 'templates' | 'transformation' | 'testing';
+
+const BASE_STEP_ORDER: readonly StepId[] = ['connector', 'general', 'templates', 'transformation', 'testing'];
+
+/** Where each section sits for a direction. Inbound is the base order, outbound adds `subscription`. */
+export class StepLayout {
+  private static readonly cache = new Map<Direction, StepLayout>();
+
+  static for(direction: Direction | undefined): StepLayout {
+    const key = direction === Direction.OUTBOUND ? Direction.OUTBOUND : Direction.INBOUND;
+    let layout = StepLayout.cache.get(key);
+    if (!layout) {
+      layout = new StepLayout(key === Direction.OUTBOUND);
+      StepLayout.cache.set(key, layout);
+    }
+    return layout;
+  }
+
+  readonly steps: readonly StepId[];
+
+  private constructor(readonly hasSubscription: boolean) {
+    this.steps = hasSubscription
+      ? ['connector', 'general', 'subscription', 'templates', 'transformation', 'testing']
+      : BASE_STEP_ORDER;
+  }
+
+  /** Position of a section, or -1 when this direction has no such section. */
+  indexOf(id: StepId): number {
+    return this.steps.indexOf(id);
+  }
+
+  idAt(index: number): StepId | undefined {
+    return this.steps[index];
+  }
+
+  get connector(): number { return this.indexOf('connector'); }
+  get general(): number { return this.indexOf('general'); }
+  get subscription(): number { return this.indexOf('subscription'); }
+  get templates(): number { return this.indexOf('templates'); }
+  get transformation(): number { return this.indexOf('transformation'); }
+  get testing(): number { return this.indexOf('testing'); }
+
+  /**
+   * Position of a section given in the base numbering (`STEP_*`), which is what
+   * `advanceFromStepToEndStep` uses. Sections from templates onward move one place for outbound.
+   */
+  fromBase(baseStep: number): number;
+  fromBase(baseStep: number | undefined): number | undefined;
+  fromBase(baseStep: number | undefined): number | undefined {
+    if (baseStep == null) return undefined;
+    return this.indexOf(BASE_STEP_ORDER[baseStep]);
+  }
+}
+
 // The shape these providers consume, and the table itself — generated from the Smart Function
 // type definitions so the editor cannot describe an API the types do not have. Regenerate with
 // `npm run generate:editor-api` in dynamic-mapper-smart-function; CI fails on a stale file.

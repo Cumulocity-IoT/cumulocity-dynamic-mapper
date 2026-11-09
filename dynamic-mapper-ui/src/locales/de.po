@@ -13,6 +13,102 @@ msgstr ""
 msgid ", which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads."
 msgstr ""
 
+msgid "A device type rule only subscribes devices created afterward. Select this to also subscribe devices of the added types that already exist. This rescans the inventory in the background and can take a while on large inventories."
+msgstr ""
+
+msgid "Add a device type first."
+msgstr ""
+
+msgid "Add type"
+msgstr ""
+
+msgid "All devices in the selected group will be subscribed automatically."
+msgstr ""
+
+msgid "already subscribed"
+msgstr ""
+
+msgid "Also subscribe existing devices of these types"
+msgstr ""
+
+msgid "By device group"
+msgstr ""
+
+msgid "Continue without a subscription. Add one later from the Subscription outbound page."
+msgstr ""
+
+msgid "Continue without changing subscriptions. Add one later from the Subscription outbound page."
+msgstr ""
+
+msgid "Device groups"
+msgstr ""
+
+msgid "Devices are subscribed by device type or device group. Newly created devices of a chosen type, and devices added to a chosen group, are subscribed automatically."
+msgstr ""
+
+msgid "Dynamic"
+msgstr ""
+
+msgid "Failed to load subscriptions:"
+msgstr ""
+
+msgid "Newly created devices of this type will be subscribed automatically."
+msgstr ""
+
+msgid "No group detected for this device. A group must be available to use this option."
+msgstr ""
+
+msgid "No type detected for this device. A type must be available to use this option."
+msgstr ""
+
+msgid "Only this device is subscribed. Devices added later are not."
+msgstr ""
+
+msgid "Outbound mappings are disabled on this service. No subscription is needed."
+msgstr ""
+
+msgid "Outbound mappings require a device subscription so Cumulocity pushes events to the broker. Choose how devices are subscribed. The subscription is created when you save the mapping."
+msgstr ""
+
+msgid "Removed, applied on save"
+msgstr ""
+
+msgid "Specific devices are subscribed. Devices added to a group later are not subscribed."
+msgstr ""
+
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgstr ""
+
+msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices. To unsubscribe a device, use the device selection (tree) view instead."
+msgstr ""
+
+msgid "Static"
+msgstr ""
+
+msgid "Subscriptions are processed asynchronously. Verify the result on the Subscription outbound page or in the Service Events."
+msgstr ""
+
+msgid "The current subscriptions could not be loaded. Subscriptions cannot be changed here. Use the Subscription outbound page instead."
+msgstr ""
+
+msgid "The mapping was saved, but updating the subscriptions failed:"
+msgstr ""
+
+msgid "The subscriptions were changed elsewhere while this mapping was open. Your selection replaces them."
+msgstr ""
+
+msgid "more"
+msgstr ""
+
+msgid "not saved yet"
+msgstr ""
+
+msgid "removed"
+msgstr ""
+
+msgid "This device only"
+msgstr ""
+
 msgid "… {{count}} earlier entries omitted …"
 msgstr ""
 
@@ -223,9 +319,6 @@ msgstr ""
 msgid "alarm"
 msgstr ""
 
-msgid "All devices in the selected group will be subscribed automatically."
-msgstr ""
-
 msgid "All extensions"
 msgstr ""
 
@@ -320,9 +413,6 @@ msgid "Bulk/batch mapping configuration change notifications not tied to a singl
 msgstr ""
 
 msgid "By"
-msgstr ""
-
-msgid "By device group"
 msgstr ""
 
 msgid "By device or device group"
@@ -493,9 +583,6 @@ msgid "Console output"
 msgstr ""
 
 msgid "Console output copied to clipboard."
-msgstr ""
-
-msgid "Continue without a subscription. Add one later from the Subscription outbound page."
 msgstr ""
 
 msgid "Copied code template"
@@ -949,9 +1036,6 @@ msgid "Failed to create mapping {{name}}:"
 msgstr ""
 
 msgid "Failed to create new code template"
-msgstr ""
-
-msgid "Failed to create subscription:"
 msgstr ""
 
 msgid "Failed to deactivate mappings"
@@ -1710,9 +1794,6 @@ msgstr ""
 msgid "New code template"
 msgstr ""
 
-msgid "Newly created devices of this type will be subscribed automatically."
-msgstr ""
-
 msgid "Next match"
 msgstr ""
 
@@ -1734,9 +1815,6 @@ msgstr ""
 msgid "No console output for this test run"
 msgstr ""
 
-msgid "No device type available for this device."
-msgstr ""
-
 msgid "No device types configured."
 msgstr ""
 
@@ -1750,9 +1828,6 @@ msgid "No events available."
 msgstr ""
 
 msgid "No extension to display."
-msgstr ""
-
-msgid "No group detected for this device — group must be available to use this option."
 msgstr ""
 
 msgid "No Java extensions available — upload one first"
@@ -1801,9 +1876,6 @@ msgid "No test devices exist."
 msgstr ""
 
 msgid "No timing data yet. It appears once a mapping has processed a message."
-msgstr ""
-
-msgid "No type detected for this device — type must be available to use this option."
 msgstr ""
 
 msgid "No valid JavaScript code was generated."
@@ -1930,9 +2002,6 @@ msgstr ""
 msgid ""
 "Outbound mappings require a device subscription so Cumulocity pushes events to the broker.\n"
 "              Would you like to set one up now?"
-msgstr ""
-
-msgid "Outbound subscription"
 msgstr ""
 
 msgid "Overview"

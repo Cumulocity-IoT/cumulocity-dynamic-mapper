@@ -37,6 +37,10 @@
   <c8y-tab [icon]="'settings'" [label]="generalSettingsTabLabel() | translate" [priority]="40" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
+  @if (layout.hasSubscription && isTabVisible(TAB_SUBSCRIPTION)) {
+  <c8y-tab [icon]="'subscription'" [label]="'Subscription' | translate" [priority]="35" [tabsOutlet]="'unified-editor'"
+    [isActive]="currentStepIndex === TAB_SUBSCRIPTION" (onSelect)="onTabSelected(TAB_SUBSCRIPTION)" data-cy="dm-unified-editor-tab-subscription"></c8y-tab>
+  }
   @if (isTabVisible(TAB_SELECT_TEMPLATES)) {
   <c8y-tab [icon]="'document-body'" [label]="'Templates' | translate" [priority]="30" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_SELECT_TEMPLATES" (onSelect)="onTabSelected(TAB_SELECT_TEMPLATES)" data-cy="dm-unified-editor-tab-templates"></c8y-tab>
@@ -77,7 +81,14 @@
     </d11r-mapping-properties>
     }
 
-    <!-- Tab 2: Templates -->
+    <!-- Tab 2: Subscription (outbound only) -->
+    @if (layout.hasSubscription && currentStepIndex === TAB_SUBSCRIPTION && isTabVisible(TAB_SUBSCRIPTION)) {
+    <d11r-mapping-step-subscription dataCyPrefix="dm-unified-editor" [selection]="subscriptionSelection"
+      [suggestions]="stepperConfiguration.subscriptionSuggestions" [feature]="feature"
+      (selectionChange)="onSubscriptionSelectionChange($event)"></d11r-mapping-step-subscription>
+    }
+
+    <!-- Tab 3: Templates -->
     @if (currentStepIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
     @if (stepperViewModel) {
     <d11r-mapping-template-step #templateStep
