@@ -24,7 +24,7 @@ package dynamic.mapper.core;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -37,7 +37,6 @@ import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
 import dynamic.mapper.model.status.LoggingEventType;
-import dynamic.mapper.notification.NotificationSubscriber;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 
@@ -46,13 +45,15 @@ import org.springframework.core.annotation.Order;
 @Order(TenantScoped.ORDER_CACHES)
 public class CacheManager implements TenantScoped {
 
-    private final C8YAgent c8yAgent;
+    private final ApplicationEventPublisher eventPublisher;
 
-    private final NotificationSubscriber notificationSubscriber;
+    private void logEvent(String message, LoggingEventType type, org.joda.time.DateTime eventTime, String tenant,
+            Map<String, String> properties) {
+        eventPublisher.publishEvent(new LoggingEventRequest(message, type, eventTime, tenant, properties));
+    }
 
-    public CacheManager(@Lazy C8YAgent c8yAgent, NotificationSubscriber notificationSubscriber) {
-        this.c8yAgent = c8yAgent;
-        this.notificationSubscriber = notificationSubscriber;
+    public CacheManager(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
@@ -90,7 +91,8 @@ public class CacheManager implements TenantScoped {
         inventoryCache.setEvictionListener(evictedSourceId -> {
             ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
             moRep.setId(new GId(evictedSourceId));
-            notificationSubscriber.unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
+            eventPublisher.publishEvent(new InventoryCacheSubscriptionRequest(
+                    InventoryCacheSubscriptionRequest.Action.UNSUBSCRIBE, tenant, moRep));
         });
         inventoryCaches.put(tenant, inventoryCache);
     }
@@ -170,7 +172,7 @@ public class CacheManager implements TenantScoped {
             String message = String.format("InboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inboundExternalIdCacheSize);
 
-            c8yAgent.createLoggingEvent(
+            logEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
@@ -229,7 +231,7 @@ public class CacheManager implements TenantScoped {
             String message = String.format("OutboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, outboundExternalIdCacheSize);
 
-            c8yAgent.createLoggingEvent(
+            logEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
@@ -267,19 +269,21 @@ public class CacheManager implements TenantScoped {
             int previousSize = inventoryCache.getCacheSize();
 
             if (recreate) {
-                notificationSubscriber.unsubscribeAllMOForInventoryCacheUpdates(tenant);
+                eventPublisher.publishEvent(new InventoryCacheSubscriptionRequest(
+                        InventoryCacheSubscriptionRequest.Action.UNSUBSCRIBE_ALL, tenant, null));
                 // Recreate via the initializer: it closes the old gauge, swaps the entry in place
                 // (never absent) and reinstalls the eviction listener.
                 initializeInventoryCache(tenant, inventoryCacheSize);
             } else {
-                notificationSubscriber.unsubscribeAllMOForInventoryCacheUpdates(tenant);
+                eventPublisher.publishEvent(new InventoryCacheSubscriptionRequest(
+                        InventoryCacheSubscriptionRequest.Action.UNSUBSCRIBE_ALL, tenant, null));
                 inventoryCache.clearCache();
             }
 
             String message = String.format("InventoryCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inventoryCacheSize);
 
-            c8yAgent.createLoggingEvent(
+            logEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),

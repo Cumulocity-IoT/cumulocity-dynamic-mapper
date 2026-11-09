@@ -77,13 +77,14 @@ public class OutboundMessageDispatcher implements NotificationCallback {
      * Constructor matching DispatcherInbound signature
      */
     public OutboundMessageDispatcher(ServiceRegistry serviceRegistry,
-            AConnectorClient connectorClient) {
-        this.mappingService = serviceRegistry.getMappingService();
+            AConnectorClient connectorClient, OutboundMessageRouter outboundMessageRouter,
+            NotificationSubscriber notificationSubscriber) {
+        this.mappingService = connectorClient.getMappingService();
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         this.serviceRegistry = serviceRegistry;
-        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
-        this.outboundMessageRouter = serviceRegistry.getOutboundMessageRouter();
+        this.notificationSubscriber = notificationSubscriber;
+        this.outboundMessageRouter = outboundMessageRouter;
 
         String connectorNameTag = connectorClient.getConnectorName() != null
                 ? connectorClient.getConnectorName() : "unknown";

@@ -27,7 +27,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.device.Device;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
@@ -46,7 +45,7 @@ public class DeviceDiscoveryService {
 
     private final ServiceRegistry serviceRegistry;
 
-    public DeviceDiscoveryService(@Lazy ServiceRegistry serviceRegistry) {
+    public DeviceDiscoveryService(ServiceRegistry serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
     }
 

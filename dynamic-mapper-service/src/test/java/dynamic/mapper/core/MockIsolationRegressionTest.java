@@ -62,7 +62,6 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
-import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.core.mock.MockIdentity;
@@ -316,8 +315,8 @@ class MockIsolationRegressionTest {
         when(subscriptionsService.getTenant()).thenReturn(TEST_TENANT);
 
         // Real caches and real mocks; only the platform edges are faked.
-        NotificationSubscriber notificationSubscriber = mock(NotificationSubscriber.class);
-        CacheManager realCacheManager = new CacheManager(mock(C8YAgent.class), notificationSubscriber);
+        org.springframework.context.ApplicationEventPublisher eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        CacheManager realCacheManager = new CacheManager(eventPublisher);
         realCacheManager.initializeInboundExternalIdCache(TEST_TENANT, 100);
         realCacheManager.initializeOutboundExternalIdCache(TEST_TENANT, 100);
         realCacheManager.initializeInventoryCache(TEST_TENANT, 100);
@@ -351,7 +350,7 @@ class MockIsolationRegressionTest {
                 inv -> inventoryFacade.get(GId.asGId((String) inv.getArgument(1)), inv.getArgument(2),
                         inv.getArgument(3)));
         InventoryCacheEnrichmentService enrichment = new InventoryCacheEnrichmentService(
-                realCacheManager, tenantRegistry, notificationSubscriber);
+                realCacheManager, tenantRegistry, eventPublisher);
         IdentityResolutionService resolution = new IdentityResolutionService(agent, tenantRegistry,
                 new ObjectMapper());
 
@@ -378,7 +377,7 @@ class MockIsolationRegressionTest {
                 realCacheManager.getOutboundExternalIdCache(TEST_TENANT).getExternalIdForSource(outboundKey));
         assertSame(liveMO, realCacheManager.getInventoryCache(TEST_TENANT).getMOBySource(REAL_INTERNAL_ID));
         assertEquals(REAL_INTERNAL_ID, tenantRegistry.getCachedExternalId(cacheKey));
-        verifyNoInteractions(notificationSubscriber);
+        verifyNoInteractions(eventPublisher);
 
         // Control: the same question in production mode IS answered from the live cache,
         // proving the caches above really were warm.

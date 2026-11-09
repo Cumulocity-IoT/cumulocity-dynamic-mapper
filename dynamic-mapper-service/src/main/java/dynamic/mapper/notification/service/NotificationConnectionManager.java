@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification.service;
 
+import dynamic.mapper.notification.NotificationClientOperations;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -28,6 +29,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.notification.OutboundDispatcherRegistry;
+import dynamic.mapper.core.ConnectorStatusEventService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.notification.CacheInventoryUpdateClient;
@@ -39,7 +41,6 @@ import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
@@ -62,13 +63,18 @@ public class NotificationConnectionManager {
     private final OutboundDispatcherRegistry dispatcherRegistry;
     private final SubscriptionQueryService queryService;
     private final ServiceRegistry serviceRegistry;
+    // set by NotificationSubscriber after construction: it owns this manager, so constructor injection would be a cycle
+    private volatile NotificationClientOperations clientOperations;
+    private final ConnectorStatusEventService connectorStatusEventService;
 
     public NotificationConnectionManager(MicroserviceSubscriptionsService subscriptionsService,
                                           TokenManager tokenManager,
                                           MqttPushManager mqttPushManager,
                                           OutboundDispatcherRegistry dispatcherRegistry,
                                           SubscriptionQueryService queryService,
-                                          @Lazy ServiceRegistry serviceRegistry) {
+                                          ServiceRegistry serviceRegistry,
+                                          ConnectorStatusEventService connectorStatusEventService) {
+        this.connectorStatusEventService = connectorStatusEventService;
         this.subscriptionsService = subscriptionsService;
         this.tokenManager = tokenManager;
         this.mqttPushManager = mqttPushManager;
@@ -226,6 +232,11 @@ public class NotificationConnectionManager {
         }
     }
 
+    /** Registers the callbacks that the Management and cache-inventory clients use; see {@link NotificationClientOperations}. */
+    public void setClientOperations(NotificationClientOperations clientOperations) {
+        this.clientOperations = clientOperations;
+    }
+
     public void initializeManagementClient(String tenant) {
         CustomWebSocketClient existingManagement = managementClients.get(tenant);
         CustomWebSocketClient existingCache = cacheInventoryClients.get(tenant);
@@ -245,10 +256,10 @@ public class NotificationConnectionManager {
 
         try {
             NotificationCallback managementCallback = managementCallbacks.computeIfAbsent(tenant,
-                    k -> new ManagementSubscriptionClient(serviceRegistry, tenant));
+                    k -> new ManagementSubscriptionClient(serviceRegistry, clientOperations, tenant));
 
             NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
-                    k -> new CacheInventoryUpdateClient(serviceRegistry, tenant));
+                    k -> new CacheInventoryUpdateClient(clientOperations, serviceRegistry, tenant));
 
             List<NotificationSubscriptionRepresentation> managementSubs = queryService
                     .getNotificationSubscriptionForDeviceGroup(tenant, null, null)
@@ -419,7 +430,7 @@ public class NotificationConnectionManager {
 
         // Send notification
         try {
-            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
+            connectorStatusEventService.sendNotificationLifecycle(
                     tenant, ConnectorStatus.DISCONNECTED, null);
         } catch (Exception e) {
             log.warn("{} - Error sending disconnect notification: {}", tenant, e.getMessage());
@@ -875,7 +886,7 @@ public class NotificationConnectionManager {
         }
 
         try {
-            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
+            connectorStatusEventService.sendNotificationLifecycle(
                     tenant, ConnectorStatus.CONNECTING, null);
 
             // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
@@ -940,7 +951,7 @@ public class NotificationConnectionManager {
         } catch (Exception e) {
             log.error("{} - Error connecting WebSocket for connector {}: {}",
                     tenant, connectorId.getName(), e.getMessage(), e);
-            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
+            connectorStatusEventService.sendNotificationLifecycle(
                     tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             return null;
         }
@@ -1016,12 +1027,12 @@ public class NotificationConnectionManager {
                 reconnectDeviceClients(tenant);
                 reconnectManagementClients(tenant);
 
-                serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
+                connectorStatusEventService.sendNotificationLifecycle(
                         tenant, ConnectorStatus.CONNECTED, null);
 
             } catch (Exception e) {
                 log.error("{} - Error during reconnection: {}", tenant, e.getMessage(), e);
-                serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
+                connectorStatusEventService.sendNotificationLifecycle(
                         tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             }
         });

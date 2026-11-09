@@ -83,7 +83,6 @@ class UpdateSubscriptionDeviceGroupTaskTest {
     void setUp() {
         groupCacheManager = new GroupCacheManager(TENANT);
         lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
 
         // Default stub for subscribeDeviceAndConnect — returns a completed future
         lenient().when(notificationSubscriber.subscribeDeviceAndConnect(
@@ -264,7 +263,7 @@ class UpdateSubscriptionDeviceGroupTaskTest {
     // ------------------------------------------------------------------
 
     private UpdateSubscriptionDeviceGroupTask task(C8YMessage msg) {
-        return new UpdateSubscriptionDeviceGroupTask(serviceRegistry, msg, groupCacheManager);
+        return new UpdateSubscriptionDeviceGroupTask(serviceRegistry, notificationSubscriber, msg, groupCacheManager);
     }
 
     /** Builds a C8YMessage with a childAssets payload listing the given device IDs. */

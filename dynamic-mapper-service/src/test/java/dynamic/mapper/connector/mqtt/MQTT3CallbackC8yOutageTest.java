@@ -64,6 +64,9 @@ import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
  * from the platform. The broker is simulated by delivering the unacknowledged message again.
  */
 class MQTT3CallbackC8yOutageTest {
+    private final dynamic.mapper.core.ConnectorClientServices clientServices =
+            org.mockito.Mockito.mock(dynamic.mapper.core.ConnectorClientServices.class);
+
 
     private static final int LIMIT = 3;
     private static final String TENANT = "t1";
@@ -92,14 +95,14 @@ class MQTT3CallbackC8yOutageTest {
         ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
         when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(configuration);
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(sameThread);
-        when(serviceRegistry.getConnectorConfigurationService()).thenReturn(connectorConfigurationService);
+        when(clientServices.getConnectorConfigurationService()).thenReturn(connectorConfigurationService);
 
         GenericMessageCallback dispatcher = mock(GenericMessageCallback.class);
         when(dispatcher.onMessage(any())).thenAnswer(inv -> {
             pipelineRuns.incrementAndGet();
             return platformDown.get() ? platformAnswers502() : succeeded();
         });
-        callback = new MQTT3Callback(TENANT, serviceRegistry, dispatcher, "id", "name", "client", () -> {
+        callback = new MQTT3Callback(TENANT, serviceRegistry, clientServices.getConnectorConfigurationService(), dispatcher, "id", "name", "client", () -> {
         });
     }
 

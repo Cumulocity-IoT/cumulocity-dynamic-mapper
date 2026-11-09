@@ -61,9 +61,8 @@ class CacheInventoryUpdateClientTest {
 
         ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
         when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
 
-        client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
+        client = new CacheInventoryUpdateClient(notificationSubscriber, serviceRegistry, TENANT);
     }
 
     @Test

@@ -65,6 +65,9 @@ import dynamic.mapper.processor.util.ProcessingResultHelper;
  * not run a fourth time.</p>
  */
 class MQTT3CallbackMaxProcessingAttemptsIntegrationTest {
+    private final dynamic.mapper.core.ConnectorClientServices clientServices =
+            org.mockito.Mockito.mock(dynamic.mapper.core.ConnectorClientServices.class);
+
 
     private static final int MAX_PROCESSING_ATTEMPTS = 3;
     private static final String TENANT = "t1";
@@ -95,10 +98,10 @@ class MQTT3CallbackMaxProcessingAttemptsIntegrationTest {
         ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
         when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(configuration);
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(sameThread);
-        when(serviceRegistry.getConnectorConfigurationService()).thenReturn(connectorConfigurationService);
+        when(clientServices.getConnectorConfigurationService()).thenReturn(connectorConfigurationService);
 
         dispatcher = mock(GenericMessageCallback.class);
-        callback = new MQTT3Callback(TENANT, serviceRegistry, dispatcher, "id", "name", "client", () -> {
+        callback = new MQTT3Callback(TENANT, serviceRegistry, clientServices.getConnectorConfigurationService(), dispatcher, "id", "name", "client", () -> {
         });
     }
 

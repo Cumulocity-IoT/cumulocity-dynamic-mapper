@@ -76,6 +76,8 @@ class SubscriptionManagerTest {
     private ServiceRegistry serviceRegistry;
 
     private ExecutorService virtualThreadPool;
+    private final SubscriptionQueryService queryService = mock(SubscriptionQueryService.class);
+    private final DeviceDiscoveryService deviceDiscoveryService = mock(DeviceDiscoveryService.class);
     private SubscriptionManager subscriptionManager;
 
     @BeforeEach
@@ -97,7 +99,9 @@ class SubscriptionManagerTest {
                 connectionManager,
                 mqttPushManager,
                 virtualThreadPool,
-                serviceRegistry);
+                serviceRegistry,
+                queryService,
+                deviceDiscoveryService);
     }
 
     // -------------------------------------------------------------------------
@@ -740,21 +744,18 @@ class SubscriptionManagerTest {
         when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
         when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("new"));
 
-        dynamic.mapper.notification.NotificationSubscriber subscriber =
-                mock(dynamic.mapper.notification.NotificationSubscriber.class);
         C8YAgent agent = mock(C8YAgent.class);
-        when(serviceRegistry.getNotificationSubscriber()).thenReturn(subscriber);
         when(serviceRegistry.getC8yAgent()).thenReturn(agent);
 
         dynamic.mapper.model.device.Device group = new dynamic.mapper.model.device.Device();
         group.setId("g1");
         dynamic.mapper.model.device.Device covered = new dynamic.mapper.model.device.Device();
         covered.setId("covered");
-        when(subscriber.getSubscriptionsByDeviceGroup("t1")).thenReturn(
+        when(queryService.getSubscriptionsByDeviceGroup("t1")).thenReturn(
                 dynamic.mapper.notification.NotificationSubscriptionResponse.builder()
                         .devices(List.of(group)).build());
         when(agent.getManagedObjectForId("t1", "g1", false)).thenReturn(morWithId("g1"));
-        when(subscriber.findAllRelatedDevicesByMO(eq("t1"), any(), any(), eq(false)))
+        when(deviceDiscoveryService.findAllRelatedDevicesByMO(eq("t1"), any(), any(), eq(false)))
                 .thenReturn(List.of(covered));
         doAnswer(inv -> {
             Consumer<ManagedObjectRepresentation> c = inv.getArgument(3);

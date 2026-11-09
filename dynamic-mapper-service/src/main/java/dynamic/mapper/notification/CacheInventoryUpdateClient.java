@@ -48,12 +48,13 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
 
     private final String tenant;
     private final C8YAgent c8yAgent;
-    private final NotificationSubscriber notificationSubscriber;
+    private final NotificationClientOperations notificationSubscriber;
 
-    public CacheInventoryUpdateClient(ServiceRegistry serviceRegistry, String tenant) {
+    public CacheInventoryUpdateClient(NotificationClientOperations notificationSubscriber, ServiceRegistry serviceRegistry,
+            String tenant) {
         this.tenant = tenant;
         this.c8yAgent = serviceRegistry.getC8yAgent();
-        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
+        this.notificationSubscriber = notificationSubscriber;
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);
     }
 

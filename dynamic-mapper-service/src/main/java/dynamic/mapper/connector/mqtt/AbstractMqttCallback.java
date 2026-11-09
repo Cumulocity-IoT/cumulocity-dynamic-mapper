@@ -36,6 +36,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.callback.MessageFailureTracker;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
@@ -99,6 +100,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     protected AbstractMqttCallback(
             String tenant,
             ServiceRegistry serviceRegistry,
+            ConnectorConfigurationService connectorConfigurationService,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName,
@@ -114,8 +116,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
 
         boolean reconnect = true;
         try {
-            ConnectorConfiguration configuration = serviceRegistry
-                    .getConnectorConfigurationService()
+            ConnectorConfiguration configuration = connectorConfigurationService
                     .getConnectorConfiguration(connectorIdentifier, tenant);
             if (configuration != null && configuration.getProperties() != null) {
                 reconnect = (Boolean) configuration.getProperties()

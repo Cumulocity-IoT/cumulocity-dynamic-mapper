@@ -54,6 +54,8 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
+import dynamic.mapper.processor.inbound.InboundMessageRouter;
+import dynamic.mapper.processor.outbound.OutboundMessageRouter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -97,6 +99,9 @@ public class ConnectorLifecycleService {
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
     private final DeploymentMapService deploymentMapService;
+    private final NotificationSubscriber notificationSubscriber;
+    private final InboundMessageRouter inboundMessageRouter;
+    private final OutboundMessageRouter outboundMessageRouter;
     private final String additionalSubscriptionIdTest;
 
     public ConnectorLifecycleService(
@@ -106,6 +111,9 @@ public class ConnectorLifecycleService {
             ConnectorConfigurationService connectorConfigurationService,
             ServiceConfigurationService serviceConfigurationService,
             DeploymentMapService deploymentMapService,
+            NotificationSubscriber notificationSubscriber,
+            InboundMessageRouter inboundMessageRouter,
+            OutboundMessageRouter outboundMessageRouter,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest) {
         this.connectorRegistry = connectorRegistry;
         this.connectorClientFactory = connectorClientFactory;
@@ -113,6 +121,9 @@ public class ConnectorLifecycleService {
         this.connectorConfigurationService = connectorConfigurationService;
         this.serviceConfigurationService = serviceConfigurationService;
         this.deploymentMapService = deploymentMapService;
+        this.notificationSubscriber = notificationSubscriber;
+        this.inboundMessageRouter = inboundMessageRouter;
+        this.outboundMessageRouter = outboundMessageRouter;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
     }
 
@@ -126,7 +137,7 @@ public class ConnectorLifecycleService {
     public void cleanupStaleConnectorReferences(String tenant) {
         List<ConnectorConfiguration> allConnectorConfigs = connectorConfigurationService
                 .getConnectorConfigurations(tenant);
-        serviceRegistry.getNotificationSubscriber()
+        notificationSubscriber
                 .cleanupOrphanedSubscribers(tenant, allConnectorConfigs, additionalSubscriptionIdTest);
 
         Set<String> validConnectorIds = allConnectorConfigs.stream()
@@ -268,7 +279,7 @@ public class ConnectorLifecycleService {
             }
             connectorRegistry.registerClient(tenant, connectorClient);
             GenericMessageCallback dispatcherInbound = new InboundMessageDispatcher(serviceRegistry,
-                    connectorClient);
+                    connectorClient, inboundMessageRouter);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
             // needed
@@ -293,8 +304,8 @@ public class ConnectorLifecycleService {
         if (serviceConfiguration.getOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             OutboundMessageDispatcher dispatcherOutbound = new OutboundMessageDispatcher(serviceRegistry,
-                    connectorClient);
-            serviceRegistry.getNotificationSubscriber().addConnector(tenant,
+                    connectorClient, outboundMessageRouter, notificationSubscriber);
+            notificationSubscriber.addConnector(tenant,
                     connectorClient.getConnectorIdentifier(), dispatcherOutbound);
         }
     }
@@ -457,7 +468,7 @@ public class ConnectorLifecycleService {
             // Reconnect outbound notification subscriptions after the connector is ready
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
             if (client != null && client.supportedDirections().contains(Direction.OUTBOUND)) {
-                serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+                notificationSubscriber.notificationSubscriberReconnect(tenant);
             }
         } catch (ConnectorOperationException e) {
             throw e;
@@ -493,7 +504,7 @@ public class ConnectorLifecycleService {
             connectorConfigurationService.saveConnectorConfiguration(configuration);
             disableConnector(tenant, client.getConnectorIdentifier());
             // Reconnect other notification clients for remaining connectors
-            boolean reconnected = serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            boolean reconnected = notificationSubscriber.notificationSubscriberReconnect(tenant);
             if (!reconnected) {
                 // Connector is disconnected and marked disabled locally, but reconnecting the
                 // remaining notification subscriptions against Cumulocity failed (e.g. backend
@@ -615,9 +626,9 @@ public class ConnectorLifecycleService {
     public void shutdownAndRemoveConnector(String tenant, String connectorIdentifier)
             throws ConnectorRegistryException {
         if (isOutboundMappingEnabled(tenant)) {
-            serviceRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
+            notificationSubscriber.unsubscribeDeviceSubscriberByConnector(tenant,
                     connectorIdentifier);
-            serviceRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
+            notificationSubscriber.removeConnector(tenant, connectorIdentifier);
         }
     }
 
@@ -625,7 +636,7 @@ public class ConnectorLifecycleService {
     public void disableConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, connectorIdentifier);
         if (isOutboundMappingEnabled(tenant)) {
-            serviceRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
+            notificationSubscriber.removeConnector(tenant, connectorIdentifier);
         }
     }
 
@@ -658,7 +669,7 @@ public class ConnectorLifecycleService {
 
     private void applyOutboundMappingChange(String tenant, ServiceConfiguration previous,
             ServiceConfiguration updated) throws ConnectorRegistryException, ConnectorException {
-        NotificationSubscriber notifications = serviceRegistry.getNotificationSubscriber();
+        NotificationSubscriber notifications = notificationSubscriber;
         Integer status = notifications.getDeviceConnectionStatus(tenant);
         boolean connected = status != null && status == 200;
 
@@ -688,11 +699,11 @@ public class ConnectorLifecycleService {
             return;
         }
 
-        if (!serviceRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
+        if (!notificationSubscriber.isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-            serviceRegistry.getNotificationSubscriber().startTokenRefresh(tenant);
+            notificationSubscriber.notificationSubscriberReconnect(tenant);
+            notificationSubscriber.startTokenRefresh(tenant);
         }
     }
 

@@ -70,12 +70,13 @@ class ConnectorLifecycleServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(serviceRegistry.getNotificationSubscriber()).thenReturn(notifications);
         ServiceConfiguration config = new ServiceConfiguration();
         config.setOutboundMappingEnabled(true);
         when(serviceConfigs.getServiceConfiguration(TENANT)).thenReturn(config);
         service = new ConnectorLifecycleService(registry, mock(ConnectorClientFactory.class), serviceRegistry,
-                connectorConfigs, serviceConfigs, deploymentMapService, "");
+                connectorConfigs, serviceConfigs, deploymentMapService, notifications,
+                mock(dynamic.mapper.processor.inbound.InboundMessageRouter.class),
+                mock(dynamic.mapper.processor.outbound.OutboundMessageRouter.class), "");
     }
 
     private ConnectorConfiguration config(ConnectorType type, boolean enabled) {

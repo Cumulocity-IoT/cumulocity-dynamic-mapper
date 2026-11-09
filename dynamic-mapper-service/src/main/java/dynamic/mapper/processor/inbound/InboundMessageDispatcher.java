@@ -71,12 +71,12 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
      * Constructor matching DispatcherInbound signature
      */
     public InboundMessageDispatcher(ServiceRegistry serviceRegistry,
-            AConnectorClient connectorClient) {
+            AConnectorClient connectorClient, InboundMessageRouter inboundMessageRouter) {
         this.connectorClient = connectorClient;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
-        this.mappingService = serviceRegistry.getMappingService();
+        this.mappingService = connectorClient.getMappingService();
         this.serviceRegistry = serviceRegistry;
-        this.inboundMessageRouter = serviceRegistry.getInboundMessageRouter();
+        this.inboundMessageRouter = inboundMessageRouter;
 
         String connectorNameTag = connectorClient.getConnectorName() != null
                 ? connectorClient.getConnectorName() : "unknown";

@@ -58,10 +58,9 @@ class NotificationSubscriptionServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(serviceRegistry.getNotificationSubscriber()).thenReturn(subscriber);
         lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         lenient().when(subscriber.getSubscriptionsByDeviceType("t1")).thenReturn(typeResponse());
-        service = new NotificationSubscriptionService(c8yAgent, serviceRegistry);
+        service = new NotificationSubscriptionService(c8yAgent, serviceRegistry, subscriber);
     }
 
     // ---- group move ordering ------------------------------------------------------------

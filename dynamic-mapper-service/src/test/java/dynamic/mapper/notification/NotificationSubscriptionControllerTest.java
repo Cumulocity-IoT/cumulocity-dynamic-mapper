@@ -65,7 +65,7 @@ class NotificationSubscriptionControllerTest {
         ServiceConfiguration config = mock(ServiceConfiguration.class);
         when(config.getOutboundMappingEnabled()).thenReturn(true);
         when(serviceConfigurationService.getServiceConfiguration("t1")).thenReturn(config);
-        controller = new NotificationSubscriptionController(c8yAgent, contextService, serviceRegistry,
+        controller = new NotificationSubscriptionController(c8yAgent, contextService, serviceRegistry, org.mockito.Mockito.mock(dynamic.mapper.notification.NotificationSubscriber.class),
                 serviceConfigurationService, subscriptionService);
     }
 

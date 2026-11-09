@@ -121,10 +121,8 @@ class OutboundPipelineIntegrationTest {
 
         // Setup ServiceRegistry mocks
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(connectorClient.getMappingService()).thenReturn(mappingService);
         when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
-        when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
-        when(serviceRegistry.getOutboundMessageRouter()).thenReturn(outboundMessageRouter);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -138,7 +136,7 @@ class OutboundPipelineIntegrationTest {
         when(connectorClient.isConnected()).thenReturn(true);
 
         // Create dispatcher
-        dispatcher = new OutboundMessageDispatcher(serviceRegistry, connectorClient);
+        dispatcher = new OutboundMessageDispatcher(serviceRegistry, connectorClient, outboundMessageRouter, notificationSubscriber);
 
         log.info("Outbound dispatcher pipeline test setup completed");
     }

@@ -55,12 +55,15 @@ import org.springframework.stereotype.Component;
 public class ConnectorClientFactory {
 
     private final ServiceRegistry serviceRegistry;
+    private final ConnectorClientServices services;
     private final ConnectorRegistry connectorRegistry;
 
     @Value("${C8Y_BASEURL_PULSAR:}")
     private String mqttServicePulsarUrl;
 
-    public ConnectorClientFactory(ServiceRegistry serviceRegistry, ConnectorRegistry connectorRegistry) {
+    public ConnectorClientFactory(ServiceRegistry serviceRegistry, ConnectorClientServices services,
+            ConnectorRegistry connectorRegistry) {
+        this.services = services;
         this.serviceRegistry = serviceRegistry;
         this.connectorRegistry = connectorRegistry;
     }
@@ -83,10 +86,10 @@ public class ConnectorClientFactory {
                 String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
                         AConnectorClient.MQTT_VERSION_3_1_1));
                 if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
-                    connectorClient = new MQTT3Client(serviceRegistry, connectorRegistry,
+                    connectorClient = new MQTT3Client(serviceRegistry, services, connectorRegistry,
                             connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 } else {
-                    connectorClient = new MQTT5Client(serviceRegistry, connectorRegistry,
+                    connectorClient = new MQTT5Client(serviceRegistry, services, connectorRegistry,
                             connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 }
                 log.info("{} - MQTT Connector {} created, identifier: {}", tenant, version,
@@ -99,35 +102,35 @@ public class ConnectorClientFactory {
                 break;
 
             case KAFKA:
-                connectorClient = new KafkaClientV2(serviceRegistry, connectorRegistry,
+                connectorClient = new KafkaClientV2(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case HTTP:
-                connectorClient = new HttpClient(serviceRegistry, connectorRegistry,
+                connectorClient = new HttpClient(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - HTTP Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case WEB_HOOK:
-                connectorClient = new WebHook(serviceRegistry, connectorRegistry,
+                connectorClient = new WebHook(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - WebHook Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case WEB_HOOK_INTERNAL:
-                connectorClient = new WebHookInternal(serviceRegistry, connectorRegistry,
+                connectorClient = new WebHookInternal(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - WebHook Internal Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case PULSAR:
-                connectorClient = new PulsarConnectorClient(serviceRegistry, connectorRegistry,
+                connectorClient = new PulsarConnectorClient(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - Pulsar Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
@@ -135,7 +138,7 @@ public class ConnectorClientFactory {
 
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
                 if (isPulsarAvailable(tenant)) {
-                    connectorClient = new MQTTServicePulsarClient(serviceRegistry, connectorRegistry,
+                    connectorClient = new MQTTServicePulsarClient(serviceRegistry, services, connectorRegistry,
                             connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                     log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
                             connectorConfiguration.getIdentifier());
@@ -143,35 +146,35 @@ public class ConnectorClientFactory {
                 break;
 
             case AMQP_091:
-                connectorClient = new AMQPClient(serviceRegistry, connectorRegistry,
+                connectorClient = new AMQPClient(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - AMQP Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case AMQP_10:
-                connectorClient = new AMQP10Client(serviceRegistry, connectorRegistry,
+                connectorClient = new AMQP10Client(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - AMQP 1.0 Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case TEST:
-                connectorClient = new TestClient(serviceRegistry, connectorRegistry,
+                connectorClient = new TestClient(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - TestClient Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case GOOGLE_PUBSUB:
-                connectorClient = new GooglePubSubClient(serviceRegistry, connectorRegistry,
+                connectorClient = new GooglePubSubClient(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - Google Pub/Sub Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case REST_POLLING:
-                connectorClient = new HttpPollingConnector(serviceRegistry, connectorRegistry,
+                connectorClient = new HttpPollingConnector(serviceRegistry, services, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - REST Polling Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());

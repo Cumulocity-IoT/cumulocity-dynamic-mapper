@@ -36,7 +36,6 @@ import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -56,13 +55,19 @@ public class SubscriptionManager {
     private final MqttPushManager mqttPushManager;
     private final ExecutorService virtualThreadPool;
     private final ServiceRegistry serviceRegistry;
+    private final SubscriptionQueryService queryService;
+    private final DeviceDiscoveryService deviceDiscoveryService;
 
     public SubscriptionManager(NotificationSubscriptionApi subscriptionAPI,
                                 MicroserviceSubscriptionsService subscriptionsService,
                                 NotificationConnectionManager connectionManager,
                                 MqttPushManager mqttPushManager,
                                 @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
-                                @Lazy ServiceRegistry serviceRegistry) {
+                                ServiceRegistry serviceRegistry,
+                                SubscriptionQueryService queryService,
+                                DeviceDiscoveryService deviceDiscoveryService) {
+        this.queryService = queryService;
+        this.deviceDiscoveryService = deviceDiscoveryService;
         this.subscriptionAPI = subscriptionAPI;
         this.subscriptionsService = subscriptionsService;
         this.connectionManager = connectionManager;
@@ -733,16 +738,15 @@ public class SubscriptionManager {
     private void pruneDevicesOfRemovedTypes(String tenant, Set<String> removedTypes) {
         virtualThreadPool.submit(() -> {
             try {
-                var subscriber = serviceRegistry.getNotificationSubscriber();
                 Set<String> groupCovered = new HashSet<>();
-                List<dynamic.mapper.model.device.Device> groups = subscriber
+                List<dynamic.mapper.model.device.Device> groups = queryService
                         .getSubscriptionsByDeviceGroup(tenant).getDevices();
                 for (dynamic.mapper.model.device.Device group : groups == null
                         ? List.<dynamic.mapper.model.device.Device>of() : groups) {
                     ManagedObjectRepresentation groupMor = serviceRegistry.getC8yAgent()
                             .getManagedObjectForId(tenant, group.getId(), false);
                     if (groupMor != null) {
-                        subscriber.findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false)
+                        deviceDiscoveryService.findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false)
                                 .forEach(d -> groupCovered.add(d.getId()));
                     }
                 }

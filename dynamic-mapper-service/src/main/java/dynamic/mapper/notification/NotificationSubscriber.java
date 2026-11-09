@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification;
 
+import dynamic.mapper.core.InventoryCacheSubscriptionRequest;
 import dynamic.mapper.core.TenantScoped;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
@@ -33,8 +34,10 @@ import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.Set;
@@ -50,7 +53,7 @@ import org.springframework.core.annotation.Order;
 @Component
 @RequiredArgsConstructor
 @Order(TenantScoped.ORDER_NOTIFICATIONS)
-public class NotificationSubscriber implements TenantScoped {
+public class NotificationSubscriber implements TenantScoped, NotificationClientOperations {
 
     private final SubscriptionManager subscriptionManager;
     private final NotificationConnectionManager connectionManager;
@@ -62,6 +65,15 @@ public class NotificationSubscriber implements TenantScoped {
 
     @Getter
     private final SubscriptionQueryService queryService;
+
+    /**
+     * Hands this bean to the connection manager, which creates the WebSocket clients that call back into it.
+     * Done here, not through constructor injection, because that would be a dependency cycle.
+     */
+    @PostConstruct
+    void registerWithConnectionManager() {
+        connectionManager.setClientOperations(this);
+    }
 
     // === Lifecycle Methods ===
 
@@ -147,6 +159,16 @@ public class NotificationSubscriber implements TenantScoped {
     public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
             String tenant, ManagedObjectRepresentation mor) {
         return subscriptionManager.subscribeByDeviceGroup(tenant, mor);
+    }
+
+    /** Carries out the inventory-cache subscription changes that {@code CacheManager} and the enrichment service request. */
+    @EventListener
+    public void onInventoryCacheSubscriptionRequest(InventoryCacheSubscriptionRequest request) {
+        switch (request.action()) {
+            case SUBSCRIBE -> subscribeMOForInventoryCacheUpdates(request.tenant(), request.mor());
+            case UNSUBSCRIBE -> unsubscribeMOForInventoryCacheUpdates(request.tenant(), request.mor());
+            case UNSUBSCRIBE_ALL -> unsubscribeAllMOForInventoryCacheUpdates(request.tenant());
+        }
     }
 
     public Future<NotificationSubscriptionRepresentation> subscribeMOForInventoryCacheUpdates(

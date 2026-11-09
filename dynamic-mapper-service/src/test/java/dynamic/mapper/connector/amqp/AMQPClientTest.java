@@ -64,6 +64,9 @@ import lombok.extern.slf4j.Slf4j;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AMQPClientTest {
+    private final dynamic.mapper.core.ConnectorClientServices clientServices =
+            org.mockito.Mockito.mock(dynamic.mapper.core.ConnectorClientServices.class);
+
 
     @Mock
     private ServiceRegistry serviceRegistry;
@@ -103,9 +106,9 @@ class AMQPClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry
-        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
-        when(serviceRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        when(serviceRegistry.getConnectorConfigurationService())
+        when(clientServices.getMappingService()).thenReturn(mappingService);
+        when(clientServices.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        when(clientServices.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
         when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         when(serviceRegistry.getVirtualThreadPool())
@@ -218,7 +221,7 @@ class AMQPClientTest {
     void testFullConstructor() {
         // When
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -239,7 +242,7 @@ class AMQPClientTest {
     void testInitializeSuccess() {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -268,7 +271,7 @@ class AMQPClientTest {
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -324,7 +327,7 @@ class AMQPClientTest {
                 eq(TEST_CONNECTOR_NAME))).thenReturn(mockCert);
 
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -352,7 +355,7 @@ class AMQPClientTest {
     void testSupportsWildcardInTopic() {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -387,7 +390,7 @@ class AMQPClientTest {
     void testIsConfigValidWithValidConfig() {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -431,7 +434,7 @@ class AMQPClientTest {
         when(invalidConfig.getProperties()).thenReturn(properties);
 
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -451,7 +454,7 @@ class AMQPClientTest {
     void testPublishMEAO() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -483,7 +486,7 @@ class AMQPClientTest {
     void testPublishMEAOWhenNotConnected() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -552,7 +555,7 @@ class AMQPClientTest {
     void testDisconnect() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -591,7 +594,7 @@ class AMQPClientTest {
     void testGetters() {
         // Given
         amqpClient = new AMQPClient(
-                serviceRegistry,
+                serviceRegistry, clientServices,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,

@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -35,12 +34,6 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
-import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.outbound.OutboundMessageRouter;
-import dynamic.mapper.processor.inbound.InboundMessageRouter;
-import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.configuration.ServiceConfigurationService;
-import dynamic.mapper.mapping.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -48,7 +41,7 @@ import org.springframework.core.annotation.Order;
 @Slf4j
 @Component
 @Order(TenantScoped.ORDER_REGISTRY)
-public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
+public class ServiceRegistry implements TenantScoped {
 
     @Getter
     private final TenantRegistry tenantRegistry;
@@ -59,9 +52,6 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     @Getter
     private final C8YAgent c8yAgent;
-
-    @Getter
-    private final ConnectorStatusEventService connectorStatusEventService;
 
     @Getter
     private final CacheManager cacheManager;
@@ -78,70 +68,28 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
     private final ConnectorRegistry connectorRegistry;
 
     @Getter
-    private final NotificationSubscriber notificationSubscriber;
-
-    @Getter
     private final ObjectMapper objectMapper;
 
     @Getter
-    private final MappingService mappingService;
-
-    @Getter
-    private final ConnectorConfigurationService connectorConfigurationService;
-
-    @Getter
-    private final ServiceConfigurationService serviceConfigurationService;
-
-    @Getter
     private final ExecutorService virtualThreadPool;
-
-    // @Lazy breaks the ServiceRegistry <-> router circular dependency: InboundMessageRouter
-    // and OutboundMessageRouter are constructed with every processor bean as a constructor
-    // argument, and those processors depend (via CommonProcessor's @Autowired field) back on
-    // ServiceRegistry. Injecting lazy proxies lets ServiceRegistry be constructed without
-    // forcing eager router/processor-graph creation; the real beans are resolved on first
-    // use (when connector dispatchers are built at runtime). Without this the cycle surfaces
-    // under lazy bean initialization (e.g. the test profile). This mirrors the former @Lazy
-    // CamelContext field, which existed for the same reason before the Camel removal.
-    @Getter
-    @Lazy
-    private final InboundMessageRouter inboundMessageRouter;
-
-    @Getter
-    @Lazy
-    private final OutboundMessageRouter outboundMessageRouter;
 
     public ServiceRegistry(
             TenantRegistry tenantRegistry,
             DeviceToClientRegistry deviceToClientRegistry,
             GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
-            NotificationSubscriber notificationSubscriber,
             ObjectMapper objectMapper,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
-            @Lazy InboundMessageRouter inboundMessageRouter,
-            @Lazy OutboundMessageRouter outboundMessageRouter,
-            @Lazy C8YAgent c8yAgent,
-            @Lazy ConnectorStatusEventService connectorStatusEventService,
-            CacheManager cacheManager,
-            @Lazy MappingService mappingService,
-            @Lazy ConnectorConfigurationService connectorConfigurationService,
-            @Lazy ServiceConfigurationService serviceConfigurationService) {
+            C8YAgent c8yAgent,
+            CacheManager cacheManager) {
         this.tenantRegistry = tenantRegistry;
         this.deviceToClientRegistry = deviceToClientRegistry;
         this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
-        this.notificationSubscriber = notificationSubscriber;
         this.objectMapper = objectMapper;
         this.virtualThreadPool = virtualThreadPool;
-        this.inboundMessageRouter = inboundMessageRouter;
-        this.outboundMessageRouter = outboundMessageRouter;
         this.c8yAgent = c8yAgent;
-        this.connectorStatusEventService = connectorStatusEventService;
         this.cacheManager = cacheManager;
-        this.mappingService = mappingService;
-        this.connectorConfigurationService = connectorConfigurationService;
-        this.serviceConfigurationService = serviceConfigurationService;
     }
 
     public boolean isPulsarAvailable(String tenant) {

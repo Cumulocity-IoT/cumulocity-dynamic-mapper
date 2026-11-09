@@ -21,6 +21,7 @@
 
 package dynamic.mapper.controller;
 
+import dynamic.mapper.notification.NotificationSubscriber;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Map;
@@ -93,6 +94,7 @@ public class OperationController {
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
+    private final NotificationSubscriber notificationSubscriber;
     private final DeviceToClientRegistry deviceToClientRegistry;
     private final CacheManager cacheManager;
     private final DeploymentMapService deploymentMapService;
@@ -431,7 +433,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
-        serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        notificationSubscriber.notificationSubscriberReconnect(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

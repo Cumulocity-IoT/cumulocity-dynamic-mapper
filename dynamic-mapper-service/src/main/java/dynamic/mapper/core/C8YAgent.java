@@ -34,6 +34,7 @@ import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
@@ -334,6 +335,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             });
         });
         return alarmRepresentation;
+    }
+
+    /** Writes the events other beans publish instead of calling this agent, which would close a dependency cycle. */
+    @EventListener
+    public void onLoggingEventRequest(LoggingEventRequest request) {
+        createLoggingEvent(request.message(), request.type(), request.eventTime(), request.tenant(),
+                request.properties());
     }
 
     public void createLoggingEvent(String message, LoggingEventType loggingType, DateTime eventTime,

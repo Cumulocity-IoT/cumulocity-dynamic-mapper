@@ -110,7 +110,7 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, mappingOrchestrationService, connectorConfigurationService,
-                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry, deviceToClientRegistry,
+                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry, org.mockito.Mockito.mock(dynamic.mapper.notification.NotificationSubscriber.class), deviceToClientRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 

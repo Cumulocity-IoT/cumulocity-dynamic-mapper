@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification.task;
 
+import dynamic.mapper.notification.NotificationClientOperations;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
@@ -44,12 +45,15 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
 
     private final C8YMessage c8yMessage;
     private final ServiceRegistry serviceRegistry;
+    private final NotificationClientOperations notificationSubscriber;
 
     public UpdateSubscriptionDeviceTypeTask(
             ServiceRegistry serviceRegistry,
+            NotificationClientOperations notificationSubscriber,
             C8YMessage c8yMessage) {
         this.c8yMessage = c8yMessage;
         this.serviceRegistry = serviceRegistry;
+        this.notificationSubscriber = notificationSubscriber;
     }
 
     @Override
@@ -82,8 +86,7 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
                     deviceId, deviceName, typeInfo);
 
             // Subscribe the device with API.ALL to receive all notifications for this device
-            Future<NotificationSubscriptionRepresentation> future = serviceRegistry
-                    .getNotificationSubscriber()
+            Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
                     .subscribeDeviceAndConnect(tenant, newMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
             // Pre-populate inventory cache for this device to ensure inventory filters work correctly

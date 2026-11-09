@@ -74,7 +74,6 @@ class NotificationCallbackTest {
         // CacheInventoryUpdateClient constructor reads the C8YAgent and the
         // notification subscriber. lenient() avoids UnnecessaryStubbingException
         // for the stubs not exercised by a given test's target client.
-        lenient().when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
         lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
         lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
@@ -85,7 +84,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_statusCode401_triggersRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, notificationSubscriber, TENANT);
 
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
@@ -95,7 +94,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, notificationSubscriber, TENANT);
 
         // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
         client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
@@ -105,7 +104,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, notificationSubscriber, TENANT);
 
         // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");
@@ -116,7 +115,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_normal_doesNotTriggerRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, notificationSubscriber, TENANT);
 
         client.onClose(1000, "Normal closure");
 
@@ -130,7 +129,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_statusCode401_triggersRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(notificationSubscriber, serviceRegistry, TENANT);
 
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
@@ -140,7 +139,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(notificationSubscriber, serviceRegistry, TENANT);
 
         // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
         client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
@@ -150,7 +149,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(notificationSubscriber, serviceRegistry, TENANT);
 
         // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");

@@ -124,7 +124,10 @@ class NotificationConnectionManagerTest {
                 mqttPushManager,
                 dispatcherRegistry,
                 queryService,
-                serviceRegistry);
+                serviceRegistry,
+                org.mockito.Mockito.mock(dynamic.mapper.core.ConnectorStatusEventService.class));
+        manager.setClientOperations(
+                org.mockito.Mockito.mock(dynamic.mapper.notification.NotificationClientOperations.class));
     }
 
     @AfterEach

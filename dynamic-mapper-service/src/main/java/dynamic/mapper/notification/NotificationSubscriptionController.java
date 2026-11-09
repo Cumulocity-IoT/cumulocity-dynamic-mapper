@@ -62,6 +62,7 @@ public class NotificationSubscriptionController {
     private final C8YAgent c8yAgent;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
+    private final NotificationSubscriber notificationSubscriber;
     private final ServiceConfigurationService serviceConfigurationService;
     private final NotificationSubscriptionService subscriptionService;
 
@@ -148,9 +149,9 @@ public class NotificationSubscriptionController {
             // returned (backward compatible) — required by consumers that need the complete set
             // (e.g. the "manage subscriptions" drawers, which re-commit the full desired set).
             NotificationSubscriptionResponse response = (pageSize == null)
-                    ? serviceRegistry.getNotificationSubscriber()
+                    ? notificationSubscriber
                             .getSubscriptionsDevices(tenant, null, subscription)
-                    : serviceRegistry.getNotificationSubscriber()
+                    : notificationSubscriber
                             .getSubscriptionsDevices(tenant, null, subscription,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search);
             return ResponseEntity.ok(response);
@@ -173,7 +174,7 @@ public class NotificationSubscriptionController {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
 
-            serviceRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
+            notificationSubscriber.unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             log.info("{} - Successfully deleted subscription for device {}", tenant, deviceId);
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {
@@ -218,9 +219,9 @@ public class NotificationSubscriptionController {
             // Paging is opt-in (see getSubscriptions). The group list currently feeds the manage
             // drawers/enrichment, which need the full set, so the UI calls this without paging.
             NotificationSubscriptionResponse response = (pageSize == null)
-                    ? serviceRegistry.getNotificationSubscriber()
+                    ? notificationSubscriber
                             .getSubscriptionsByDeviceGroup(tenant)
-                    : serviceRegistry.getNotificationSubscriber()
+                    : notificationSubscriber
                             .getSubscriptionsByDeviceGroup(tenant,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
             return ResponseEntity.ok(response);
@@ -261,7 +262,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            NotificationSubscriptionResponse response = serviceRegistry.getNotificationSubscriber()
+            NotificationSubscriptionResponse response = notificationSubscriber
                     .getSubscriptionsByDeviceType(tenant);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -283,10 +284,9 @@ public class NotificationSubscriptionController {
             // Ensure management WebSocket is up — it drives type-based device discovery.
             // Device WebSocket clients are not needed here (type subscription only changes the C8Y filter).
             log.info("{} - Ensuring management client is initialized for type subscription", tenant);
-            serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            notificationSubscriber.initializeManagementClient(tenant);
 
-            NotificationSubscriptionResponse response = serviceRegistry
-                    .getNotificationSubscriber().updateSubscriptionByType(tenant, request.getTypes());
+            NotificationSubscriptionResponse response = notificationSubscriber.updateSubscriptionByType(tenant, request.getTypes());
             log.info("{} - Successfully updated type subscription", tenant);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -332,7 +332,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            serviceRegistry.getNotificationSubscriber().resyncTypeSubscription(tenant, type);
+            notificationSubscriber.resyncTypeSubscription(tenant, type);
             log.info("{} - Resync accepted for type {}", tenant, type);
             return ResponseEntity.status(HttpStatus.ACCEPTED).build();
         } catch (IllegalArgumentException e) {

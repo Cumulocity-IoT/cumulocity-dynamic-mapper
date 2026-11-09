@@ -104,7 +104,7 @@ class TenantRemovalImplementationsTest {
 
     @Test
     void cacheManagerRemovesAllThreeCaches() {
-        CacheManager cacheManager = new CacheManager(null, null);
+        CacheManager cacheManager = new CacheManager(null);
         cacheManager.initializeInboundExternalIdCache(TENANT, 10);
         cacheManager.initializeOutboundExternalIdCache(TENANT, 10);
         cacheManager.initializeInventoryCache(TENANT, 10);

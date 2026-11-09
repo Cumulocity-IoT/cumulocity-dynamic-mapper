@@ -119,9 +119,8 @@ class InboundPipelineIntegrationTest {
 
         // Setup ServiceRegistry mocks
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(connectorClient.getMappingService()).thenReturn(mappingService);
         when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
-        when(serviceRegistry.getInboundMessageRouter()).thenReturn(inboundMessageRouter);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -146,7 +145,7 @@ class InboundPipelineIntegrationTest {
         // the dispatcher entry point.
 
         // Create dispatcher
-        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient);
+        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient, inboundMessageRouter);
 
         log.info("Dispatcher pipeline test setup completed");
     }

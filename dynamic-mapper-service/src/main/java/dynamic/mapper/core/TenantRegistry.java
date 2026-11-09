@@ -58,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-public class TenantRegistry {
+public class TenantRegistry implements IMapperConfiguration {
 
     // ─── Credentials & configuration ─────────────────────────────────────────
 
@@ -151,6 +151,7 @@ public class TenantRegistry {
         mapperServiceRepresentations.put(tenant, repr);
     }
 
+    @Override
     public MapperServiceRepresentation getMapperServiceRepresentation(String tenant) {
         return mapperServiceRepresentations.get(tenant);
     }

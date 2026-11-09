@@ -34,6 +34,8 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConnectorClientServices;
+import dynamic.mapper.core.ConnectorStatusEventService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.status.ConnectorStatus;
@@ -156,6 +158,7 @@ public abstract class AConnectorClient {
     protected ServiceConfigurationService serviceConfigurationService;
     @Getter
     protected ConnectorConfigurationService connectorConfigurationService;
+    protected ConnectorStatusEventService connectorStatusEventService;
     @Getter
     protected C8YAgent c8yAgent;
     @Getter
@@ -295,7 +298,7 @@ public abstract class AConnectorClient {
                 publisher = eventPublisher;
                 if (publisher == null) {
                     publisher = new ConnectorEventPublisher(tenant, connectorName, connectorIdentifier,
-                            () -> c8yAgent, () -> serviceRegistry.getConnectorStatusEventService(),
+                            () -> c8yAgent, () -> connectorStatusEventService,
                             () -> serviceConfiguration);
                     eventPublisher = publisher;
                 }
@@ -549,6 +552,7 @@ public abstract class AConnectorClient {
      * constructor delegate) and before {@link #initializeManagers()}.
      */
     protected void wireFromRegistry(ServiceRegistry serviceRegistry,
+            ConnectorClientServices services,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             GenericMessageCallback dispatcher,
@@ -566,9 +570,10 @@ public abstract class AConnectorClient {
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
-        this.mappingService = serviceRegistry.getMappingService();
-        this.serviceConfigurationService = serviceRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = serviceRegistry.getConnectorConfigurationService();
+        this.mappingService = services.getMappingService();
+        this.serviceConfigurationService = services.getServiceConfigurationService();
+        this.connectorConfigurationService = services.getConnectorConfigurationService();
+        this.connectorStatusEventService = services.getConnectorStatusEventService();
         this.c8yAgent = serviceRegistry.getC8yAgent();
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.objectMapper = serviceRegistry.getObjectMapper();
@@ -649,7 +654,7 @@ public abstract class AConnectorClient {
         // forever. Best-effort: failures are logged and swallowed inside the call itself, must
         // never block/fail connector startup.
         if (serviceConfiguration.getSendConnectorLifecycle() && !PROBE_CONSTRUCTION.get()) {
-            serviceRegistry.getConnectorStatusEventService().closeOrphanedConnectorSession(tenant, connectorName,
+            connectorStatusEventService.closeOrphanedConnectorSession(tenant, connectorName,
                     connectorIdentifier);
         }
 
