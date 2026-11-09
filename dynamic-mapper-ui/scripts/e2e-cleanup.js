@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*
  * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
@@ -19,7 +20,6 @@
  *
  */
 
-#!/usr/bin/env node
 /**
  * Cleanup job for the Cypress e2e suite. Removes everything a run can leave behind on the tenant,
  * for example after a crashed or cancelled run whose teardown never executed:

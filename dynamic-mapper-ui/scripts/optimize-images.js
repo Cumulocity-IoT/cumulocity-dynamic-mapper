@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*
  * Copyright (c) 2022-2026 Cumulocity GmbH.
  *
@@ -19,7 +20,6 @@
  *
  */
 
-#!/usr/bin/env node
 /**
  * Build step: compresses the PNG screenshots referenced in cumulocity.config.ts
  * into resources/image-optimized/ (generated, gitignored) without touching the
