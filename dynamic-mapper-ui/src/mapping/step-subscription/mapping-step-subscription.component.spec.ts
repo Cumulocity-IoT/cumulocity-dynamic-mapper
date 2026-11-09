@@ -212,6 +212,20 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(fixture.nativeElement.querySelector('.bottom-drawer')).not.toBeNull();
     });
 
+    it('shows "not saved yet" on the option where the device list was changed', () => {
+      component.setMode('static');
+      component.onDevicesChange([{ id: 'd2' }]);
+      fixture.detectChanges();
+      expect(component.devicesEditedVia).toBe('tree');
+
+      component.onCommitDevices([{ id: 'd2' }, { id: 'd3' }]);
+      fixture.detectChanges();
+      expect(component.devicesEditedVia).toBe('table');
+      const labels = Array.from(fixture.nativeElement.querySelectorAll('.label-warning'));
+      expect(labels.length).toBe(1);
+      expect((labels[0] as HTMLElement).closest('c8y-li')!.querySelector('[data-cy$="sub-device-table"]')).not.toBeNull();
+    });
+
     it('expands only the selected option, and shows no drawer for the inline selectors', () => {
       fixture.detectChanges();
       expect(q('dm-mapping-stepper-subscription-types')).not.toBeNull();

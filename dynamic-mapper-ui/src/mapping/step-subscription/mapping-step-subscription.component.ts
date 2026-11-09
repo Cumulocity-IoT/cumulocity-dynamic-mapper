@@ -254,11 +254,18 @@ export class MappingStepSubscriptionComponent implements OnInit {
 
   onTypesChange(types: string[]): void { this.update({ types }); }
   onGroupsChange(groups: IIdentified[]): void { this.update({ groups: groups as Device[] }); }
-  onDevicesChange(devices: IIdentified[]): void { this.update({ devices: devices as Device[] }); }
+  /** The option that made the pending device change; both options edit the same list, but the label belongs where the user acted. */
+  devicesEditedVia: 'tree' | 'table' = 'tree';
+
+  onDevicesChange(devices: IIdentified[]): void {
+    this.devicesEditedVia = 'tree';
+    this.update({ devices: devices as Device[] });
+  }
 
   onCommitDevices(devices: IIdentified[]): void {
     this.showDeviceTable = false;
-    this.onDevicesChange(devices);
+    this.update({ devices: devices as Device[] });
+    this.devicesEditedVia = 'table';
   }
 
   setResyncTypes(resyncTypes: string[]): void {

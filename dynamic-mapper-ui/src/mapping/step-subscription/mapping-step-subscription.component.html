@@ -149,7 +149,7 @@
                 } @else {
                 <span class="text-muted text-12 m-l-8" translate>None</span>
                 }
-                @if (devicesPending) {
+                @if (devicesPending && devicesEditedVia === 'tree') {
                 <span class="label label-warning m-l-8" translate>not saved yet</span>
                 }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
@@ -170,6 +170,9 @@
             <c8y-li-body>
               <div class="d-flex a-i-center flex-wrap">
                 <strong translate>Add subscriptions (device table)</strong>
+                @if (devicesPending && devicesEditedVia === 'table') {
+                <span class="label label-warning m-l-8" translate>not saved yet</span>
+                }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
                   'Specify devices using filters in the device table to add them to the subscription. This can only add devices. To unsubscribe a device, use the device selection (tree) view instead.'
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
