@@ -58,6 +58,26 @@ The wizard has five steps:
 (so six steps, and the unified editor has a **Subscription** tab at the same place). It decides which devices
 trigger the mapping. See [Defining a subscription for outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#in-the-mapping-editor).
 
+```mermaid
+flowchart LR
+    conn["Connector"]
+    gen["General settings"]
+    sub["Subscription<br/>outbound only"]
+    tpl["Select templates"]
+    trans["Transformation"]
+    test["Test mapping"]
+
+    conn --> gen
+    gen -- "inbound" --> tpl
+    gen -- "outbound" --> sub
+    sub --> tpl
+    tpl --> trans
+    trans --> test
+
+    classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
+    class sub outbound;
+```
+
 For **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because the
 payload is binary. To see a real binary message, use the
 [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer).

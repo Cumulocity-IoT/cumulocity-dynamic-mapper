@@ -639,8 +639,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     this.showConfigMapping = false;
-
-    this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
   }
 
   /**

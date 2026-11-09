@@ -284,9 +284,8 @@ describe('MappingUnifiedEditorComponent', () => {
         { provide: ActivatedRoute, useValue: activatedRoute },
         { provide: Location, useValue: jasmine.createSpyObj('Location', ['back', 'path']) },
         { provide: GlobalContextService, useValue: mockGlobalContextService },
-        // The component injects SubscriptionService, whose real constructor takes a
-        // FetchClient the test injector cannot provide (NG0201). It is only used for
-        // validateSubscriptionOutbound(), so a spy is enough.
+        // MappingPublishService injects SubscriptionService, whose real constructor takes a
+        // FetchClient the test injector cannot provide (NG0201), so a spy is enough.
         { provide: SubscriptionService, useValue: mockSubscriptionService },
         provideTranslateStub()
       ]

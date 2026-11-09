@@ -36,6 +36,36 @@ subscription while you define the mapping. They appear for outbound mappings onl
 | **Dynamic** | Subscribe by device type (**Manage subscriptions (by device type)**) or by device group (**Manage subscriptions (by device groups)**). |
 | **Static** | Subscribe specific devices (**Manage subscriptions (device selection)** or **Add subscriptions (device table)**). |
 
+Choosing **Dynamic** or **Static** opens its options as radio options. Only the selected option is expanded, and the
+first one is selected for you:
+
+- **Dynamic**: **Manage subscriptions (by device type)** shows the list of device types. **Manage subscriptions (by device groups)** shows the group selector.
+- **Static**: **Manage subscriptions (device selection)** shows the device tree. **Add subscriptions (device table)** opens the device table in a drawer, because the table needs more room than the page has. After you close the drawer, the option stays selected and **Open device table** opens it again.
+
+Each option shows how many entries are selected and a **not saved yet** label while you have unsaved changes. The
+lists show the subscriptions of the whole tenant, not only those of this mapping.
+
+![Subscription step with Dynamic selected](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Subscription_Dynamic.png "The Subscription tab of an outbound mapping with Dynamic and Manage subscriptions (by device type) selected.")
+
+```mermaid
+flowchart LR
+    choose["Choose Skip, Dynamic, or Static<br/>in the Subscription step"]
+    save["Save the mapping"]
+    saved["Mapping is saved"]
+    write["Subscriptions are written<br/>types, groups, or devices"]
+    async["Processed asynchronously<br/>verify on the Subscription outbound page"]
+    warn["Warning is shown<br/>the mapping stays saved"]
+
+    choose --> save
+    save --> saved
+    saved --> write
+    write -- "succeeds" --> async
+    write -- "fails" --> warn
+
+    classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
+    class choose outbound;
+```
+
 The selection is written when you save the mapping, after the mapping itself was saved. Cancel the editor and
 nothing changes. The lists start from the current subscriptions, so you can also remove a type, group, or device. The
 removal is applied on save. If the saving of the subscription fails, the mapping stays saved, a warning explains

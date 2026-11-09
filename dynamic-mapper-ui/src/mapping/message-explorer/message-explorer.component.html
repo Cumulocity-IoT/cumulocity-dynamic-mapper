@@ -176,7 +176,7 @@
       [actionControls]="actionControls"
       [bulkActionControls]="bulkActionControls"
       [configureColumnsEnabled]="false"
-      [selectable]="true">
+      [selectable]="sessionDirection !== 'OUTBOUND'">
     </c8y-data-grid>
   }
 

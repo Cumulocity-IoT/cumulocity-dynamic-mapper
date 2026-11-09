@@ -41,7 +41,6 @@ import {
   MappingType
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import {
   StepId
@@ -140,7 +139,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   private readonly mappingService = inject(MappingService);
   private readonly commitService = inject(MappingCommitService);
   private readonly publishService = inject(MappingPublishService);
-  private readonly subscriptionService = inject(SubscriptionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly globalContextService = inject(GlobalContextService);
@@ -387,21 +385,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // Saving closes the editor. Re-baselining first matters: navigation is guarded by
     // unsavedChangesGuard, which would otherwise see the just-saved edits as unsaved and prompt.
     this.rebaselineAfterSave(result.persisted, !!result.deploymentFailed);
-
-    // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
-    // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
-    // to receive it otherwise silently does nothing once activated.
-    // It is advisory and the mapping is already saved, so a failure must not strand the user in
-    // an editor whose state was just rebaselined. Save & Activate skips it: activation runs the
-    // same check and refuses, so showing it twice would only add noise.
-    if (!activateAfterSave) {
-      try {
-        await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
-      } catch (error) {
-        console.error('Post-save subscription check failed:', error);
-        this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
-      }
-    }
 
     // The mapping is saved but its connector assignment is not (error alert already raised):
     // stay in the editor so the selection isn't lost and Save can retry the deployment.

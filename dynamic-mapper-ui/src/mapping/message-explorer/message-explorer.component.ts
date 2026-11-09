@@ -577,6 +577,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   private canCombine(msgs: IndexedMessage[]): boolean {
+    // Outbound mappings are built from one message: its type decides the filter, the subscription and the source API.
+    if (msgs.some(m => m.direction === 'OUTBOUND')) return false;
     return msgs.length >= 2
       && msgs.length <= MAX_EXPLORER_SAMPLES
       && msgs.every(m => samplePayloadKind(m) === samplePayloadKind(msgs[0]))
