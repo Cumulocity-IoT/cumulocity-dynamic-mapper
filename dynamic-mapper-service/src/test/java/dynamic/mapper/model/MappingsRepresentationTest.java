@@ -68,7 +68,7 @@ public class MappingsRepresentationTest {
                 });
 
         // Setup repository to return empty list by default
-        lenient().when(mappingRepository.findAll(anyString(), any(), any()))
+        lenient().when(mappingRepository.findAll(anyString(), any(), any(), any()))
                 .thenReturn(new ArrayList<>());
 
         // Create the validator with mocked dependencies

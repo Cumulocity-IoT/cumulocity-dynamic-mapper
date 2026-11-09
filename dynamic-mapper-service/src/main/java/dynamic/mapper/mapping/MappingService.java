@@ -84,6 +84,19 @@ public class MappingService implements TenantScoped {
     private final MappingVersionService mappingVersionService;
     private final ApplicationEventPublisher eventPublisher;
 
+    /** Handed to the repository, which must not depend on this service; see {@link MappingRepository.LoadEffects}. */
+    private final MappingRepository.LoadEffects loadEffects = new MappingRepository.LoadEffects() {
+        @Override
+        public void persistMigratedMapping(String tenant, Mapping mapping) {
+            updateMapping(tenant, mapping, true, true);
+        }
+
+        @Override
+        public void sendLoadingError(String tenant, ManagedObjectRepresentation mo, String message) {
+            sendMappingLoadingError(tenant, mo, message);
+        }
+    };
+
     // Track dirty mappings that need to be persisted
     private final Map<String, Set<Mapping>> dirtyMappings = new ConcurrentHashMap<>();
 
@@ -360,7 +373,7 @@ public class MappingService implements TenantScoped {
             inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
 
             ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
-            return mappingRepository.findAll(tenant, direction, moc);
+            return mappingRepository.findAll(tenant, direction, moc, loadEffects);
         });
     }
 

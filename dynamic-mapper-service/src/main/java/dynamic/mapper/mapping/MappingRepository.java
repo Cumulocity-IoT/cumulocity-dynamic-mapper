@@ -32,7 +32,6 @@ import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -50,17 +49,25 @@ import java.util.stream.StreamSupport;
 public class MappingRepository {
 
     private final ServiceRegistry serviceRegistry;
-    private final MappingService mappingService;
 
     // Tracks moIds for which a loading warning has already been logged this session,
     // to prevent flooding the log on every mapping reload.
     // Structure: <"tenant:moId">
     private final Set<String> reportedLoadingWarnings = ConcurrentHashMap.newKeySet();
 
-    public MappingRepository(ServiceRegistry serviceRegistry,
-                            @Lazy MappingService mappingService) {
+    public MappingRepository(ServiceRegistry serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
-        this.mappingService = mappingService;
+    }
+
+    /**
+     * Side effects that loading mappings can require: persisting an in-memory migration and
+     * reporting a loading error. {@link MappingService}, the only caller of {@link #findAll}, passes
+     * them in, so this repository does not depend on the service that depends on it.
+     */
+    public interface LoadEffects {
+        void persistMigratedMapping(String tenant, Mapping mapping);
+
+        void sendLoadingError(String tenant, ManagedObjectRepresentation mo, String message);
     }
 
     /**
@@ -97,7 +104,8 @@ public class MappingRepository {
      * NOTE: This is a lower-level method that expects inventoryApi to be called from MappingService
      * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
-    public List<Mapping> findAll(String tenant, Direction direction, ManagedObjectCollection moc) {
+    public List<Mapping> findAll(String tenant, Direction direction, ManagedObjectCollection moc,
+            LoadEffects effects) {
         // Phase 1: pure conversion + in-memory migration. The inventory pages are
         // fully drained into a list here; no inventory writes happen while iterating.
         List<LoadResult> loaded = StreamSupport.stream(moc.get().allPages().spliterator(), false)
@@ -109,10 +117,10 @@ public class MappingRepository {
         // updateMapping -> callForTenant) while the allPages() stream is still live.
         for (LoadResult result : loaded) {
             if (result.migration() != null) {
-                applyMigration(tenant, result.mapping(), result.source(), result.migration());
+                applyMigration(tenant, result.mapping(), result.source(), result.migration(), effects);
             }
             if (result.loadingError() != null) {
-                sendLoadingErrorSafe(tenant, result.source(), result.loadingError());
+                sendLoadingErrorSafe(tenant, result.source(), result.loadingError(), effects);
             }
         }
 
@@ -329,11 +337,12 @@ public class MappingRepository {
      * {@link #findAll} after inventory iteration, so the write does not run
      * re-entrantly while the mapping pages are being streamed.
      */
-    private void applyMigration(String tenant, Mapping mapping, ManagedObjectRepresentation mo, Migration migration) {
+    private void applyMigration(String tenant, Mapping mapping, ManagedObjectRepresentation mo, Migration migration,
+            LoadEffects effects) {
         try {
-            mappingService.updateMapping(tenant, mapping, true, true);
+            effects.persistMigratedMapping(tenant, mapping);
             switch (migration.notice()) {
-                case LOADING_ERROR -> mappingService.sendMappingLoadingError(tenant, mo, migration.message());
+                case LOADING_ERROR -> effects.sendLoadingError(tenant, mo, migration.message());
                 case OPERATION_EVENT -> serviceRegistry.getC8yAgent().createLoggingEvent(
                         migration.message(), LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE, DateTime.now(), tenant, null);
             }
@@ -342,9 +351,10 @@ public class MappingRepository {
         }
     }
 
-    private void sendLoadingErrorSafe(String tenant, ManagedObjectRepresentation mo, String message) {
+    private void sendLoadingErrorSafe(String tenant, ManagedObjectRepresentation mo, String message,
+            LoadEffects effects) {
         try {
-            mappingService.sendMappingLoadingError(tenant, mo, message);
+            effects.sendLoadingError(tenant, mo, message);
         } catch (Exception notifyEx) {
             log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId(mo), notifyEx.getMessage());
         }
