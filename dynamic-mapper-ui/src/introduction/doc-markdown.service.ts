@@ -60,7 +60,7 @@ function ensureMermaidInitialized(): void {
     // prevents the over-wrapping — labels were being broken mid-word ("classes" -> "cl asses")
     // because foreignObject content inherits the page's CSS.
     htmlLabels: false,
-    flowchart: { htmlLabels: false, wrappingWidth: 360 }
+    flowchart: { wrappingWidth: 360 }
   });
 }
 

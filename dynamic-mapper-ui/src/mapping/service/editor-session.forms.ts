@@ -58,7 +58,7 @@ export function buildFilterFormlyFields(
                     key: 'filterMapping',
                     type: 'd11r-input',
                     wrappers: ['c8y-form-field'],
-                    templateOptions: {
+                    props: {
                         label: gettext('Filter execution mapping'),
                         class: 'input-sm',
                         disabled: stepperConfiguration.readOnly ||

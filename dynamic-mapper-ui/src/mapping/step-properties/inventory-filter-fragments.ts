@@ -19,7 +19,6 @@
  */
 
 // Same loading style as MappingService / TreeService: the package is CommonJS (`export =`).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const jsonata = require('jsonata');
 
 /** AST child properties that hold sub-expressions evaluated against the same (root) context. */

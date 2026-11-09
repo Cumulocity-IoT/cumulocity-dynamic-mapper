@@ -194,7 +194,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             id: 'mappingName',
             wrappers: ['c8y-form-field'],
             type: 'input',
-            templateOptions: {
+            props: {
               label: gettext('Mapping name'),
               disabled: this.isFieldDisabled,
               required: true
@@ -226,7 +226,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             id: 'mappingTopic',
             wrappers: ['c8y-form-field'],
             type: 'input',
-            templateOptions: {
+            props: {
               label: gettext('Mapping topic'),
               placeholder: 'plant1/+/+',
               disabled: this.isFieldDisabled,
@@ -242,14 +242,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               },
               required: true
             },
-            hideExpression: isOutbound
+            hide: isOutbound
           },
           {
             className: 'col-lg-6',
             key: 'publishTopic',
             wrappers: ['c8y-form-field'],
             type: 'input',
-            templateOptions: {
+            props: {
               label: gettext('Publish topic'),
               placeholder: 'measurements/+',
               disabled: this.isFieldDisabled,
@@ -263,7 +263,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               },
               required: true
             },
-            hideExpression: isInbound
+            hide: isInbound
           },
           {
             className: 'col-lg-6',
@@ -271,7 +271,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             id: 'mappingTopicSample',
             type: 'input',
             wrappers: ['c8y-form-field'],
-            templateOptions: {
+            props: {
               label: gettext('Mapping topic sample'),
               placeholder: 'e.g. device/110',
               disabled: this.isFieldDisabled,
@@ -280,14 +280,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               ),
               required: true
             },
-            hideExpression: isOutbound
+            hide: isOutbound
           },
           {
             className: 'col-lg-6',
             key: 'publishTopicSample',
             type: 'input',
             wrappers: ['c8y-form-field'],
-            templateOptions: {
+            props: {
               label: gettext('Publish topic sample'),
               placeholder: 'e.g. device/110',
               disabled: this.isFieldDisabled,
@@ -296,7 +296,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               ),
               required: true
             },
-            hideExpression: !isOutbound
+            hide: !isOutbound
           }
         ]
       },
@@ -310,7 +310,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             // The project wrapper, not the stock c8y one: it can show the "not in the inventory
             // cache" warning under the input (props.warning).
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
+            props: {
               label: gettext('Filter inventory'),
               placeholder: 'type = "lora_device_type"',
               disabled: this.isFieldDisabled,
@@ -370,7 +370,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'targetAPI',
             type: 'select',
             wrappers: ['c8y-form-field'],
-            templateOptions: {
+            props: {
               label: isInbound ? gettext('Target API') : gettext('Source API'),
               description: isOutbound
                 ? gettext('Used as a filter to select which mappings apply when a notification arrives.')
@@ -394,46 +394,46 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'createNonExistingDevice',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: switchProps(
+            props: switchProps(
               gettext('Create device'),
               gettext(
                 'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
               )
             ),
-            hideExpression: () => isOutbound || this.model.targetAPI === API.INVENTORY.name
+            expressions: { hide: () => isOutbound || this.model.targetAPI === API.INVENTORY.name }
           },
           {
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: switchProps(
+            props: switchProps(
               gettext('Update existing device'),
               gettext('Update the managed object of the device if it already exists.')
             ),
-            hideExpression: () => isOutbound || this.model.targetAPI !== API.INVENTORY.name
+            expressions: { hide: () => isOutbound || this.model.targetAPI !== API.INVENTORY.name }
           },
           {
             className: 'col-lg-3',
             key: 'eventWithAttachment',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: switchProps(
+            props: switchProps(
               gettext('Event contains attachment'),
               gettext('Event contains attachment, e.g. image, ... that is stored separately.')
             ),
-            hideExpression: () => isOutbound || this.model.targetAPI !== API.EVENT.name
+            expressions: { hide: () => isOutbound || this.model.targetAPI !== API.EVENT.name }
           },
           {
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: switchProps(
+            props: switchProps(
               gettext('Auto acknowledge'),
               gettext('Auto acknowledge outbound operation.')
             ),
-            hideExpression: () => isInbound || this.model.targetAPI !== API.OPERATION.name
+            expressions: { hide: () => isInbound || this.model.targetAPI !== API.OPERATION.name }
           }
         ]
       },
@@ -445,7 +445,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'useExternalId',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
+            props: {
               ...switchProps(
                 gettext('Use external id'),
                 gettext(
@@ -465,11 +465,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'input',
             wrappers: ['c8y-form-field'],
             defaultValue: 'c8y_Serial',
-            templateOptions: {
+            props: {
               label: gettext('External id type'),
               disabled: this.isFieldDisabled
             },
-            hideExpression: (model) => !model.useExternalId
+            expressions: { hide: (field) => !field.model.useExternalId }
           }
         ]
       },
@@ -487,7 +487,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'qos',
             type: 'select',
             wrappers: ['c8y-form-field'],
-            templateOptions: {
+            props: {
               label: gettext('QoS'),
               // Labels and the per-level explanation come from the shared QoS metadata, so the
               // grid renderer and this picker can never describe a level differently.
@@ -505,7 +505,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             expressions: {
               // Recomputed on every change so the user sees immediately when the level they
               // picked will be clamped by one of the connectors this mapping is deployed to.
-              'templateOptions.description': (field) => this.describeQos(field.model?.qos)
+              'props.description': (field) => this.describeQos(field.model?.qos)
             }
           },
           {
@@ -513,7 +513,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'maxFailureCount',
             type: 'input',
             wrappers: ['c8y-form-field'],
-            templateOptions: {
+            props: {
               label: gettext('Max failure count'),
               type: 'number',
               min: 0,

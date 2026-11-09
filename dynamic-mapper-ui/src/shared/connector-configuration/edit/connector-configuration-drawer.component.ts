@@ -183,7 +183,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private specificationProperties: { [name: string]: ConnectorProperty } = {};
 
   private createHideExpression(entry: PropertyEntry) {
-    return (model) => !isPropertyActive(this.specificationProperties, entry.key, model?.properties);
+    return (field: FormlyFieldConfig) =>
+      !isPropertyActive(this.specificationProperties, entry.key, field.model?.properties);
   }
 
   private labelFor(entry: PropertyEntry): string {
@@ -205,7 +206,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           description: entry.property.description || undefined,
           ...additionalProps
         },
-        hideExpression: this.createHideExpression(entry)
+        expressions: { hide: this.createHideExpression(entry) }
       }]
     };
   }
@@ -265,7 +266,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
         },
-        hideExpression: this.createHideExpression(entry),
+        expressions: { hide: this.createHideExpression(entry) },
         // Initialize with empty object if no default value
         defaultValue: entry.property.defaultValue || {}
       }]
@@ -367,7 +368,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return {
       type: 'template',
       template: `<div class="legend form-block">${this.escapeHtml(group)}</div>`,
-      hideExpression: (model) => memberHidden.every(isHidden => isHidden(model))
+      expressions: { hide: (field: FormlyFieldConfig) => memberHidden.every(isHidden => isHidden(field)) }
     };
   }
 

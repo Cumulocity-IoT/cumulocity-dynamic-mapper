@@ -800,7 +800,7 @@ describe('MappingStepperService', () => {
     it('builds filterFormlyFields required for OUTBOUND direction', async () => {
       const mapping = makeMapping({ direction: Direction.OUTBOUND });
       const result = await service.initializeEditorSession(mapping, makeStepperConfig({ direction: Direction.OUTBOUND }), new Subject(), callbacks());
-      expect(result.filterFormlyFields[0].fieldGroup![0].templateOptions.required).toBe(true);
+      expect(result.filterFormlyFields[0].fieldGroup![0].props.required).toBe(true);
     });
   });
 });

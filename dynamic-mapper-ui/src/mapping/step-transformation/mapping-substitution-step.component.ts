@@ -206,7 +206,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
 
-        templateOptions: {
+        props: {
           label: gettext('Source Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
@@ -232,7 +232,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         key: 'pathTarget',
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
-        templateOptions: {
+        props: {
           label: gettext('Target Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration.readOnly ||
