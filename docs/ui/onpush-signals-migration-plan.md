@@ -672,11 +672,14 @@ built on them; `ai-prompt` was converted and then reverted.
   `setDisabledState`, the keyboard service subscription, the focus microtask, `select`, `deselect`,
   `deselectAll`, and `onHidden`.
 - `shared-code-ai-prompt`: strategy change only; it already called `markForCheck()` after each async step.
-- `ai-prompt`: reverted to default change detection. `OnPush` (with a `markForCheck()` wrapper around `ngOnInit`
-  and one in the drawer resize) made the reopened drawer show no earlier conversation again, as reported in the
-  browser. This is the second time a change to this component's change detection caused it (the first was
-  the render wait in "Regression: AI conversation not restored"). The mechanism is still unknown. Do not try
-  `OnPush` here again without first reproducing the loss in a unit test that uses the real `c8y-agent-chat`.
+- `ai-prompt`: converted, then reverted to default change detection after a browser report that the reopened
+  drawer showed no earlier conversation. After the revert the history was missing once more, then worked again
+  and could not be reproduced. With the drawer closed by "Cancel" after a finished answer the history is
+  restored; closing mid-reply logs "AI response cancelled" (expected, the chat aborts the stream) and was not
+  shown to lose anything. So it is not established that `OnPush` caused the loss; it was the first change in
+  the area, and so the revert was the safe move. The component stays on default change detection. If `OnPush`
+  is tried again, first write a unit test with the real `c8y-agent-chat` that opens, converses, closes, and
+  reopens, and test closing mid-reply and by Esc and backdrop in the browser.
 Browser check, in this order: (1) the AI prompt must still show its history after reopening (it is back on the
 default strategy, so this confirms the revert); (2) code template AI prompt (shared code: open, chat, accept the result); (3) connector
 drawer: add a connector, change the type, change the direction filter, view an enabled connector (read only),
