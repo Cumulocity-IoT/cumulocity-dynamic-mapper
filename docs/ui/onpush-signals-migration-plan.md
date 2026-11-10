@@ -1,22 +1,56 @@
 # Plan: OnPush and signals for the UI
 
-Status: paused, to be continued later. The editor and everything below it is on `OnPush` and signals, the
-`detectChanges()` calls are removed except two on purpose, the lint rules are in, and the first tranche of the
-`any` typing is done (commit `d1ff21b24`). See "Status at a glance" for the numbers and "Progress" for each
-step. The rest of the plan (the remaining screens, the schematics, the remaining `any`, and promoting more
-directories to lint errors) has not been started and will be picked up in a later session.
+Status: stopped on 2026-11-10, to be continued later. 86 of 93 components are on `OnPush`. Every screen
+was converted except seven that need a browser check first (listed below). Nothing from the later rounds has
+been checked in a browser yet: only the editor rounds up to the "Code template: Replace code" entry were
+checked, see "Progress". The code is committed on `develop` and is not pushed.
 
-Open at the pause:
+Results at the stop (unit tests 1012 of 1012; lint 0 errors and 395 warnings; AOT check: 8 existing errors,
+none from this work):
 
-- Not yet checked in a browser: the connector grid and connector step, the older stepper's AI drawer, and the
-  validation drawer's "Go to problem" (needs a JSONata mapping). The read-only case of the Subscription tab
-  (no Mapping Admin or Create role) was also not tested.
-- Still on default change detection: the two AI prompt components, the mapping grid, the message explorer, the
-  older stepper, the cell renderers, the connector details page and drawers, and the rest of the 73 components
-  the lint rule lists.
-- Two `detectChanges()` calls stay on purpose (the AI prompt's `ngOnInit` and the connector drawer's direction
-  filter). Do not replace them with a render wait without a browser check; see "Regression: AI conversation not
-  restored".
+| Measure | Start | At the stop |
+|---|---|---|
+| Components on `OnPush` | 5 of 91 | 86 of 93 |
+| `detectChanges()` calls | 29 | 2 on purpose (AI prompt `ngOnInit`, connector drawer direction filter) |
+| `ngDoCheck` | 1 | 0 |
+| `prefer-on-push` warnings | 73 | 7 |
+| `prefer-signals` warnings | 198 | 198 (not started) |
+| Explicit `any` (non-spec) | 277 | 190 (second round added 2 casts) |
+
+Not converted, on purpose (7): `ai-prompt`, `shared-code-ai-prompt`, `connector-configuration-drawer`,
+`custom-form-field-wrapper`, `input-list-formly`, `input-list`, and `custom-select`. Reasons are in the entry
+"Modals, drawers, doc pages, and import dialogs on `OnPush`".
+
+Open browser tests (nothing below has been run; each entry under "Progress" has its own steps):
+
+1. Earlier rounds, still unchecked: connector grid and connector step; the older stepper's AI drawer (create
+   a mapping with "Generate with AI" and confirm the drawer opens); the validation drawer's "Go to problem"
+   (needs a JSONata mapping); the read-only Subscription tab (no Mapping Admin or Create role).
+2. Cell renderers (19): toggle a mapping's activation and debug flag and a connector's enabled switch; confirm
+   the version, draft, deployment, and status cells refresh.
+3. Mapping grid and older stepper: spinner on reload, import, and bulk delete; add, edit, copy; save and cancel.
+4. Mapping type drawer and message explorer: add a mapping in both directions; start, pause, resume, edit and stop
+   a session; reload to resume the stored session; create a mapping from one and several messages.
+5. Monitoring, extension, configuration: cache page, statistics and chart, events page, extension upload and
+   delete, service configuration (every tab by direct URL, Expert Mode, Save enables and disables, import), code
+   template (select, edit, save, rename, copy, delete).
+6. Service logs, connector details, explorer drawer, versions drawer and count, publish dialog.
+7. Modals and import dialogs, subscription page (all drawers, resync), device-to-client map, test-device grid,
+   documentation pages (search, code blocks, diagrams), copy-source dialog, validation drawer, deprecation notice.
+
+Two things to watch during all of these: a screen that stops updating after an `await` or a timer (the failure
+mode in "The two ways OnPush breaks a screen"), and the first render of a drawer or dialog opened through
+`initialState`.
+
+Next steps, in this order:
+
+1. Run the browser tests above and fix what they show. A failed test points at a field that needs a signal or
+   a `markForCheck()`.
+2. Convert `connector-configuration-drawer` and the Formly group with browser checks after each.
+3. Convert the two AI prompts one step at a time. Do not replace the `detectChanges()` in `ai-prompt`
+   `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
+4. Promote the lint rules to errors for the migrated directories (phase 7), then start `prefer-signals` and the
+   remaining `any`.
 
 ## Why
 
@@ -140,14 +174,14 @@ Rules:
 
 ## Status at a glance
 
-Measured on 2026-11-10 against the starting numbers in the review.
+Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 
 | Measure | Start | Now |
 |---|---|---|
-| Components on `OnPush` (lint count) | 5 of 91 by grep | 20 of 93 (the lint rule finds 93 components; my grep missed two) |
+| Components on `OnPush` (lint count) | 5 of 91 by grep | 86 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
-| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 188 |
+| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 190 |
 | Unit tests | 978 | 1012 |
 
 | Phase | State |
