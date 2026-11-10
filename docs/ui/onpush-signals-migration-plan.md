@@ -604,6 +604,28 @@ existing session); versions drawer (open from the grid, edit a note, activate, p
 count page; publish dialog (suggestion buttons set the version, OK enables for a valid version).
 Unit tests: 1012 of 1012.
 
+### Modals, drawers, doc pages, and import dialogs on `OnPush` (done, not yet browser-checked)
+
+19 more components: validation drawer, code editor drawer, manage-template dialog, copy-source dialog,
+confirmation modal, deprecation notice, mapping tree, device-id cell renderer, connector configuration page,
+the four documentation pages (page, main, overview, code templates), the mapping and connector import dialogs,
+the device-to-client map, the test-device grid, the subscription page, and the type resync drawer.
+Signals were added where a template reads something set after an `await`, a timer, or a router event:
+doc pages (`title`, `html`, `codeTemplates`, search state in `doc-main`), import dialogs (loading, result, error
+fields), the subscription page (five drawer flags, the three subscribed lists, the two responses, `feature`, and the
+action controls, which are now replaced instead of pushed to after the `await`), the device-to-client map and
+the test grid (same `await` then in-place `push` pattern), and the resync drawer's `rows`.
+Not migrated on purpose, because each needs a browser check first:
+- `connector-configuration-drawer`: Formly forms, field arrays mutated in place, state set after an `await` in
+  `ngOnInit`, and a kept `detectChanges()`.
+- The three Formly components (`custom-form-field-wrapper`, `input-list-formly`, `input-list`) and
+  `custom-select` (a value accessor with its own open and search state). Formly drives its own checks.
+- The two AI prompts (`ai-prompt`, `shared-code-ai-prompt`), see "Regression: AI conversation not restored".
+Browser check: open each import dialog and import a file; subscription page (static, dynamic, group and type
+tabs: open each drawer, commit, delete a subscription, resync a type); device-to-client map (add, delete);
+test-device grid; each documentation page (search in `doc-main`, code blocks and diagrams render); copy a mapping
+that has a draft (the copy-source dialog); the validation drawer; the deprecation notice. Unit tests: 1012 of 1012.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,
