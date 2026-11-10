@@ -48,8 +48,8 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Phase 7 is partly done (see "Lint rules promoted"). Start `prefer-signals` and the remaining `any`, and
-   promote each rule per directory when it reaches zero.
+3. Pay down the debt (198 `prefer-signals`, 190 `any`, 6 components over 500 lines). Delete a directory's line from
+   the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
 
@@ -192,7 +192,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | 4. Step components | Done: every step and every component below the editor, including the connector step and its grid. |
 | 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection, on purpose. |
 | 6. Grids, lists, rest | Done: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
-| 7. Enforce | Partly done: `OnPush` is an error for the whole tree, and new `cdr.detectChanges()` and `ngDoCheck` are errors. Still to do: a size check for components over 500 lines, `prefer-signals` and `no-explicit-any` as errors, and the `docs/ui/architecture.md` state rule. |
+| 7. Enforce | Done. `OnPush`, `prefer-signals`, and `no-explicit-any` are errors for the whole tree; 61 directories with remaining findings are listed as warnings ("Known debt" blocks). New `cdr.detectChanges()` and `ngDoCheck` are errors, components over 500 lines warn, and `docs/ui/architecture.md` has the state rule. The debt itself (198 `prefer-signals`, 190 `any`) is not paid. |
 
 ## Progress
 
@@ -696,6 +696,18 @@ exempt), and a `no-restricted-syntax` rule makes `cdr.detectChanges()` and `ngDo
 `ngOnInit` render, and the connector drawer's direction filter render. I checked the rules with a throwaway
 component that broke all three, and they reported four errors. `prefer-signals` (198) and `no-explicit-any`
 (190) stay warnings outside the directories already promoted. Lint now reports 0 errors and 388 warnings.
+
+### Phase 7: enforce (done)
+
+`eslint.config.cjs` now enforces by default and lists the exceptions, which is the reverse of the earlier setup
+(warnings everywhere, errors for finished directories). `prefer-signals` and `no-explicit-any` are errors for all
+app code; two "Known debt" blocks downgrade them to warnings for the directories that still have findings, so a
+new file or directory is strict from the first commit, and each cleaned directory is one deleted line. A
+`max-lines` warning (500, blank lines and comments skipped) covers components. I checked it with a throwaway
+component in a new directory: it failed on the `@Input()` decorator, the `any`, and the missing `OnPush`.
+`docs/ui/architecture.md` has a new section "State and change detection" with the eight rules. Lint: 0 errors and
+394 warnings (198 `prefer-signals`, 190 `any`, 6 over 500 lines). The old per-directory error blocks are gone,
+because the global errors replace them.
 
 ### Lint rules (done)
 

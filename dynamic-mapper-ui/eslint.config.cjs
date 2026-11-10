@@ -28,11 +28,11 @@ module.exports = [
     rules: {
       '@typescript-eslint/no-deprecated': 'error',
       // Migration to OnPush and signals (docs/ui/onpush-signals-migration-plan.md). OnPush is an error for the
-      // whole tree; the two rules below still count what is left and are promoted to errors per directory
-      // once they reach zero.
+      // whole tree; the two rules below are errors too; the directories that still have findings are listed
+      // as warnings in the "Known debt" blocks further down.
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
-      '@angular-eslint/prefer-signals': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@angular-eslint/prefer-signals': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
       // A forced render or ngDoCheck hides state that does not notify its view. Use a signal or markForCheck().
       // The two allowed forced renders carry an eslint-disable comment that explains why.
       'no-restricted-syntax': [
@@ -68,39 +68,113 @@ module.exports = [
     },
   },
   {
-    // Directories that are fully migrated. Every component in them is OnPush; keep it that way.
-    // (Docs: docs/ui/onpush-signals-migration-plan.md.) Promote more directories as they reach zero.
+    // Known debt, to be paid down directory by directory (docs/ui/onpush-signals-migration-plan.md). Everything
+    // else is an error, so new code and new directories are strict from the start. When a directory reaches
+    // zero, delete its line here.
     files: [
-      'src/mapping/step-subscription/**/*.ts',
-      'src/mapping/step-connector/**/*.ts',
-      'src/mapping/step-template/**/*.ts',
-      'src/mapping/step-properties/**/*.ts',
-      'src/mapping/step-transformation/**/*.ts',
-      'src/mapping/step-testing/**/*.ts',
-      'src/mapping/substitution/**/*.ts',
-      'src/mapping/unified-editor/**/*.ts',
-      'src/mapping/editor-base/**/*.ts',
-      'src/mapping/subscription/subscription-dynamic-group/**/*.ts',
-      'src/mapping/subscription/subscription-static-table/**/*.ts',
-      'src/mapping/subscription/subscription-static-tree/**/*.ts',
+      'src/configuration/code-template/*.ts',
+      'src/connector/*.ts',
+      'src/extension/add/*.ts',
+      'src/extension/card/*.ts',
+      'src/introduction/*.ts',
+      'src/mapping-tree/*.ts',
+      'src/mapping/client-relation/*.ts',
+      'src/mapping/deprecation-notice/*.ts',
+      'src/mapping/editor-base/*.ts',
+      'src/mapping/grid/*.ts',
+      'src/mapping/grid/copy-source-modal/*.ts',
+      'src/mapping/import/*.ts',
+      'src/mapping/mapping-create/*.ts',
+      'src/mapping/message-explorer/*.ts',
+      'src/mapping/prompt/*.ts',
+      'src/mapping/step-connector/*.ts',
+      'src/mapping/step-properties/*.ts',
+      'src/mapping/step-subscription/*.ts',
+      'src/mapping/step-template/*.ts',
+      'src/mapping/step-testing/*.ts',
+      'src/mapping/step-transformation/*.ts',
+      'src/mapping/stepper/*.ts',
+      'src/mapping/subscription/*.ts',
+      'src/mapping/subscription/subscription-dynamic-group/*.ts',
+      'src/mapping/subscription/subscription-dynamic-type/*.ts',
+      'src/mapping/subscription/subscription-static-table/*.ts',
+      'src/mapping/subscription/subscription-static-tree/*.ts',
+      'src/mapping/substitution/*.ts',
+      'src/mapping/unified-editor/*.ts',
+      'src/mapping/validation/*.ts',
+      'src/mapping/versions/*.ts',
+      'src/monitoring/cache/kpi/*.ts',
+      'src/shared/component/code-explorer/*.ts',
+      'src/shared/component/code-template/*.ts',
+      'src/shared/component/confirmation/*.ts',
+      'src/shared/component/formly/*.ts',
+      'src/shared/component/json-editor/*.ts',
+      'src/shared/component/select/*.ts',
+      'src/shared/connector-configuration/*.ts',
+      'src/shared/connector-configuration/edit/*.ts',
+      'src/shared/connector-details/*.ts',
+      'src/test-device/grid/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {
-      '@angular-eslint/prefer-on-push-component-change-detection': 'error',
+      '@angular-eslint/prefer-signals': 'warn',
     },
   },
   {
-    // Directories with no explicit `any` left. A new one is an error here.
     files: [
-      'src/mapping/step-subscription/**/*.ts',
-      'src/mapping/step-connector/**/*.ts',
-      'src/mapping/step-template/**/*.ts',
-      'src/mapping/substitution/**/*.ts',
-      'src/mapping/unified-editor/**/*.ts',
+      'src/*.ts',
+      'src/configuration/*.ts',
+      'src/configuration/code-template/*.ts',
+      'src/extension/add/*.ts',
+      'src/extension/grid/*.ts',
+      'src/extension/properties/*.ts',
+      'src/extension/share/*.ts',
+      'src/introduction/*.ts',
+      'src/mapping-tree/*.ts',
+      'src/mapping/client-relation/*.ts',
+      'src/mapping/core/*.ts',
+      'src/mapping/deprecation-notice/*.ts',
+      'src/mapping/grid/*.ts',
+      'src/mapping/mapping-create/*.ts',
+      'src/mapping/message-explorer/*.ts',
+      'src/mapping/prompt/*.ts',
+      'src/mapping/renderer/*.ts',
+      'src/mapping/service/*.ts',
+      'src/mapping/step-properties/*.ts',
+      'src/mapping/stepper/*.ts',
+      'src/mapping/subscription/subscription-dynamic-group/*.ts',
+      'src/mapping/subscription/subscription-dynamic-type/*.ts',
+      'src/mapping/subscription/subscription-static-table/*.ts',
+      'src/mapping/subscription/subscription-static-tree/*.ts',
+      'src/mapping/versions/*.ts',
+      'src/monitoring/*.ts',
+      'src/monitoring/logs/*.ts',
+      'src/shared/component/formly/*.ts',
+      'src/shared/component/json-editor/*.ts',
+      'src/shared/component/renderer/*.ts',
+      'src/shared/configuration/*.ts',
+      'src/shared/connector-configuration/*.ts',
+      'src/shared/connector-details/*.ts',
+      'src/shared/mapping/*.ts',
+      'src/shared/mapping/processor/*.ts',
+      'src/shared/misc/*.ts',
+      'src/shared/service/*.ts',
+      'src/test-device/*.ts',
+      'src/test-device/grid/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+  {
+    // Size check: a component class over 500 lines is a candidate for splitting along the seams the OnPush work
+    // exposed (docs/ui/onpush-signals-migration-plan.md, "Oversized components"). A warning, not an error: the
+    // existing large components are listed in the plan and are split one pull request at a time.
+    files: ['src/**/*.component.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
     },
   },
   {
