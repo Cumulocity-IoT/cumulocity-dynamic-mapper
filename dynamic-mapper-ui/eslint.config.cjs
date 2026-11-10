@@ -27,11 +27,25 @@ module.exports = [
     },
     rules: {
       '@typescript-eslint/no-deprecated': 'error',
-      // Migration to OnPush and signals (docs/ui/onpush-signals-migration-plan.md). Warnings, not errors:
-      // they count what is left. Each is promoted to an error for a directory once it reaches zero.
-      '@angular-eslint/prefer-on-push-component-change-detection': 'warn',
+      // Migration to OnPush and signals (docs/ui/onpush-signals-migration-plan.md). OnPush is an error for the
+      // whole tree; the two rules below still count what is left and are promoted to errors per directory
+      // once they reach zero.
+      '@angular-eslint/prefer-on-push-component-change-detection': 'error',
       '@angular-eslint/prefer-signals': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
+      // A forced render or ngDoCheck hides state that does not notify its view. Use a signal or markForCheck().
+      // The two allowed forced renders carry an eslint-disable comment that explains why.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='detectChanges'][callee.object.property.name='cdr']",
+          message: 'Do not force a render with cdr.detectChanges(). Use a signal or markForCheck() (docs/ui/onpush-signals-migration-plan.md).'
+        },
+        {
+          selector: "MethodDefinition[key.name='ngDoCheck']",
+          message: 'Do not use ngDoCheck. Use a signal, a computed value, or ngOnChanges (docs/ui/onpush-signals-migration-plan.md).'
+        }
+      ],
       // Naming rules
       '@angular-eslint/component-selector': [
         'error',
@@ -99,6 +113,7 @@ module.exports = [
       '@angular-eslint/prefer-on-push-component-change-detection': 'off',
       '@angular-eslint/prefer-signals': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      'no-restricted-syntax': 'off',
       // specs declare throwaway host components with test selectors
       '@angular-eslint/component-selector': 'off',
     },

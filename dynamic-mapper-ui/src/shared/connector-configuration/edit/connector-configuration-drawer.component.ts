@@ -445,6 +445,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     // Kept as a synchronous render on purpose: the empty form must be rendered, so Formly tears the old
     // fields down, before they are rebuilt below. markForCheck would defer the render until after the
     // rebuild and Formly would reuse the old field state.
+    // eslint-disable-next-line no-restricted-syntax -- synchronous render kept on purpose, see the comment above
     this.cdr.detectChanges();
     this.initializeBrokerFormFields();
   }

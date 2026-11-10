@@ -48,8 +48,8 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Promote the lint rules to errors for the whole tree (phase 7), then start `prefer-signals` and the
-   remaining `any`.
+3. Phase 7 is partly done (see "Lint rules promoted"). Start `prefer-signals` and the remaining `any`, and
+   promote each rule per directory when it reaches zero.
 
 ## Why
 
@@ -192,7 +192,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | 4. Step components | Done: every step and every component below the editor, including the connector step and its grid. |
 | 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection, on purpose. |
 | 6. Grids, lists, rest | Done: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
-| 7. Enforce | Not started. |
+| 7. Enforce | Partly done: `OnPush` is an error for the whole tree, and new `cdr.detectChanges()` and `ngDoCheck` are errors. Still to do: a size check for components over 500 lines, `prefer-signals` and `no-explicit-any` as errors, and the `docs/ui/architecture.md` state rule. |
 
 ## Progress
 
@@ -687,6 +687,15 @@ run "Test connection"; (4) every Formly field type in that drawer, including the
 rows) and the validation messages when a required field is left empty; (5) every `d11r-select` in the
 application: open, search, pick with mouse and keyboard, multi-select, disabled state, preselected value.
 Unit tests: 1012 of 1012.
+
+### Lint rules promoted (done)
+
+In `eslint.config.cjs`: `prefer-on-push-component-change-detection` is an error for all app code (specs are
+exempt), and a `no-restricted-syntax` rule makes `cdr.detectChanges()` and `ngDoCheck` errors. Three places carry an
+`eslint-disable` with a reason: the `ai-prompt` component (default change detection on purpose), its
+`ngOnInit` render, and the connector drawer's direction filter render. I checked the rules with a throwaway
+component that broke all three, and they reported four errors. `prefer-signals` (198) and `no-explicit-any`
+(190) stay warnings outside the directories already promoted. Lint now reports 0 errors and 388 warnings.
 
 ### Lint rules (done)
 

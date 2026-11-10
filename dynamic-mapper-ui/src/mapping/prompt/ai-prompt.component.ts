@@ -52,6 +52,9 @@ import { base64ToString } from '../../shared/mapping/util';
 const SUBMIT_SMART_FUNCTION_TOOL = 'submit-smart-function';
 const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
 
+// Default change detection on purpose: a change to it was followed by reports of a lost conversation history.
+// See docs/ui/onpush-signals-migration-plan.md, "Last components on OnPush".
+// eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
 @Component({
   selector: 'd11r-mapping-ai-prompt',
   templateUrl: 'ai-prompt.component.html',
@@ -277,6 +280,7 @@ export class AiPromptComponent implements OnInit {
     // `persistSession()` needs the `agentChat` view child that this render resolves. Replacing it with a
     // wait for the next application tick was followed by a report that a reopened drawer showed no
     // earlier conversation; the cause was not established, so the render that is known to work stays.
+    // eslint-disable-next-line no-restricted-syntax -- synchronous render kept on purpose, see the comment above
     this.cdr.detectChanges();
 
     if (stored) {
