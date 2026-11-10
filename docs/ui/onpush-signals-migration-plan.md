@@ -192,7 +192,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | 4. Step components | Done: every step and every component below the editor, including the connector step and its grid. |
 | 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection, on purpose. |
 | 6. Grids, lists, rest | Done: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
-| 7. Enforce | Done. `OnPush`, `prefer-signals`, and `no-explicit-any` are errors for the whole tree; 61 directories with remaining findings are listed as warnings ("Known debt" blocks). New `cdr.detectChanges()` and `ngDoCheck` are errors, components over 500 lines warn, and `docs/ui/architecture.md` has the state rule. The debt itself (198 `prefer-signals`, 190 `any`) is not paid. |
+| 7. Enforce | Done. `OnPush`, `prefer-signals`, and `no-explicit-any` are errors for the whole tree; 59 directories with remaining findings are listed as warnings ("Known debt" blocks). New `cdr.detectChanges()` and `ngDoCheck` are errors, components over 500 lines warn, and `docs/ui/architecture.md` has the state rule. The debt itself (198 `prefer-signals`, 190 `any`) is not paid. |
 
 ## Progress
 
