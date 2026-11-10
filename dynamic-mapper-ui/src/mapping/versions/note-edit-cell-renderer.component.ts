@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
@@ -47,6 +47,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       <span></span>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, FormsModule]
 })

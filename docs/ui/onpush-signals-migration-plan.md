@@ -540,6 +540,8 @@ the cell spec changes. Not migrated: `mapping-status-activation` and the other r
 Browser check: open the mapping grid, toggle a mapping's activation and debug flag, and confirm the version,
 draft, and deployment cells refresh after the grid reloads. Unit tests: 1012 of 1012 pass.
 
+A second batch of 6 followed: activation toggle, connector enabled toggle, connector name, connector status, version note, and version state. These had their own state, but each already calls `markForCheck()` after its `await`, so nothing else was needed.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,

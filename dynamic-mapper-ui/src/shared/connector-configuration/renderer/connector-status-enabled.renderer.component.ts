@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
   CellRendererContext,
@@ -53,6 +53,7 @@ import { TranslatePipe } from '@ngx-translate/core';
       </label>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule

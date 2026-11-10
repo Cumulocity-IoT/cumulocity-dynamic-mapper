@@ -19,7 +19,7 @@
  */
 
 import { HttpStatusCode } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
@@ -52,6 +52,7 @@ import { SubscriptionService } from '../core/subscription.service';
       </label>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
