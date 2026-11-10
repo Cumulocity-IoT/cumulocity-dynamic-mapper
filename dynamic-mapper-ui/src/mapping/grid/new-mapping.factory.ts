@@ -103,12 +103,6 @@ export function toSourceSample(payload: string, binary: boolean, mappingType: Ma
   return payload;
 }
 
-/**
- * Builds the mapping a new-mapping flow starts from: defaults per direction and transformation
- * type, the sample from the chosen code template, and, when the user came from the Message
- * Explorer, the captured topic, payload and metadata. It changes nothing outside its result; the
- * caller applies the stepper state and bumps its own mapping counter.
- */
 /** The top-level string `type` of a JSON payload, or undefined (not JSON, no type, not a string). */
 function payloadType(payload: string): string | undefined {
   try {
@@ -119,6 +113,12 @@ function payloadType(payload: string): string | undefined {
   }
 }
 
+/**
+ * Builds the mapping a new-mapping flow starts from: defaults per direction and transformation
+ * type, the sample from the chosen code template, and, when the user came from the Message
+ * Explorer, the captured topic, payload and metadata. It changes nothing outside its result; the
+ * caller applies the stepper state and bumps its own mapping counter.
+ */
 export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
   const { direction, mappingType, transformationType, substitutionsAsCode, codeTemplate, extension, preFill } = req;
   let sampleMessageInfo: SampleMessageInfo | undefined;
@@ -344,8 +344,8 @@ export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
       mapping.publishTopicSample = preFill.publishTopicSample;
     }
     // OUTBOUND: the captured message's own `type` becomes the execution filter (option "Filter by
-    // type" of the General Settings step). Without one, the 'true' default below applies.
-    // It replaces the 'true' default set above.
+    // type" of the General Settings step). Without one, the control stays
+    // unselected (filterMapping is empty, see above).
     const capturedType = direction === Direction.OUTBOUND ? payloadType(preFill.payload) : undefined;
     if (capturedType) {
       mapping.filterMapping = toFilterMapping({ mode: 'type', value: capturedType });

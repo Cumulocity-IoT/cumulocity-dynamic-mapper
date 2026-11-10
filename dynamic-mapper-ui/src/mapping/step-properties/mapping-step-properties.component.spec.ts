@@ -194,6 +194,27 @@ describe('MappingStepPropertiesComponent', () => {
       expect(field.expressions.hide()).toBeTrue();
     });
 
+    it('follows a filterMapping edited in the Templates step, and never writes the stale one back', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      component.mapping.filterMapping = '$exists(c8y_Temperature)';
+      component.ngDoCheck();
+      expect(component.model.executionFilterMode).toBe('fragment');
+      expect(component.model.executionFilterValue).toBe('c8y_Temperature');
+
+      component.mapping.filterMapping = "type = 'a' and $exists(b)";
+      component.model.name = 'renamed';
+      component.commitModel();
+      expect(component.mapping.filterMapping).toBe("type = 'a' and $exists(b)");
+    });
+
+    it('keeps a chosen option with an empty value while the user types', async () => {
+      const component = await outboundComponent('');
+      component.model.executionFilterMode = 'type';
+      component.onExecutionFilterChanged();
+      component.ngDoCheck();
+      expect(component.model.executionFilterMode).toBe('type');
+    });
+
     it('clears filterMapping for the custom option', async () => {
       const component = await outboundComponent("type = 'lora'");
       component.model.executionFilterMode = 'custom';

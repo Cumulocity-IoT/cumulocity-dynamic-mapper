@@ -20,6 +20,7 @@
 
 import {
   Component,
+  DoCheck,
   EventEmitter,
   inject,
   Input,
@@ -91,7 +92,7 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   standalone: true,
   imports: [CoreModule, PopoverModule]
 })
-export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
+export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoCheck {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
@@ -110,7 +111,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   /** The properties this step edits. Anything else on the mapping is not copied, so a stale copy can never overwrite it. */
   static readonly PROPERTY_KEYS: (keyof Mapping)[] = [
     'name', 'mappingTopic', 'publishTopic', 'mappingTopicSample', 'publishTopicSample',
-    'filterInventory', 'filterMapping', 'targetAPI', 'createNonExistingDevice', 'updateExistingDevice',
+    'filterInventory', 'targetAPI', 'createNonExistingDevice', 'updateExistingDevice',
     'eventWithAttachment', 'autoAckOperation', 'useExternalId', 'externalIdType', 'qos',
     'maxFailureCount'
   ];
@@ -791,11 +792,33 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     model['externalIdType'] ??= 'c8y_Serial';
     // Show the stored filter expression as one of the three options (an unknown expression is "custom").
     // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
-    const choice = fromFilterMapping(this.mapping.filterMapping);
-    model['executionFilterMode'] = this.mapping.filterMapping?.trim() ? choice.mode : undefined;
-    model['executionFilterValue'] = choice.value ?? '';
     this.model = model as Partial<Mapping>;
+    this.deriveExecutionFilter();
     this.commitModel();
+  }
+
+  /** The last `filterMapping` this control wrote or read; a different value in the host came from elsewhere. */
+  private knownFilterMapping: string | undefined;
+
+  /** Shows the host's `filterMapping` as one of the three options (an unknown expression is "custom"). */
+  private deriveExecutionFilter(): void {
+    const expression = this.mapping.filterMapping;
+    const choice = fromFilterMapping(expression);
+    // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
+    this.model.executionFilterMode = expression?.trim() ? choice.mode : undefined;
+    this.model.executionFilterValue = choice.value ?? '';
+    this.model.filterMapping = expression;
+    this.knownFilterMapping = expression;
+  }
+
+  /**
+   * The Templates step edits `filterMapping` too, and this component outlives it in the stepper.
+   * Follow such a change so the control never shows (or writes back) a stale expression.
+   */
+  ngDoCheck(): void {
+    if (this.model && this.mapping && this.mapping.filterMapping !== this.knownFilterMapping) {
+      this.deriveExecutionFilter();
+    }
   }
 
   /** Writes the execution-filter control to `filterMapping`. Only runs on user input, never on load. */
@@ -804,7 +827,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     const value = this.propertyFormly.get('executionFilterValue')?.value ?? this.model.executionFilterValue;
     this.model.executionFilterMode = mode;
     this.model.executionFilterValue = value;
-    this.model.filterMapping = toFilterMapping({ mode, value });
+    const expression = toFilterMapping({ mode, value });
+    this.model.filterMapping = expression;
+    this.knownFilterMapping = expression;
+    // Not part of commitModel: the Templates step also owns this property.
+    if (expression !== this.mapping.filterMapping) {
+      this.propertiesChange.emit({ filterMapping: expression });
+    }
     this.commitModel();
   }
 
