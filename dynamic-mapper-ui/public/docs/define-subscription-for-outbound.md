@@ -77,7 +77,10 @@ Tick the box of a type to also subscribe the devices of that type that already e
 the background and can take a while on large inventories. Types that are already subscribed show "subscribed already".
 
 When you create a mapping from the [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer), the
-step offers the type, the groups, and the device of the selected message as one-click suggestions.
+step offers only the device of the selected message: **Skip for now**, **By device type**, **By device group**, and
+**This device only**. A type rule subscribes devices created afterward, so the message's own device is not subscribed by
+it. Tick **Also subscribe existing devices** under **By device type** to subscribe the existing devices of that type
+as well.
 
 #### On the Subscription outbound page
 
@@ -89,7 +92,7 @@ asynchronously, so refresh the list or check **Service Events** to see the resul
   with the table filters (add only). Subscriptions are created for the chosen devices and are not updated
   automatically when devices are added to or removed from a group.
 
-  ![Static subscription device picker](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png "Selecting individual devices for a static outbound subscription.")
+  ![Static subscription device picker](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_Subscription.png "Selecting individual devices for a static outbound subscription.")
 - **Subscription dynamic**, **Manage subscriptions (by device groups)**: Specify device groups. When a group is added, subscriptions for all
   assigned devices are created. When a device is added to or removed from a chosen group, the subscription is
   automatically created or deleted. The filter applies to child assets and child devices.

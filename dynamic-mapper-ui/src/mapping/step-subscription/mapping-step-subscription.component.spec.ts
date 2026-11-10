@@ -299,6 +299,28 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(component.contextChoice).toBe('type');
     });
 
+    it('offers resync for the chosen type, and drops it again when another choice is made', () => {
+      component.setContextChoice('type');
+      fixture.detectChanges();
+      const box = q('dm-mapping-stepper-subscription-suggest-type-resync') as HTMLInputElement;
+      expect(box).not.toBeNull();
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      expect(emitted.at(-1)!.resyncTypes).toEqual(['c8y_SensorPhone']);
+      expect(component.contextResync).toBe(true);
+
+      component.setContextChoice('device');
+      fixture.detectChanges();
+      expect(q('dm-mapping-stepper-subscription-suggest-type-resync')).toBeNull();
+    });
+
+    it('offers no resync when the type is already subscribed', () => {
+      component.selection = { ...component.selection, baseline: { ...baseline, types: ['c8y_SensorPhone'] } };
+      component.setContextChoice('type');
+      fixture.detectChanges();
+      expect(q('dm-mapping-stepper-subscription-suggest-type-resync')).toBeNull();
+    });
+
     it('choosing the group switches from the type and keeps the existing groups', () => {
       component.setContextChoice('type');
       component.setContextGroup('g9');

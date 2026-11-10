@@ -224,4 +224,4 @@ Implemented with these differences (the Explorer context mode is one of them, se
 - **Removals** show as "n removed" next to each list; the type, group and device lists all do this.
 - **Role gating** adds `inert` to the inline selectors, so keyboard input is blocked as well.
 - **Deployment failure** now warns that the subscriptions were not written.
-- **Open.** The page and the step still have separate loader code (plan step 3 was not done). The concurrency check still warns after the fact instead of merging. Cypress tests and user guide screenshots are still missing. Whether the "no subscription" check can fire right after a save is unverified.
+- **Open.** The page and the step still have separate loader code (plan step 3 was not done). The concurrency check still warns after the fact instead of merging. User guide screenshots are still missing. Cypress: `subscription-step.cy.ts` covers skip, type plus resync, and the editor tab for both directions. Right after a save the "no subscription" check cannot fire: the writes are synchronous and the check only runs on activation.
