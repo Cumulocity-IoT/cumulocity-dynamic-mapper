@@ -590,6 +590,20 @@ reload, open properties and switch the direction filter); service configuration 
 URL, toggle Expert Mode, edit a value and confirm Save enables, save and confirm it disables, add and remove
 a fragment, import a file); code template (select, edit, save, rename, copy, delete). Unit tests: 1012 of 1012.
 
+### Service logs page and the small screens on `OnPush` (done, not yet browser-checked)
+
+Moved: the service logs page (17 fields as signals, because it reads them after `await`s and from a
+`setInterval`), the connector details page (`configuration`, `feature`, `serviceConfiguration`,
+`isTogglingConnection`; the optimistic `enabled` flip now replaces the object instead of mutating it), the
+connector status history, the message explorer drawer (11 form fields) and its three cell renderers, the
+versions drawer (`loading`, `busy`), the versions count page, and the publish-version dialog.
+Browser check: service logs (page loads, switch source, pick a mapping, auto refresh ticks, paging, theme
+toggle, download); connector details (open from the grid, toggle the connection, edit, status history shows
+new entries); message explorer drawer (change direction, pick a connector, pick a device, start; edit an
+existing session); versions drawer (open from the grid, edit a note, activate, publish, delete); versions
+count page; publish dialog (suggestion buttons set the version, OK enables for a valid version).
+Unit tests: 1012 of 1012.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,

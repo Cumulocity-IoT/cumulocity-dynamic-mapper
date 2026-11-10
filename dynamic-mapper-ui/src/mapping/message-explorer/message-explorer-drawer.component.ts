@@ -19,7 +19,7 @@
  */
 
 import { gettext } from '@c8y/ngx-components/gettext';
-import { Component, inject, Input, OnInit, OnChanges } from '@angular/core';
+import { Component, inject, Input, OnInit, OnChanges, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
@@ -57,6 +57,7 @@ export interface ExplorerSessionSnapshot {
   selector: 'd11r-message-explorer-drawer',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './message-explorer-drawer.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, FormsModule, AssetSelectorModule]
 })
@@ -68,19 +69,39 @@ export class MessageExplorerDrawerComponent implements OnInit {
 
   get editMode(): boolean { return this.editSnapshot !== null; }
 
-  connectors: ConnectorConfiguration[] = [];
-  allConnectors: ConnectorConfiguration[] = [];
-  selectedConnectorIdentifier: string = '';
-  topic: string = '';
-  maxMessages: number = 50;
-  sessionTTLMinutes: number = 10;
-  direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  private readonly connectorsState = signal<ConnectorConfiguration[]>([]);
+  get connectors(): ConnectorConfiguration[] { return this.connectorsState(); }
+  set connectors(value: ConnectorConfiguration[]) { this.connectorsState.set(value); }
+  private readonly allConnectorsState = signal<ConnectorConfiguration[]>([]);
+  get allConnectors(): ConnectorConfiguration[] { return this.allConnectorsState(); }
+  set allConnectors(value: ConnectorConfiguration[]) { this.allConnectorsState.set(value); }
+  private readonly selectedConnectorIdentifierState = signal<string>('');
+  get selectedConnectorIdentifier(): string { return this.selectedConnectorIdentifierState(); }
+  set selectedConnectorIdentifier(value: string) { this.selectedConnectorIdentifierState.set(value); }
+  private readonly topicState = signal<string>('');
+  get topic(): string { return this.topicState(); }
+  set topic(value: string) { this.topicState.set(value); }
+  private readonly maxMessagesState = signal<number>(50);
+  get maxMessages(): number { return this.maxMessagesState(); }
+  set maxMessages(value: number) { this.maxMessagesState.set(value); }
+  private readonly sessionTTLMinutesState = signal<number>(10);
+  get sessionTTLMinutes(): number { return this.sessionTTLMinutesState(); }
+  set sessionTTLMinutes(value: number) { this.sessionTTLMinutesState.set(value); }
+  private readonly directionState = signal<'INBOUND' | 'OUTBOUND'>('INBOUND');
+  get direction(): 'INBOUND' | 'OUTBOUND' { return this.directionState(); }
+  set direction(value: 'INBOUND' | 'OUTBOUND') { this.directionState.set(value); }
   /** Selected source (device or group) for outbound monitoring (single selection). */
-  selectedDeviceList: IIdentified[] = [];
+  private readonly selectedDeviceListState = signal<IIdentified[]>([]);
+  get selectedDeviceList(): IIdentified[] { return this.selectedDeviceListState(); }
+  set selectedDeviceList(value: IIdentified[]) { this.selectedDeviceListState.set(value); }
   /** Optional device type filter for outbound monitoring — shows all devices of this type. */
-  deviceTypeFilter: string = '';
+  private readonly deviceTypeFilterState = signal<string>('');
+  get deviceTypeFilter(): string { return this.deviceTypeFilterState(); }
+  set deviceTypeFilter(value: string) { this.deviceTypeFilterState.set(value); }
   /** Controls which OUTBOUND filter mode is active: asset selector or device type input. */
-  outboundFilterMode: 'source' | 'deviceType' = 'source';
+  private readonly outboundFilterModeState = signal<'source' | 'deviceType'>('source');
+  get outboundFilterMode(): 'source' | 'deviceType' { return this.outboundFilterModeState(); }
+  set outboundFilterMode(value: 'source' | 'deviceType') { this.outboundFilterModeState.set(value); }
 
   private _resolve!: (value: ExplorerStartResult | null) => void;
   result: Promise<ExplorerStartResult | null> = new Promise(resolve => { this._resolve = resolve; });
@@ -90,7 +111,9 @@ export class MessageExplorerDrawerComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly inventoryService = inject(InventoryService);
 
-  selectedDeviceType: string | null = null;
+  private readonly selectedDeviceTypeState = signal<string | null>(null);
+  get selectedDeviceType(): string | null { return this.selectedDeviceTypeState(); }
+  set selectedDeviceType(value: string | null) { this.selectedDeviceTypeState.set(value); }
   private deviceTypeFetch: Promise<string | null> = Promise.resolve(null);
 
   async ngOnInit(): Promise<void> {

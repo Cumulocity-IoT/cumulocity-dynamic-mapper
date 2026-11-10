@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { firstValueFrom, Observable, Subject, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -52,6 +52,7 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule,
@@ -63,9 +64,15 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   specifications$: Observable<ConnectorSpecification[]>;
   statusLogs$: Observable<any[]>;
-  configuration: ConnectorConfiguration;
-  feature: Feature;
-  serviceConfiguration: ServiceConfiguration;
+  private readonly configurationState = signal<ConnectorConfiguration>(undefined as unknown as ConnectorConfiguration);
+  get configuration(): ConnectorConfiguration { return this.configurationState(); }
+  set configuration(value: ConnectorConfiguration) { this.configurationState.set(value); }
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
+  private readonly serviceConfigurationState = signal<ServiceConfiguration>(undefined as unknown as ServiceConfiguration);
+  get serviceConfiguration(): ServiceConfiguration { return this.serviceConfigurationState(); }
+  set serviceConfiguration(value: ServiceConfiguration) { this.serviceConfigurationState.set(value); }
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.CONNECTOR_EVENT_TYPE,
@@ -74,7 +81,9 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
   initialStateDrawer: any;
-  isTogglingConnection = false;
+  private readonly isTogglingConnectionState = signal<boolean>(false);
+  get isTogglingConnection(): boolean { return this.isTogglingConnectionState(); }
+  set isTogglingConnection(value: boolean) { this.isTogglingConnectionState.set(value); }
 
   private readonly destroy$ = new Subject<void>();
 
@@ -200,7 +209,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
         // Optimistic, for instant feedback — the live getConfigurationsWithStatus() subscription
         // in ngOnInit() will correct this afterward if the connect/reconnect attempt it queued
         // ultimately fails or is still backing off.
-        this.configuration.enabled = !this.configuration.enabled;
+        this.configuration = { ...this.configuration, enabled: !this.configuration.enabled };
       }
     } finally {
       this.isTogglingConnection = false;

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { Component, Input, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import {
   connectorStatusToSeverity,
@@ -38,6 +38,7 @@ import {
   selector: 'd11r-connector-status-history',
   templateUrl: 'connector-status-history.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CommonModule, CoreModule]
 })

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, Input, OnInit, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -105,6 +105,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './mapping-version-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('mapping-versions')],
   imports: [CoreModule, SharedModule]
@@ -139,8 +140,12 @@ export class MappingVersionDrawerComponent implements OnInit {
   actionControls: ActionControl[] = this.buildActionControls();
   readonly rows$ = new BehaviorSubject<VersionRow[]>([]);
   readonly pagination: Pagination = { pageSize: 100, currentPage: 1 };
-  loading = true;
-  busy = false;
+  private readonly loadingState = signal<boolean>(true);
+  get loading(): boolean { return this.loadingState(); }
+  set loading(value: boolean) { this.loadingState.set(value); }
+  private readonly busyState = signal<boolean>(false);
+  get busy(): boolean { return this.busyState(); }
+  set busy(value: boolean) { this.busyState.set(value); }
 
   private changed = false;
 

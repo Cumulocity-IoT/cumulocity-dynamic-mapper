@@ -17,13 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -63,6 +57,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: './mapping-versions-count.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('mapping-versions-count')],
   imports: [CoreModule, CommonModule]
