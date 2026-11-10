@@ -48,7 +48,7 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 190 `any`, 6 components over 500 lines). Delete a directory's line from
+3. Pay down the debt (198 `prefer-signals`, 190 `any`, 4 components over 500 lines). Delete a directory's line from
    the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
@@ -708,6 +708,29 @@ component in a new directory: it failed on the `@Input()` decorator, the `any`, 
 `docs/ui/architecture.md` has a new section "State and change detection" with the eight rules. Lint: 0 errors and
 394 warnings (198 `prefer-signals`, 190 `any`, 6 over 500 lines). The old per-directory error blocks are gone,
 because the global errors replace them.
+
+### Oversized components: message explorer and properties step split (done, not yet browser-checked)
+
+Two of the six components over 500 lines were split. Neither split changes behavior.
+- **Message explorer (645 to 500 or fewer):**
+  - `explorer-mapping-context.service.ts`: the device type and group lookup and the publish-topic derivation that
+    "Create mapping from message" used. It was one 147-line method. 12 unit tests were added.
+  - `explorer-session-store.ts`: reading, writing, and clearing the stored session in `localStorage`, with the
+    defaults for older stored sessions. 4 unit tests were added.
+  - `message-explorer.columns.ts`: the column definitions.
+  - `onOpenDrawer` and `onEditSession` repeated about 45 lines of session start code. Both now call
+    `replaceSession(result, 'start' | 'update')`. The two modes differ only in the texts shown to the user.
+- **Properties step (767 to 484):** `ngOnInit` was 470 lines of Formly field configuration. It moved to
+  `property-form-fields.ts` as `buildPropertyFields(host)`. The host object exposes the model, the form, and the
+  mapping as getters, so every handler still reads the current value when it runs. The `PropertyFormModel` type
+  now lives next to the fields. The new file is 513 lines. It is not a component, so the size rule does not
+  apply, but it is the next candidate if the field list grows.
+Four components are still over 500 lines: the grid (743), the type drawer (640), `ai-prompt` (595), and the
+testing step (537). Unit tests: 1027 of 1027 (15 new).
+Browser check: message explorer (start a session, edit it, create a mapping from one message and from several,
+outbound with a device and with a group as the source, reload to resume); Properties step (open it for an
+inbound and an outbound mapping; change the topic, the target API, the execution filter, Expert Mode and the
+inventory filter; toggle external id; change QoS and confirm its description updates).
 
 ### Lint rules (done)
 
