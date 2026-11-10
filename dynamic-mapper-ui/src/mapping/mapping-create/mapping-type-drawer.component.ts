@@ -19,7 +19,7 @@
  */
 
 import { TranslateService } from '@ngx-translate/core';
-import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Observable, Subject, map, shareReplay, takeUntil } from 'rxjs';
@@ -71,6 +71,7 @@ interface SaveResult {
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
@@ -118,20 +119,38 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Public properties
   readonly labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
   
-  formGroup: FormGroup;
-  mappingTypeOptions: MappingTypeOption[] = [];
-  transformationTypeOptions: TransformationTypeOption[] = [];
-  codeTemplateOptions: CodeTemplateOption[] = [];
-  extensionItems: string[] = [];
+  private readonly formGroupState = signal<FormGroup>(undefined as unknown as FormGroup);
+  get formGroup(): FormGroup { return this.formGroupState(); }
+  set formGroup(value: FormGroup) { this.formGroupState.set(value); }
+  private readonly mappingTypeOptionsState = signal<MappingTypeOption[]>([]);
+  get mappingTypeOptions(): MappingTypeOption[] { return this.mappingTypeOptionsState(); }
+  set mappingTypeOptions(value: MappingTypeOption[]) { this.mappingTypeOptionsState.set(value); }
+  private readonly transformationTypeOptionsState = signal<TransformationTypeOption[]>([]);
+  get transformationTypeOptions(): TransformationTypeOption[] { return this.transformationTypeOptionsState(); }
+  set transformationTypeOptions(value: TransformationTypeOption[]) { this.transformationTypeOptionsState.set(value); }
+  private readonly codeTemplateOptionsState = signal<CodeTemplateOption[]>([]);
+  get codeTemplateOptions(): CodeTemplateOption[] { return this.codeTemplateOptionsState(); }
+  set codeTemplateOptions(value: CodeTemplateOption[]) { this.codeTemplateOptionsState.set(value); }
+  private readonly extensionItemsState = signal<string[]>([]);
+  get extensionItems(): string[] { return this.extensionItemsState(); }
+  set extensionItems(value: string[]) { this.extensionItemsState.set(value); }
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
-  hasExtensionParameter = false;
+  private readonly hasExtensionParameterState = signal<boolean>(false);
+  get hasExtensionParameter(): boolean { return this.hasExtensionParameterState(); }
+  set hasExtensionParameter(value: boolean) { this.hasExtensionParameterState.set(value); }
 
   private readonly extensionEvents$ = new BehaviorSubject<ExtensionEntry[]>([]);
   private extensions = new Map<string, Extension>();
   
-  isLoading = true;
-  isLoadingCodeTemplates = false;
-  isLoadingExtensions = false;
+  private readonly isLoadingState = signal<boolean>(true);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly isLoadingCodeTemplatesState = signal<boolean>(false);
+  get isLoadingCodeTemplates(): boolean { return this.isLoadingCodeTemplatesState(); }
+  set isLoadingCodeTemplates(value: boolean) { this.isLoadingCodeTemplatesState.set(value); }
+  private readonly isLoadingExtensionsState = signal<boolean>(false);
+  get isLoadingExtensions(): boolean { return this.isLoadingExtensionsState(); }
+  set isLoadingExtensions(value: boolean) { this.isLoadingExtensionsState.set(value); }
   showTransformationType = false;
   /** True if the deployed-agents check itself failed (network/parse error) rather than the
    *  service genuinely reporting no agents — shown to the user so they don't mistake a
