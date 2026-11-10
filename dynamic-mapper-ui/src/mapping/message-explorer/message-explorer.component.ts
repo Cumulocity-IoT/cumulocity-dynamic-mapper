@@ -20,7 +20,7 @@
 
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector, ChangeDetectionStrategy, signal } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -67,6 +67,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: './message-explorer.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('message-explorer')],
   imports: [CoreModule, CommonModule, ReactiveFormsModule]
@@ -75,20 +76,40 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly injector = inject(Injector);
 
   // ---- state ----------------------------------------------------------------
-  sessionId: string | null = null;
-  connectorName: string = '';
+  private readonly sessionIdState = signal<string | null>(null);
+  get sessionId(): string | null { return this.sessionIdState(); }
+  set sessionId(value: string | null) { this.sessionIdState.set(value); }
+  private readonly connectorNameState = signal<string>('');
+  get connectorName(): string { return this.connectorNameState(); }
+  set connectorName(value: string) { this.connectorNameState.set(value); }
   sessionConnectorIdentifier: string = '';
-  sessionTopic: string = '';
-  sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  private readonly sessionTopicState = signal<string>('');
+  get sessionTopic(): string { return this.sessionTopicState(); }
+  set sessionTopic(value: string) { this.sessionTopicState.set(value); }
+  private readonly sessionDirectionState = signal<'INBOUND' | 'OUTBOUND'>('INBOUND');
+  get sessionDirection(): 'INBOUND' | 'OUTBOUND' { return this.sessionDirectionState(); }
+  set sessionDirection(value: 'INBOUND' | 'OUTBOUND') { this.sessionDirectionState.set(value); }
   sessionMaxMessages: number = 50;
   sessionTTLMinutes: number = 10;
   sessionDeviceType: string | null = null;
-  sessionSourceId: string | null = null;
-  sessionDeviceName: string | null = null;
-  sessionDeviceTypeFilter: string | null = null;
-  sessionSubscriptionWarning: string | null = null;
-  messages: IndexedMessage[] = [];
-  paused: boolean = false;
+  private readonly sessionSourceIdState = signal<string | null>(null);
+  get sessionSourceId(): string | null { return this.sessionSourceIdState(); }
+  set sessionSourceId(value: string | null) { this.sessionSourceIdState.set(value); }
+  private readonly sessionDeviceNameState = signal<string | null>(null);
+  get sessionDeviceName(): string | null { return this.sessionDeviceNameState(); }
+  set sessionDeviceName(value: string | null) { this.sessionDeviceNameState.set(value); }
+  private readonly sessionDeviceTypeFilterState = signal<string | null>(null);
+  get sessionDeviceTypeFilter(): string | null { return this.sessionDeviceTypeFilterState(); }
+  set sessionDeviceTypeFilter(value: string | null) { this.sessionDeviceTypeFilterState.set(value); }
+  private readonly sessionSubscriptionWarningState = signal<string | null>(null);
+  get sessionSubscriptionWarning(): string | null { return this.sessionSubscriptionWarningState(); }
+  set sessionSubscriptionWarning(value: string | null) { this.sessionSubscriptionWarningState.set(value); }
+  private readonly messagesState = signal<IndexedMessage[]>([]);
+  get messages(): IndexedMessage[] { return this.messagesState(); }
+  set messages(value: IndexedMessage[]) { this.messagesState.set(value); }
+  private readonly pausedState = signal<boolean>(false);
+  get paused(): boolean { return this.pausedState(); }
+  set paused(value: boolean) { this.pausedState.set(value); }
   private nextSeqNo = 1;
 
   private static readonly SESSION_STORAGE_KEY = 'd11r-explorer-session';
@@ -160,9 +181,11 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     }
   ];
 
-  columns: Column[] = this.allColumns.filter(
+  private readonly columnsState = signal<Column[]>(this.allColumns.filter(
     c => !MessageExplorerComponent.OPTIONAL_COLUMNS.includes(c.name)
-  );
+  ));
+  get columns(): Column[] { return this.columnsState(); }
+  set columns(value: Column[]) { this.columnsState.set(value); }
 
   actionControls: ActionControl[] = [
     {

@@ -554,6 +554,19 @@ bulk delete; add a mapping and edit one (the stepper opens and shows its data); 
 closes the stepper; "Go to problem" after a rejected save (same item as the editor check); the AI drawer opens
 when a mapping is created with "Generate with AI". Unit tests: 1012 of 1012 pass.
 
+### Mapping type drawer and message explorer on `OnPush` (done, not yet browser-checked)
+
+Both use signal-backed accessors for the fields their templates read and that change after an `await`,
+a timer, or a subscription. Drawer: the form group, the type, transformation, code template and extension
+option lists, `hasExtensionParameter`, and the three loading flags. Explorer: the session fields
+(`sessionId`, connector name, topic, direction, source id, device name and type filter, subscription warning),
+`messages`, `paused`, and `columns`. The countdown already runs through `nextTriggerCountdown$ | async`.
+Browser check, drawer: open "Add mapping" for both directions, change the mapping type, the transformation type
+(Expert Mode on), the code template, and the extension and event; confirm each list and the loading spinners
+update and "Continue" enables when the form is valid. Explorer: start a session, confirm messages arrive on the
+polling interval, pause and resume, edit the session, stop it, reload the page to resume the stored session, and
+create a mapping from one message and from several. Unit tests: 1012 of 1012 pass.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,
