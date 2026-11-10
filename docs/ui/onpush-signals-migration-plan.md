@@ -187,12 +187,12 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | Phase | State |
 |---|---|
 | 0. Safety net | Lint rules added as warnings (`prefer-on-push`, `prefer-signals`, `no-explicit-any`), and promoted to errors in the directories that are done. Starting counts: 73 not `OnPush`, 198 `prefer-signals`, 277 `any`. |
-| 1. Leaf components | Partly done through phase 4 work (code section, grid, extension selector, subscription selectors). Doc components, grid renderers, `custom-select`, and the Formly wrappers are untouched. The migration schematics have not been run. |
+| 1. Leaf components | Done, including the 19 cell renderers and the documentation pages. `custom-select` and the Formly wrappers are left (see the status block). The migration schematics have not been run. |
 | 2. `MappingStepPropertiesComponent` | Done: `ngDoCheck` removed and the step is `OnPush`. |
-| 3. `MappingUnifiedEditorComponent` | Done: state in signals, 3 forced renders replaced, and the editor is `OnPush`. The older `MappingStepperComponent` is still on default change detection. |
+| 3. `MappingUnifiedEditorComponent` | Done: state in signals, 3 forced renders replaced, and the editor is `OnPush`. The older `MappingStepperComponent` is `OnPush` too. |
 | 4. Step components | Done: every step and every component below the editor, including the connector step and its grid. |
-| 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection. |
-| 6. Grids, lists, rest | `detectChanges()` calls removed in the connector grid, renderers, details page, and drawers. The connector grid is `OnPush`; the renderers, details page, drawers, mapping grid, message explorer, and the rest are not. |
+| 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection, on purpose. |
+| 6. Grids, lists, rest | Done except the seven components in the status block: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
 | 7. Enforce | Not started. |
 
 ## Progress
