@@ -1,7 +1,22 @@
 # Plan: OnPush and signals for the UI
 
-Status: in progress. Phase 3, step 1 is implemented and passes the unit tests. It has not been
-checked in a browser yet. See "Progress".
+Status: paused, to be continued later. The editor and everything below it is on `OnPush` and signals, the
+`detectChanges()` calls are removed except two on purpose, the lint rules are in, and the first tranche of the
+`any` typing is done (commit `d1ff21b24`). See "Status at a glance" for the numbers and "Progress" for each
+step. The rest of the plan (the remaining screens, the schematics, the remaining `any`, and promoting more
+directories to lint errors) has not been started and will be picked up in a later session.
+
+Open at the pause:
+
+- Not yet checked in a browser: the connector grid and connector step, the older stepper's AI drawer, and the
+  validation drawer's "Go to problem" (needs a JSONata mapping). The read-only case of the Subscription tab
+  (no Mapping Admin or Create role) was also not tested.
+- Still on default change detection: the two AI prompt components, the mapping grid, the message explorer, the
+  older stepper, the cell renderers, the connector details page and drawers, and the rest of the 73 components
+  the lint rule lists.
+- Two `detectChanges()` calls stay on purpose (the AI prompt's `ngOnInit` and the connector drawer's direction
+  filter). Do not replace them with a render wait without a browser check; see "Regression: AI conversation not
+  restored".
 
 ## Why
 
