@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
@@ -36,6 +36,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-doc-overview',
   templateUrl: './doc-overview.component.html',
   styleUrls: ['./doc-shared.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, RouterLink],
   // Most of the body is rendered markdown injected via [innerHTML], which never receives the
@@ -55,8 +56,12 @@ export class DocOverviewComponent implements OnInit {
   // The overview page is now short: the intro prose, the live tenant counts, then the
   // "where to start" tier table. Everything that used to be concatenated onto this page
   // (getting started, connectors, mappings, SparkPlug B, monitoring, …) is its own route.
-  htmlIntro: SafeHtml = '';
-  htmlNextSteps: SafeHtml = '';
+  private readonly htmlIntroState = signal<SafeHtml>('');
+  get htmlIntro(): SafeHtml { return this.htmlIntroState(); }
+  set htmlIntro(value: SafeHtml) { this.htmlIntroState.set(value); }
+  private readonly htmlNextStepsState = signal<SafeHtml>('');
+  get htmlNextSteps(): SafeHtml { return this.htmlNextStepsState(); }
+  set htmlNextSteps(value: SafeHtml) { this.htmlNextStepsState.set(value); }
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;

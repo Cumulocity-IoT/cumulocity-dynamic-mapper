@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  ApplicationRef,
-  Component,
-  NgZone,
-  OnDestroy,
-  ViewEncapsulation,
-  inject
-} from '@angular/core';
+import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import {
   AlertService,
   CoreModule,
@@ -44,15 +37,22 @@ const SENSITIVE_PLACEHOLDER = '****';
   templateUrl: './import-connectors.component.html',
   styleUrls: ['./import-connectors.component.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
 export class ImportConnectorsComponent implements OnDestroy {
   private readonly translateService = inject(TranslateService);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-  isLoading: boolean = false;
-  isAppCreated: boolean = false;
-  errorMessage: string;
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly isAppCreatedState = signal<boolean>(false);
+  get isAppCreated(): boolean { return this.isAppCreatedState(); }
+  set isAppCreated(value: boolean) { this.isAppCreatedState.set(value); }
+  private readonly errorMessageState = signal<string | null>(null);
+  get errorMessage(): string | null { return this.errorMessageState(); }
+  set errorMessage(value: string | null) { this.errorMessageState.set(value); }
   successText: string = 'Imported connectors';
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };

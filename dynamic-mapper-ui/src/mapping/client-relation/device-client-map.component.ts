@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -61,6 +54,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: 'device-client-map.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('device-client-map')],
   imports: [CoreModule, CommonModule, PopoverModule, ClientRelationStepperComponent]
@@ -85,7 +79,9 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   private alertService = inject(AlertService);
 
   clientRelations: any;
-  mapEntries: any[];
+  private readonly mapEntriesState = signal<any[]>([]);
+  get mapEntries(): any[] { return this.mapEntriesState(); }
+  set mapEntries(value: any[]) { this.mapEntriesState.set(value); }
   Direction = Direction;
 
   titleMapping: string;
@@ -131,7 +127,9 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   actionControlRelation: ActionControl[] = [];
   bulkActionControlRelation: BulkActionControl[] = [];
   feature: Feature;
-  showAddRelation: Boolean = false;
+  private readonly showAddRelationState = signal<boolean>(false);
+  get showAddRelation(): boolean { return this.showAddRelationState(); }
+  set showAddRelation(value: boolean) { this.showAddRelationState.set(value); }
 
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];

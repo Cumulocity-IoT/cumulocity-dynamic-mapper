@@ -17,13 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  Input,
-  OnDestroy,
-  OnInit,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { CapitalizeCasePipe } from '../../../shared';
@@ -33,6 +27,7 @@ import { CodeTemplate } from '../../configuration/configuration.model';
   selector: 'd11r-manage-template',
   templateUrl: './manage-template.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports:[CoreModule]
 })

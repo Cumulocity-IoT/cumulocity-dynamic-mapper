@@ -17,16 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import {
   ActionControl,
   Column,
@@ -79,6 +70,7 @@ import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
   templateUrl: 'type-resync.component.html',
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('type-resync')],
   imports: [CoreModule]
@@ -100,7 +92,9 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
   ) {}
 
   typeListInternal: string[] = [];
-  rows: DeviceTypeRow[] = [];
+  private readonly rowsState = signal<DeviceTypeRow[]>([]);
+  get rows(): DeviceTypeRow[] { return this.rowsState(); }
+  set rows(value: DeviceTypeRow[]) { this.rowsState.set(value); }
 
   // type -> state derived from its most recent backfill events
   private states: Record<string, ResyncState> = {};

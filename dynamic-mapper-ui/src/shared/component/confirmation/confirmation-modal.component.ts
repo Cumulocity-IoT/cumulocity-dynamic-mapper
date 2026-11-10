@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  AfterViewInit,
-  Component,
-  Input,
-  OnDestroy,
-  OnInit,
-  ViewChild
-} from '@angular/core';
+import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import {
   ConfirmModalComponent,
   CoreModule,
@@ -39,6 +32,7 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'd11r-confirmation-modal',
   templateUrl: 'confirmation-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports:[CoreModule]
 })

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -30,6 +30,7 @@ import { handleDocLinkClick, scrollToDocElement } from './doc-links';
   selector: 'd11r-doc-page',
   templateUrl: './doc-page.component.html',
   styleUrls: ['./doc-shared.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule],
   // The body is rendered markdown injected via [innerHTML], which never receives the
@@ -42,8 +43,12 @@ export class DocPageComponent implements OnInit {
   private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
-  title = '';
-  html: SafeHtml = '';
+  private readonly titleState = signal<string>('');
+  get title(): string { return this.titleState(); }
+  set title(value: string) { this.titleState.set(value); }
+  private readonly htmlState = signal<SafeHtml>('');
+  get html(): SafeHtml { return this.htmlState(); }
+  set html(value: SafeHtml) { this.htmlState.set(value); }
 
   constructor(
     private route: ActivatedRoute,

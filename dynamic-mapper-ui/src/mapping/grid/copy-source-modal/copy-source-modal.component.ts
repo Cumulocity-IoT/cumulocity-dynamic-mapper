@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnDestroy, inject } from '@angular/core';
+import { Component, Input, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CoreModule } from '@c8y/ngx-components';
 import { BsModalRef } from 'ngx-bootstrap/modal';
@@ -34,6 +34,7 @@ export type CopySource = 'active' | 'draft';
  */
 @Component({
   selector: 'd11r-copy-source-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, FormsModule],
   template: `

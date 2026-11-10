@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
@@ -30,6 +30,7 @@ import { base64ToString, stringToBase64 } from '../../mapping/util';
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './code-editor-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, EditorComponent, FormsModule]
 })
