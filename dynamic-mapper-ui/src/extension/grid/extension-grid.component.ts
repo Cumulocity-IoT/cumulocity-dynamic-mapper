@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { IManagedObject } from '@c8y/client';
 import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -40,32 +40,32 @@ interface ExtensionState {
   selector: 'd11r-mapping-extension',
   templateUrl: './extension-grid.component.html',
   styleUrls: ['../share/extension.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, ExtensionCardComponent]
 })
 export class ExtensionGridComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly reload$ = new BehaviorSubject<void>(null);
-  private readonly state = new BehaviorSubject<ExtensionState>({
+  private readonly state = signal<ExtensionState>({
     reloading: false,
     externalExtensionEnabled: true
   });
 
 
-  readonly state$ = this.state.asObservable();
   extensions$: Observable<IManagedObject[]>;
   listClass: any;
 
   get reloading(): boolean {
-    return this.state.value.reloading;
+    return this.state().reloading;
   }
 
   get feature(): Feature {
-    return this.state.value.feature;
+    return this.state().feature;
   }
 
   get externalExtensionEnabled(): boolean {
-    return this.state.value.externalExtensionEnabled;
+    return this.state().externalExtensionEnabled;
   }
 
   constructor(
@@ -87,7 +87,6 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.reload$.complete();
-    this.state.complete();
   }
 
   async loadExtensions(): Promise<void> {
@@ -177,8 +176,8 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
   }
 
   private updateState(partialState: Partial<ExtensionState>): void {
-    this.state.next({
-      ...this.state.value,
+    this.state.set({
+      ...this.state(),
       ...partialState
     });
   }

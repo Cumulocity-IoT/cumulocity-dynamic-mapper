@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -58,6 +58,7 @@ import { TranslateService } from '@ngx-translate/core';
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('monitoring-statistic')],
   imports: [CoreModule, CommonModule]

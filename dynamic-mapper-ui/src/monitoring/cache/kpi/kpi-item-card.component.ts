@@ -19,13 +19,14 @@
  *
  */
 
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { C8yTranslateModule, IconDirective } from '@c8y/ngx-components';
 import { CommonModule } from '@angular/common';
 import { KpiDetails } from '../../shared/monitoring.service';
 
 @Component({
   selector: 'd11r-kpi-item-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [IconDirective, C8yTranslateModule, CommonModule,],
   templateUrl: './kpi-item-card.component.html',

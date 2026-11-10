@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectionStrategy, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -31,6 +31,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 @Component({
   selector: 'd11r-mapping-extension-card',
   templateUrl: './extension-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, PopoverModule, BsDropdownModule]
 })
@@ -40,7 +41,9 @@ export class ExtensionCardComponent implements OnInit {
 
   ExtensionStatus = ExtensionStatus;
   external = true;
-  feature: Feature;
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
 
   constructor(
     private extensionService: ExtensionService,

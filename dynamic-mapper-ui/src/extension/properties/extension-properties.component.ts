@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import * as jsYaml from 'js-yaml';
@@ -50,6 +50,7 @@ interface ExtensionWithEntries extends IManagedObject {
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, SharedModule]
 })
