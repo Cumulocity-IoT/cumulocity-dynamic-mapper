@@ -1,7 +1,7 @@
 # Plan: OnPush and signals for the UI
 
-Status: stopped on 2026-11-10, to be continued later. All 93 components are on `OnPush`. The last seven
-(listed below) were converted without a browser check and are the first to test. Nothing from the later rounds has
+Status: stopped on 2026-11-10, to be continued later. 92 of 93 components are on `OnPush`. `ai-prompt` stays on default change detection (see below). The other six of
+the last seven (listed below) were converted without a browser check and are the first to test. Nothing from the later rounds has
 been checked in a browser yet: only the editor rounds up to the "Code template: Replace code" entry were
 checked, see "Progress". The code is committed on `develop` and is not pushed.
 
@@ -10,16 +10,16 @@ none from this work):
 
 | Measure | Start | At the stop |
 |---|---|---|
-| Components on `OnPush` | 5 of 91 | 93 of 93 |
+| Components on `OnPush` | 5 of 91 | 92 of 93 (`ai-prompt` stays on default) |
 | `detectChanges()` calls | 29 | 2 on purpose (AI prompt `ngOnInit`, connector drawer direction filter) |
 | `ngDoCheck` | 1 | 0 |
-| `prefer-on-push` warnings | 73 | 0 |
+| `prefer-on-push` warnings | 73 | 1 (`ai-prompt`, on purpose) |
 | `prefer-signals` warnings | 198 | 198 (not started) |
 | Explicit `any` (non-spec) | 277 | 190 (second round added 2 casts) |
 
-Converted last, with no browser check yet (7): `ai-prompt`, `shared-code-ai-prompt`,
+Converted last, with no browser check yet (6): `shared-code-ai-prompt`,
 `connector-configuration-drawer`, `custom-form-field-wrapper`, `input-list-formly`, `input-list`, and
-`custom-select`. See the entry "Last seven components on `OnPush`" for what changed and how to test each.
+`custom-select`. See the entry "Last components on `OnPush`" for what changed and how to test each.
 
 Open browser tests (nothing below has been run; each entry under "Progress" has its own steps):
 
@@ -46,7 +46,7 @@ Next steps, in this order:
 
 1. Run the browser tests above and fix what they show. A failed test points at a field that needs a signal or
    a `markForCheck()`.
-2. Test the last seven first (checklist in their entry). Do not replace the `detectChanges()` in `ai-prompt`
+2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
 3. Promote the lint rules to errors for the whole tree (phase 7), then start `prefer-signals` and the
    remaining `any`.
@@ -177,7 +177,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 
 | Measure | Start | Now |
 |---|---|---|
-| Components on `OnPush` (lint count) | 5 of 91 by grep | 93 of 93 (see the status block at the top) |
+| Components on `OnPush` (lint count) | 5 of 91 by grep | 92 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
 | Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 190 |
@@ -659,10 +659,10 @@ tabs: open each drawer, commit, delete a subscription, resync a type); device-to
 test-device grid; each documentation page (search in `doc-main`, code blocks and diagrams render); copy a mapping
 that has a draft (the copy-source dialog); the validation drawer; the deprecation notice. Unit tests: 1012 of 1012.
 
-### Last seven components on `OnPush` (done, not yet browser-checked)
+### Last components on `OnPush` (six done, `ai-prompt` reverted; not yet browser-checked)
 
-All components are now on `OnPush`. These seven were the ones left on purpose, and they need browser checks
-before anything else is built on them.
+These seven were the ones left on purpose. Six are converted and need browser checks before anything else is
+built on them; `ai-prompt` was converted and then reverted.
 - `connector-configuration-drawer`: nine fields became signals (the three form field lists and `dynamicForm`,
   `description`, `readOnly`, `feature`, `mode`, `testing`, `testResult`). The synchronous `detectChanges()` in
   `onDirectionFilterChange` stays; it still renders an `OnPush` view.
@@ -672,13 +672,13 @@ before anything else is built on them.
   `setDisabledState`, the keyboard service subscription, the focus microtask, `select`, `deselect`,
   `deselectAll`, and `onHidden`.
 - `shared-code-ai-prompt`: strategy change only; it already called `markForCheck()` after each async step.
-- `ai-prompt`: strategy change, plus `ngOnInit` now wraps the old body in a `try/finally` that calls
-  `markForCheck()` (it returned from several places after an `await`, without marking), and the drawer resize
-  marks the view because it runs in a native listener. The synchronous `detectChanges()` stays, as the
-  regression entry above requires.
-Browser check, in this order: (1) AI prompt: open it on a new mapping and on a mapping with a stored
-conversation (history and suggestions must show, as before the migration), generate, close, reopen, drag the
-preview resize handle; (2) code template AI prompt (shared code: open, chat, accept the result); (3) connector
+- `ai-prompt`: reverted to default change detection. `OnPush` (with a `markForCheck()` wrapper around `ngOnInit`
+  and one in the drawer resize) made the reopened drawer show no earlier conversation again, as reported in the
+  browser. This is the second time a change to this component's change detection caused it (the first was
+  the render wait in "Regression: AI conversation not restored"). The mechanism is still unknown. Do not try
+  `OnPush` here again without first reproducing the loss in a unit test that uses the real `c8y-agent-chat`.
+Browser check, in this order: (1) the AI prompt must still show its history after reopening (it is back on the
+default strategy, so this confirms the revert); (2) code template AI prompt (shared code: open, chat, accept the result); (3) connector
 drawer: add a connector, change the type, change the direction filter, view an enabled connector (read only),
 run "Test connection"; (4) every Formly field type in that drawer, including the map field (add and remove
 rows) and the validation messages when a required field is left empty; (5) every `d11r-select` in the
