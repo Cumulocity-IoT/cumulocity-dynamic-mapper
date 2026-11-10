@@ -117,6 +117,25 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     await component.ngOnInit();
   });
 
+  // The step is OnPush. Results arrive after awaits, and the host pushes new test mappings with no event
+  // in this view, so the step has to mark itself for checking.
+  it('marks itself for checking when a test run finishes', async () => {
+    const markForCheck = spyOn(component['cdr'], 'markForCheck');
+    testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+    await component.onTestTransformation();
+
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking when the host pushes a new test mapping', () => {
+    const markForCheck = spyOn(component['cdr'], 'markForCheck');
+
+    component.updateTestingTemplate.next(buildMapping());
+
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
   it('opens the dialog for a missing device reported as a WARNING (Dry Run) and offers to assume it exists', async () => {
     testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsWarning), Promise.resolve(ok));
 
@@ -583,7 +602,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       expect(alertService.danger).not.toHaveBeenCalled();
       expect(component.testingModel.results.length).toBe(1);
-      expect(component.testingModel.request).toEqual({ payload: 'temp;21.5\n' });
+      expect(component.testingModel.request as unknown).toEqual({ payload: 'temp;21.5\n' });
       expect(component.testingModel.logs).toContain(
         'INFO A request or response is not a JSON object, so it is shown as text under "payload".');
     });
@@ -596,7 +615,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onTestTransformation();
 
-      expect(component.testingModel.request).toEqual({ a: 2, b: 1 });
+      expect(component.testingModel.request as unknown).toEqual({ a: 2, b: 1 });
       expect(component.testingModel.logs?.some(l => l.includes('not a JSON object'))).toBeFalse();
     });
 

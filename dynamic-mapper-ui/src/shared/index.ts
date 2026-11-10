@@ -38,6 +38,7 @@ export * from './mapping/mapping-helpers';
 export * from './mapping/validation-errors';
 export * from './mapping/notification-subscription.model';
 export * from './mapping/mapping.constants';
+export * from './mapping/json.model';
 export * from './misc/admin.guard';
 export * from './misc/base64-decode.pipe';
 export * from './misc/camel-case.pipe';

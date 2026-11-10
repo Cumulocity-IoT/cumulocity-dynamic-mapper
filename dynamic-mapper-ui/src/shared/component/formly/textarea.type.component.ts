@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, ViewChild, Injector, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, Injector, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { afterNextRenderInZone } from '../../misc/after-render';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FieldType, FormlyModule } from '@ngx-formly/core';
@@ -79,6 +80,7 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
 })
 export class TextareaTypeComponent extends FieldType implements AfterViewInit {
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   @ViewChild('textareaRef') textareaRef: ElementRef<HTMLTextAreaElement>;
   showSensitive = false;
 
@@ -100,7 +102,7 @@ export class TextareaTypeComponent extends FieldType implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.formControl.valueChanges.subscribe(() => {
+    this.formControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       afterNextRenderInZone(this.injector, () => this.resize());
     });
   }

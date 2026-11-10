@@ -19,6 +19,7 @@
  */
 
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -40,6 +41,7 @@ import {
   styleUrls: ['../../shared/mapping/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ConnectorGridComponent, C8yTranslateDirective]
 })
 export class MappingConnectorComponent implements OnInit {

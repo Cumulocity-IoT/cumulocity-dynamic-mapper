@@ -18,8 +18,9 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, computed, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, ViewChild, computed, signal } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
+import { MappingCodeEditorSectionComponent } from './mapping-code-editor-section.component';
 import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService } from '@c8y/ngx-components';
@@ -35,9 +36,11 @@ import {
   Extension,
   Feature,
   isSubstitutionsAsCode,
+  JsonSchema,
   Mapping,
   StepperConfiguration,
   Substitution,
+  Template,
   TransformationType
 } from '../../shared';
 import {
@@ -53,7 +56,7 @@ import {
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../shared/configuration/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition, MappingForAiDrawer } from '../../shared/mapping/ai-prompt.model';
 import { StepLayout } from '../../shared/mapping/stepper.model';
 import { emptySelection, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
 import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
@@ -75,8 +78,74 @@ import { StepperViewModel } from './stepper-view.model';
 @Directive()
 export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   private readonly injector = inject(Injector);
-  abstract mapping: Mapping;
-  abstract stepperConfiguration: StepperConfiguration;
+  /**
+   * The mapping being edited, held as one signal that only the host writes. The object inside is
+   * treated as immutable: every change goes through {@link patchMapping} (or
+   * {@link updateMapping} / {@link withMappingDraft} for code that mutates in place) and produces a
+   * new object, so an `OnPush` child sees the change through its input and a `computed()` slice such
+   * as `computed(() => this.mappingSignal().filterMapping)` only fires when that value changes.
+   * Hosts declare the `mapping` input through `inputs: [...]` in their `@Component`, not with a
+   * field of their own, like `deploymentMapEntry`.
+   */
+  private readonly mappingState = signal<Mapping | undefined>(undefined);
+  readonly mappingSignal = computed(() => this.mappingState()!);
+  get mapping(): Mapping {
+    return this.mappingState()!;
+  }
+  set mapping(value: Mapping) {
+    this.mappingState.set(value);
+  }
+
+  /**
+   * Resolves once Angular has rendered the pending state changes, so lazily rendered children and
+   * `@ViewChild` references exist. Use it instead of `cdr.detectChanges()`: it waits for the normal
+   * render, which is also what a component on `OnPush` needs, rather than forcing one.
+   */
+  protected whenRendered(): Promise<void> {
+    return new Promise(resolve => afterNextRenderInZone(this.injector, resolve));
+  }
+
+  /** Replaces the given top-level properties. Nested values in the patch must be new objects or arrays. */
+  protected patchMapping(patch: Partial<Mapping>): void {
+    this.mappingState.update(current => ({ ...current!, ...patch }));
+  }
+
+  /**
+   * For code that mutates a mapping in place (the stepper service's extension and target API
+   * handlers). Runs it on a copy, then publishes the copy. `extension` is copied too because those
+   * handlers write into it.
+   */
+  protected updateMapping(recipe: (draft: Mapping) => void): void {
+    const draft = BaseMappingDraft.copy(this.mapping);
+    recipe(draft);
+    this.mappingState.set(draft);
+  }
+
+  /**
+   * The async form of {@link updateMapping}, for saving and publishing, which write the version,
+   * template and code fields into the mapping they are given. Only the properties the callback
+   * actually changed are patched afterwards, so an edit made while it ran is not overwritten.
+   * Patched in `finally`: a failed call can still have changed fields before it threw.
+   */
+  protected async withMappingDraft<T>(run: (draft: Mapping) => Promise<T>): Promise<T> {
+    const base = this.mapping;
+    const draft = BaseMappingDraft.copy(base);
+    try {
+      return await run(draft);
+    } finally {
+      const changed: Partial<Mapping> = {};
+      for (const key of Object.keys(draft) as (keyof Mapping)[]) {
+        if (draft[key] !== base[key]) (changed as Record<string, unknown>)[key] = draft[key];
+      }
+      if (Object.keys(changed).length > 0) this.patchMapping(changed);
+    }
+  }
+  // The properties below are signal-backed accessors, written by the host and read by its template. Reads
+  // and writes keep their old names, so no call site changes; a host on `OnPush` re-renders when one
+  // changes. Hosts do not declare these fields themselves.
+  private readonly stepperConfigurationState = signal<StepperConfiguration>(undefined!);
+  get stepperConfiguration(): StepperConfiguration { return this.stepperConfigurationState(); }
+  set stepperConfiguration(value: StepperConfiguration) { this.stepperConfigurationState.set(value); }
   /**
    * The connectors this mapping is deployed to. Held in a signal so what is derived from it, such
    * as {@link connectorSelectionEmpty}, is always current, even when the connector step reports
@@ -94,8 +163,23 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   readonly connectorSelectionEmpty = computed(() => isConnectorSelectionEmpty(this.deploymentMapEntrySignal()));
   /** The rendered template step, if any; the base only needs what {@link TemplateEditorRef} offers. */
   abstract templateStepRef: TemplateEditorRef | undefined;
-  abstract codeEditor: EditorComponent;
-  abstract currentStepIndex: number;
+  /** The code-editor block of the Transformation step, once it is rendered. */
+  @ViewChild(MappingCodeEditorSectionComponent) protected codeSection?: MappingCodeEditorSectionComponent;
+  /** The Monaco editor inside {@link codeSection}; `undefined` until it has been created. */
+  get codeEditor(): EditorComponent | undefined {
+    return this.codeSection?.codeEditorRef;
+  }
+  /**
+   * The selected step or tab. A signal, so a host on `OnPush` re-renders when it changes. Hosts do not
+   * declare a field of their own.
+   */
+  private readonly currentStepIndexState = signal(0);
+  get currentStepIndex(): number {
+    return this.currentStepIndexState();
+  }
+  set currentStepIndex(value: number) {
+    this.currentStepIndexState.set(value);
+  }
   /** Index of the transformation step/tab; anything before it counts as "before substitutions". */
   protected abstract get substitutionStepIndex(): number;
 
@@ -108,7 +192,9 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
    * What the Subscription step collected, written when the mapping is saved. Held here rather
    * than in the step: the unified editor destroys the step on every tab switch.
    */
-  subscriptionSelection: OutboundSubscriptionSelection = emptySelection();
+  private readonly subscriptionSelectionState = signal<OutboundSubscriptionSelection>(emptySelection());
+  get subscriptionSelection(): OutboundSubscriptionSelection { return this.subscriptionSelectionState(); }
+  set subscriptionSelection(value: OutboundSubscriptionSelection) { this.subscriptionSelectionState.set(value); }
 
   onSubscriptionSelectionChange(selection: OutboundSubscriptionSelection): void {
     this.subscriptionSelection = selection;
@@ -130,15 +216,25 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   readonly TransformationType = TransformationType;
 
   // View model with computed properties for template simplification
-  stepperViewModel!: StepperViewModel;
+  private readonly stepperViewModelState = signal<StepperViewModel>(undefined!);
+  get stepperViewModel(): StepperViewModel { return this.stepperViewModelState(); }
+  set stepperViewModel(value: StepperViewModel) { this.stepperViewModelState.set(value); }
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
-  schemaSource: any;
-  schemaTarget: any;
+  private readonly schemaSourceState = signal<JsonSchema | undefined>(undefined);
+  get schemaSource(): JsonSchema | undefined { return this.schemaSourceState(); }
+  set schemaSource(value: JsonSchema | undefined) { this.schemaSourceState.set(value); }
+  private readonly schemaTargetState = signal<JsonSchema | undefined>(undefined);
+  get schemaTarget(): JsonSchema | undefined { return this.schemaTargetState(); }
+  set schemaTarget(value: JsonSchema | undefined) { this.schemaTargetState.set(value); }
 
-  templateForm!: FormGroup;
+  private readonly templateFormState = signal<FormGroup>(undefined!);
+  get templateForm(): FormGroup { return this.templateFormState(); }
+  set templateForm(value: FormGroup) { this.templateFormState.set(value); }
   filterFormly = new FormGroup({});
-  filterFormlyFields!: FormlyFieldConfig[];
+  private readonly filterFormlyFieldsState = signal<FormlyFieldConfig[]>(undefined!);
+  get filterFormlyFields(): FormlyFieldConfig[] { return this.filterFormlyFieldsState(); }
+  set filterFormlyFields(value: FormlyFieldConfig[]) { this.filterFormlyFieldsState.set(value); }
   propertyFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
@@ -146,16 +242,32 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   codeTemplatesDecoded = new Map<string, CodeTemplate>();
   codeTemplates?: CodeTemplateMap;
   codeTemplateEntries: { key: string; name: string; type: TemplateType }[] = [];
-  mappingCode?: string;
+  private readonly mappingCodeState = signal<string | undefined>(undefined);
+  get mappingCode(): string | undefined { return this.mappingCodeState(); }
+  set mappingCode(value: string | undefined) { this.mappingCodeState.set(value); }
   templateId?: TemplateType;
 
-  sourceTemplate?: any;
-  sourceSystem!: string;
-  targetTemplate?: any;
-  targetSystem!: string;
-  aiAgentDeployed = false;
-  aiCapabilitiesDisabled = false;
-  aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
+  private readonly sourceTemplateState = signal<Template | undefined>(undefined);
+  get sourceTemplate(): Template | undefined { return this.sourceTemplateState(); }
+  set sourceTemplate(value: Template | undefined) { this.sourceTemplateState.set(value); }
+  private readonly sourceSystemState = signal<string>(undefined!);
+  get sourceSystem(): string { return this.sourceSystemState(); }
+  set sourceSystem(value: string) { this.sourceSystemState.set(value); }
+  private readonly targetTemplateState = signal<Template | undefined>(undefined);
+  get targetTemplate(): Template | undefined { return this.targetTemplateState(); }
+  set targetTemplate(value: Template | undefined) { this.targetTemplateState.set(value); }
+  private readonly targetSystemState = signal<string>(undefined!);
+  get targetSystem(): string { return this.targetSystemState(); }
+  set targetSystem(value: string) { this.targetSystemState.set(value); }
+  private readonly aiAgentDeployedState = signal<boolean>(false);
+  get aiAgentDeployed(): boolean { return this.aiAgentDeployedState(); }
+  set aiAgentDeployed(value: boolean) { this.aiAgentDeployedState.set(value); }
+  private readonly aiCapabilitiesDisabledState = signal<boolean>(false);
+  get aiCapabilitiesDisabled(): boolean { return this.aiCapabilitiesDisabledState(); }
+  set aiCapabilitiesDisabled(value: boolean) { this.aiCapabilitiesDisabledState.set(value); }
+  private readonly aiAgentState = signal<AgentObjectDefinition | AgentTextDefinition | null>(null);
+  get aiAgent(): AgentObjectDefinition | AgentTextDefinition | null { return this.aiAgentState(); }
+  set aiAgent(value: AgentObjectDefinition | AgentTextDefinition | null) { this.aiAgentState.set(value); }
 
   // Use service observables
   get isSubstitutionValid$() { return this.stepperService.isSubstitutionValid$; }
@@ -164,19 +276,38 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   get targetCustomMessage$() { return this.stepperService.targetCustomMessage$; }
 
   // Cached properties for c8y-select components (to avoid recreating arrays on every change detection)
-  extensionItems: string[] = [];
+  private readonly extensionItemsState = signal<string[]>([]);
+  get extensionItems(): string[] { return this.extensionItemsState(); }
+  set extensionItems(value: string[]) { this.extensionItemsState.set(value); }
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a parameter block defined */
-  hasExtensionParameter = false;
+  private readonly hasExtensionParameterState = signal<boolean>(false);
+  get hasExtensionParameter(): boolean { return this.hasExtensionParameterState(); }
+  set hasExtensionParameter(value: boolean) { this.hasExtensionParameterState.set(value); }
   /** True while extensions are being (re-)loaded from the backend */
-  isLoadingExtensions = false;
-  codeTemplateItems: Array<{ label: string; value: string }> = [];
+  private readonly isLoadingExtensionsState = signal<boolean>(false);
+  get isLoadingExtensions(): boolean { return this.isLoadingExtensionsState(); }
+  set isLoadingExtensions(value: boolean) { this.isLoadingExtensionsState.set(value); }
+  private readonly codeTemplateItemsState = signal<Array<{ label: string; value: string }>>([]);
+  get codeTemplateItems(): Array<{ label: string; value: string }> { return this.codeTemplateItemsState(); }
+  set codeTemplateItems(value: Array<{ label: string; value: string }>) { this.codeTemplateItemsState.set(value); }
 
-  templatesInitialized = false;
+  /** True once the templates are expanded and the editors that show them can render. A signal for `OnPush` hosts. */
+  private readonly templatesInitializedState = signal(false);
+  get templatesInitialized(): boolean {
+    return this.templatesInitializedState();
+  }
+  set templatesInitialized(value: boolean) {
+    this.templatesInitializedState.set(value);
+  }
   extensions = new Map<string, Extension>();
-  editorOptions?: EditorComponent['editorOptions'];
+  private readonly editorOptionsState = signal<EditorComponent['editorOptions'] | undefined>(undefined);
+  get editorOptions(): EditorComponent['editorOptions'] | undefined { return this.editorOptionsState(); }
+  set editorOptions(value: EditorComponent['editorOptions'] | undefined) { this.editorOptionsState.set(value); }
 
-  feature!: Feature;
+  private readonly featureState = signal<Feature>(undefined!);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
   serviceConfiguration!: ServiceConfiguration;
 
   editorOptionsSourceTemplate = {
@@ -199,8 +330,12 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   };
 
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
-  codeEditorHelp!: string;
-  codeEditorLabel!: string;
+  private readonly codeEditorHelpState = signal<string>(undefined!);
+  get codeEditorHelp(): string { return this.codeEditorHelpState(); }
+  set codeEditorHelp(value: string) { this.codeEditorHelpState.set(value); }
+  private readonly codeEditorLabelState = signal<string>(undefined!);
+  get codeEditorLabel(): string { return this.codeEditorLabelState(); }
+  set codeEditorLabel(value: string) { this.codeEditorLabelState.set(value); }
 
   private transitionQueue: Promise<void> = Promise.resolve();
 
@@ -376,21 +511,21 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
   /** The host owns the mapping: children report changes, only the host writes them. */
   onSubstitutionsChange(substitutions: Substitution[]): void {
-    this.mapping.substitutions = substitutions;
+    this.patchMapping({ substitutions });
   }
 
   onPropertiesChange(patch: Partial<Mapping>): void {
-    Object.assign(this.mapping, patch);
+    this.patchMapping(patch);
   }
 
   onFilterMappingChange(filterMapping: string): void {
-    this.mapping.filterMapping = filterMapping;
+    this.patchMapping({ filterMapping });
   }
 
-  onTestingSourceTemplateChanged(template: any): void {
+  onTestingSourceTemplateChanged(template: Template): void {
     this.sourceTemplate = template;
     // The payload the user edited in the test step becomes the mapping's source template.
-    this.mapping.sourceTemplate = JSON.stringify(template || {});
+    this.patchMapping({ sourceTemplate: JSON.stringify(template || {}) });
   }
 
   raiseAlert(alert: Alert): void {
@@ -398,20 +533,26 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   }
 
   onSelectExtensionName(extensionName: string): void {
-    this.stepperService.applyExtensionNameSelection(extensionName, this.mapping, this.extensions);
+    this.updateMapping(draft => this.stepperService.applyExtensionNameSelection(extensionName, draft, this.extensions));
   }
 
   onSelectExtensionEvent(extensionEvent: string): void {
-    const hasParameter = this.stepperService.applyExtensionEventSelection(
-      extensionEvent, this.mapping, this.extensions, this.templateForm
-    );
+    let hasParameter: boolean | undefined;
+    this.updateMapping(draft => {
+      hasParameter = this.stepperService.applyExtensionEventSelection(
+        extensionEvent, draft, this.extensions, this.templateForm
+      );
+    });
     if (hasParameter !== undefined) {
       this.hasExtensionParameter = hasParameter;
     }
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
-    const result = this.stepperService.applyTargetAPIChange(this.mapping, this.stepperConfiguration.direction, changedTargetAPI);
+    let result!: ReturnType<MappingStepperService['applyTargetAPIChange']>;
+    this.updateMapping(draft => {
+      result = this.stepperService.applyTargetAPIChange(draft, this.stepperConfiguration.direction, changedTargetAPI);
+    });
     if (result.schemaTarget !== undefined) this.schemaTarget = result.schemaTarget;
     if (result.schemaSource !== undefined) this.schemaSource = result.schemaSource;
   }
@@ -424,9 +565,17 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     const code = this.stepperService.computeCodeFromTemplate(
       this.codeTemplatesDecoded, this.templateId, this.serviceConfiguration, this.mapping.transformationType
     );
-    if (code !== undefined) {
-      this.mappingCode = code;
+    if (code === undefined) {
+      // A selection that finds no template used to do nothing, which looked like a dead button.
+      if (this.templateId) {
+        this.alertService.warning(gettext('The selected code template was not found. Reload the page and try again.'));
+      }
+      return;
     }
+    this.mappingCode = code;
+    // Write into the editor directly as well as through the `code` binding: the binding reaches Monaco
+    // only after a render and an async `ngModel` update, and the editor must show the new code at once.
+    this.codeSection?.writeCode(code);
   }
 
   private updateCodeTemplateEntries(): void {
@@ -438,7 +587,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   }
 
   async onCreateCodeTemplate(): Promise<void> {
-    // Reachable only because the "Create new code template" button renders inside the
+    // Reachable only because the "Create code template" button renders inside the
     // code-editor section, which is gated on a StepperConfiguration flag two hops away from
     // the transformation type. Check here rather than rely on that: an unsupported
     // combination should tell the user, not throw out of an event handler.
@@ -496,7 +645,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
     let drawer;
     try {
-      const testMapping: any = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      const testMapping: MappingForAiDrawer = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
       // What is known about the captured message (type, size, sender, broker metadata) lives on the
       // stepper configuration only; attach it to the drawer's copy so AI generation sees it. Never
       // persisted on the mapping itself.
@@ -531,13 +680,11 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
         if (typeof result === 'string' && result.trim()) {
           this.mappingCode = result;
 
-          if (this.codeEditor) {
-            // After the render that applies the new `mappingCode` to the editor's input.
-            afterNextRenderInZone(this.injector, () => {
-              this.codeEditor.writeValue(result);
-              this.cdr.markForCheck();
-            });
-          }
+          // The editor may only be created by the next render, so write once that has happened.
+          afterNextRenderInZone(this.injector, () => {
+            this.codeSection?.writeCode(result);
+            this.cdr.markForCheck();
+          });
         } else {
           this.alertService.warning(gettext('No valid JavaScript code was generated.'));
         }
@@ -566,3 +713,12 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.isGenerateSubstitutionOpen = false;
   }
 }
+
+/** Copies a mapping for in-place mutation, including `extension`, which the stepper service writes into. */
+const BaseMappingDraft = {
+  copy(mapping: Mapping): Mapping {
+    const copy = { ...mapping };
+    if (mapping.extension) copy.extension = { ...mapping.extension };
+    return copy;
+  }
+};

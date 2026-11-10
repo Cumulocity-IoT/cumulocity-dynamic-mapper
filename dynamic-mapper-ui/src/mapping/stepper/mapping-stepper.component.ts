@@ -28,7 +28,6 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { EditorComponent } from '@c8y/ngx-components/editor';
 import { C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 // Side-effect import, kept first: the type-only imports below are elided at build time, and
@@ -69,13 +68,11 @@ interface StepperStepChange {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
-  // `deploymentMapEntry` is an accessor on MappingEditorBase.
-  inputs: ['deploymentMapEntry'],
+  // `deploymentMapEntry` and `mapping` are accessors on MappingEditorBase.
+  inputs: ['deploymentMapEntry', 'mapping', 'stepperConfiguration'],
   imports: [CoreModule, CommonModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingStepSubscriptionComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, MappingTemplateStepComponent, MappingExtensionSelectorComponent, MappingCodeEditorSectionComponent]
 })
 export class MappingStepperComponent extends MappingEditorBase implements OnInit {
-  @Input() mapping!: Mapping;
-  @Input() stepperConfiguration!: StepperConfiguration;
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<CommitEditorState>();
 
@@ -83,7 +80,6 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   @ViewChild('transformationStepRef', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
-  @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
 
   protected get substitutionStepIndex(): number { return this.layout.transformation; }
   get STEP_DEFINE_SUBSTITUTIONS(): number { return this.layout.transformation; }
@@ -92,7 +88,6 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   readonly labelsFinal = { custom: gettext('Confirm') };
 
   stepperForward = true;
-  currentStepIndex = 0;
 
   /**
    * Snapshot of the Cumulocity-side template's freshly-expanded default content, taken once when
@@ -229,9 +224,10 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
    */
   private launchAIGenerationOnStart(): void {
     (document.activeElement as HTMLElement | null)?.blur?.();
-    setTimeout(() => {
+    setTimeout(async () => {
       this.updateTemplatesInEditors();
-      this.cdr.detectChanges();
+      // The transformation step must have the updated templates, as inputs, before the drawer opens.
+      await this.whenRendered();
       this.transformationStepRef?.openGenerateSubstitutionDrawer();
     }, 0);
   }

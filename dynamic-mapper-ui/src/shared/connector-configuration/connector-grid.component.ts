@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector } from '@angular/core';
 import { afterNextRenderInZone } from '../misc/after-render';
 import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -48,6 +48,7 @@ import { provideGridPersistence } from '../misc/grid-persistence';
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [...provideGridPersistence((url) => (url.includes('/mappings/') ? 'connectors-select' : 'connectors'))],
   imports: [
     CoreModule,
@@ -67,7 +68,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
-  @ViewChild('autoRefreshTemplate') autoRefreshTemplate: TemplateRef<any>;
+  // Static: the template is at the top level of the grid's own template, so it exists before the first
+  // render and the header controls can be set in ngOnInit instead of forcing a render after the view init.
+  @ViewChild('autoRefreshTemplate', { static: true }) autoRefreshTemplate: TemplateRef<any>;
   @ViewChild(CountdownIntervalComponent)
   countdownIntervalComponent: CountdownIntervalComponent;
   toggleIntervalForm: FormGroup;
@@ -124,6 +127,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   async ngOnInit(): Promise<void> {
+    this.headerActionControls = [{
+      type: 'AUTO_REFRESH',
+      template: this.autoRefreshTemplate,
+      callback: () => {}
+    }];
     this.initializeColumns();
     this.initializeActionControls();
     this.initializeBulkActionControls();
@@ -150,12 +158,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   ngAfterViewInit(): void {
-    this.headerActionControls = [{
-      type: 'AUTO_REFRESH',
-      template: this.autoRefreshTemplate,
-      callback: () => {}
-    }];
-    this.cdr.detectChanges();
     if (this.selectable) {
       afterNextRenderInZone(this.injector, () => this.connectorGrid.setItemsSelected(this.selected, true));
     }
@@ -314,6 +316,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       if (this.selectable) {
         this.updateDeploymentMapEntry(selected);
       }
+      // OnPush: the selected connectors' names are looked up in `configurations`, which changes here, from
+      // a subscription rather than from an event of this view.
+      this.cdr.markForCheck();
     });
   }
 

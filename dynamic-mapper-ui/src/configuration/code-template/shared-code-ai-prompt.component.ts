@@ -92,14 +92,14 @@ export class SharedCodeAiPromptComponent implements OnInit {
       const settings = await this.aiAgentService.getAISettings(true);
       if (settings.killSwitch) {
         this.aiCapabilitiesDisabled = true;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
         return;
       }
       this.telemetryEnabled = !settings.telemetryOptOut;
     } catch (error) {
       console.error('Failed to check AI settings before opening the AI assistant:', error);
       this.aiAvailabilityCheckFailed = true;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -120,7 +120,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
       }
     ];
     this.aiChatEnabled = true;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /**
@@ -155,7 +155,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
       this.generatedCode = candidate;
       this.valid = true;
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   save(): void {

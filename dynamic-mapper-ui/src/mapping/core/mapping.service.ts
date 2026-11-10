@@ -62,6 +62,8 @@ import {
   LoggingEventTypeMap,
   LoggingEventType,
   DEPLOYMENT_MAP_FRAGMENT,
+  JsonValue,
+  Template,
 } from '../../shared';
 
 import {
@@ -475,11 +477,11 @@ export class MappingService {
 
   // ===== UTILITY METHODS =====
 
-  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
-    let result: any = '';
+  async evaluateExpression(json: Template | undefined, path: string): Promise<JsonValue> {
+    let result: JsonValue = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);
-      result = expression.evaluate(json) as JSON;
+      result = expression.evaluate(json) as JsonValue;
     }
     return result;
   }

@@ -150,3 +150,50 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(step.cancelEditSubstitution).not.toHaveBeenCalled();
   });
 });
+
+describe('MappingSubstitutionStepComponent async results (OnPush)', () => {
+  let step: any;
+  let markForCheck: jasmine.Spy;
+  let stepperService: jasmine.SpyObj<any>;
+
+  beforeEach(() => {
+    // Exercised without a TestBed, like the specs above: only what the methods read is set.
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    markForCheck = jasmine.createSpy('markForCheck');
+    stepperService = jasmine.createSpyObj('MappingStepperService', [
+      'evaluateSourceExpression', 'evaluateTargetExpression', 'setTargetCustomMessage'
+    ]);
+    const control = { setErrors: jasmine.createSpy('setErrors') };
+    step.cdr = { markForCheck };
+    step.stepperService = stepperService;
+    step.translateService = { instant: interpolateMessage };
+    step.substitutionFormly = { get: () => control };
+    step.substitutionModel = { pathSource: '$.a', pathTarget: '$.b' };
+  });
+
+  // The evaluation runs after an await, from the debounced input or when the host selects a row, so no
+  // event of this view marks the step; it has to mark itself, whether the evaluation succeeds or fails.
+  it('marks itself for checking after a source expression is evaluated', async () => {
+    stepperService.evaluateSourceExpression.and.resolveTo({ result: '1', resultType: 'Number', valid: true });
+    await step.updateSourceExpressionResult('$.a');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a source expression fails', async () => {
+    stepperService.evaluateSourceExpression.and.rejectWith(new Error('bad'));
+    await step.updateSourceExpressionResult('$.a');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a target expression is evaluated', async () => {
+    stepperService.evaluateTargetExpression.and.resolveTo({ result: '1', resultType: 'Number', valid: true });
+    await step.updateTargetExpressionResult('$.b');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a target expression fails', async () => {
+    stepperService.evaluateTargetExpression.and.rejectWith(new Error('bad'));
+    await step.updateTargetExpressionResult('$.b');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+});

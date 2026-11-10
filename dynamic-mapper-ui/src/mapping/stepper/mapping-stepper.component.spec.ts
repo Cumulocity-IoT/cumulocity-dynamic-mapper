@@ -313,8 +313,8 @@ describe('MappingStepperComponent', () => {
       expect(component.templateForm).toBe(session.templateForm);
       expect(component.targetSystem).toBe('X-target');
       expect(component.sourceSystem).toBe('Y-source');
-      expect(component.schemaSource).toEqual({ a: 1 });
-      expect(component.schemaTarget).toEqual({ b: 2 });
+      expect(component.schemaSource as unknown).toEqual({ a: 1 });
+      expect(component.schemaTarget as unknown).toEqual({ b: 2 });
       expect(component.codeEditorHelp).toBe('H');
       expect(component.codeEditorLabel).toBe('L');
       expect(component.feature).toBe(session.feature);
@@ -445,7 +445,7 @@ describe('MappingStepperComponent', () => {
       expect(mockStepperService.applyTargetAPIChange).toHaveBeenCalledWith(
         component.mapping, component.stepperConfiguration.direction, 'EVENT'
       );
-      expect(component.schemaTarget).toEqual({ fromService: true });
+      expect(component.schemaTarget as unknown).toEqual({ fromService: true });
     });
 
     it('applies the source schema returned by the service for OUTBOUND', async () => {
@@ -453,7 +453,7 @@ describe('MappingStepperComponent', () => {
 
       await component.onTargetAPIChanged('EVENT');
 
-      expect(component.schemaSource).toEqual({ fromService: true });
+      expect(component.schemaSource as unknown).toEqual({ fromService: true });
     });
   });
 

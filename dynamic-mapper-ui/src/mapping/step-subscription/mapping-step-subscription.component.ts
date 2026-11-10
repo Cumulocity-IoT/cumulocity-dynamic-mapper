@@ -19,6 +19,8 @@
  */
 
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   inject,
@@ -62,6 +64,7 @@ import {
   templateUrl: 'mapping-step-subscription.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CoreModule,
     CommonModule,
@@ -83,6 +86,7 @@ export class MappingStepSubscriptionComponent implements OnInit {
 
   private readonly selectionService = inject(SubscriptionSelectionService);
   private readonly alertService = inject(AlertService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   /**
    * Which option of the chosen mode is selected, and therefore expanded. The options are radio
@@ -134,6 +138,8 @@ export class MappingStepSubscriptionComponent implements OnInit {
       this.alertService.danger(gettext('Failed to load subscriptions:'), (error as Error)?.message);
     } finally {
       this.loading = false;
+      // OnPush: the baseline, `loading` and `loadFailed` change after an await, outside any event.
+      this.cdr.markForCheck();
     }
   }
 

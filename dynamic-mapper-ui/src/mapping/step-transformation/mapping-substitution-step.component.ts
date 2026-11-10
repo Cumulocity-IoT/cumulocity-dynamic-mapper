@@ -21,6 +21,8 @@
 
 // mapping-substitution-step.component.ts
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   Input,
   Output,
@@ -44,13 +46,15 @@ import {
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
+  JsonSchema,
   RepairStrategy,
-  Substitution
+  Substitution,
+  Template
 } from '../../shared';
 import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition, MappingForAiDrawer } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService, SubstitutionsUpdate } from '../service/substitution-management.service';
 import { isExpression } from '../../shared/mapping/util';
@@ -63,21 +67,22 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
   templateUrl: './mapping-substitution-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionGridComponent]
 })
 export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() sourceTemplate: any;
-  @Input() targetTemplate: any;
+  @Input() sourceTemplate: Template | undefined;
+  @Input() targetTemplate: Template | undefined;
   @Input() sourceSystem: string;
   @Input() targetSystem: string;
   @Input() feature: Feature;
   @Input() aiAgentDeployed: boolean;
   @Input() aiCapabilitiesDisabled = false;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() schemaSource: any;
-  @Input() schemaTarget: any;
+  @Input() schemaSource: JsonSchema | undefined;
+  @Input() schemaTarget: JsonSchema | undefined;
   @Input() mappingCode: string;
   @Input() codeEditorLabel: string;
   @Input() codeEditorHelp: string;
@@ -100,6 +105,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   editorTargetStepSubstitution!: JsonEditorComponent;
 
   private alertService = inject(AlertService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private translateService = inject(TranslateService);
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
@@ -293,6 +299,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
 
     this.substitutionModel = { ...this.substitutionModel };
+    // OnPush: the result arrives after an await (debounced input, onSelectSubstitution, or a host call).
+    this.cdr.markForCheck();
   }
 
   async updateTargetExpressionResult(path: string): Promise<void> {
@@ -320,6 +328,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
 
     this.substitutionModel = { ...this.substitutionModel };
+    // OnPush: the result arrives after an await (debounced input, onSelectSubstitution, or a host call).
+    this.cdr.markForCheck();
   }
 
   onSelectedPathSourceChanged(path: string): void {
@@ -421,6 +431,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       stepperConfiguration: this.stepperConfiguration
     };
     this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
+    // The host calls this directly (to jump to a validation problem), so no event of this view marks it.
+    this.cdr.markForCheck();
 
     await Promise.all([
       this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
@@ -447,7 +459,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   }
 
   async openGenerateSubstitutionDrawer(): Promise<void> {
-    const testMapping: any = { ...this.mapping };
+    const testMapping: MappingForAiDrawer = { ...this.mapping };
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
     // Out-of-band transport fields (e.g. the Kafka record key of the message this mapping was
@@ -494,6 +506,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     } catch (ex) {
       // User canceled
     }
+    this.cdr.markForCheck();
   }
 
   onValueCodeChange(value: string): void {

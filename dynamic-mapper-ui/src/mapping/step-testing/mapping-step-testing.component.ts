@@ -19,6 +19,8 @@
  */
 
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   inject,
@@ -39,10 +41,13 @@ import {
   ConfirmationModalComponent,
   ContentChanges,
   Direction,
+  isJsonObject,
   JsonEditorComponent,
+  JsonObject,
   Mapping,
   MappingType,
   StepperConfiguration,
+  Template,
   isSubstitutionsAsCode
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
@@ -54,8 +59,8 @@ import { CommonModule } from '@angular/common';
 
 interface TestingModel {
   results: DynamicMapperRequest[];
-  request?: any;
-  response?: any;
+  request?: Template;
+  response?: Template;
   logs?: string[];
 }
 
@@ -74,6 +79,7 @@ function stableStringify(value: unknown): string {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]
 
 
@@ -84,7 +90,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() connectorsUnsaved = false;
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
-  @Output() sourceTemplateChanged = new EventEmitter<any>();
+  @Output() sourceTemplateChanged = new EventEmitter<Template>();
 
   @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
   @ViewChild('editorTestingRequest') editorTestingRequest!: JsonEditorComponent;
@@ -119,6 +125,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
   private readonly translateService = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
   /**
@@ -132,7 +139,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // State
   testingModel: TestingModel = { results: [] };
   testMapping!: Mapping;
-  sourceTemplate: any;
+  sourceTemplate: Template | undefined;
   sourceSystem = '';
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(-1);
@@ -177,7 +184,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       // Patch a copy rather than mutating this.sourceTemplate in place: the payload editor's
       // [data] input is only re-applied on reference change, and testMapping/mapping.sourceTemplate
       // (the strings actually sent to the backend) must be resynced with the freshly patched id too.
-      const patchedTemplate = { ...this.sourceTemplate };
+      const patchedTemplate = { ...(this.sourceTemplate as JsonObject | undefined) };
       patchC8YTemplateForTesting(patchedTemplate, this.testMapping);
       this.syncPayload(patchedTemplate, undefined, false);
       this.resetTestingModel();
@@ -298,6 +305,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       .subscribe(mapping => {
         this.updateTestMapping(mapping);
         this.resetTestingModel();
+        // OnPush: the host pushes a new test mapping when its templates or code change, outside any event here.
+        this.cdr.markForCheck();
       });
   }
 
@@ -393,6 +402,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading = false;
       this.runningTest = undefined;
+      // OnPush: the results, console, and loading flags all change after awaits, outside any event.
+      this.cdr.markForCheck();
     }
   }
 
@@ -403,15 +414,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * discarded the whole result and its errors; sorting the keys of such text would also have turned it
    * into one entry per character. It is shown as { "payload": <text> } instead, and the caller adds a note.
    */
-  private toEditable(value: unknown): { value: any; wrapped: boolean } {
+  private toEditable(value: unknown): { value: Template | undefined; wrapped: boolean } {
+    // The request and response come from the backend as untyped JSON, so the casts below are at that boundary.
     if (typeof value !== 'string' || value === '') {
-      return { value, wrapped: false };
+      return { value: value as Template | undefined, wrapped: false };
     }
     const parsed = this.tryParse(value);
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (isJsonObject(parsed)) {
       return { value: parsed, wrapped: false };
     }
-    return { value: { payload: parsed === undefined ? value : parsed }, wrapped: true };
+    return { value: { payload: (parsed === undefined ? value : parsed) as Template }, wrapped: true };
   }
 
   private parseRequestResponse(req: DynamicMapperRequest): { request: DynamicMapperRequest; wrapped: boolean } {
@@ -430,7 +442,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // (and store the test-only patched device id in it), and the editor would then report unsaved
   // changes although the user changed nothing.
   // topicSample is only provided when called from the editor onChange handler.
-  private syncPayload(parsedContent: any, topicSample?: string, propagate = false): void {
+  private syncPayload(parsedContent: Template | undefined | null, topicSample?: string, propagate = false): void {
     const sourceTemplateStr = JSON.stringify(parsedContent || {});
     this.sourceTemplate = parsedContent;
     this.testMapping = {
@@ -622,7 +634,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private tryParse(value: string): any {
+  private tryParse(value: string): unknown {
     try {
       return JSON.parse(value);
     } catch {
@@ -648,7 +660,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return String(error || '');
   }
 
-  private parseJsonContent(content: Content): any {
+  private parseJsonContent(content: Content): Template | null | undefined {
     if ('text' in content && content.text) {
       try {
         return JSON.parse(content.text);
@@ -701,7 +713,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return 'log';
   }
 
-  private extractTopicSample(contentAsJson: any): string {
+  private extractTopicSample(contentAsJson: Template | null | undefined): string {
     if (!contentAsJson?.[MappingTokens.TOPIC_LEVEL] || !Array.isArray(contentAsJson[MappingTokens.TOPIC_LEVEL])) {
       return '';
     }

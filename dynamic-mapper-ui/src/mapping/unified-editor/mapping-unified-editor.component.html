@@ -141,7 +141,7 @@
       <ng-container codeEditor>
         <d11r-mapping-code-editor-section dataCyPrefix="dm-unified-editor" [label]="codeEditorLabel" [help]="codeEditorHelp"
             [code]="mappingCode" (codeChange)="onValueCodeChange($event)" [editorOptions]="editorOptions"
-            [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event; onSelectCodeTemplate()"
+            [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event" (replaceCode)="onSelectCodeTemplate()"
             (createTemplate)="onCreateCodeTemplate()" [aiButtonLabel]="aiButtonLabel" [aiGenerationDisabled]="aiGenerationDisabled"
             [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" (generate)="openGenerateSubstitutionDrawer()"
             [showEditor]="templatesInitialized" [showInternalNote]="stepperViewModel?.showInternalExtensionNote" (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>

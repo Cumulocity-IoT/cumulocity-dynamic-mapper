@@ -19,13 +19,16 @@
  */
 
 import {
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
   Component,
-  DoCheck,
   EventEmitter,
   inject,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
+  SimpleChanges,
   Output,
   ViewEncapsulation
 } from '@angular/core';
@@ -49,6 +52,7 @@ import {
   MappingTypeLabels,
   Qos,
   qosLabel,
+  JsonValue,
   QOS_OPTIONS,
   SharedService,
   StepperConfiguration
@@ -96,9 +100,10 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   `],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, PopoverModule]
 })
-export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoCheck {
+export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
@@ -157,6 +162,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
   private readonly destroy$ = new Subject<void>();
 
   private readonly alertService = inject(AlertService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly translateService = inject(TranslateService);
   private readonly sharedService = inject(SharedService);
   private readonly mappingService = inject(MappingService);
@@ -632,6 +638,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
         ]
       }
     ];
+    // OnPush: the form fields and models above are built after awaits (features, QoS capabilities), so no
+    // event of this view announces them.
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy() {
@@ -664,7 +673,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
     // The cache note is part of the field's help text, and a missing attribute is reported right
     // under the field (see refreshFilterInventoryWarning) — not as a toast that disappears.
     try {
-      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+      const resultExpression: JsonValue = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
         path
       );
@@ -688,6 +697,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
     this.syncFilterInventoryResultField();
+    // OnPush: the result arrives after an await (debounced input), outside any event of this view.
+    this.cdr.markForCheck();
   }
 
   private syncFilterInventoryResultField(): void {
@@ -725,6 +736,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
       field.props['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
       field.options?.detectChanges?.(field);
     }
+    this.cdr.markForCheck();
   }
 
   private uncachedWarningText(attributes: string[]): string {
@@ -846,10 +858,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
 
   /**
    * The Templates step edits `filterMapping` too, and this component outlives it in the stepper.
-   * Follow such a change so the control never shows (or writes back) a stale expression.
+   * The host replaces its mapping object on every edit, so a new `mapping` input is the signal to
+   * follow such a change and keep the control from showing (or writing back) a stale expression.
    */
-  ngDoCheck(): void {
-    if (this.model && this.mapping && this.mapping.filterMapping !== this.knownFilterMapping) {
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['mapping'] && this.model && this.mapping && this.mapping.filterMapping !== this.knownFilterMapping) {
       this.deriveExecutionFilter();
     }
   }

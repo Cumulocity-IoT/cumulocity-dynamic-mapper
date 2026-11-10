@@ -19,10 +19,11 @@
  */
 
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup } from '@angular/forms';
 import { CoreModule } from '@c8y/ngx-components';
-import { Observable } from 'rxjs';
+import { merge, Observable, Subscription } from 'rxjs';
 import { Mapping } from '../../shared';
 
 /**
@@ -37,9 +38,10 @@ import { Mapping } from '../../shared';
   selector: 'd11r-mapping-extension-selector',
   templateUrl: 'mapping-extension-selector.component.html',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule]
 })
-export class MappingExtensionSelectorComponent {
+export class MappingExtensionSelectorComponent implements OnChanges {
   @Input() form!: FormGroup;
   @Input() side: 'source' | 'target' = 'source';
   @Input() mapping!: Mapping;
@@ -50,6 +52,25 @@ export class MappingExtensionSelectorComponent {
   @Input() extensionItems: string[] = [];
   @Input() extensionEvents!: Observable<{ label: string; value: string; description?: string }[]>;
   @Input() dataCyPrefix = 'dm-mapping-stepper';
+
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private formSubscription?: Subscription;
+
+  /**
+   * The host fills the form programmatically (when it opens a saved mapping and when the extension
+   * changes), which fires no event in this component's view. The template shows the form's validity and
+   * the selected event's description, so mark the view dirty whenever the form's value or status changes.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['form']) return;
+    this.formSubscription?.unsubscribe();
+    this.formSubscription = this.form
+      ? merge(this.form.valueChanges, this.form.statusChanges)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(() => this.cdr.markForCheck())
+      : undefined;
+  }
 
   /** Description of the currently selected event, shown below the dropdown instead of inside it. */
   descriptionFor(events: { value: string; description?: string }[] | null): string | undefined {

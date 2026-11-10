@@ -198,6 +198,28 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   describe('updateFilterExpressionResult', () => {
+    // The step is OnPush. The result arrives after an await, and from the debounced filter input and the
+    // host's direct calls, so no event of this view marks it; it has to mark itself.
+    it('marks itself for checking when an evaluation succeeds', async () => {
+      const markForCheck = spyOn(component['cdr'], 'markForCheck');
+      mockStepperService.evaluateFilterExpression.and.returnValue(
+        Promise.resolve({ result: 'true', resultType: 'boolean', valid: true } as any)
+      );
+
+      await component.updateFilterExpressionResult('$exists(foo)', { foo: 1 });
+
+      expect(markForCheck).toHaveBeenCalled();
+    });
+
+    it('marks itself for checking when an evaluation fails', async () => {
+      const markForCheck = spyOn(component['cdr'], 'markForCheck');
+      mockStepperService.evaluateFilterExpression.and.returnValue(Promise.reject(new Error('bad expr')));
+
+      await component.updateFilterExpressionResult('$broken(');
+
+      expect(markForCheck).toHaveBeenCalled();
+    });
+
     it('stores the evaluated expression and announces the path to the host', async () => {
       const evaluated = { result: 'true', resultType: 'boolean', valid: true };
       mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(evaluated));
@@ -206,7 +228,7 @@ describe('MappingTemplateStepComponent', () => {
 
       await component.updateFilterExpressionResult('$exists(foo)', { foo: 1 });
 
-      expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalledWith({ foo: 1 }, '$exists(foo)');
+      expect(mockStepperService.evaluateFilterExpression as unknown as jasmine.Spy).toHaveBeenCalledWith({ foo: 1 }, '$exists(foo)');
       expect(component.filterModel.filterExpression).toEqual(evaluated);
       expect(announced).toEqual(['$exists(foo)']);
       expect(component.mapping.filterMapping).toBe(''); // the step never writes the mapping
@@ -262,7 +284,7 @@ describe('MappingTemplateStepComponent', () => {
       component.onOverwriteFilterMapping();
 
       expect(component.filterModel.filterMapping).toBe('$.deep.path');
-      expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalled();
+      expect(mockStepperService.evaluateFilterExpression as unknown as jasmine.Spy).toHaveBeenCalled();
     });
   });
 
@@ -274,7 +296,7 @@ describe('MappingTemplateStepComponent', () => {
 
       component.onSampleTargetTemplatesButton();
 
-      expect(mockStepperService.computeSampleTargetTemplate).toHaveBeenCalledWith(component.mapping, component.stepperConfiguration);
+      expect(mockStepperService.computeSampleTargetTemplate as unknown as jasmine.Spy).toHaveBeenCalledWith(component.mapping, component.stepperConfiguration);
       expect(emitted).toEqual([{ sample: true }]);
     });
   });
@@ -288,7 +310,7 @@ describe('MappingTemplateStepComponent', () => {
       component.showSourceMetadata = false;
       component.editorSourceStepTemplate = editor({ value: 2 }); // displayed template, metadata stripped
 
-      expect(component.getSourceTemplate()).toEqual({ value: 2, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] });
+      expect(component.getSourceTemplate() as unknown).toEqual({ value: 2, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] });
     });
 
     it('returns the editor content as is while metadata is shown', () => {
@@ -296,7 +318,7 @@ describe('MappingTemplateStepComponent', () => {
       component.showTargetMetadata = true;
       component.editorTargetStepTemplate = editor({ value: 2 }); // user removed the metadata on purpose
 
-      expect(component.getTargetTemplate()).toEqual({ value: 2 });
+      expect(component.getTargetTemplate() as unknown).toEqual({ value: 2 });
     });
 
     it('does not resurrect a key the user edited into a different value', () => {
@@ -304,12 +326,12 @@ describe('MappingTemplateStepComponent', () => {
       component.showSourceMetadata = false;
       component.editorSourceStepTemplate = editor({ value: 2, _IDENTITY_: { externalId: 'edited' } });
 
-      expect(component.getSourceTemplate()._IDENTITY_).toEqual({ externalId: 'edited' });
+      expect((component.getSourceTemplate() as Record<string, unknown>)['_IDENTITY_']).toEqual({ externalId: 'edited' });
     });
 
     it('is undefined without an editor, so the host keeps its own value', () => {
-      expect(component.getSourceTemplate()).toBeUndefined();
-      expect(component.getTargetTemplate()).toBeUndefined();
+      expect(component.getSourceTemplate() as unknown).toBeUndefined();
+      expect(component.getTargetTemplate() as unknown).toBeUndefined();
     });
   });
 });

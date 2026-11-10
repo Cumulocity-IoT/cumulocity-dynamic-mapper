@@ -369,11 +369,11 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       });
     });
 
-    it('should trigger change detection after creating form', async () => {
+    it('should mark itself for checking after creating form', async () => {
       // ChangeDetectorRef is a framework-provided token resolved through the component's own
       // NodeInjector, which a TestBed-module-level `{ provide: ChangeDetectorRef, useValue: ... }`
       // cannot intercept — spy on the real instance the component actually holds instead.
-      const cdrSpy = spyOn(component['cdr'], 'detectChanges');
+      const cdrSpy = spyOn(component['cdr'], 'markForCheck');
 
       await component['createDynamicForm'](ConnectorType.MQTT);
 

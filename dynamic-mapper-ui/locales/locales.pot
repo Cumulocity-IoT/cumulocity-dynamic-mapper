@@ -565,7 +565,7 @@ msgstr ""
 msgid "Create mapping from selected messages"
 msgstr ""
 
-msgid "Create new code template"
+msgid "Create code template"
 msgstr ""
 
 msgid "Create new shared code"
@@ -1226,6 +1226,12 @@ msgid "Custom filter"
 msgstr ""
 
 msgid "Fragment"
+msgstr ""
+
+msgid "Replace code"
+msgstr ""
+
+msgid "Replace the code in the editor with the selected template"
 msgstr ""
 
 msgid "Writes the \"Filter execution mapping\" of the Templates step: by type (<code>type = '...'</code>), by fragment (<code>$exists(...)</code>), or custom (empty, enter the expression there)."

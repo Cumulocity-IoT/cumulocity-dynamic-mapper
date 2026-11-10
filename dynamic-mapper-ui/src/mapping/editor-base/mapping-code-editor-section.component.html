@@ -49,20 +49,25 @@
     <div class="col-lg-5 p-r-16">
       <div class="input-group">
         <c8y-select [attr.data-cy]="dataCyPrefix + '-code-template-select'" [items]="codeTemplateItems" [ngModel]="templateId"
-          (ngModelChange)="templateSelected.emit($event)" name="templateSelect" [filterItems]="true" labelProperty="label"
+          (ngModelChange)="onTemplateSelected($event)" name="templateSelect" [filterItems]="true" labelProperty="label"
           placeholder="{{ 'Select template...' | translate }}" [attr.aria-label]="'Code Template' | translate" class="select-template">
         </c8y-select>
         <div class="input-group-btn">
+          <button type="button" name="replace" [attr.data-cy]="dataCyPrefix + '-code-template-replace'" class="btn btn-default btn-sm"
+            (click)="replaceCode.emit()" [disabled]="!templateId"
+            [title]="'Replace the code in the editor with the selected template' | translate" translate>
+            Replace code
+          </button>
           <button type="button" name="update" [attr.data-cy]="dataCyPrefix + '-code-template-create'" class="btn btn-default btn-sm"
             (click)="createTemplate.emit()" translate>
-            Create new code template
+            Create code template
           </button>
         </div>
       </div>
     </div>
   </div>
   @if (showEditor) {
-  <c8y-editor [attr.data-cy]="dataCyPrefix + '-code-editor'" [editorOptions]="editorOptions" class="form-control flex-grow"
+  <c8y-editor #codeEditor [attr.data-cy]="dataCyPrefix + '-code-editor'" [editorOptions]="editorOptions" class="form-control flex-grow"
     style="min-height: 630px" monacoEditorMarkerValidator [ngModel]="code" (ngModelChange)="codeChange.emit($event)"
     (editorInit)="editorInit.emit()">
   </c8y-editor>

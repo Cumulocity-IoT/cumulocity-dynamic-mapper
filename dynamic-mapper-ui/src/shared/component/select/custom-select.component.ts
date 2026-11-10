@@ -46,7 +46,7 @@ import {
     Validator
 } from '@angular/forms';
 import { BsDropdownDirective, BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { isEqual } from 'lodash-es';
@@ -322,6 +322,7 @@ export class CustomSelectComponent
     ngAfterViewInit(): void {
         this.selectKeyboardService
             .register$(this.searchControl.nativeElement, this.list, this.dropdown)
+            .pipe(takeUntil(this.destroy$))
             .subscribe(selectedIndex => {
                 if (selectedIndex > -1) {
                     this._preselectedItem = this._items[selectedIndex];

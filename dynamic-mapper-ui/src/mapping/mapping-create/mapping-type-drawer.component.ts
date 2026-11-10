@@ -168,7 +168,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.setupFormSubscriptions();
     } finally {
       this.isLoading = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 

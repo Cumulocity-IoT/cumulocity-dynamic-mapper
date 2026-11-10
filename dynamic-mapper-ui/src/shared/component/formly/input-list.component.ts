@@ -23,7 +23,7 @@
 
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { debounceTime, Subject } from 'rxjs';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-input-list',
@@ -94,13 +94,18 @@ export class InputListComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Debounce the changes to prevent too frequent updates
     this.changeSubject.pipe(
-      debounceTime(150) // Wait 150ms after the last change
+      debounceTime(150), // Wait 150ms after the last change
+      takeUntil(this.destroy$)
     ).subscribe(() => {
       this.emitChange();
     });
   }
 
+  private destroy$ = new Subject<void>();
+
   ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.changeSubject.complete();
   }
 

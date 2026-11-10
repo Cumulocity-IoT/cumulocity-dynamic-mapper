@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -35,6 +36,7 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports:[CoreModule, AssetSelectorModule]
 })
 export class DeviceSelectorTreeComponent {

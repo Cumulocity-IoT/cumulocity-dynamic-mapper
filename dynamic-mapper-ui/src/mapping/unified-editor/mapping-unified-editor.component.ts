@@ -19,6 +19,8 @@
  */
 
 import {
+  signal,
+  ChangeDetectionStrategy,
   Component,
   inject,
   isDevMode,
@@ -26,7 +28,6 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { EditorComponent } from '@c8y/ngx-components/editor';
 import { CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -98,6 +99,7 @@ const STEP_FOR_BLOCKER: Partial<Record<CommitBlocker, StepId>> = {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [MappingStepperService, SubstitutionManagementService],
   imports: [
     CoreModule,
@@ -127,12 +129,9 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       : gettext('General Settings');
   }
 
-  mapping!: Mapping;
-  stepperConfiguration!: StepperConfiguration;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
   // Needed to select the substitution a validation failure points at.
   @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
@@ -154,13 +153,17 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   get TAB_DEFINE_TRANSFORMATION(): number { return this.layout.transformation; }
   get TAB_TEST_MAPPING(): number { return this.layout.testing; }
 
-  currentStepIndex = 0;
-
   protected get substitutionStepIndex(): number { return this.layout.transformation; }
 
   // Snapshots for change detection — set once at load time
   private initialContentSnapshot: MappingContentSnapshot = { mappingJson: '', sourceTemplateJson: '', targetTemplateJson: '', mappingCode: '' };
-  private initialDeploymentConnectors = '';
+  /**
+   * The connector selection as last saved. A signal, because `connectorsUnsaved` is bound to the testing
+   * step and this is re-baselined after a save, which happens after an await and outside any event.
+   */
+  private readonly initialDeploymentConnectorsState = signal('');
+  private get initialDeploymentConnectors(): string { return this.initialDeploymentConnectorsState(); }
+  private set initialDeploymentConnectors(value: string) { this.initialDeploymentConnectorsState.set(value); }
 
   /** The connector selection differs from the saved deployment. A Live Test publishes to the saved one. */
   get connectorsUnsaved(): boolean {
@@ -212,7 +215,9 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
     this.templatesInitialized = true;
-    this.cdr.detectChanges();
+    // The code editor section and the extension selects render from this state; the form patch below
+    // needs them to exist.
+    await this.whenRendered();
 
     // Snapshot initial state so we can distinguish connector-only changes from content changes
     this.initialContentSnapshot = captureMappingContentSnapshot(
@@ -226,11 +231,8 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     if (this.mapping?.extension?.extensionName) {
       // Not left to handleGeneralSettingsTab(): the editor can open on a tab that never runs it.
       if (this.mapping.extension.parameter) this.hasExtensionParameter = true;
-      this.stepperService.selectExtensionName(
-        this.mapping.extension.extensionName,
-        this.extensions,
-        this.mapping
-      );
+      const extensionName = this.mapping.extension.extensionName;
+      this.updateMapping(draft => this.stepperService.selectExtensionName(extensionName, this.extensions, draft));
       this.patchExtensionFormValues();
     }
 
@@ -335,8 +337,9 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
-    const result = await this.commitService.commitMapping({
-      mapping: this.mapping,
+    // commitMapping writes the templates and code into the mapping it is given; run it on a draft.
+    const result = await this.withMappingDraft(draft => this.commitService.commitMapping({
+      mapping: draft,
       deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors,
       stepperConfiguration: this.stepperConfiguration,
@@ -353,7 +356,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         validateExtensionSelection:
           this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget
       }
-    });
+    }));
 
     if (result.status === 'blocked') {
       if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
@@ -419,7 +422,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     const name = this.mapping.name;
     try {
       if (this.mapping.draftDirty) {
-        const outcome = await this.publishService.publishDraft(this.mapping);
+        const outcome = await this.withMappingDraft(draft => this.publishService.publishDraft(draft));
         if (outcome.cancelled) {
           this.alertService.add({
             text: this.translateService.instant(gettext('Saved draft for {{name}}. It is not live yet: publish and activate it from the mapping list (Versions).'), { name }),
@@ -429,7 +432,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
         }
       } else if (!this.mapping.active && this.mapping.version) {
         // Connector-only change: no draft to publish, but an inactive mapping can still be switched on.
-        await this.publishService.activate(this.mapping, this.mapping.version);
+        await this.withMappingDraft(draft => this.publishService.activate(draft, draft.version));
       } else {
         this.alertService.info(this.translateService.instant(gettext('{{name}} has no unpublished changes.'), { name }));
       }
@@ -449,12 +452,14 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
    */
   private rebaselineAfterSave(persisted: Mapping, deploymentFailed: boolean): void {
     if (persisted) {
-      this.mapping.lastUpdate = persisted.lastUpdate;
-      this.mapping.version = persisted.version;
-      this.mapping.draftDirty = persisted.draftDirty;
-      // Defensive: the editor has no create flow today (it is reached only via /edit/:id), but if
-      // one is ever added, a second Save must update rather than create a duplicate.
-      if (persisted.id) this.mapping.id = persisted.id;
+      this.patchMapping({
+        lastUpdate: persisted.lastUpdate,
+        version: persisted.version,
+        draftDirty: persisted.draftDirty,
+        // Defensive: the editor has no create flow today (it is reached only via /edit/:id), but if
+        // one is ever added, a second Save must update rather than create a duplicate.
+        ...(persisted.id ? { id: persisted.id } : {})
+      });
     }
 
     this.initialContentSnapshot = captureMappingContentSnapshot(
@@ -561,8 +566,8 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // any in-flight tab change and performs the per-tab setup the step depends on.
     await this.onTabSelected(this.TAB_DEFINE_TRANSFORMATION);
     // The tab's content is rendered lazily, so the step only exists once that has been applied.
-    this.cdr.detectChanges();
+    await this.whenRendered();
     await this.transformationStepRef?.onSelectSubstitution(result.index);
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 }

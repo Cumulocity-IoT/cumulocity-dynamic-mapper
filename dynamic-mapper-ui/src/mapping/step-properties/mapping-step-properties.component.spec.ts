@@ -21,7 +21,7 @@
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { MappingStepPropertiesComponent } from './mapping-step-properties.component';
@@ -63,6 +63,13 @@ async function createComponent(
 // ---------------------------------------------------------------------------
 // MappingStepPropertiesComponent
 // ---------------------------------------------------------------------------
+
+/** What the editor host does when another step edits the mapping: it binds a new mapping object. */
+function hostReplacesMapping(component: MappingStepPropertiesComponent, patch: Partial<Mapping>): void {
+  const previous = component.mapping;
+  component.mapping = { ...previous, ...patch };
+  component.ngOnChanges({ mapping: new SimpleChange(previous, component.mapping, false) });
+}
 
 describe('MappingStepPropertiesComponent', () => {
   let mockSharedService: jasmine.SpyObj<SharedService>;
@@ -196,12 +203,11 @@ describe('MappingStepPropertiesComponent', () => {
 
     it('follows a filterMapping edited in the Templates step, and never writes the stale one back', async () => {
       const component = await outboundComponent("type = 'lora'");
-      component.mapping.filterMapping = '$exists(c8y_Temperature)';
-      component.ngDoCheck();
+      hostReplacesMapping(component, { filterMapping: '$exists(c8y_Temperature)' });
       expect(component.model.executionFilterMode).toBe('fragment');
       expect(component.model.executionFilterValue).toBe('c8y_Temperature');
 
-      component.mapping.filterMapping = "type = 'a' and $exists(b)";
+      hostReplacesMapping(component, { filterMapping: "type = 'a' and $exists(b)" });
       component.model.name = 'renamed';
       component.commitModel();
       expect(component.mapping.filterMapping).toBe("type = 'a' and $exists(b)");
@@ -211,7 +217,7 @@ describe('MappingStepPropertiesComponent', () => {
       const component = await outboundComponent('');
       component.model.executionFilterMode = 'type';
       component.onExecutionFilterChanged();
-      component.ngDoCheck();
+      hostReplacesMapping(component, {});
       expect(component.model.executionFilterMode).toBe('type');
     });
 
@@ -260,6 +266,17 @@ describe('MappingStepPropertiesComponent', () => {
       (component as any).filterInventoryField = field;
       return { component, field };
     }
+
+    // The step is OnPush. The inventory filter result arrives after an await, outside any event of its view.
+    it('marks itself for checking once an inventory filter has been evaluated', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component } = await componentWithField();
+      const markForCheck = spyOn(component['cdr'], 'markForCheck');
+
+      await component.updateFilterInventoryExpressionResult('type = "a"');
+
+      expect(markForCheck).toHaveBeenCalled();
+    });
 
     it('warns under the field about an attribute that is not cached', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);

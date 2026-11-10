@@ -82,7 +82,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   async ngOnInit() {
     try {
       this.feature = await this.sharedService.getFeatures();
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error loading features in component', error);
       this.alertService.danger(gettext('Failed to load features. Please refresh the page.'));
@@ -102,7 +102,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
       await this.activateMapping();
     } finally {
       this.isCheckingValidity = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 

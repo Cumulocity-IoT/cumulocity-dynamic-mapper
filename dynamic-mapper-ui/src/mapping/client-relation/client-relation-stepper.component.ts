@@ -131,8 +131,6 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
     try {
-      console.log("Step next step", event, this.selectedDevices);
-
       event.stepper.next();
     } catch (error) {
       this.handleError('Error moving to next step', error);
@@ -148,14 +146,14 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
         // The device selector of this step exists after the render that shows the step.
         afterNextRenderInZone(this.injector, () => {
           this.selectedDevices = devices?.map(id => ({ id })) || [];
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         });
 
       } catch (error) {
         // ignore not found error
         afterNextRenderInZone(this.injector, () => {
           this.selectedDevices = [];
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         });
       }
     }

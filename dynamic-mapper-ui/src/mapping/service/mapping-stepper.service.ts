@@ -43,7 +43,7 @@ import {
 } from '../../shared';
 import { PROTECTED_TOKENS } from '../../shared/mapping/processor/processor.model';
 import { MappingService } from '../core/mapping.service';
-import { SharedService } from '../../shared';
+import { isJsonObject, JsonSchema, JsonValue, SharedService, Template } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AiAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../shared/configuration/configuration.model';
@@ -97,13 +97,13 @@ export class MappingStepperService {
         this.mappingPropertyChanged.next(mapping);
     }
 
-    async evaluateSourceExpression(sourceTemplate: any, path: string): Promise<{
+    async evaluateSourceExpression(sourceTemplate: Template | undefined, path: string): Promise<{
         resultType: string;
         result: string;
         valid: boolean;
     }> {
         try {
-            const r: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
+            const r: JsonValue = await this.mappingService.evaluateExpression(sourceTemplate, path);
             return {
                 resultType: getTypeOf(r),
                 result: JSON.stringify(r, null, 4),
@@ -114,13 +114,13 @@ export class MappingStepperService {
         }
     }
 
-    async evaluateTargetExpression(targetTemplate: any, path: string): Promise<{
+    async evaluateTargetExpression(targetTemplate: Template | undefined, path: string): Promise<{
         resultType: string;
         result: string;
         valid: boolean;
     }> {
         try {
-            const r: JSON = await this.mappingService.evaluateExpression(targetTemplate, path);
+            const r: JsonValue = await this.mappingService.evaluateExpression(targetTemplate, path);
             return {
                 resultType: getTypeOf(r),
                 result: JSON.stringify(r, null, 4),
@@ -132,8 +132,8 @@ export class MappingStepperService {
     }
 
     /** True when the template holds at least one key that is not a metadata token. */
-    private hasPayloadContent(template: any): boolean {
-        if (typeof template !== 'object' || Array.isArray(template)) {
+    private hasPayloadContent(template: Template | undefined): boolean {
+        if (!isJsonObject(template)) {
             return true;
         }
         return Object.keys(template).some(
@@ -141,7 +141,7 @@ export class MappingStepperService {
         );
     }
 
-    async evaluateFilterExpression(sourceTemplate: any, path: string): Promise<{
+    async evaluateFilterExpression(sourceTemplate: Template | undefined, path: string): Promise<{
         resultType: string;
         result: string;
         valid: boolean;
@@ -155,7 +155,7 @@ export class MappingStepperService {
             return { resultType: '', result: '', valid: true };
         }
 
-        const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
+        const resultExpression: JsonValue = await this.mappingService.evaluateExpression(sourceTemplate, path);
         const resultType = getTypeOf(resultExpression);
         const result = JSON.stringify(resultExpression, null, 4);
 
@@ -205,8 +205,8 @@ export class MappingStepperService {
     }
 
     expandTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
-        sourceTemplate: any;
-        targetTemplate: any;
+        sourceTemplate: Template | undefined;
+        targetTemplate: Template | undefined;
     } {
         const levels: string[] = splitTopicExcludingSeparator(
             direction === Direction.INBOUND
@@ -215,14 +215,14 @@ export class MappingStepperService {
             false
         );
 
-        const expand = (template: any) => {
+        const expand = (template: Template | undefined) => {
             if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
         };
 
-        const expandTarget = (template: any) => {
+        const expandTarget = (template: Template | undefined) => {
             if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
@@ -247,8 +247,8 @@ export class MappingStepperService {
     }
 
     expandExistingTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
-        sourceTemplate: any;
-        targetTemplate: any;
+        sourceTemplate: Template | undefined;
+        targetTemplate: Template | undefined;
     } {
         const levels: string[] = splitTopicExcludingSeparator(
             direction === Direction.INBOUND
@@ -257,14 +257,14 @@ export class MappingStepperService {
             false
         );
 
-        const expand = (template: any) => {
+        const expand = (template: Template | undefined) => {
             if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
         };
 
-        const expandTarget = (template: any) => {
+        const expandTarget = (template: Template | undefined) => {
             if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
@@ -353,7 +353,7 @@ export class MappingStepperService {
 
     async checkAIAgentDeployment(mapping: Mapping, serviceConfiguration: ServiceConfiguration): Promise<{
         aiAgentDeployed: boolean;
-        aiAgent: any;
+        aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
         aiCapabilitiesDisabled: boolean;
     }> {
         let agents: AgentTextDefinition[];
@@ -414,7 +414,7 @@ export class MappingStepperService {
     /** Mutates `mapping.extension.extensionName` and refreshes the filtered extension events. */
     applyExtensionNameSelection(extensionName: string, mapping: Mapping, extensions: Map<string, Extension>): void {
         if (!mapping.extension) {
-            mapping.extension = {} as any;
+            mapping.extension = {} as Mapping['extension'];
         }
         mapping.extension.extensionName = extensionName;
         this.selectExtensionName(extensionName, extensions, mapping);
@@ -434,7 +434,7 @@ export class MappingStepperService {
         templateForm: FormGroup
     ): boolean | undefined {
         if (!mapping.extension) {
-            mapping.extension = {} as any;
+            mapping.extension = {} as Mapping['extension'];
         }
         mapping.extension.eventName = extensionEvent;
 
@@ -463,7 +463,7 @@ export class MappingStepperService {
     }
 
     /** Mutates `mapping.sourceTemplate`/`targetTemplate` for the newly-selected target API, returning whichever schema (source or target) needs re-computing. */
-    applyTargetAPIChange(mapping: Mapping, direction: Direction, changedTargetAPI: string): { schemaSource?: any; schemaTarget?: any } {
+    applyTargetAPIChange(mapping: Mapping, direction: Direction, changedTargetAPI: string): { schemaSource?: JsonSchema; schemaTarget?: JsonSchema } {
         if (direction === Direction.INBOUND) {
             mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
                 ? '{}'
@@ -478,7 +478,7 @@ export class MappingStepperService {
     }
 
     /** Computes the sample target template shown when the user clicks "Sample target templates". */
-    computeSampleTargetTemplate(mapping: Mapping, stepperConfiguration: StepperConfiguration): any {
+    computeSampleTargetTemplate(mapping: Mapping, stepperConfiguration: StepperConfiguration): Template {
         if (stepperConfiguration.direction === Direction.INBOUND) {
             if (isCodeOrExtensionTransformation(mapping.transformationType)) {
                 return {};
@@ -585,7 +585,7 @@ export class MappingStepperService {
     // Monaco completion-provider state. Owned here (not per-component) because the service
     // itself is component-scoped (`providers: [MappingStepperService, ...]` on both
     // components), so this is exactly as "per editor instance" as it was as a component field.
-    private completionProviderDisposable: any;
+    private completionProviderDisposable: { dispose(): void } | undefined;
     private completionProviderRegistering = false;
 
     /**
@@ -607,7 +607,7 @@ export class MappingStepperService {
                 this.completionProviderDisposable = undefined;
             }
             const monacoModule = await import('monaco-editor');
-            const monaco = (monacoModule as any).default || monacoModule;
+            const monaco = (monacoModule as unknown as { default?: typeof monacoModule }).default || monacoModule;
             const d1 = createCompletionProviderFlowFunction(monaco, direction);
             this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
         } finally {
@@ -746,6 +746,6 @@ export interface EditorSessionResult {
     codeTemplateItems: { label: string; value: string }[];
     codeEditorHelp: string;
     codeEditorLabel: string;
-    schemaSource: any;
-    schemaTarget: any;
+    schemaSource: JsonSchema | undefined;
+    schemaTarget: JsonSchema | undefined;
 }

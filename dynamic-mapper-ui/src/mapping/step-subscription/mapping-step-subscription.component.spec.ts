@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { NO_ERRORS_SCHEMA, Pipe, PipeTransform } from '@angular/core';
+import { ChangeDetectorRef, NO_ERRORS_SCHEMA, Pipe, PipeTransform } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertService } from '@c8y/ngx-components';
@@ -67,6 +67,16 @@ describe('MappingStepSubscriptionComponent', () => {
     fixture.detectChanges();
   }
 
+  /**
+   * Runs a handler the way a template event binding does: the handler, then the component marked
+   * dirty. The component is OnPush, so calling a handler directly and running change detection would
+   * not re-render it.
+   */
+  const act = (handler: () => void) => {
+    handler();
+    fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+  };
+
   const q = (cy: string) => fixture.nativeElement.querySelector(`[data-cy="${cy}"]`) as HTMLElement | null;
 
   beforeEach(() => {
@@ -91,6 +101,16 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(selectionService.loadBaseline).toHaveBeenCalledTimes(1);
       expect(emitted.at(-1)!.baseline).toEqual(baseline);
       expect(component.ready).toBe(true);
+    });
+
+    it('shows the warning when loading fails, which happens after an await and with no event (OnPush)', async () => {
+      selectionService.loadBaseline.and.rejectWith(new Error('boom'));
+
+      await create();
+
+      expect(component.loadFailed).toBe(true);
+      expect(fixture.nativeElement.querySelector('.alert-warning')).not.toBeNull();
+      expect(alerts.danger).toHaveBeenCalled();
     });
 
     it('reloads when the tab is opened again without edits, so the baseline is fresh', async () => {
@@ -156,7 +176,7 @@ describe('MappingStepSubscriptionComponent', () => {
       component.setMode('dynamic');
       fixture.detectChanges();
       expect(q('dm-mapping-stepper-subscription-types')!.classList).toContain('selector-readonly');
-      component.selectSub('groups');
+      act(() => component.selectSub('groups'));
       fixture.detectChanges();
       expect(q('dm-mapping-stepper-subscription-groups')!.classList).toContain('selector-readonly');
     });
@@ -195,16 +215,16 @@ describe('MappingStepSubscriptionComponent', () => {
     });
 
     it('opens the device table as a drawer when its option is selected, and offers a link to reopen it', () => {
-      component.setMode('static');
+      act(() => component.setMode('static'));
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.bottom-drawer')).toBeNull();
 
-      component.selectSub('table');
+      act(() => component.selectSub('table'));
       fixture.detectChanges();
       expect(component.showDeviceTable).toBe(true);
       expect(fixture.nativeElement.querySelector('.bottom-drawer')).not.toBeNull();
 
-      component.onCommitDevices([{ id: 'd9' }]);
+      act(() => component.onCommitDevices([{ id: 'd9' }]));
       fixture.detectChanges();
       expect(component.showDeviceTable).toBe(false);
       expect(emitted.at(-1)!.devices).toEqual([{ id: 'd9' } as any]);
@@ -218,12 +238,14 @@ describe('MappingStepSubscriptionComponent', () => {
     });
 
     it('shows "not saved yet" on the option where the device list was changed', () => {
-      component.setMode('static');
-      component.onDevicesChange([{ id: 'd2' }]);
+      act(() => {
+        component.setMode('static');
+        component.onDevicesChange([{ id: 'd2' }]);
+      });
       fixture.detectChanges();
       expect(component.devicesEditedVia).toBe('tree');
 
-      component.onCommitDevices([{ id: 'd2' }, { id: 'd3' }]);
+      act(() => component.onCommitDevices([{ id: 'd2' }, { id: 'd3' }]));
       fixture.detectChanges();
       expect(component.devicesEditedVia).toBe('table');
       const labels = Array.from(fixture.nativeElement.querySelectorAll('.label-warning'));
@@ -236,7 +258,7 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(q('dm-mapping-stepper-subscription-types')).not.toBeNull();
       expect(q('dm-mapping-stepper-subscription-groups')).toBeNull();
 
-      component.selectSub('groups');
+      act(() => component.selectSub('groups'));
       fixture.detectChanges();
       expect(q('dm-mapping-stepper-subscription-types')).toBeNull();
       expect(q('dm-mapping-stepper-subscription-groups')).not.toBeNull();

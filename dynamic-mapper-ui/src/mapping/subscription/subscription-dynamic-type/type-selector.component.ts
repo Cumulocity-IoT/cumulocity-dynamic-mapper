@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -33,6 +34,7 @@ import { CoreModule } from '@c8y/ngx-components';
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports:[CoreModule]
 })
 export class TypeSelectorComponent {

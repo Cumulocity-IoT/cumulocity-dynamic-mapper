@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -61,6 +62,7 @@ export interface SubstitutionGridSettings {
   styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, PopoverModule, SharedModule, FormsModule]
 })
 export class SubstitutionGridComponent implements OnDestroy {
@@ -146,7 +148,20 @@ export class SubstitutionGridComponent implements OnDestroy {
     return this.settings.readOnly;
   }
 
+  /** Called from the template on every change detection pass: reuse the arrays instead of rebuilding one per row. */
+  private readonly strategyOptionsCache = new Map<string, RepairStrategyOption[]>();
+
   repairStrategyOptionsFor(sub: Substitution): RepairStrategyOption[] {
+    const cacheKey = `${this.translateService.getCurrentLang()}|${this.isRepairStrategyDisabled()}|${!!sub.expandArray}`;
+    let options = this.strategyOptionsCache.get(cacheKey);
+    if (!options) {
+      options = this.buildRepairStrategyOptions(sub);
+      this.strategyOptionsCache.set(cacheKey, options);
+    }
+    return options;
+  }
+
+  private buildRepairStrategyOptions(sub: Substitution): RepairStrategyOption[] {
     return Object.keys(RepairStrategy).map(key => ({
       label: key,
       value: key,

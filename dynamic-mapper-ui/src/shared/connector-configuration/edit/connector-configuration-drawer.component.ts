@@ -286,7 +286,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     }
 
     this.createDynamicFormFields(dynamicFields);
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   private initializeBasicFormFields(): void {
@@ -423,6 +423,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     this.dynamicFormFields = [];
     this.dynamicForm = new FormGroup({});
     this.brokerFormFields = [];
+    // Kept as a synchronous render on purpose: the empty form must be rendered, so Formly tears the old
+    // fields down, before they are rebuilt below. markForCheck would defer the render until after the
+    // rebuild and Formly would reuse the old field state.
     this.cdr.detectChanges();
     this.initializeBrokerFormFields();
   }

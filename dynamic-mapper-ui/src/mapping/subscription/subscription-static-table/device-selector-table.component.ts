@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -38,6 +39,7 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, Registratio
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, AssetSelectorModule, DeviceGridModule],
   providers: [
     DeviceGridService]

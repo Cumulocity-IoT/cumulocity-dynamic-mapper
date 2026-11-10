@@ -223,14 +223,14 @@ export class AiPromptComponent implements OnInit {
       const settings = await this.aiAgentService.getAISettings(true);
       if (settings.killSwitch) {
         this.aiCapabilitiesDisabled = true;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
         return;
       }
       this.telemetryEnabled = !settings.telemetryOptOut;
     } catch (error) {
       console.error('Failed to check AI settings before opening the AI assistant:', error);
       this.aiAvailabilityCheckFailed = true;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -272,6 +272,11 @@ export class AiPromptComponent implements OnInit {
       }
     }
 
+    // A synchronous render, kept on purpose. The chat component renders only once the agent definition
+    // above is set, restores a stored conversation from `initialChatHistory` when it is created, and
+    // `persistSession()` needs the `agentChat` view child that this render resolves. Replacing it with a
+    // wait for the next application tick was followed by a report that a reopened drawer showed no
+    // earlier conversation; the cause was not established, so the render that is known to work stays.
     this.cdr.detectChanges();
 
     if (stored) {
@@ -310,7 +315,7 @@ export class AiPromptComponent implements OnInit {
               )
         )
       };
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -333,7 +338,7 @@ export class AiPromptComponent implements OnInit {
           )
         )
       };
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -521,7 +526,7 @@ export class AiPromptComponent implements OnInit {
       return;
     }
     this.persistSession();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
@@ -550,7 +555,7 @@ export class AiPromptComponent implements OnInit {
       await this.checkIfResponseContainsSubstitutions(content);
     }
     this.persistSession();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /**

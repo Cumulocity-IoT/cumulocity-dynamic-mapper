@@ -97,7 +97,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       tap(({ connector }) => {
         this.configuration = connector;
         this.currentIdentifier = connector.identifier;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       }))
       .subscribe(async data => {
         const { connector } = data;
@@ -128,7 +128,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       const match = configurations.find(config => config.identifier === this.currentIdentifier);
       if (match) {
         this.configuration = match;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       }
     });
   }
