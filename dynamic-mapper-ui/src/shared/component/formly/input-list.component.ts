@@ -21,13 +21,14 @@
 
 // input-list.component.ts
 
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-input-list',
   templateUrl: './input-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })

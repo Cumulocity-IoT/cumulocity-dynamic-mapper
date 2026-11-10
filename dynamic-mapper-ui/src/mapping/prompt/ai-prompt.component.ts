@@ -17,15 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  ChangeDetectorRef,
-  Component,
-  inject,
-  Input,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
@@ -57,6 +49,7 @@ const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
   templateUrl: 'ai-prompt.component.html',
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports:[CoreModule, AgentChatComponent, EditorComponent],
   host: { class: 'd-contents' }
@@ -189,6 +182,7 @@ export class AiPromptComponent implements OnInit {
     target.setPointerCapture(event.pointerId);
     const onMove = (e: PointerEvent) => {
       this.previewHeight = this.clampPreviewHeight(startHeight + (startY - e.clientY));
+      this.cdr.markForCheck();
     };
     const onUp = () => {
       target.removeEventListener('pointermove', onMove);
@@ -219,6 +213,15 @@ export class AiPromptComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    try {
+      await this.initialize();
+    } finally {
+      // The component is OnPush and initialize() returns from several places after an await.
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async initialize(): Promise<void> {
     try {
       const settings = await this.aiAgentService.getAISettings(true);
       if (settings.killSwitch) {

@@ -1,7 +1,7 @@
 # Plan: OnPush and signals for the UI
 
-Status: stopped on 2026-11-10, to be continued later. 86 of 93 components are on `OnPush`. Every screen
-was converted except seven that need a browser check first (listed below). Nothing from the later rounds has
+Status: stopped on 2026-11-10, to be continued later. All 93 components are on `OnPush`. The last seven
+(listed below) were converted without a browser check and are the first to test. Nothing from the later rounds has
 been checked in a browser yet: only the editor rounds up to the "Code template: Replace code" entry were
 checked, see "Progress". The code is committed on `develop` and is not pushed.
 
@@ -10,16 +10,16 @@ none from this work):
 
 | Measure | Start | At the stop |
 |---|---|---|
-| Components on `OnPush` | 5 of 91 | 86 of 93 |
+| Components on `OnPush` | 5 of 91 | 93 of 93 |
 | `detectChanges()` calls | 29 | 2 on purpose (AI prompt `ngOnInit`, connector drawer direction filter) |
 | `ngDoCheck` | 1 | 0 |
-| `prefer-on-push` warnings | 73 | 7 |
+| `prefer-on-push` warnings | 73 | 0 |
 | `prefer-signals` warnings | 198 | 198 (not started) |
 | Explicit `any` (non-spec) | 277 | 190 (second round added 2 casts) |
 
-Not converted, on purpose (7): `ai-prompt`, `shared-code-ai-prompt`, `connector-configuration-drawer`,
-`custom-form-field-wrapper`, `input-list-formly`, `input-list`, and `custom-select`. Reasons are in the entry
-"Modals, drawers, doc pages, and import dialogs on `OnPush`".
+Converted last, with no browser check yet (7): `ai-prompt`, `shared-code-ai-prompt`,
+`connector-configuration-drawer`, `custom-form-field-wrapper`, `input-list-formly`, `input-list`, and
+`custom-select`. See the entry "Last seven components on `OnPush`" for what changed and how to test each.
 
 Open browser tests (nothing below has been run; each entry under "Progress" has its own steps):
 
@@ -46,10 +46,9 @@ Next steps, in this order:
 
 1. Run the browser tests above and fix what they show. A failed test points at a field that needs a signal or
    a `markForCheck()`.
-2. Convert `connector-configuration-drawer` and the Formly group with browser checks after each.
-3. Convert the two AI prompts one step at a time. Do not replace the `detectChanges()` in `ai-prompt`
+2. Test the last seven first (checklist in their entry). Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-4. Promote the lint rules to errors for the migrated directories (phase 7), then start `prefer-signals` and the
+3. Promote the lint rules to errors for the whole tree (phase 7), then start `prefer-signals` and the
    remaining `any`.
 
 ## Why
@@ -178,7 +177,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 
 | Measure | Start | Now |
 |---|---|---|
-| Components on `OnPush` (lint count) | 5 of 91 by grep | 86 of 93 (see the status block at the top) |
+| Components on `OnPush` (lint count) | 5 of 91 by grep | 93 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
 | Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 190 |
@@ -192,7 +191,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | 3. `MappingUnifiedEditorComponent` | Done: state in signals, 3 forced renders replaced, and the editor is `OnPush`. The older `MappingStepperComponent` is `OnPush` too. |
 | 4. Step components | Done: every step and every component below the editor, including the connector step and its grid. |
 | 5. AI prompt components | `detectChanges()` calls removed except one that stays (10 of 11). The two prompt components are still on default change detection, on purpose. |
-| 6. Grids, lists, rest | Done except the seven components in the status block: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
+| 6. Grids, lists, rest | Done: mapping grid, message explorer, monitoring, extension, configuration, connector details, versions, and the dialogs are on `OnPush`. |
 | 7. Enforce | Not started. |
 
 ## Progress
@@ -659,6 +658,32 @@ Browser check: open each import dialog and import a file; subscription page (sta
 tabs: open each drawer, commit, delete a subscription, resync a type); device-to-client map (add, delete);
 test-device grid; each documentation page (search in `doc-main`, code blocks and diagrams render); copy a mapping
 that has a draft (the copy-source dialog); the validation drawer; the deprecation notice. Unit tests: 1012 of 1012.
+
+### Last seven components on `OnPush` (done, not yet browser-checked)
+
+All components are now on `OnPush`. These seven were the ones left on purpose, and they need browser checks
+before anything else is built on them.
+- `connector-configuration-drawer`: nine fields became signals (the three form field lists and `dynamicForm`,
+  `description`, `readOnly`, `feature`, `mode`, `testing`, `testResult`). The synchronous `detectChanges()` in
+  `onDirectionFilterChange` stays; it still renders an `OnPush` view.
+- `custom-form-field-wrapper`, `input-list-formly`, `input-list`: strategy change only. The c8y form field
+  wrapper that `custom-form-field-wrapper` copies is `OnPush` as well, which is the precedent.
+- `custom-select`: `OnPush` plus `markForCheck()` wherever state changes outside a template event: `writeValue`,
+  `setDisabledState`, the keyboard service subscription, the focus microtask, `select`, `deselect`,
+  `deselectAll`, and `onHidden`.
+- `shared-code-ai-prompt`: strategy change only; it already called `markForCheck()` after each async step.
+- `ai-prompt`: strategy change, plus `ngOnInit` now wraps the old body in a `try/finally` that calls
+  `markForCheck()` (it returned from several places after an `await`, without marking), and the drawer resize
+  marks the view because it runs in a native listener. The synchronous `detectChanges()` stays, as the
+  regression entry above requires.
+Browser check, in this order: (1) AI prompt: open it on a new mapping and on a mapping with a stored
+conversation (history and suggestions must show, as before the migration), generate, close, reopen, drag the
+preview resize handle; (2) code template AI prompt (shared code: open, chat, accept the result); (3) connector
+drawer: add a connector, change the type, change the direction filter, view an enabled connector (read only),
+run "Test connection"; (4) every Formly field type in that drawer, including the map field (add and remove
+rows) and the validation messages when a required field is left empty; (5) every `d11r-select` in the
+application: open, search, pick with mouse and keyboard, multi-select, disabled state, preselected value.
+Unit tests: 1012 of 1012.
 
 ### Lint rules (done)
 

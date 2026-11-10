@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CoreModule, FormsModule } from '@c8y/ngx-components';
 import { FieldWrapper, FormlyModule } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -27,6 +27,7 @@ import { FormatStringPipe } from '../../misc/format-string.pipe';
 @Component({
   selector: 'd11r-wrapper-form-field',
   templateUrl: './custom-form-field-wrapper.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CommonModule,

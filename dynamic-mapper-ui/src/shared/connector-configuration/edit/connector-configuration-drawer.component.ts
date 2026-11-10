@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, inject, Injector, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Injector, Input, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormGroup, FormsModule } from '@angular/forms';
@@ -53,6 +53,7 @@ interface PropertyEntry {
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'connector-configuration-drawer.component.html',
   styleUrls: ['./connector-configuration-drawer.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule,
@@ -68,15 +69,29 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() configurationsCount!: number;
   @Input() allowedConnectors: ConnectorType[] = [];
 
-  brokerFormFields: FormlyFieldConfig[] = [];
+  private readonly brokerFormFieldsState = signal<FormlyFieldConfig[]>([]);
+  get brokerFormFields(): FormlyFieldConfig[] { return this.brokerFormFieldsState(); }
+  set brokerFormFields(value: FormlyFieldConfig[]) { this.brokerFormFieldsState.set(value); }
   brokerForm = new FormGroup({});
-  dynamicFormFields: FormlyFieldConfig[] = [];
-  dynamicForm = new FormGroup({});
+  private readonly dynamicFormFieldsState = signal<FormlyFieldConfig[]>([]);
+  get dynamicFormFields(): FormlyFieldConfig[] { return this.dynamicFormFieldsState(); }
+  set dynamicFormFields(value: FormlyFieldConfig[]) { this.dynamicFormFieldsState.set(value); }
+  private readonly dynamicFormState = signal<FormGroup>(new FormGroup({}));
+  get dynamicForm(): FormGroup { return this.dynamicFormState(); }
+  set dynamicForm(value: FormGroup) { this.dynamicFormState.set(value); }
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
-  description?: string;
-  readOnly = false;
-  feature!: Feature;
-  mode: 'Add' | 'Update' | 'View' = 'Add';
+  private readonly descriptionState = signal<string | undefined>(undefined);
+  get description(): string | undefined { return this.descriptionState(); }
+  set description(value: string | undefined) { this.descriptionState.set(value); }
+  private readonly readOnlyState = signal<boolean>(false);
+  get readOnly(): boolean { return this.readOnlyState(); }
+  set readOnly(value: boolean) { this.readOnlyState.set(value); }
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
+  private readonly modeState = signal<'Add' | 'Update' | 'View'>('Add');
+  get mode(): 'Add' | 'Update' | 'View' { return this.modeState(); }
+  set mode(value: 'Add' | 'Update' | 'View') { this.modeState.set(value); }
   directionFilter: Direction | 'ALL' = 'ALL';
   readonly Direction = Direction;
 
@@ -109,8 +124,12 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   // resolved lazily (only when Test is clicked) so the drawer itself needs no extra providers
   private readonly injector = inject(Injector);
 
-  testing = false;
-  testResult?: ConnectionTestResult;
+  private readonly testingState = signal<boolean>(false);
+  get testing(): boolean { return this.testingState(); }
+  set testing(value: boolean) { this.testingState.set(value); }
+  private readonly testResultState = signal<ConnectionTestResult | undefined>(undefined);
+  get testResult(): ConnectionTestResult | undefined { return this.testResultState(); }
+  set testResult(value: ConnectionTestResult | undefined) { this.testResultState.set(value); }
 
   get supportsTest(): boolean {
     return !!this.specifications?.find(sp => sp.connectorType === this.configuration?.connectorType)
