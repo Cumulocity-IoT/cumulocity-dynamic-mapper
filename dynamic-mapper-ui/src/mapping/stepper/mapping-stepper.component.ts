@@ -19,15 +19,7 @@
  */
 
 import { CdkStep, StepperSelectionEvent } from '@angular/cdk/stepper';
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnInit,
-  Output,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 // Side-effect import, kept first: the type-only imports below are elided at build time, and
@@ -66,6 +58,7 @@ interface StepperStepChange {
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
   // `deploymentMapEntry` and `mapping` are accessors on MappingEditorBase.

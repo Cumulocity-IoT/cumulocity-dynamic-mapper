@@ -542,6 +542,18 @@ draft, and deployment cells refresh after the grid reloads. Unit tests: 1012 of 
 
 A second batch of 6 followed: activation toggle, connector enabled toggle, connector name, connector status, version note, and version state. These had their own state, but each already calls `markForCheck()` after its `await`, so nothing else was needed.
 
+### Mapping grid and older stepper on `OnPush` (done, not yet browser-checked)
+
+`MappingStepperComponent` needed only the strategy change, because all its template-bound state lives in the
+base class signals. `MappingComponent` (the grid) got signal-backed accessors for the fields that change after
+an `await` or a callback: `isLoading`, `showConfigMapping`, `mappingToUpdate`, `deploymentMapEntry`,
+`stepperConfiguration`, and `feature`. The row data already comes through `mappingsEnriched$ | async`, and
+`realtimeActive` changes only from a click in the template.
+Browser check: open the grid for both directions and confirm the spinner shows and hides on reload, import, and
+bulk delete; add a mapping and edit one (the stepper opens and shows its data); copy a mapping; cancel and save
+closes the stepper; "Go to problem" after a rejected save (same item as the editor check); the AI drawer opens
+when a mapping is created with "Generate with AI". Unit tests: 1012 of 1012 pass.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,
