@@ -26,9 +26,8 @@ import { Device } from '../../shared/mapping/notification-subscription.model';
  * mapping itself was saved.
  *
  * - `skip`: write nothing.
- * - `dynamic`: `types` and `groups` are written (subscriptions follow devices created later, or
- *   joining a group).
- * - `static`: `devices` is written to the static device subscription.
+ * - `dynamic` / `static`: which options the step shows. Every list the user edited is written,
+ *   whichever mode is chosen when saving, so switching mode never discards an edit.
  *
  * A list that is `null` was not touched and is left as it is on the server.
  */
@@ -72,8 +71,11 @@ const sameIds = (a: { id: string }[], b: { id: string }[]): boolean => {
   return b.every(d => ids.has(d.id));
 };
 
-const sameStrings = (a: string[], b: string[]): boolean =>
-  a.length === b.length && new Set(a).size === new Set([...a, ...b]).size;
+const sameStrings = (a: string[], b: string[]): boolean => {
+  const sa = new Set(a);
+  const sb = new Set(b);
+  return sa.size === sb.size && [...sb].every(x => sa.has(x));
+};
 
 /** Types in the selection that the server does not have yet. */
 export function addedTypes(selection: OutboundSubscriptionSelection): string[] {
@@ -82,18 +84,23 @@ export function addedTypes(selection: OutboundSubscriptionSelection): string[] {
 }
 
 export function changedTypes(s: OutboundSubscriptionSelection): boolean {
-  return s.mode === 'dynamic' && s.types !== null && !sameStrings(s.types, s.baseline?.types ?? []);
+  return s.mode !== 'skip' && s.types !== null && !sameStrings(s.types, s.baseline?.types ?? []);
 }
 
 export function changedGroups(s: OutboundSubscriptionSelection): boolean {
-  return s.mode === 'dynamic' && s.groups !== null && !sameIds(s.groups, s.baseline?.groups ?? []);
+  return s.mode !== 'skip' && s.groups !== null && !sameIds(s.groups, s.baseline?.groups ?? []);
 }
 
 export function changedDevices(s: OutboundSubscriptionSelection): boolean {
-  return s.mode === 'static' && s.devices !== null && !sameIds(s.devices, s.baseline?.devices ?? []);
+  return s.mode !== 'skip' && s.devices !== null && !sameIds(s.devices, s.baseline?.devices ?? []);
 }
 
 /** True when saving would write something. An untouched selection writes nothing and shows no alert. */
 export function hasPendingSubscriptionChanges(s: OutboundSubscriptionSelection | undefined): boolean {
   return !!s && (changedTypes(s) || changedGroups(s) || changedDevices(s));
+}
+
+/** True when the user edited any list, whatever the mode: the baseline then must not be replaced. */
+export function hasEditedLists(s: OutboundSubscriptionSelection): boolean {
+  return s.types !== null || s.groups !== null || s.devices !== null;
 }

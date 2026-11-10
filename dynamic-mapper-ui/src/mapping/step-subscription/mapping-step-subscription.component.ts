@@ -44,6 +44,7 @@ import {
   changedDevices,
   changedGroups,
   changedTypes,
+  hasEditedLists,
   OutboundSubscriptionSelection,
   SubscriptionMode,
   SubscriptionSuggestions
@@ -121,7 +122,9 @@ export class MappingStepSubscriptionComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // The host recreates this component on a tab switch; an already chosen mode opens as chosen.
     this.expandFor(this.selection.mode);
-    if (this.selection.baseline) return;
+    // Reload on every open so a long session does not write on top of old data; but keep the
+    // baseline the user's edits were diffed against while there are edits.
+    if (this.selection.baseline && hasEditedLists(this.selection)) return;
     this.loading = true;
     try {
       const baseline = await this.selectionService.loadBaseline();
@@ -195,9 +198,10 @@ export class MappingStepSubscriptionComponent implements OnInit {
     const { mode } = this.selection;
     if (mode === 'static') return 'device';
     if (mode === 'dynamic') {
+      // The raw lists: a choice that is already subscribed still counts as chosen.
       const type = this.contextType;
-      if (type && this.types.includes(type) && !this.isTypeSubscribed(type)) return 'type';
-      if (this.contextGroups.some(g => this.groups.some(x => x.id === g.id) && !this.isGroupSubscribed(g.id))) return 'group';
+      if (type && this.selection.types?.includes(type)) return 'type';
+      if (this.contextGroups.some(g => this.selection.groups?.some(x => x.id === g.id))) return 'group';
     }
     return 'skip';
   }
@@ -219,7 +223,7 @@ export class MappingStepSubscriptionComponent implements OnInit {
         const type = this.contextType;
         if (!type) return;
         const base = this.selection.baseline?.types ?? [];
-        this.update({ mode: 'dynamic', types: Array.from(new Set([...base, type])), groups: null, devices: null });
+        this.update({ mode: 'dynamic', types: Array.from(new Set([...base, type])), groups: null, devices: null, resyncTypes: [] });
         break;
       }
       case 'group': {
@@ -243,6 +247,28 @@ export class MappingStepSubscriptionComponent implements OnInit {
 
   onContextSelect(choice: 'skip' | 'type' | 'group' | 'device', checked: boolean): void {
     if (checked && this.contextChoice !== choice) this.setContextChoice(choice);
+  }
+
+  /** Context mode: also subscribe the devices of the chosen type that exist already. */
+  get contextResync(): boolean {
+    const type = this.contextType;
+    return !!type && this.selection.resyncTypes.includes(type);
+  }
+
+  setContextResync(checked: boolean): void {
+    const type = this.contextType;
+    if (type) this.setResyncTypes(checked ? [type] : []);
+  }
+
+  /** Items removed by the pending edit, so a removal is visible before saving. */
+  get removedTypes(): number { return this.removedCount(this.selection.types, this.selection.baseline?.types); }
+  get removedGroups(): number { return this.removedCount(this.selection.groups?.map(g => g.id), this.selection.baseline?.groups.map(g => g.id)); }
+  get removedDevices(): number { return this.removedCount(this.selection.devices?.map(d => d.id), this.selection.baseline?.devices.map(d => d.id)); }
+
+  private removedCount(now: string[] | null | undefined, before: string[] | undefined): number {
+    if (!now || !before) return 0;
+    const kept = new Set(now);
+    return before.filter(x => !kept.has(x)).length;
   }
 
   setContextGroup(id: string): void {

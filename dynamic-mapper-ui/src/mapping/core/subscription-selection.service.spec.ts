@@ -127,6 +127,25 @@ describe('SubscriptionSelectionService', () => {
       expect(alerts.add).not.toHaveBeenCalled();
     });
 
+    it('on retry after a partial failure writes and resyncs only what is left', async () => {
+      subs.updateSubscriptionByDeviceGroup.and.rejectWith(new Error('nope'));
+      const selection = select({ mode: 'dynamic', types: ['a', 'b'], groups: [{ id: 'g2' }] as any, resyncTypes: ['b'] });
+      await service.apply(selection);
+      expect(subs.resyncTypeSubscription).toHaveBeenCalledTimes(1);
+
+      subs.getSubscriptionByDeviceType.and.resolveTo({ types: ['a', 'b'] } as any);
+      subs.updateSubscriptionByDeviceGroup.and.resolveTo({} as any);
+      subs.updateSubscriptionByDeviceType.calls.reset();
+      alerts.warning.calls.reset();
+      const retry = await service.apply(selection);
+
+      expect(subs.updateSubscriptionByDeviceType).not.toHaveBeenCalled();
+      expect(subs.resyncTypeSubscription).toHaveBeenCalledTimes(1);
+      expect(subs.updateSubscriptionByDeviceGroup).toHaveBeenCalledTimes(2);
+      expect(retry.failed).toBe(false);
+      expect(alerts.warning).not.toHaveBeenCalled();
+    });
+
     it('does not resync when the type write failed', async () => {
       subs.updateSubscriptionByDeviceType.and.rejectWith(new Error('nope'));
       await service.apply(select({ mode: 'dynamic', types: ['b'], resyncTypes: ['b'] }));

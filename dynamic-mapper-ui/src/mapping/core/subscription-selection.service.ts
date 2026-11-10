@@ -69,7 +69,9 @@ export class SubscriptionSelectionService {
   }
 
   /**
-   * Writes what changed. Each write is independent: a failure is reported and the others still
+   * Writes what changed. A list that was written becomes the selection's baseline (the host's
+   * object is updated in place), so a retry after a partial failure writes only what is left.
+   * Each write is independent: a failure is reported and the others still
    * run, so one rejected list does not discard the rest of the user's selection.
    */
   async apply(selection: OutboundSubscriptionSelection): Promise<ApplySubscriptionResult> {
@@ -78,6 +80,8 @@ export class SubscriptionSelectionService {
     const groupsChanged = changedGroups(selection);
     const devicesChanged = changedDevices(selection);
     if (!typesChanged && !groupsChanged && !devicesChanged) return result;
+    // Without a loaded baseline nothing here can be diffed or recorded; the step never allows editing then.
+    selection.baseline ??= { available: true, types: [], groups: [], devices: [] };
 
     const fail = (error: unknown) => {
       result.failed = true;
@@ -97,6 +101,8 @@ export class SubscriptionSelectionService {
         result.applied = true;
         // Only types that are new in this selection can be resynced, and only the ones ticked.
         const resync = addedTypes(selection).filter(type => selection.resyncTypes.includes(type));
+        // Written: a retry (the editor stays open after a partial failure) must not rewrite or resync it.
+        selection.baseline = { ...selection.baseline!, types: [...selection.types!] };
         // One after another: each call starts a background rescan of the inventory.
         for (const type of resync) {
           try {
@@ -113,6 +119,7 @@ export class SubscriptionSelectionService {
       try {
         await this.subscriptionService.updateSubscriptionByDeviceGroup({ api: API.ALL.name, devices: selection.groups! });
         result.applied = true;
+        selection.baseline = { ...selection.baseline!, groups: [...selection.groups!] };
       } catch (error) {
         fail(error);
       }
@@ -124,6 +131,7 @@ export class SubscriptionSelectionService {
           this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
         );
         result.applied = true;
+        selection.baseline = { ...selection.baseline!, devices: [...selection.devices!] };
       } catch (error) {
         fail(error);
       }

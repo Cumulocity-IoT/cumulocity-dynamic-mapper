@@ -60,9 +60,9 @@ describe('outbound subscription selection', () => {
     expect(changedDevices(make({ mode: 'static', devices: [{ id: '10' }] }))).toBe(true);
   });
 
-  it('only counts the lists of the chosen mode', () => {
-    expect(changedTypes(make({ mode: 'static', types: ['x'] }))).toBe(false);
-    expect(changedDevices(make({ mode: 'dynamic', devices: [] }))).toBe(false);
+  it('counts an edited list whichever mode is chosen, but nothing in skip mode', () => {
+    expect(changedTypes(make({ mode: 'static', types: ['x'] }))).toBe(true);
+    expect(changedDevices(make({ mode: 'dynamic', devices: [] }))).toBe(true);
     expect(hasPendingSubscriptionChanges(make({ mode: 'skip', types: ['x'] }))).toBe(false);
   });
 

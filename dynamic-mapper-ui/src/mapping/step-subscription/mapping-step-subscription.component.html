@@ -78,12 +78,15 @@
                 @if (typesPending) {
                 <span class="label label-warning m-l-8" translate>not saved yet</span>
                 }
+                @if (removedTypes > 0) {
+                <span class="text-muted text-12 m-l-8">{{ removedTypes }} {{ 'removed' | translate }}</span>
+                }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
                   'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.types) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-types'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-types'">
                 <d11r-type-selector [inline]="true" [typeList]="types" (typesChange)="onTypesChange($event)"
                   [showResync]="true" [knownTypes]="selection.baseline?.types ?? []" [resyncTypes]="selection.resyncTypes"
                   (resyncTypesChange)="setResyncTypes($event)"></d11r-type-selector>
@@ -109,12 +112,15 @@
                 @if (groupsPending) {
                 <span class="label label-warning m-l-8" translate>not saved yet</span>
                 }
+                @if (removedGroups > 0) {
+                <span class="text-muted text-12 m-l-8">{{ removedGroups }} {{ 'removed' | translate }}</span>
+                }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
                   'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices.'
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.groups) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-groups'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-groups'">
                 <d11r-group-selector [inline]="true" [deviceList]="groups" (selectionChange)="onGroupsChange($event)"></d11r-group-selector>
               </div>
               }
@@ -152,12 +158,15 @@
                 @if (devicesPending && devicesEditedVia === 'tree') {
                 <span class="label label-warning m-l-8" translate>not saved yet</span>
                 }
+                @if (removedDevices > 0) {
+                <span class="text-muted text-12 m-l-8">{{ removedDevices }} {{ 'removed' | translate }}</span>
+                }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
                   'Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.devices) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-device-tree'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-device-tree'">
                 <d11r-device-selector-tree [inline]="true" [deviceList]="devices" (selectionChange)="onDevicesChange($event)"></d11r-device-selector-tree>
               </div>
               }
@@ -221,6 +230,14 @@
         @if (contextType; as type) {
         <span class="badge badge--primary m-t-4">{{ type }}</span>
         @if (isTypeSubscribed(type)) { <span class="text-muted text-12 m-l-4" translate>already subscribed</span> }
+        @if (!isTypeSubscribed(type) && contextChoice === 'type') {
+        <label class="c8y-checkbox m-t-8 d-block">
+          <input type="checkbox" [checked]="contextResync" [disabled]="!canEdit" (change)="setContextResync($any($event.target).checked)"
+            [attr.data-cy]="dataCyPrefix + '-subscription-suggest-type-resync'" />
+          <span></span>
+          <span translate>Also subscribe existing devices</span>
+        </label>
+        }
         } @else {
         <span class="text-muted text-12" translate>No type detected for this device. A type must be available to use this option.</span>
         }

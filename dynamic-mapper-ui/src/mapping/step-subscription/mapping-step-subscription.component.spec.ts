@@ -93,8 +93,13 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(component.ready).toBe(true);
     });
 
-    it('does not reload when the host already holds a baseline (tab switched back)', async () => {
+    it('reloads when the tab is opened again without edits, so the baseline is fresh', async () => {
       await create({ ...emptySelection(), baseline });
+      expect(selectionService.loadBaseline).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the baseline the edits were diffed against while there are edits', async () => {
+      await create({ ...emptySelection(), baseline, types: ['x'] });
       expect(selectionService.loadBaseline).not.toHaveBeenCalled();
     });
 

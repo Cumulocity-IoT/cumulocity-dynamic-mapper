@@ -176,6 +176,10 @@ export class MappingCommitService {
         // behind. Subscriptions are tenant-wide: a failure here does not undo the saved mapping.
         let subscriptionFailed = false;
         const selection = request.subscriptionSelection;
+        if (mappingPersisted && deploymentFailed && stepperConfiguration.direction === Direction.OUTBOUND
+            && selection && hasPendingSubscriptionChanges(selection)) {
+            this.alertService.warning(gettext('The subscriptions were not updated because the mapping could not be deployed. Save again to retry.'));
+        }
         if (mappingPersisted && !deploymentFailed && stepperConfiguration.direction === Direction.OUTBOUND
             && selection && hasPendingSubscriptionChanges(selection)) {
             const outcome = await this.injector.get(SubscriptionSelectionService).apply(selection);

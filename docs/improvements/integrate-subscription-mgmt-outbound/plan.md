@@ -1,6 +1,6 @@
 # Integrate outbound subscription management into the stepper and unified editor
 
-Status: implemented 2026-11-09. See [Implementation notes](#implementation-notes) for where the code differs from this plan.
+Status: implemented 2026-11-09, reviewed 2026-11-10 (see [Review fixes](#review-fixes-2026-11-10)). See [Implementation notes](#implementation-notes) for where the code differs from this plan.
 
 ## Goal
 
@@ -196,7 +196,7 @@ None. The questions raised in the first draft were answered on 2026-11-09 and ar
 
 ## Implementation notes
 
-Implemented as planned, with these differences:
+Implemented with these differences (the Explorer context mode is one of them, see Review fixes):
 
 - **Step layout.** `StepLayout` in `stepper.model.ts` replaces the fixed positions. The `STEP_*` constants stay as the base numbering that `advanceFromStepToEndStep` uses, and `StepLayout.fromBase` maps it to the real position. This avoided changing the configuration strategy and its specs.
 - **Stepper keeps no failed save open.** The stepper creates a new mapping, so a second Save would create a duplicate. A failed subscription write there shows the warning and closes as before. The unified editor stays open, because saving again only retries.
@@ -214,3 +214,14 @@ Implemented as planned, with these differences:
 - **Only the selected option is expanded.** The options of the chosen mode are radio options (`expanded` in the step component); selecting one collapses the other. Switching only changes the view: an edit made in the option left is kept and saved.
 - **Menu icon.** The Subscription outbound menu entry uses the `subscription` icon, the same as the step and tab (it was `mail`).
 - **Not done.** The Cypress tests that used the former button test ids of the step are not updated (none existed for the step); the user guide screenshots still show the old layout.
+
+## Review fixes (2026-11-10)
+
+- **Explorer context mode differs from the plan.** From the Message Explorer the step shows only a radio list for the sampled device (skip, its type, one of its groups, this device) and hides Dynamic and Static. The earlier "suggestions on top of the full options" design was not built. Context mode now also offers "Also subscribe existing devices" for a new type, because a type rule alone never subscribes the sampled device.
+- **Mode no longer gates writes.** Every list the user edited is written, except in Skip mode. Switching between Dynamic and Static keeps edits.
+- **Retry after partial failure.** `SubscriptionSelectionService.apply` records each written list in the selection's `baseline`, so a retry writes and resyncs only what is left and raises no false "changed elsewhere" warning.
+- **Fresh baseline.** The step reloads the subscriptions each time it opens, unless the user already edited a list (the edits stay diffed against their original baseline).
+- **Removals** show as "n removed" next to each list; the type, group and device lists all do this.
+- **Role gating** adds `inert` to the inline selectors, so keyboard input is blocked as well.
+- **Deployment failure** now warns that the subscriptions were not written.
+- **Open.** The page and the step still have separate loader code (plan step 3 was not done). The concurrency check still warns after the fact instead of merging. Cypress tests and user guide screenshots are still missing. Whether the "no subscription" check can fire right after a save is unverified.
