@@ -712,7 +712,7 @@ because the global errors replace them.
 ### Oversized components: message explorer and properties step split (done, not yet browser-checked)
 
 Two of the six components over 500 lines were split. Neither split changes behavior.
-- **Message explorer (645 to 500 or fewer):**
+- **Message explorer (645 lines by the rule's count, now under 500):**
   - `explorer-mapping-context.service.ts`: the device type and group lookup and the publish-topic derivation that
     "Create mapping from message" used. It was one 147-line method. 12 unit tests were added.
   - `explorer-session-store.ts`: reading, writing, and clearing the stored session in `localStorage`, with the
@@ -720,7 +720,7 @@ Two of the six components over 500 lines were split. Neither split changes behav
   - `message-explorer.columns.ts`: the column definitions.
   - `onOpenDrawer` and `onEditSession` repeated about 45 lines of session start code. Both now call
     `replaceSession(result, 'start' | 'update')`. The two modes differ only in the texts shown to the user.
-- **Properties step (767 to 484):** `ngOnInit` was 470 lines of Formly field configuration. It moved to
+- **Properties step (767 lines by the rule's count, now under 500):** `ngOnInit` was 470 lines of Formly field configuration. It moved to
   `property-form-fields.ts` as `buildPropertyFields(host)`. The host object exposes the model, the form, and the
   mapping as getters, so every handler still reads the current value when it runs. The `PropertyFormModel` type
   now lives next to the fields. The new file is 513 lines. It is not a component, so the size rule does not
