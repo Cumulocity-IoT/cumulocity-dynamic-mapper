@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,6 +38,7 @@ import { ImportServiceConfigurationComponent } from './import/import-service-con
   selector: 'd11r-mapping-service-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
   templateUrl: 'service-configuration.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, ReactiveFormsModule]
 })
@@ -54,7 +55,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
-  section: string;
+  private readonly sectionState = signal<string>('general');
+  get section(): string { return this.sectionState(); }
+  set section(value: string) { this.sectionState.set(value); }
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -89,9 +92,15 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
-  aiAgentDeployed: boolean = false;
-  aiCapabilitiesDisabled = false;
-  inventoryFragmentsList: string[] = [''];
+  private readonly aiAgentDeployedState = signal<boolean>(false);
+  get aiAgentDeployed(): boolean { return this.aiAgentDeployedState(); }
+  set aiAgentDeployed(value: boolean) { this.aiAgentDeployedState.set(value); }
+  private readonly aiCapabilitiesDisabledState = signal<boolean>(false);
+  get aiCapabilitiesDisabled(): boolean { return this.aiCapabilitiesDisabledState(); }
+  set aiCapabilitiesDisabled(value: boolean) { this.aiCapabilitiesDisabledState.set(value); }
+  private readonly inventoryFragmentsListState = signal<string[]>(['']);
+  get inventoryFragmentsList(): string[] { return this.inventoryFragmentsListState(); }
+  set inventoryFragmentsList(value: string[]) { this.inventoryFragmentsListState.set(value); }
 
   trackByFragmentFn(index: any, _item: any) {
     return index;
@@ -167,7 +176,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   private static readonly EXPERT_MODE_STORAGE_KEY = 'dynamic-mapper.serviceConfiguration.expertMode';
 
-  expertMode = false;
+  private readonly expertModeState = signal<boolean>(false);
+  get expertMode(): boolean { return this.expertModeState(); }
+  set expertMode(value: boolean) { this.expertModeState.set(value); }
 
   /** How many settings the current tab is hiding, for the hint under the list. */
   get hiddenExpertCount(): number {
@@ -302,7 +313,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   }
 
   /** Form values plus the cached-fragments list (which lives outside the form) as last loaded/saved. */
-  private savedSnapshot = '';
+  private readonly savedSnapshotState = signal<string>('');
+  private get savedSnapshot(): string { return this.savedSnapshotState(); }
+  private set savedSnapshot(value: string) { this.savedSnapshotState.set(value); }
 
   private currentSnapshot(): string {
     return JSON.stringify([

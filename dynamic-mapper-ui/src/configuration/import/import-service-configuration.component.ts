@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { TranslateService } from '@ngx-translate/core';
-import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation, inject } from '@angular/core';
+import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { AlertService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { ServiceConfiguration } from '../../shared/configuration/configuration.model';
@@ -37,23 +37,38 @@ import { gettext } from '@c8y/ngx-components/gettext';
   templateUrl: './import-service-configuration.component.html',
   styleUrls: ['./import-service-configuration.component.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
 export class ImportServiceConfigurationComponent implements OnDestroy {
   private readonly translateService = inject(TranslateService);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-  isLoading = false;
-  isImported = false;
-  errorMessage: string;
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly isImportedState = signal<boolean>(false);
+  get isImported(): boolean { return this.isImportedState(); }
+  set isImported(value: boolean) { this.isImportedState.set(value); }
+  private readonly errorMessageState = signal<string | null>(null);
+  get errorMessage(): string | null { return this.errorMessageState(); }
+  set errorMessage(value: string | null) { this.errorMessageState.set(value); }
   successText = 'Service configuration restored';
   closeSubject: Subject<boolean> = new Subject();
 
   /** Parsed file, held until the user confirms the replacement. */
-  pendingConfiguration: Partial<ServiceConfiguration>;
-  pendingSettingsCount = 0;
-  pendingCodeTemplateCount = 0;
-  fileName: string;
+  private readonly pendingConfigurationState = signal<Partial<ServiceConfiguration> | undefined>(undefined);
+  get pendingConfiguration(): Partial<ServiceConfiguration> | undefined { return this.pendingConfigurationState(); }
+  set pendingConfiguration(value: Partial<ServiceConfiguration> | undefined) { this.pendingConfigurationState.set(value); }
+  private readonly pendingSettingsCountState = signal<number>(0);
+  get pendingSettingsCount(): number { return this.pendingSettingsCountState(); }
+  set pendingSettingsCount(value: number) { this.pendingSettingsCountState.set(value); }
+  private readonly pendingCodeTemplateCountState = signal<number>(0);
+  get pendingCodeTemplateCount(): number { return this.pendingCodeTemplateCountState(); }
+  set pendingCodeTemplateCount(value: number) { this.pendingCodeTemplateCountState.set(value); }
+  private readonly fileNameState = signal<string | undefined>(undefined);
+  get fileName(): string | undefined { return this.fileNameState(); }
+  set fileName(value: string | undefined) { this.fileNameState.set(value); }
 
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Replace settings' };
 

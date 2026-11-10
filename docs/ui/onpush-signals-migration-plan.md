@@ -567,6 +567,29 @@ update and "Continue" enables when the form is valid. Explorer: start a session,
 polling interval, pause and resume, edit the session, stop it, reload the page to resume the stored session, and
 create a mapping from one message and from several. Unit tests: 1012 of 1012 pass.
 
+### Monitoring, extension, and configuration screens on `OnPush` (done, not yet browser-checked)
+
+Moved: the cache statistics page and its three KPI components, the monitoring chart, the mapping statistics
+page, the service events page, the extension grid, card, properties page, and upload dialog, the service
+configuration page, its import dialog, and the code template page. Left on default detection:
+`shared-code-ai-prompt` (goes with the AI prompts) and the service logs page (499 lines, 18 `await`s, timers).
+Signals were needed where a template reads a field that changes after an `await`, a timer, or a subscription:
+- Cache statistics: `kpis`, `loading`. Monitoring chart: the two update options and `hasLatencyData`.
+- Extension grid: its state is now one signal instead of a `BehaviorSubject` read through getters. Extension
+  card: `feature`. Upload dialog: `isLoading`, `isAppCreated`, `app` (now `null` when unset), `errorMessage`.
+- Service configuration: `section`, `expertMode`, the two AI flags, the fragment list, and the saved snapshot
+  behind `isDirty`. Import dialog: loading, imported, error, the pending file and its counts, `fileName`.
+- Code template: `template`, `templateType`, the decoded template, `isLoading`, the editor options, the AI
+  fields, and the saved code behind `isDirty`.
+The mapping statistics and service events pages needed no field change: they read through the `async` pipe.
+`service-configuration.component.spec.ts` builds the component with `Object.create`, so its helper now
+creates the two signals by hand.
+Browser check: cache page (reload and clear a cache); monitoring chart and statistics (values change as
+mappings run, reset statistics); events page (filters, load more); extensions (upload a jar, delete one,
+reload, open properties and switch the direction filter); service configuration (open each tab on a direct
+URL, toggle Expert Mode, edit a value and confirm Save enables, save and confirm it disables, add and remove
+a fragment, import a file); code template (select, edit, save, rename, copy, delete). Unit tests: 1012 of 1012.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,

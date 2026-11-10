@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
@@ -53,34 +53,51 @@ interface CodeTemplateEntry {
   templateUrl: 'code-template.component.html',
   styleUrls: ['./code-template.component.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
 export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
-  codeTemplateDecoded?: CodeTemplate;
+  private readonly codeTemplateDecodedState = signal<CodeTemplate | undefined>(undefined);
+  get codeTemplateDecoded(): CodeTemplate | undefined { return this.codeTemplateDecodedState(); }
+  set codeTemplateDecoded(value: CodeTemplate | undefined) { this.codeTemplateDecodedState.set(value); }
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates!: CodeTemplateMap;
-  template!: string;
+  private readonly templateState = signal<string>(undefined as unknown as string);
+  get template(): string { return this.templateState(); }
+  set template(value: string) { this.templateState.set(value); }
   defaultTemplate!: string;
-  templateType!: TemplateType;
+  private readonly templateTypeState = signal<TemplateType>(undefined as unknown as TemplateType);
+  get templateType(): TemplateType { return this.templateTypeState(); }
+  set templateType(value: TemplateType) { this.templateTypeState.set(value); }
   TemplateType = TemplateType;
   codeTemplateEntries: CodeTemplateEntry[] = [];
   codeTemplateEntries$: BehaviorSubject<CodeTemplateEntry[]> = new BehaviorSubject<CodeTemplateEntry[]>([]);
-  isLoading = false;
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
 
-  editorOptions: EditorComponent['editorOptions'] = {
+  private readonly editorOptionsState = signal<EditorComponent['editorOptions']>({
     minimap: { enabled: true },
     //  renderValidationDecorations: "on",
     language: 'javascript',
-  };
+  });
+  get editorOptions(): EditorComponent['editorOptions'] { return this.editorOptionsState(); }
+  set editorOptions(value: EditorComponent['editorOptions']) { this.editorOptionsState.set(value); }
   feature!: Feature;
   private completionProviderDisposable: any;
   /** Code of the selected template as last loaded/saved; Save is only enabled when the editor differs. */
-  private savedCode = '';
-  aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
-  aiCapabilitiesDisabled = false;
+  private readonly savedCodeState = signal<string>('');
+  private get savedCode(): string { return this.savedCodeState(); }
+  private set savedCode(value: string) { this.savedCodeState.set(value); }
+  private readonly aiAgentState = signal<AgentObjectDefinition | AgentTextDefinition | null>(null);
+  get aiAgent(): AgentObjectDefinition | AgentTextDefinition | null { return this.aiAgentState(); }
+  set aiAgent(value: AgentObjectDefinition | AgentTextDefinition | null) { this.aiAgentState.set(value); }
+  private readonly aiCapabilitiesDisabledState = signal<boolean>(false);
+  get aiCapabilitiesDisabled(): boolean { return this.aiCapabilitiesDisabledState(); }
+  set aiCapabilitiesDisabled(value: boolean) { this.aiCapabilitiesDisabledState.set(value); }
 
 
   codeEditorHelp = `A <b>Code Template</b> is copied into each new mapping — edits here do <em>not</em> affect existing mappings. <b>Shared</b> templates provide globals available in all Smart Functions without any import.<br><br>Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;

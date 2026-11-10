@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { signal } from '@angular/core';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 
 /**
@@ -33,8 +34,9 @@ describe('ServiceConfigurationComponent', () => {
     const component = Object.create(
       ServiceConfigurationComponent.prototype
     ) as ServiceConfigurationComponent;
-    component.expertMode = false;
-    (component as any).section = section;
+    // Object.create skips field initializers, so the signals behind the accessors are created here.
+    (component as any).expertModeState = signal(false);
+    (component as any).sectionState = signal(section);
     return component;
   }
 
