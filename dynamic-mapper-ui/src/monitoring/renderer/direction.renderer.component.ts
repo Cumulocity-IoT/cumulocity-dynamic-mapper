@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { Direction } from '../../shared';
 
@@ -31,6 +31,7 @@ import { Direction } from '../../shared';
       ></i>
     </span>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })

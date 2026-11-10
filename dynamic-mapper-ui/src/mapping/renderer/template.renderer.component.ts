@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 
 @Component({
@@ -34,6 +34,7 @@ import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
       >{{ json }}</textarea
     >
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: []
 })

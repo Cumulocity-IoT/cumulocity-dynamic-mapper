@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
@@ -31,6 +31,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         title="This mapping has an unpublished draft version">draft</span>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })

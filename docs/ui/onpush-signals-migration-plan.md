@@ -531,6 +531,15 @@ connector: "Selected connectors for mapping" must follow, with the right names. 
 filter by direction, add, edit, copy, delete, import, and export a connector: the list must refresh after each.
 Scroll the grid out of view and back, and switch browser tabs: polling must pause and resume.
 
+### Stateless cell renderers on `OnPush` (done, not yet browser-checked)
+
+13 renderers that only read `CellRendererContext` moved to `OnPush`: draft badge, deployment, mapping id, QoS,
+status, template, version badge, label, tagged label, name, number, monitoring direction, and monitoring id.
+Safe because `c8y-cell-renderer` is itself `OnPush` and builds a new injector (and so a new renderer) when
+the cell spec changes. Not migrated: `mapping-status-activation` and the other renderers that hold state.
+Browser check: open the mapping grid, toggle a mapping's activation and debug flag, and confirm the version,
+draft, and deployment cells refresh after the grid reloads. Unit tests: 1012 of 1012 pass.
+
 ### Lint rules (done)
 
 Three rules are on for application code as warnings: `@angular-eslint/prefer-on-push-component-change-detection`,
