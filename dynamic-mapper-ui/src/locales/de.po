@@ -1257,7 +1257,7 @@ msgstr "bereits abonniert"
 msgid "Subscribe the devices of this type that already exist, in addition to the ones created afterward"
 msgstr "Auch die bereits vorhandenen Geräte dieses Typs abonnieren, zusätzlich zu den später angelegten"
 
-msgid "Filter inventory"
+msgid "Inventory filter"
 msgstr ""
 
 msgid "Filter Inventory Result [{{resultType}}]"

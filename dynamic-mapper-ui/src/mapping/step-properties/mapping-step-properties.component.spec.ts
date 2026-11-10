@@ -223,6 +223,35 @@ describe('MappingStepPropertiesComponent', () => {
     });
   });
 
+  describe('inventory filter behind Expert Mode', () => {
+    async function component(filterInventory?: string) {
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const c = fixture.componentInstance;
+      c.mapping = { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterInventory } as unknown as Mapping;
+      c.stepperConfiguration = { direction: Direction.OUTBOUND, persistence: 'create' };
+      c.propertyFormly = new FormGroup({});
+      await c.ngOnInit();
+      return c;
+    }
+    const field = (c: MappingStepPropertiesComponent) =>
+      (c.propertyFormlyFields as any[]).flatMap(f => f.fieldGroup ?? []).find(f => f.key === 'filterInventory');
+
+    it('hides the field by default, keeps its value on hide, and labels it "Inventory filter"', async () => {
+      const c = await component('');
+      expect(c.model.expertMode).toBeFalse();
+      expect(field(c).expressions.hide()).toBeTrue();
+      expect(field(c).resetOnHide).toBeFalse();
+      expect(field(c).props.label).toBe('Inventory filter');
+      c.model.expertMode = true;
+      expect(field(c).expressions.hide()).toBeFalse();
+    });
+
+    it('opens with Expert Mode on when a filter is already stored', async () => {
+      const c = await component('type = "x"');
+      expect(c.model.expertMode).toBeTrue();
+    });
+  });
+
   describe('filter inventory: attributes missing from the inventory cache', () => {
     /** A stand-in for the formly field, which is not rendered in these template-less specs. */
     async function componentWithField() {

@@ -77,6 +77,12 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   styles: [`
     .d11r-props-compact .legend.form-block { margin: 12px 0 4px; }
     .d11r-props-compact .form-group { margin-bottom: 8px; }
+    /* Expert Mode: out of the layout flow, above the right end of the first section heading line. */
+    .d11r-props-compact .expert-mode-row { position: relative; height: 0; margin: 0; }
+    .d11r-props-compact .expert-mode-corner {
+      position: absolute; top: -36px; right: 0; z-index: 1; width: auto; padding: 0;
+    }
+    .d11r-props-compact .expert-mode-corner .form-group { margin: 0; }
     /* Same box as .form-control, so the text starts where the neighboring input's text starts. */
     .d11r-props-compact .filter-result {
       padding: 5px 8px;
@@ -121,7 +127,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
    * the execution-filter control (outbound). Those are a view over `filterMapping` and are never
    * committed.
    */
-  model: Partial<Mapping> & { executionFilterMode?: ExecutionFilterMode; executionFilterValue?: string } = {};
+  model: Partial<Mapping> & { executionFilterMode?: ExecutionFilterMode; executionFilterValue?: string; expertMode?: boolean } = {};
 
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
@@ -184,6 +190,26 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
     });
 
     this.propertyFormlyFields = [
+      {
+        // Top right corner of the tab. Expert Mode (as in the mapping create drawer) reveals the inventory filter. A view-only
+        // helper key: it is not a mapping property and never committed.
+        fieldGroupClassName: 'row expert-mode-row',
+        fieldGroup: [
+          {
+            className: 'expert-mode-corner',
+            key: 'expertMode',
+            type: 'switch',
+            wrappers: ['d11r-wrapper-form-field'],
+            props: {
+              ...switchProps(gettext('Expert Mode'), ''),
+              hideInlineDescription: true,
+              // Never disabled: it only reveals fields, and a read-only mapping may still be inspected.
+              disabled: false,
+              change: () => this.syncFilterInventoryResultField()
+            }
+          }
+        ]
+      },
       {
         type: 'template',
         expressions: {
@@ -317,12 +343,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
             // cache" warning under the input (props.warning).
             wrappers: ['d11r-wrapper-form-field'],
             props: {
-              label: gettext('Filter inventory'),
+              label: gettext('Inventory filter'),
               placeholder: 'type = "lora_device_type"',
               disabled: this.isFieldDisabled,
               description: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
               required: false
             },
+            // Hidden outside Expert Mode; the stored expression must survive that (formly would
+            // otherwise reset the value on hide).
+            resetOnHide: false,
+            expressions: { hide: () => !this.model.expertMode },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 this.filterInventoryField = field;
@@ -665,7 +695,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
       return;
     }
     this.filterResultField.template = this.renderFilterInventoryResult();
-    this.filterResultField.hide = this.filterInventoryModel.filterExpression.resultType === 'empty';
+    this.filterResultField.hide =
+      !this.model.expertMode || this.filterInventoryModel.filterExpression.resultType === 'empty';
   }
 
   /**
@@ -792,6 +823,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy, DoChec
     model['externalIdType'] ??= 'c8y_Serial';
     // Show the stored filter expression as one of the three options (an unknown expression is "custom").
     // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
+    // An existing inventory filter must not be hidden from the user.
+    model['expertMode'] = !!this.mapping.filterInventory?.trim();
     this.model = model as Partial<Mapping>;
     this.deriveExecutionFilter();
     this.commitModel();
