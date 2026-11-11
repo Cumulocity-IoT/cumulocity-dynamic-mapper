@@ -53,8 +53,9 @@ Every component uses `ChangeDetectionStrategy.OnPush`. The lint rules enforce it
 ### Lint rules
 
 `eslint.config.cjs`: `prefer-on-push-component-change-detection`, `prefer-signals`, and `no-explicit-any` are errors
-for all app code except specs. The directories that still have findings are listed in the "Known debt" blocks, as
-warnings. When a directory reaches zero, delete its line so that it stays at zero.
+for all app code except specs. `no-explicit-any` has no exceptions left. The directories that still have
+`prefer-signals` findings are listed in the "Known debt" block, as warnings. When a directory reaches zero, delete its
+line so that it stays at zero.
 
 ## Translations
 
