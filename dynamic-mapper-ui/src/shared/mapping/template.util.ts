@@ -26,7 +26,7 @@ import { CONTEXT_DATA_KEY_NAME, CONTEXT_DATA_METHOD_NAME, CONTEXT_DATA_PUBLISH_T
 
 // ─── TransformationType predicates ───────────────────────────────────────────
 
-export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+export function checkTransformationType(transformationType: TransformationType, template: unknown): boolean {
   // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
 
   if (isJSONArray(template)) {
@@ -36,7 +36,7 @@ export function checkTransformationType(transformationType: TransformationType, 
   return true;
 }
 
-function isJSONArray(value: any): boolean {
+function isJSONArray(value: unknown): boolean {
   // Check if already a parsed array
   if (Array.isArray(value)) {
     return true;

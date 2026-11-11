@@ -407,7 +407,7 @@ export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
 // ─── Functions ────────────────────────────────────────────────────────────────
 
-export function getExternalTemplate(mapping: Mapping): any {
+export function getExternalTemplate(mapping: Mapping) {
   if (
     mapping.mappingType == MappingType.FLAT_FILE ||
     mapping.mappingType == MappingType.HEX
@@ -423,7 +423,7 @@ export function getSchema(
   direction: Direction,
   isTarget: boolean,
   getTesting: boolean
-): any {
+) {
   if (
     (isTarget && direction == Direction.INBOUND) ||
     (!isTarget && direction == Direction.OUTBOUND)

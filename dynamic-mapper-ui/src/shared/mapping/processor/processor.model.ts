@@ -32,11 +32,11 @@ export interface DynamicMapperRequest {
   method?: string;
   api?: string;
   publishTopic?: string;
-  sourceId?: any;
+  sourceId?: string;
   externalId?: string;
   externalIdType?: string;
-  request?: any;
-  response?: any;
+  request?: unknown;
+  response?: unknown;
   /** Why this request failed; absent when it succeeded. */
   errorMessage?: string;
   hidden?: boolean;
@@ -86,10 +86,10 @@ export enum SubstituteValueType {
 }
 
 export interface SubstituteValue {
-  value: any;
+  value: unknown;
   type?: SubstituteValueType;
   repairStrategy: RepairStrategy;
-}export function getTypedValue(subValue: SubstituteValue): any {
+}export function getTypedValue(subValue: SubstituteValue): unknown {
   if (subValue.type == SubstituteValueType.NUMBER) {
     return Number(subValue.value);
   } else if (subValue.type == SubstituteValueType.TEXTUAL) {
@@ -99,7 +99,7 @@ export interface SubstituteValue {
   }
 }
 
-export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
+export const isNumeric = (num: unknown) => (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
   !isNaN(num as number);
 
 

@@ -89,7 +89,7 @@ The language model to use.
   /**
 The schema of the object that the model should generate.
    */
-  schema: any;
+  schema: unknown;
   /**
 Optional name of the output that should be generated.
 Used by some providers for additional LLM guidance, e.g.
@@ -130,13 +130,13 @@ Additional provider-specific options. They are passed through
 to the provider from the AI SDK and enable provider-specific
 functionality that can be fully encapsulated in the provider.
 */
-  providerOptions?: any;
+  providerOptions?: unknown;
   /**
 @deprecated Use `providerOptions` instead.
 */
   experimental_providerMetadata?: ProviderMetadata;
 
-  variables?: { [key: string]: any };
+  variables?: { [key: string]: unknown };
 };
 export type ObjectCompletionResponse = ReturnType<typeof generateObject>;
 

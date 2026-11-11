@@ -126,9 +126,7 @@ module.exports = [
       'src/mapping/core/*.ts',
       'src/mapping/message-explorer/*.ts',
       'src/mapping/prompt/*.ts',
-      'src/mapping/service/*.ts',
-      'src/shared/mapping/*.ts',
-      'src/shared/mapping/processor/*.ts'
+      'src/mapping/service/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {

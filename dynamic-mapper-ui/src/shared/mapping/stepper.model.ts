@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import type * as Monaco from 'monaco-editor';
 import { Direction, StepperConfiguration, Substitution } from '../../shared/mapping/mapping.model';
 import { ClassDefinition, ClassOrEnum, EnumDefinition } from './smart-function-api.model';
 import { SMART_FUNCTION_API } from './generated/smart-function-api.generated';
@@ -116,7 +117,7 @@ export class StepLayout {
  * @param {Monaco} monaco - The Monaco instance
  * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderFlowFunction(monaco: any, direction: Direction = Direction.INBOUND): { dispose: () => void } {
+export function createCompletionProviderFlowFunction(monaco: typeof Monaco, direction: Direction = Direction.INBOUND): { dispose: () => void } {
   // Register flow-specific classes and interfaces
   const allClasses: ClassOrEnum[] = SMART_FUNCTION_API;
 
@@ -273,7 +274,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
     // No ' ': a space triggered the widget on essentially every keystroke of prose inside strings
     // and comments, which made the editor feel noisy without ever offering anything useful.
     triggerCharacters: ['.', '('],
-    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
+    provideCompletionItems: function (model: Monaco.editor.ITextModel, position: Monaco.Position) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -564,7 +565,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
   });
 
   const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
-    provideHover: function(model: any, position: any) {
+    provideHover: function(model: Monaco.editor.ITextModel, position: Monaco.Position) {
       const word = model.getWordAtPosition(position);
       if (!word) return null;
       const w = word.word;
@@ -664,7 +665,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       for (const cls of allClasses) {
         if (cls.name === w) {
           const kind = cls.isEnum ? 'enum' : 'class';
-          const dep = (cls as any).deprecated ? '\n\n⚠️ **DEPRECATED**' : '';
+          const dep = cls.deprecated ? '\n\n⚠️ **DEPRECATED**' : '';
           return { range, contents: [{ value: `\`\`\`typescript\n${kind} ${cls.name}\n\`\`\`\n\n${cls.documentation}${dep}`, isTrusted: true }] };
         }
         if (cls.isEnum) {

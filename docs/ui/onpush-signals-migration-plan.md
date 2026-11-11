@@ -48,7 +48,7 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 89 `any`, 4 components over 500 lines). Delete a directory's line from
+3. Pay down the debt (198 `prefer-signals`, 59 `any`, 4 components over 500 lines). Delete a directory's line from
    the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
@@ -180,7 +180,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | Components on `OnPush` (lint count) | 5 of 91 by grep | 92 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
-| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 89 |
+| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 59 |
 | Unit tests | 978 | 1012 |
 
 | Phase | State |
@@ -987,3 +987,20 @@ Choices worth knowing:
 
 Left: 89 `any` in seven directories: `shared/mapping` (24), `mapping/client-relation` (14), `mapping/core` (14),
 `mapping/message-explorer` (11), `mapping/prompt` (10), `mapping/service` (10), and `shared/mapping/processor` (6).
+
+### `any` conversion, third batch: `shared/mapping` (done, not yet browser-checked)
+
+`any` is down from 89 to 59. `shared/mapping` and `shared/mapping/processor` are at zero and now fail on `any`; five
+directories remain in the `any` warning block: `mapping/client-relation` (14), `mapping/core` (14),
+`mapping/message-explorer` (11), `mapping/prompt` (10), and `mapping/service` (10). Tests pass (1027 of 1027), lint
+reports 0 errors and 261 warnings, and the AOT check shows the same 8 baseline errors.
+
+Choices worth knowing:
+- `DynamicMapperRequest.request` and `.response` are `unknown`, and `SubstituteValue.value` and `getTypedValue()` are
+  `unknown`. Only one caller needed a cast (the testing step reads `response.id`), so this is cheap to keep.
+- `BackendErrorBody` (errors, details, message) is exported from `mapping-validation-error.ts` and types both
+  `toBackendError` and `buildBackendErrorMessage`.
+- The completion and hover providers in `stepper.model.ts` use the real Monaco types (`import type` from
+  `monaco-editor`, so nothing is added to the bundle). The completion spec passes a partial stub, so it casts it.
+- `getSchema` and `getExternalTemplate` lost their `: any` and return the inferred constant types. No caller broke.
+- `findFieldInObject` and `validateProtectedFields` take `unknown`, and use `Object.prototype.hasOwnProperty.call`.

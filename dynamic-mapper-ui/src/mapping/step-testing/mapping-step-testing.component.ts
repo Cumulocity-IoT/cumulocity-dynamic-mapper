@@ -555,7 +555,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const first = result.requests?.[0];
     const rawResponse = first?.response;
     const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
-    const id = response?.id;
+    const id = (response as { id?: string } | null | undefined)?.id;
     const api = (first?.api ?? '').toUpperCase();
     const externalId = first?.externalId
       ? ` (${first.externalIdType ? first.externalIdType + ' ' : ''}${first.externalId})`
