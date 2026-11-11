@@ -20,7 +20,7 @@
 
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector, ChangeDetectionStrategy, signal } from '@angular/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -152,8 +152,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   currentPollingInterval: number;
   private shouldRefreshAutomatic = true;
 
-  @ViewChild(CountdownIntervalComponent)
-  countdownIntervalComponent!: CountdownIntervalComponent;
+  readonly countdownIntervalComponent = viewChild(CountdownIntervalComponent);
 
   private readonly destroy$ = new Subject<void>();
 
@@ -240,7 +239,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       afterNextRenderInZone(this.injector, () => {
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
         if (this.shouldRefreshAutomatic) {
-          this.countdownIntervalComponent?.start();
+          this.countdownIntervalComponent()?.start();
         }
       });
       // this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
@@ -287,12 +286,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   startCountdown(): void {
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
     if (this.shouldRefreshAutomatic && this.sessionId) {
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
   resetCountdown(): void {
-    this.countdownIntervalComponent?.reset();
+    this.countdownIntervalComponent()?.reset();
   }
 
   async onCountdownEnded(): Promise<void> {
@@ -318,7 +317,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.sessionTopic = '';
         this.setMessages([]);
         this.paused = false;
-        this.countdownIntervalComponent?.stop();
+        this.countdownIntervalComponent()?.stop();
         clearStoredExplorerSession();
         this.alertService.warning(gettext('Explorer session has expired. Start a new session.'));
       } else {
@@ -331,9 +330,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   trackUserClickOnIntervalToggle(event: Event): void {
     this.shouldRefreshAutomatic = (event.target as HTMLInputElement).checked;
     if (!this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent?.stop();
+      this.countdownIntervalComponent()?.stop();
     } else if (this.sessionId) {
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
@@ -417,7 +416,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
-        this.countdownIntervalComponent?.start();
+        this.countdownIntervalComponent()?.start();
       }
     } catch (e) {
       const text =
@@ -431,10 +430,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   onTogglePause(): void {
     this.paused = !this.paused;
     if (this.paused) {
-      this.countdownIntervalComponent?.stop();
+      this.countdownIntervalComponent()?.stop();
     } else if (this.shouldRefreshAutomatic) {
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
@@ -454,7 +453,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionDeviceName = null;
     this.sessionDeviceTypeFilter = null;
     this.paused = false;
-    this.countdownIntervalComponent?.stop();
+    this.countdownIntervalComponent()?.stop();
     clearStoredExplorerSession();
     this.alertService.add({ text: gettext('Explorer session stopped.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }

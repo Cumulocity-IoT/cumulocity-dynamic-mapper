@@ -29,8 +29,7 @@ import {
   Output,
   ViewChild,
   ViewEncapsulation,
-  AfterViewInit
-} from '@angular/core';
+  AfterViewInit, viewChild } from '@angular/core';
 import {
   JsonEditor,
   createJSONEditor,
@@ -132,8 +131,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
 
-  @ViewChild('jsonEditorContainer', { static: true })
-  jsonEditorContainer: ElementRef<HTMLElement>;
+  readonly jsonEditorContainer = viewChild<ElementRef<HTMLElement>>('jsonEditorContainer');
 
   private _options: JsonEditorInputOptions;
   private editor: JsonEditor | undefined;
@@ -143,7 +141,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this.editor = createJSONEditor({
-      target: this.jsonEditorContainer.nativeElement,
+      target: this.jsonEditorContainer().nativeElement,
       props: {
         ...this.libraryProps(),
         content: this.content,

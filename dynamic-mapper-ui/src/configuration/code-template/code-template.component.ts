@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
@@ -58,7 +58,7 @@ interface CodeTemplateEntry {
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
 export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
+  readonly codeEditor = viewChild(EditorComponent);
 
   private readonly codeTemplateDecodedState = signal<CodeTemplate | undefined>(undefined);
   get codeTemplateDecoded(): CodeTemplate | undefined { return this.codeTemplateDecodedState(); }
@@ -213,11 +213,11 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   registerCompletionProvider(): void {
-    if (!this.codeEditor || !this.codeEditor.editor || !this.codeEditor.monaco) {
+    if (!this.codeEditor() || !this.codeEditor().editor || !this.codeEditor().monaco) {
       return;
     }
 
-    const monaco = this.codeEditor.monaco;
+    const monaco = this.codeEditor().monaco;
 
     // Dispose previous provider if exists
     if (this.completionProviderDisposable) {

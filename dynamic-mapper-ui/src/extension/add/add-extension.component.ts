@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -39,7 +39,7 @@ type UploadError = string | { data?: { message?: string; error?: string } } | nu
   imports: [CoreModule]
 })
 export class AddExtensionComponent implements OnDestroy {
-  @ViewChild(DropAreaComponent) dropAreaComponent;
+  readonly dropAreaComponent = viewChild(DropAreaComponent);
 
   /** No existing upload-size convention elsewhere in the codebase — 50 MB is a generous default for a processor-extension *.jar. */
   readonly maxFileSizeInMegaBytes = 50;
@@ -129,7 +129,7 @@ export class AddExtensionComponent implements OnDestroy {
     this.progress$.next(0);
     this.extensionService.cancelProcessorExtensionCreation(this.app);
     this.app = null;
-    this.dropAreaComponent?.onDelete();
+    this.dropAreaComponent()?.onDelete();
 
     this.errorMessage = this.extractErrorMessage(error);
     if (!this.errorMessage && !this.uploadCanceled) {

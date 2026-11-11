@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { TranslateService } from '@ngx-translate/core';
-import { Component, inject, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -82,7 +82,7 @@ type SubscribedDevice = Device & { groupNames?: string; subscriptionSource?: str
 
 })
 export class MappingSubscriptionComponent implements OnInit {
-  @ViewChild('subscriptionGrid') subscriptionGrid!: DataGridComponent;
+  readonly subscriptionGrid = viewChild<DataGridComponent>('subscriptionGrid');
 
   constructor() {
     // The grid pulls each page through this callback (server-side load-more).
@@ -385,7 +385,7 @@ export class MappingSubscriptionComponent implements OnInit {
   }
 
   onRefresh(): void {
-    this.subscriptionGrid?.reload();
+    this.subscriptionGrid()?.reload();
   }
 
   async deleteSubscription(device: IIdentified, options?: { reload?: boolean }): Promise<void> {
@@ -398,7 +398,7 @@ export class MappingSubscriptionComponent implements OnInit {
         gettext('Subscription for this device deleted successfully')
       );
       if (reload) {
-        this.subscriptionGrid?.reload();
+        this.subscriptionGrid()?.reload();
       }
     } catch (error) {
       this.alertService.danger(
@@ -428,8 +428,8 @@ export class MappingSubscriptionComponent implements OnInit {
       }
     }
     this.mappingService.refreshMappings(Direction.OUTBOUND);
-    this.subscriptionGrid?.setAllItemsSelected(false);
-    this.subscriptionGrid?.reload();
+    this.subscriptionGrid()?.setAllItemsSelected(false);
+    this.subscriptionGrid()?.reload();
   }
 
   private async deleteSubscriptionWithConfirmation(
@@ -450,7 +450,7 @@ export class MappingSubscriptionComponent implements OnInit {
       result = true;
     }
 
-    this.subscriptionGrid?.setAllItemsSelected(false);
+    this.subscriptionGrid()?.setAllItemsSelected(false);
     return result;
   }
 
@@ -489,7 +489,7 @@ export class MappingSubscriptionComponent implements OnInit {
       const response = await this.subscriptionService.updateSubscriptionDevice(
         subscriptionDevices
       );
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
@@ -510,7 +510,7 @@ export class MappingSubscriptionComponent implements OnInit {
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceGroup();
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
@@ -530,7 +530,7 @@ export class MappingSubscriptionComponent implements OnInit {
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceType();
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       this.alertService.danger(

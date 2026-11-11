@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, ViewChild, computed, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, Signal, computed, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { MappingCodeEditorSectionComponent } from './mapping-code-editor-section.component';
 import { FormGroup } from '@angular/forms';
@@ -162,12 +162,12 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   /** True while no connector is selected; a mapping needs one to be saved. Derived, never set. */
   readonly connectorSelectionEmpty = computed(() => isConnectorSelectionEmpty(this.deploymentMapEntrySignal()));
   /** The rendered template step, if any; the base only needs what {@link TemplateEditorRef} offers. */
-  abstract templateStepRef: TemplateEditorRef | undefined;
+  abstract readonly templateStepRef: Signal<TemplateEditorRef | undefined>;
   /** The code-editor block of the Transformation step, once it is rendered. */
-  @ViewChild(MappingCodeEditorSectionComponent) protected codeSection?: MappingCodeEditorSectionComponent;
+  protected readonly codeSection = viewChild(MappingCodeEditorSectionComponent);
   /** The Monaco editor inside {@link codeSection}; `undefined` until it has been created. */
   get codeEditor(): EditorComponent | undefined {
-    return this.codeSection?.codeEditorRef;
+    return this.codeSection()?.codeEditorRef();
   }
   /**
    * The selected step or tab. A signal, so a host on `OnPush` re-renders when it changes. Hosts do not
@@ -492,7 +492,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   }
 
   protected updateTemplatesInEditors(): void {
-    const result = updateTemplatesInEditors(this.templateStepRef, this.sourceTemplate, this.targetTemplate);
+    const result = updateTemplatesInEditors(this.templateStepRef(), this.sourceTemplate, this.targetTemplate);
     this.sourceTemplate = result.sourceTemplate;
     this.targetTemplate = result.targetTemplate;
   }
@@ -575,7 +575,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     this.mappingCode = code;
     // Write into the editor directly as well as through the `code` binding: the binding reaches Monaco
     // only after a render and an async `ngModel` update, and the editor must show the new code at once.
-    this.codeSection?.writeCode(code);
+    this.codeSection()?.writeCode(code);
   }
 
   private updateCodeTemplateEntries(): void {
@@ -682,7 +682,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
           // The editor may only be created by the next render, so write once that has happened.
           afterNextRenderInZone(this.injector, () => {
-            this.codeSection?.writeCode(result);
+            this.codeSection()?.writeCode(result);
             this.cdr.markForCheck();
           });
         } else {

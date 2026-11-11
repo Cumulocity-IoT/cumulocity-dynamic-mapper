@@ -19,7 +19,7 @@
  */
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { ApplicationRef, Component, NgZone, OnDestroy, ViewChild, ViewEncapsulation, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { ApplicationRef, Component, NgZone, OnDestroy, ViewChild, ViewEncapsulation, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   CoreModule,
   DropAreaComponent,
@@ -40,7 +40,7 @@ import { createCustomUuid, Mapping } from '../../shared';
 })
 export class ImportMappingsComponent implements OnDestroy {
   private readonly translateService = inject(TranslateService);
-  @ViewChild(DropAreaComponent) dropAreaComponent;
+  readonly dropAreaComponent = viewChild(DropAreaComponent);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   private readonly isLoadingState = signal<boolean>(false);
   get isLoading(): boolean { return this.isLoadingState(); }

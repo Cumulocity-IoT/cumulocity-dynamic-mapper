@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -71,7 +71,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
     return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
   }
 
-  @ViewChild('modal', { static: false }) private modal?: { _dismiss(): void };
+  private readonly modal = viewChild<{ _dismiss(): void }>('modal');
 
   constructor(
     private sharedService: SharedService,
@@ -87,7 +87,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
     this.isClosing = true;
     this.closeSubject.next(false);
     this.closeSubject.complete();
-    this.modal?._dismiss();
+    this.modal()?._dismiss();
   }
 
   async onAccept(): Promise<void> {
@@ -100,7 +100,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
       });
       this.closeSubject.next(true);
       this.closeSubject.complete();
-      this.modal?._dismiss();
+      this.modal()?._dismiss();
     } catch (error) {
       console.error('Failed to save deprecation notice acceptance:', error);
       this.alertService.warning(

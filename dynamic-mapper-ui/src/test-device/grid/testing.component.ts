@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, OnInit, ViewChild, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, EventEmitter, OnInit, ViewChild, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ActionControl,
@@ -58,7 +58,7 @@ export class TestingComponent implements OnInit {
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
     // refreshData$ lives on a root service: without this, every grid ever created keeps reloading.
     this.service.refreshData$.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.deviceGrid?.reload();
+      this.deviceGrid()?.reload();
     });
     this.columns = this.getColumns();
     this.pagination = this.service.getPagination();
@@ -118,8 +118,7 @@ export class TestingComponent implements OnInit {
       this.bulkActionControls = this.service.getBulkActionControls();
     }
   }
-  @ViewChild(DataGridComponent, { static: false })
-  deviceGrid: DataGridComponent;
+  readonly deviceGrid = viewChild(DataGridComponent);
   private readonly featureState = signal<Feature>(undefined as unknown as Feature);
   get feature(): Feature { return this.featureState(); }
   set feature(value: Feature) { this.featureState.set(value); }

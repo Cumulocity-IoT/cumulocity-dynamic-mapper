@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -63,7 +63,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
 
-  @ViewChild('deviceToClientGrid') deviceToClientGrid: DataGridComponent;
+  readonly deviceToClientGrid = viewChild<DataGridComponent>('deviceToClientGrid');
 
   constructor(
   ) {
@@ -155,7 +155,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
       this.mapEntries = this.clientRelations.relations;
     }
 
-    this.deviceToClientGrid?.reload();
+    this.deviceToClientGrid()?.reload();
   }
 
   ngOnDestroy(): void {
@@ -238,7 +238,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         this.deleteRelation(device2Delete);
       }
     }
-    this.deviceToClientGrid.setAllItemsSelected(false);
+    this.deviceToClientGrid().setAllItemsSelected(false);
   }
 
   private async deleteRelationWithConfirmation(
@@ -268,7 +268,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         await this.deleteRelation(device2Delete);
       }
     }
-    this.deviceToClientGrid.setAllItemsSelected(false);
+    this.deviceToClientGrid().setAllItemsSelected(false);
     return result;
   }
 }

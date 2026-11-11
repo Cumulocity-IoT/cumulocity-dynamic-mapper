@@ -171,7 +171,7 @@ describe('AiPromptComponent — result hand-over', () => {
       create(TransformationType.SMART_FUNCTION);
       history = TestBed.inject(AiChatHistoryService);
       agentChat = { saveChatHistory: jasmine.createSpy('saveChatHistory').and.returnValue({ snapshot: 1 }) };
-      (component as any).agentChat = agentChat;
+      (component as any).agentChat = () => agentChat;
       (component as any).inputsKey = generationInputsKey((component as any).mappingForAI);
     });
 
@@ -253,7 +253,7 @@ describe('AiPromptComponent — result hand-over', () => {
     it('keeps a conversation stored by a first run for the next run on the same mapping', async () => {
       component.existingMapping = true;
       await component.ngOnInit();
-      (component as any).agentChat = { saveChatHistory: () => ({ snapshot: 'first run' }) };
+      (component as any).agentChat = () => ({ saveChatHistory: () => ({ snapshot: 'first run' }) });
       component.onMessagesChange([{ role: 'user', content: 'hi' } as any]);
       component.cancel();
 

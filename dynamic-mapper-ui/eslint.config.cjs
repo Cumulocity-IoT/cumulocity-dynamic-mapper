@@ -73,17 +73,10 @@ module.exports = [
     // zero, delete its line here.
     files: [
       'src/configuration/code-template/*.ts',
-      'src/connector/*.ts',
-      'src/extension/add/*.ts',
       'src/extension/card/*.ts',
-      'src/introduction/*.ts',
-      'src/mapping-tree/*.ts',
-      'src/mapping/client-relation/*.ts',
       'src/mapping/deprecation-notice/*.ts',
       'src/mapping/editor-base/*.ts',
-      'src/mapping/grid/*.ts',
       'src/mapping/grid/copy-source-modal/*.ts',
-      'src/mapping/import/*.ts',
       'src/mapping/mapping-create/*.ts',
       'src/mapping/message-explorer/*.ts',
       'src/mapping/prompt/*.ts',
@@ -93,14 +86,11 @@ module.exports = [
       'src/mapping/step-template/*.ts',
       'src/mapping/step-testing/*.ts',
       'src/mapping/step-transformation/*.ts',
-      'src/mapping/stepper/*.ts',
-      'src/mapping/subscription/*.ts',
       'src/mapping/subscription/subscription-dynamic-group/*.ts',
       'src/mapping/subscription/subscription-dynamic-type/*.ts',
       'src/mapping/subscription/subscription-static-table/*.ts',
       'src/mapping/subscription/subscription-static-tree/*.ts',
       'src/mapping/substitution/*.ts',
-      'src/mapping/unified-editor/*.ts',
       'src/mapping/validation/*.ts',
       'src/mapping/versions/*.ts',
       'src/monitoring/cache/kpi/*.ts',
@@ -112,8 +102,7 @@ module.exports = [
       'src/shared/component/select/*.ts',
       'src/shared/connector-configuration/*.ts',
       'src/shared/connector-configuration/edit/*.ts',
-      'src/shared/connector-details/*.ts',
-      'src/test-device/grid/*.ts'
+      'src/shared/connector-details/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,7 +41,7 @@ import { handleDocLinkClick, scrollToDocElement } from './doc-links';
 })
 export class DocPageComponent implements OnInit {
   private readonly injector = inject(Injector);
-  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+  readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
   private readonly titleState = signal<string>('');
   get title(): string { return this.titleState(); }
@@ -77,7 +77,7 @@ export class DocPageComponent implements OnInit {
   }
 
   private decorate(): void {
-    const body = this.docBodyRef?.nativeElement;
+    const body = this.docBodyRef()?.nativeElement;
     if (!body) return; // navigated away before the macrotask ran
     this.markdownService.highlightCodeBlocks(body);
     this.markdownService.renderMermaidDiagrams(body);

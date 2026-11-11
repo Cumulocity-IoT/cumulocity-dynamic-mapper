@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -108,9 +108,9 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   ],
 })
 export class MappingComponent implements OnInit, OnDestroy {
-  @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
+  readonly mappingGrid = viewChild<DataGridComponent>('mappingGrid');
   // Used to move the stepper to a substitution a validation failure points at.
-  @ViewChild('mappingStepper') mappingStepperRef?: MappingStepperComponent;
+  readonly mappingStepperRef = viewChild<MappingStepperComponent>('mappingStepper');
 
   private readonly showConfigMappingState = signal<boolean>(false);
   get showConfigMapping(): boolean { return this.showConfigMappingState(); }
@@ -665,7 +665,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (result.action !== 'goto') {
       return;
     }
-    await this.mappingStepperRef?.goToSubstitution(result.index);
+    await this.mappingStepperRef()?.goToSubstitution(result.index);
   }
 
   async onReload() {
@@ -688,7 +688,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -699,7 +699,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -712,7 +712,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -724,7 +724,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       true,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -736,7 +736,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       false,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -747,7 +747,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );

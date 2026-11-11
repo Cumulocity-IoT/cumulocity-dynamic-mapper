@@ -19,7 +19,7 @@
  */
 
 import { CdkStep, StepperSelectionEvent } from '@angular/cdk/stepper';
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, viewChild } from '@angular/core';
 import { C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 // Side-effect import, kept first: the type-only imports below are elided at build time, and
@@ -69,10 +69,10 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<CommitEditorState>();
 
-  @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
-  @ViewChild('transformationStepRef', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
-  @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
+  readonly templateStepRef = viewChild<MappingTemplateStepComponent>('templateStep');
+  readonly transformationStepRef = viewChild<MappingSubstitutionStepComponent>('transformationStepRef');
+  readonly mappingTestingStep = viewChild<MappingStepTestingComponent>('mappingTestingStep');
+  readonly stepper = viewChild<C8yStepper>('stepper');
 
   protected get substitutionStepIndex(): number { return this.layout.transformation; }
   get STEP_DEFINE_SUBSTITUTIONS(): number { return this.layout.transformation; }
@@ -126,11 +126,11 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
    * rejected save can put the user directly on the substitution that caused it.
    */
   async goToSubstitution(index: number): Promise<void> {
-    if (this.stepper && this.stepper.selectedIndex !== this.layout.transformation) {
-      this.stepper.selectedIndex = this.layout.transformation;
+    if (this.stepper() && this.stepper().selectedIndex !== this.layout.transformation) {
+      this.stepper().selectedIndex = this.layout.transformation;
     }
     // The step's content is rendered lazily, so the child only exists after the switch above.
-    await this.transformationStepRef?.onSelectSubstitution(index);
+    await this.transformationStepRef()?.onSelectSubstitution(index);
   }
 
   onCancelButton(): void {
@@ -178,7 +178,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
     if (this.mapping.filterMapping) {
       // Pass the (now-expanded) sourceTemplate explicitly so the child does not
       // have to rely on its own @Input or the not-yet-rendered editor ViewChild.
-      await this.templateStepRef?.updateFilterExpressionResult(
+      await this.templateStepRef()?.updateFilterExpressionResult(
         this.mapping.filterMapping,
         this.sourceTemplate
       );
@@ -221,7 +221,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
       this.updateTemplatesInEditors();
       // The transformation step must have the updated templates, as inputs, before the drawer opens.
       await this.whenRendered();
-      this.transformationStepRef?.openGenerateSubstitutionDrawer();
+      this.transformationStepRef()?.openGenerateSubstitutionDrawer();
     }, 0);
   }
 
@@ -261,13 +261,13 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   }
 
   private goToLastStep(): void {
-    this.stepper.steps.forEach((step, index) => {
-      if (index < this.stepper.steps.length - 1) {
+    this.stepper().steps.forEach((step, index) => {
+      if (index < this.stepper().steps.length - 1) {
         step.completed = true;
       }
     });
     this.updateTemplatesInEditors();
-    this.stepper.selectedIndex = this.stepper.steps.length - 1;
+    this.stepper().selectedIndex = this.stepper().steps.length - 1;
   }
 
   async onBackStep(event: StepperStepChange): Promise<void> {
@@ -276,7 +276,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
     // selectedIndex is still the step the Back button belongs to
     const leavingStep = event.stepper.selectedIndex;
     if (leavingStep === this.layout.testing) {
-      this.mappingTestingStep.editorTestingRequest.setSchema({});
+      this.mappingTestingStep()?.editorTestingRequest()?.setSchema({});
     } else if (leavingStep === this.layout.general || leavingStep === this.layout.templates) {
       this.templatesInitialized = false;
     }
@@ -339,7 +339,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
 
   /** True if the user has edited the target template since `aiReviewBaseline` was captured. */
   private hasReviewedAITemplate(): boolean {
-    const liveTarget = this.templateStepRef?.getTargetTemplate();
+    const liveTarget = this.templateStepRef()?.getTargetTemplate();
     if (liveTarget === undefined) return true; // can't verify — don't block on a guess
     return JSON.stringify(liveTarget) !== this.aiReviewBaseline;
   }

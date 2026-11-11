@@ -19,7 +19,7 @@
  */
 
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, ViewChild, viewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -76,7 +76,7 @@ export class MappingCodeEditorSectionComponent {
   }
 
   /** The code editor, once `showEditor` has created it. Hosts write into it through {@link writeCode}. */
-  @ViewChild('codeEditor') codeEditorRef?: EditorComponent;
+  readonly codeEditorRef = viewChild<EditorComponent>('codeEditor');
 
   /**
    * Puts `code` into the editor now, without waiting for the `code` binding to reach it. Used when the
@@ -84,6 +84,6 @@ export class MappingCodeEditorSectionComponent {
    * the value of the `code` binding.
    */
   writeCode(code: string): void {
-    this.codeEditorRef?.writeValue(code);
+    this.codeEditorRef()?.writeValue(code);
   }
 }

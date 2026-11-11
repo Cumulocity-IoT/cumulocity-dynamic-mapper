@@ -308,7 +308,7 @@ describe('MappingTemplateStepComponent', () => {
     it('restores hidden metadata keys onto what the editor holds', () => {
       component.sourceTemplate = full;
       component.showSourceMetadata = false;
-      component.editorSourceStepTemplate = editor({ value: 2 }); // displayed template, metadata stripped
+      Object.assign(component, { editorSourceStepTemplate: () => editor({ value: 2 }) }); // displayed template, metadata stripped
 
       expect(component.getSourceTemplate() as unknown).toEqual({ value: 2, _IDENTITY_: { externalId: 'x' }, _TOPIC_LEVEL_: ['a'] });
     });
@@ -316,7 +316,7 @@ describe('MappingTemplateStepComponent', () => {
     it('returns the editor content as is while metadata is shown', () => {
       component.targetTemplate = full;
       component.showTargetMetadata = true;
-      component.editorTargetStepTemplate = editor({ value: 2 }); // user removed the metadata on purpose
+      Object.assign(component, { editorTargetStepTemplate: () => editor({ value: 2 }) }); // user removed the metadata on purpose
 
       expect(component.getTargetTemplate() as unknown).toEqual({ value: 2 });
     });
@@ -324,7 +324,7 @@ describe('MappingTemplateStepComponent', () => {
     it('does not resurrect a key the user edited into a different value', () => {
       component.sourceTemplate = full;
       component.showSourceMetadata = false;
-      component.editorSourceStepTemplate = editor({ value: 2, _IDENTITY_: { externalId: 'edited' } });
+      Object.assign(component, { editorSourceStepTemplate: () => editor({ value: 2, _IDENTITY_: { externalId: 'edited' } }) });
 
       expect((component.getSourceTemplate() as Record<string, unknown>)['_IDENTITY_']).toEqual({ externalId: 'edited' });
     });

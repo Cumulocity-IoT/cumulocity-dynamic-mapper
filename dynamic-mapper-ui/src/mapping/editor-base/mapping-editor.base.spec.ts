@@ -22,7 +22,8 @@
 // Side-effect import first: shared/mapping/* have a circular import that only resolves when the
 // `shared` barrel is evaluated before them (see mapping-stepper.component.ts).
 import '../../shared';
-import { Component, computed, effect, EventEmitter, OnInit, Output } from '@angular/core';
+import type { TemplateEditorRef } from '../../shared/mapping/editor-session.util';
+import { Component, computed, effect, EventEmitter, OnInit, Output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -47,7 +48,7 @@ class TestEditorHostComponent extends MappingEditorBase {
     } as unknown as Mapping;
     this.stepperConfiguration = { direction: Direction.INBOUND, persistence: 'create' } as StepperConfiguration;
   }
-  templateStepRef = undefined as any;
+  templateStepRef = signal<TemplateEditorRef | undefined>(undefined);
   protected readonly substitutionStepIndex = 3;
 
   // protected members under test
@@ -57,7 +58,7 @@ class TestEditorHostComponent extends MappingEditorBase {
   enterTestingStep() { this.enterTesting(); }
   enqueue(handler: () => Promise<void>) { return this.enqueueTransition(handler); }
   rendered() { return this.whenRendered(); }
-  useCodeSection(section: { writeCode: (code: string) => void }) { this.codeSection = section as never; }
+  useCodeSection(section: { writeCode: (code: string) => void }) { Object.assign(this, { codeSection: () => section }); }
   get alerts() { return this.alertService; }
   patch(patch: Partial<Mapping>) { this.patchMapping(patch); }
   update(recipe: (draft: Mapping) => void) { this.updateMapping(recipe); }

@@ -29,8 +29,7 @@ import {
   OnInit,
   Output,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, viewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
@@ -92,9 +91,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
   @Output() sourceTemplateChanged = new EventEmitter<Template>();
 
-  @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
-  @ViewChild('editorTestingRequest') editorTestingRequest!: JsonEditorComponent;
-  @ViewChild('editorTestingResponse') editorTestingResponse!: JsonEditorComponent;
+  readonly editorTestingPayload = viewChild<JsonEditorComponent>('editorTestingPayload');
+  readonly editorTestingRequest = viewChild<JsonEditorComponent>('editorTestingRequest');
+  readonly editorTestingResponse = viewChild<JsonEditorComponent>('editorTestingResponse');
 
   // Template helpers
   readonly Direction = Direction;
@@ -336,9 +335,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private updateEditors(): void {
     // Data is already sorted in displayTestResult(), pass it directly
-    this.editorTestingRequest?.set(this.testingModel.request);
+    this.editorTestingRequest()?.set(this.testingModel.request);
     // Handle null response for test mode (don't try to sort null)
-    this.editorTestingResponse?.set(this.testingModel.response);
+    this.editorTestingResponse()?.set(this.testingModel.response);
   }
 
   private getNextVisibleResultIndex(): number {
@@ -458,7 +457,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async performTest(sendPayload: boolean, assumeDeviceExists = false): Promise<TestResult> {
     // Always read directly from the editor to capture the latest content,
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
-    this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate, undefined, false);
+    this.syncPayload(this.editorTestingPayload()?.get() ?? this.sourceTemplate, undefined, false);
 
     // Raw-payload types carry their text in a `payload` property. An ANY_PAYLOAD mapping handled by a
     // Java extension can instead have a plain JSON source template (the shipped IN-17 sample): then

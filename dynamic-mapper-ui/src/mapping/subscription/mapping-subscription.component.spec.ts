@@ -334,13 +334,14 @@ describe('MappingSubscriptionComponent', () => {
       };
 
       mockConfirmationService.confirmDeletion.and.returnValue(Promise.resolve(true));
-      component.subscriptionGrid = { setAllItemsSelected: jasmine.createSpy(), reload: jasmine.createSpy() } as any;
+      const grid = { setAllItemsSelected: jasmine.createSpy(), reload: jasmine.createSpy() };
+      Object.assign(component, { subscriptionGrid: () => grid });
 
       await component['deleteSubscriptionBulkWithConfirmation'](['1', '2']);
 
       expect(mockConfirmationService.confirmDeletion).toHaveBeenCalledWith('subscription', true);
       expect(mockSubscriptionService.deleteSubscriptionDevice).toHaveBeenCalledTimes(2);
-      expect(component.subscriptionGrid.setAllItemsSelected).toHaveBeenCalledWith(false);
+      expect(grid.setAllItemsSelected).toHaveBeenCalledWith(false);
     });
   });
 

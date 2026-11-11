@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   Column,
@@ -76,7 +76,7 @@ import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
   imports: [CoreModule]
 })
 export class TypeResyncComponent implements OnInit, OnDestroy {
-  @ViewChild('typeResyncGrid') typeResyncGrid!: DataGridComponent;
+  readonly typeResyncGrid = viewChild<DataGridComponent>('typeResyncGrid');
 
   @Input() set typeList(list: string[]) {
     this.typeListInternal = list ?? [];

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CdkStep, StepperSelectionEvent } from '@angular/cdk/stepper';
-import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, Injector, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { ChangeDetectionStrategy } from '@angular/core';
@@ -70,8 +70,7 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   clientsAsOptions: ClientOption[] = [];
 
-  @ViewChild('stepper', { static: false })
-  stepper: C8yStepper;
+  readonly stepper = viewChild<C8yStepper>('stepper');
 
   labels: StepperLabels = {
     next: gettext('Next'),

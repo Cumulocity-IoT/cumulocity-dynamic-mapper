@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ElementRef, ViewChild, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ElementRef, ViewChild, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -39,7 +39,7 @@ import { scrollToDocElement } from './doc-links';
   ]
 })
 export class DocMainComponent implements OnInit, OnDestroy {
-  @ViewChild('docContent', { static: false }) docContentRef: ElementRef<HTMLElement>;
+  readonly docContentRef = viewChild<ElementRef<HTMLElement>>('docContent');
 
   private readonly searchQueryState = signal<string>('');
   get searchQuery(): string { return this.searchQueryState(); }
@@ -86,7 +86,7 @@ export class DocMainComponent implements OnInit, OnDestroy {
     this.searchCurrentIndex = -1;
     const query = this.searchQuery.trim();
     if (query.length < 2) { this.searchMatchCount = 0; return; }
-    const root = this.docContentRef?.nativeElement;
+    const root = this.docContentRef()?.nativeElement;
     if (!root) return;
     this.searchMatches = this.applyHighlights(root, query);
     this.searchMatchCount = this.searchMatches.length;
@@ -124,7 +124,7 @@ export class DocMainComponent implements OnInit, OnDestroy {
   }
 
   private clearHighlights(): void {
-    const root = this.docContentRef?.nativeElement;
+    const root = this.docContentRef()?.nativeElement;
     if (!root) return;
 
     root.querySelectorAll('mark.search-highlight').forEach(mark => {

@@ -65,7 +65,7 @@ describe('MappingTemplateStepComponent initial filter evaluation', () => {
     c.stepperConfiguration = { direction: 'OUTBOUND', persistence: 'create' } as any;
     c.filterFormly = new FormGroup({ filterMapping: new FormControl('') });
     // The editor exists but still shows the placeholder from before the templates were expanded.
-    (c as any).editorSourceStepTemplate = { get: () => ({}) };
+    (c as any).editorSourceStepTemplate = () => ({ get: () => ({}) });
     c.sourceTemplate = { type: 'c8y_Compass', id: '1' };
     c.ngOnChanges({ sourceTemplate: new SimpleChange({}, c.sourceTemplate, false) });
     await new Promise(r => setTimeout(r, 50));

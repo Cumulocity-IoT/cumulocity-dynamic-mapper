@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { CoreModule, BottomDrawerService } from '@c8y/ngx-components';
@@ -52,7 +52,7 @@ import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/cod
 })
 export class DocCodeTemplatesComponent implements OnInit {
   private readonly injector = inject(Injector);
-  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+  readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
   private readonly titleState = signal<string>('Code templates');
   get title(): string { return this.titleState(); }
@@ -79,7 +79,7 @@ export class DocCodeTemplatesComponent implements OnInit {
       this.title = rendered.title;
       this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
       afterNextRenderInZone(this.injector, () => {
-        const body = this.docBodyRef?.nativeElement;
+        const body = this.docBodyRef()?.nativeElement;
         if (!body) return; // navigated away before the render happened
         this.markdownService.highlightCodeBlocks(body);
         this.markdownService.renderMermaidDiagrams(body);

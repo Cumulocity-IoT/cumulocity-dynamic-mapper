@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, Injector } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, Injector, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
@@ -151,14 +151,11 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
-  @ViewChild('editorSourceStepTemplate', { static: false })
-  editorSourceStepTemplate!: JsonEditorComponent;
+  readonly editorSourceStepTemplate = viewChild<JsonEditorComponent>('editorSourceStepTemplate');
 
-  @ViewChild('editorTargetStepTemplate', { static: false })
-  editorTargetStepTemplate!: JsonEditorComponent;
+  readonly editorTargetStepTemplate = viewChild<JsonEditorComponent>('editorTargetStepTemplate');
 
-  @ViewChild('filterModelFilterExpression')
-  filterModelFilterExpression!: ElementRef<HTMLTextAreaElement>;
+  readonly filterModelFilterExpression = viewChild<ElementRef<HTMLTextAreaElement>>('filterModelFilterExpression');
 
   // ─── Services ──────────────────────────────────────────────────────────────
   private readonly stepperService = inject(MappingStepperService);
@@ -246,12 +243,12 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * `undefined` while the editor does not exist (step not rendered, or still being created).
    */
   getSourceTemplate(): Template | undefined {
-    return this.currentTemplate(this.editorSourceStepTemplate, this.sourceTemplate, this.showSourceMetadata);
+    return this.currentTemplate(this.editorSourceStepTemplate(), this.sourceTemplate, this.showSourceMetadata);
   }
 
   /** The target-side counterpart of {@link getSourceTemplate}. */
   getTargetTemplate(): Template | undefined {
-    return this.currentTemplate(this.editorTargetStepTemplate, this.targetTemplate, this.showTargetMetadata);
+    return this.currentTemplate(this.editorTargetStepTemplate(), this.targetTemplate, this.showTargetMetadata);
   }
 
   /**
@@ -374,7 +371,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   }
 
   private manualResize(): void {
-    const el = this.filterModelFilterExpression?.nativeElement;
+    const el = this.filterModelFilterExpression()?.nativeElement;
     if (el) {
       el.style.height = '32px';
       el.style.height = el.scrollHeight + 'px';
@@ -453,7 +450,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
   onSampleTargetTemplatesButton(): void {
     const newTarget = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
-    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
+    this.editorTargetStepTemplate()?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
     this.targetTemplateChange.emit(newTarget);
   }
 

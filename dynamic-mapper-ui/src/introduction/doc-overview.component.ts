@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
@@ -46,7 +46,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 })
 export class DocOverviewComponent implements OnInit {
   private readonly injector = inject(Injector);
-  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+  readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
   countMappingInbound$ = new BehaviorSubject<number | string>(0);
   countMappingOutbound$ = new BehaviorSubject<number | string>(0);
@@ -120,7 +120,7 @@ export class DocOverviewComponent implements OnInit {
     // After the render that commits the [innerHTML] bindings, docBodyRef.nativeElement contains
     // the <pre class="mermaid"> nodes mermaid.run() needs to find.
     afterNextRenderInZone(this.injector, () => {
-      const body = this.docBodyRef?.nativeElement;
+      const body = this.docBodyRef()?.nativeElement;
       if (!body) return; // navigated away before the render happened
       this.markdownService.highlightCodeBlocks(body);
       this.markdownService.renderMermaidDiagrams(body);

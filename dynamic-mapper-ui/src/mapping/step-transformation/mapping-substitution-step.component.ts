@@ -30,8 +30,7 @@ import {
   ViewChild,
   OnDestroy,
   OnInit,
-  inject
-} from '@angular/core';
+  inject, viewChild } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -98,11 +97,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
    */
   @Output() substitutionsChange = new EventEmitter<Substitution[]>();
 
-  @ViewChild('editorSourceStepSubstitution', { static: false })
-  editorSourceStepSubstitution!: JsonEditorComponent;
+  readonly editorSourceStepSubstitution = viewChild<JsonEditorComponent>('editorSourceStepSubstitution');
 
-  @ViewChild('editorTargetStepSubstitution', { static: false })
-  editorTargetStepSubstitution!: JsonEditorComponent;
+  readonly editorTargetStepSubstitution = viewChild<JsonEditorComponent>('editorTargetStepSubstitution');
 
   private alertService = inject(AlertService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -280,7 +277,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   async updateSourceExpressionResult(path: string): Promise<void> {
     try {
       const result = await this.stepperService.evaluateSourceExpression(
-        this.editorSourceStepSubstitution?.get(),
+        this.editorSourceStepSubstitution()?.get(),
         path
       );
       this.substitutionModel.sourceExpression = result;
@@ -306,7 +303,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   async updateTargetExpressionResult(path: string): Promise<void> {
     try {
       const result = await this.stepperService.evaluateTargetExpression(
-        this.editorTargetStepSubstitution?.get(),
+        this.editorTargetStepSubstitution()?.get(),
         path
       );
       this.substitutionModel.targetExpression = result;
@@ -391,8 +388,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.initializeSubstitutionModel();
     this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
     this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
-    this.editorSourceStepSubstitution?.clearSelection();
-    this.editorTargetStepSubstitution?.clearSelection();
+    this.editorSourceStepSubstitution()?.clearSelection();
+    this.editorTargetStepSubstitution()?.clearSelection();
   }
 
   /** Inline expandArray/repairStrategy edit in the grid: no selection/model change is needed. */
@@ -435,8 +432,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     await Promise.all([
-      this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
-      this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
+      this.editorSourceStepSubstitution().setSelectionToPath(this.substitutionModel.pathSource),
+      this.editorTargetStepSubstitution().setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
 
     // Explicitly (re-)evaluate both expressions rather than relying on side effects to trigger

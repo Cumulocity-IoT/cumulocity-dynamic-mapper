@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../misc/after-render';
 import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -67,12 +67,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
-  @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
+  readonly connectorGrid = viewChild<DataGridComponent>('connectorGrid');
   // Static: the template is at the top level of the grid's own template, so it exists before the first
   // render and the header controls can be set in ngOnInit instead of forcing a render after the view init.
-  @ViewChild('autoRefreshTemplate', { static: true }) autoRefreshTemplate: TemplateRef<unknown>;
-  @ViewChild(CountdownIntervalComponent)
-  countdownIntervalComponent: CountdownIntervalComponent;
+  readonly autoRefreshTemplate = viewChild<TemplateRef<unknown>>('autoRefreshTemplate');
+  readonly countdownIntervalComponent = viewChild(CountdownIntervalComponent);
   toggleIntervalForm: FormGroup;
   headerActionControls: HeaderActionControl[] = [];
 
@@ -129,7 +128,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   async ngOnInit(): Promise<void> {
     this.headerActionControls = [{
       type: 'AUTO_REFRESH',
-      template: this.autoRefreshTemplate,
+      template: this.autoRefreshTemplate(),
       callback: () => {}
     }];
     this.initializeColumns();
@@ -159,7 +158,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   ngAfterViewInit(): void {
     if (this.selectable) {
-      afterNextRenderInZone(this.injector, () => this.connectorGrid.setItemsSelected(this.selected, true));
+      afterNextRenderInZone(this.injector, () => this.connectorGrid().setItemsSelected(this.selected, true));
     }
     afterNextRenderInZone(this.injector, () => this.startCountdown());
     this.initVisibilityTracking();
@@ -180,19 +179,19 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   resetCountdown(): void {
     // console.log('resetCountdown', this.currentPollingInterval);
 
-    this.countdownIntervalComponent?.reset();
+    this.countdownIntervalComponent()?.reset();
   }
 
   startCountdown(): void {
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
     if (this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent.start();
+      this.countdownIntervalComponent().start();
       this.connectorConfigurationService.setPollingEnabled(true);
     }
   }
 
   private stopPolling(): void {
-    this.countdownIntervalComponent?.stop();
+    this.countdownIntervalComponent()?.stop();
     this.connectorConfigurationService.setPollingEnabled(false);
   }
 
@@ -464,7 +463,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       .filter(config => ids.includes(config.identifier) && config.connectorType !== ConnectorType.HTTP)
       .map(config => prepareConnectorConfigurationForApi(config));
     this.exportConfigurations(configurations2Export);
-    this.connectorGrid.setAllItemsSelected(false);
+    this.connectorGrid().setAllItemsSelected(false);
   }
 
   async onImport(): Promise<void> {
@@ -561,9 +560,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
     this.connectorConfigurationService.setPollingEnabled(this.shouldRefreshAutomatic);
     if (!this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent.stop();
+      this.countdownIntervalComponent().stop();
     } else {
-      this.countdownIntervalComponent.start();
+      this.countdownIntervalComponent().start();
     }
   }
 }

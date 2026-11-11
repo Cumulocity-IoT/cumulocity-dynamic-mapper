@@ -24,8 +24,7 @@ import {
   Input,
   OnInit,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, viewChild } from '@angular/core';
 import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction, JsonValue } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
@@ -88,7 +87,7 @@ export class AiPromptComponent implements OnInit {
   private readonly translateService = inject(TranslateService);
   private readonly chatHistoryService = inject(AiChatHistoryService);
 
-  @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
+  readonly agentChat = viewChild(AgentChatComponent);
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
@@ -511,11 +510,11 @@ export class AiPromptComponent implements OnInit {
     if (!this.aiAgent || !this.newMessage) {
       return;
     }
-    if (!this.agentChat) {
+    if (!this.agentChat()) {
       console.error('AiPromptComponent.sendMessage: #agentChat is not available yet');
       return;
     }
-    await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
+    await this.agentChat().sendMessage({ role: 'user', content: this.newMessage });
     this.newMessage = '';
   }
 
@@ -582,13 +581,13 @@ export class AiPromptComponent implements OnInit {
    * so by then its messages may already be cleared and an empty snapshot would replace the real one.
    */
   persistSession(): void {
-    if (!this.hasMessages || !this.agentChat || !this.inputsKey || !this.mapping?.identifier) return;
+    if (!this.hasMessages || !this.agentChat() || !this.inputsKey || !this.mapping?.identifier) return;
     try {
       this.chatHistoryService.set(this.mapping.identifier, {
         inputsKey: this.inputsKey,
         targetKeyAtOpen: this.targetKeyAtOpen,
         extractedKey: this.extractedKey(),
-        history: this.agentChat.saveChatHistory(),
+        history: this.agentChat().saveChatHistory(),
         generatedCode: this.generatedCode,
         substitutions: [...this.substitutions],
         validationIssues: [...this.validationIssues],

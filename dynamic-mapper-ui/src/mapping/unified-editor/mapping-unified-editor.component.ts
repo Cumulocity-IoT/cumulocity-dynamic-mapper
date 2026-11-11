@@ -26,8 +26,7 @@ import {
   isDevMode,
   OnInit,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, viewChild } from '@angular/core';
 import { CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -130,10 +129,10 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   }
 
 
-  @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
-  @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
+  readonly templateStepRef = viewChild<MappingTemplateStepComponent>('templateStep');
+  readonly mappingTestingStep = viewChild<MappingStepTestingComponent>('mappingTestingStep');
   // Needed to select the substitution a validation failure points at.
-  @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
+  readonly transformationStepRef = viewChild<MappingSubstitutionStepComponent>('transformationStep');
 
   private readonly mappingService = inject(MappingService);
   private readonly commitService = inject(MappingCommitService);
@@ -304,7 +303,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
   private async handleSelectTemplatesTab(): Promise<void> {
     if (this.mapping.filterMapping) {
-      await this.templateStepRef?.updateFilterExpressionResult(this.mapping.filterMapping);
+      await this.templateStepRef()?.updateFilterExpressionResult(this.mapping.filterMapping);
     }
 
     // Do NOT re-derive mappingCode from mapping.code here: mapping.code is only
@@ -567,7 +566,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     await this.onTabSelected(this.TAB_DEFINE_TRANSFORMATION);
     // The tab's content is rendered lazily, so the step only exists once that has been applied.
     await this.whenRendered();
-    await this.transformationStepRef?.onSelectSubstitution(result.index);
+    await this.transformationStepRef()?.onSelectSubstitution(result.index);
     this.cdr.markForCheck();
   }
 }
