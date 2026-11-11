@@ -31,7 +31,7 @@ Work through the following causes in order. Each one stops a mapping without an 
   deployed mapping claims them. If neither increases, the messages do not reach the connector.
 - **Filters.** If **Filtered** increases, a filter rejects the messages. Check the **Execution Filter** (**Filter
   execution mapping** on the *Select templates* step). If set, it must evaluate to `true` for the incoming payload,
-  otherwise the message is skipped without an error. For outbound mappings, also check **Filter Inventory**.
+  otherwise the message is skipped without an error. For outbound mappings, also check **Inventory filter**.
 - **Errors.** If **Errors** increases, read **Last error** in the same view, and the
   [Service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs) for the mapping.
 - **Missing role.** Saving, activating, and deploying mappings needs `ROLE_DYNAMIC_MAPPER_CREATE`, and connector
@@ -85,8 +85,8 @@ record connector, subscription, and mapping state changes, for example a mapping
 - Verify that a **subscription** exists for the device (**Mapping → Subscription outbound**). Without a
   subscription, no outbound messages are processed regardless of mapping state.
 - Notifications can be partial updates. The **Execution Filter** runs against the changed fields of a notification, not
-  the full object. Put checks that need the complete managed object into **Filter Inventory**.
-- Check the **Filter Inventory**. If set, it must evaluate to `true` for the device's managed object.
+  the full object. Put checks that need the complete managed object into **Inventory filter**.
+- Check the **Inventory filter**. If set, it must evaluate to `true` for the device's managed object.
 - Check the **Execution Filter**. If set, it must evaluate to `true` for the triggering payload.
 - Confirm the mapping's **connector** is enabled and `CONNECTED` under
   [**Configuration → Connectors**](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration).

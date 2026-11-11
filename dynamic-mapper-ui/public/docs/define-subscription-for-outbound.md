@@ -132,10 +132,10 @@ Evaluated for each change against the device's cached inventory fragments. If th
 fails, the mapping is skipped for that message. The expression is a JSONata expression. It is not affected by which
 fields the change contains, because it reads the device's inventory and not the notification.
 
-This filter is the **Filter Inventory** field on the **General settings** step of the wizard and is available for
-**outbound mappings only**.
+This filter is the **Inventory filter** field on the **General settings** step of the wizard. It is shown when **Expert Mode** is on
+(on by default when the mapping already has a filter) and is available for **outbound mappings only**.
 
-![Inventory filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Filter Inventory field.")
+![Inventory filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Inventory filter field.")
 
 ```javascript
 // Only process pressure sensors

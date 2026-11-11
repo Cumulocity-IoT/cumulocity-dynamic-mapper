@@ -126,6 +126,30 @@ export interface Mapping {
   /** Filter expression for inventory queries (e.g., "has(c8y_IsDevice)") */
   filterInventory?: string;
 
+  /** Transport fields seen on a real message this mapping was created from, e.g. a Kafka
+   *  record key: { "key": "..." }, plus broker metadata such as "header.<name>" or
+   *  "property.<name>". They are delivered out-of-band, not inside the payload, so they are
+   *  absent from sourceTemplate by design. */
+  sampleTransportFields?: Record<string, string>;
+
+  /** Further real messages of the same payload type as sourceTemplate (Message Explorer
+   *  multi-select), at most 4. Each entry has a payload, its concrete topic, and optional
+   *  transportFields. sourceTemplate is sample 1. Absent when only one message was captured. */
+  additionalSamples?: { topic: string; payload: any; transportFields?: Record<string, string> }[];
+
+  /** Facts about the real message the sample in sourceTemplate was captured from.
+   *  payloadType: JSON | XML | TEXT | BINARY | EMPTY. binaryFormat: recognized container such as
+   *  GZIP, ZIP, AVRO (absent if unknown). payloadSize: raw bytes. clientId: sender client ID.
+   *  connectorType: connector the message was ingested through (MQTT, KAFKA, PULSAR, AMQP_091, ...). */
+  sampleMessageInfo?: {
+    payloadType?: 'JSON' | 'XML' | 'TEXT' | 'BINARY' | 'EMPTY';
+    binaryFormat?: string;
+    payloadSize?: number;
+    clientId?: string;
+    topic?: string;
+    connectorType?: string;
+  };
+
   /** Maximum number of failures before disabling mapping */
   maxFailureCount?: number;
 
@@ -272,6 +296,13 @@ The `_IDENTITY_` property is used to identify the target or source device in Cum
 
 For INBOUND mappings, `_IDENTITY_` identifies the **target** device that the data should be written to.
 For OUTBOUND mappings, `_IDENTITY_` identifies the **source** device from which the Cumulocity data originates.
+
+# Sample inputs in the mapping JSON
+The mapping JSON can carry real-message evidence in addition to `sourceTemplate`:
+- `sampleTransportFields`: transport fields observed on a real message, for example `{ "key": "863859042393327" }` for a Kafka record key. They are not part of the payload, so they do not appear in `sourceTemplate`. For an INBOUND mapping, read the record key in a substitution with `pathSource` `_CONTEXT_DATA_.key`. A Kafka record key is often the device identifier and the best source for the external ID. Never read these values from the payload, and never copy a sample value into an expression as a constant. Only `key` is available through `_CONTEXT_DATA_`. Other entries, such as `header.<name>` or `property.<name>`, are evidence that the broker sends that metadata, but a substitution cannot read them.
+- `additionalSamples`: further real messages of the same payload type, and `sourceTemplate` is sample 1. Write substitutions that work for every sample. Treat a field that appears in only some samples as optional, accept arrays of different lengths, and never hard-code a value that differs between samples. Mention in your summary which differences between samples you handled.
+- `sampleMessageInfo`: facts about sample 1. `payloadType` and `binaryFormat` tell you whether the sample was JSON, XML, text, or binary. `connectorType` and `clientId` tell you which broker delivered it.
+`sampleTransportFields` and `sampleMessageInfo` describe sample 1 only.
 
 # _CONTEXT_DATA_ property
 The `_CONTEXT_DATA_` property is used to set request/control metadata that is NOT part of the target payload body itself — always use `repairStrategy: "CREATE_IF_MISSING"` for these since they never exist as literal keys in the target template.
