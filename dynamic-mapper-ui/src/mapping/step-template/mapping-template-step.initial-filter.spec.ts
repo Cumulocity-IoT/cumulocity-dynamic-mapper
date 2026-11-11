@@ -1,4 +1,4 @@
-import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
@@ -28,17 +28,14 @@ describe('MappingTemplateStepComponent initial filter evaluation', () => {
         provideTranslateStub()
       ]
     }).compileComponents();
-    const c = TestBed.createComponent(MappingTemplateStepComponent).componentInstance;
-    c.mapping = { direction: 'OUTBOUND', filterMapping: "type = 'c8y_Compass'" } as any;
-    c.stepperConfiguration = { direction: 'OUTBOUND', persistence: 'create' } as any;
-    c.sourceTemplate = { type: 'c8y_Compass', id: '1' };
-    c.targetTemplate = {};
-    c.filterFormly = new FormGroup({ filterMapping: new FormControl('') });
-    c.ngOnChanges({
-      filterFormly: new SimpleChange(undefined, c.filterFormly, true),
-      sourceTemplate: new SimpleChange(undefined, c.sourceTemplate, true),
-      mapping: new SimpleChange(undefined, c.mapping, true)
-    });
+    const fixture = TestBed.createComponent(MappingTemplateStepComponent);
+    const c = fixture.componentInstance;
+    fixture.componentRef.setInput('mapping', { direction: 'OUTBOUND', filterMapping: "type = 'c8y_Compass'" } as any);
+    fixture.componentRef.setInput('stepperConfiguration', { direction: 'OUTBOUND', persistence: 'create' } as any);
+    fixture.componentRef.setInput('sourceTemplate', { type: 'c8y_Compass', id: '1' });
+    fixture.componentRef.setInput('targetTemplate', {});
+    fixture.componentRef.setInput('filterFormly', new FormGroup({ filterMapping: new FormControl('') }));
+    fixture.detectChanges(); // runs the input effects, which replaced ngOnChanges
     await new Promise(r => setTimeout(r, 50));
     expect(c.filterModel.filterExpression).toEqual({ result: 'true', resultType: 'Boolean', valid: true });
   });
@@ -60,14 +57,15 @@ describe('MappingTemplateStepComponent initial filter evaluation', () => {
         provideTranslateStub()
       ]
     }).compileComponents();
-    const c = TestBed.createComponent(MappingTemplateStepComponent).componentInstance;
-    c.mapping = { direction: 'OUTBOUND', filterMapping: "type = 'c8y_Compass'" } as any;
-    c.stepperConfiguration = { direction: 'OUTBOUND', persistence: 'create' } as any;
-    c.filterFormly = new FormGroup({ filterMapping: new FormControl('') });
+    const fixture = TestBed.createComponent(MappingTemplateStepComponent);
+    const c = fixture.componentInstance;
+    fixture.componentRef.setInput('mapping', { direction: 'OUTBOUND', filterMapping: "type = 'c8y_Compass'" } as any);
+    fixture.componentRef.setInput('stepperConfiguration', { direction: 'OUTBOUND', persistence: 'create' } as any);
+    fixture.componentRef.setInput('filterFormly', new FormGroup({ filterMapping: new FormControl('') }));
     // The editor exists but still shows the placeholder from before the templates were expanded.
     (c as any).editorSourceStepTemplate = () => ({ get: () => ({}) });
-    c.sourceTemplate = { type: 'c8y_Compass', id: '1' };
-    c.ngOnChanges({ sourceTemplate: new SimpleChange({}, c.sourceTemplate, false) });
+    fixture.componentRef.setInput('sourceTemplate', { type: 'c8y_Compass', id: '1' });
+    fixture.detectChanges(); // runs the input effects, which replaced ngOnChanges
     await new Promise(r => setTimeout(r, 50));
     expect(c.filterModel.filterExpression?.result).toBe('true');
   });

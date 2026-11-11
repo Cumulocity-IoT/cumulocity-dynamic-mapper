@@ -101,11 +101,11 @@ describe('MappingTemplateStepComponent', () => {
 
     fixture = TestBed.createComponent(MappingTemplateStepComponent);
     component = fixture.componentInstance;
-    component.mapping = buildMapping();
-    component.stepperConfiguration = buildConfig();
-    component.sourceTemplate = {};
-    component.targetTemplate = {};
-    component.filterFormly = new FormGroup({ filterMapping: new FormControl('') });
+    fixture.componentRef.setInput('mapping', buildMapping());
+    fixture.componentRef.setInput('stepperConfiguration', buildConfig());
+    fixture.componentRef.setInput('sourceTemplate', {});
+    fixture.componentRef.setInput('targetTemplate', {});
+    fixture.componentRef.setInput('filterFormly', new FormGroup({ filterMapping: new FormControl('') }));
   });
 
   describe('onSourceTemplateChanged', () => {
@@ -121,7 +121,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('parses valid text content into JSON before judging it', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      fixture.componentRef.setInput('mapping', buildMapping({ transformationType: TransformationType.DEFAULT }));
       component.onSourceTemplateChanged({
         previousContent: { json: {} } as Content,
         updatedContent: { text: '[1,2]' } as Content
@@ -141,7 +141,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('flags an invalid change and warns when a protected field is altered (with expansion on)', () => {
-      component.stepperConfiguration = buildConfig({ allowTemplateExpansion: true });
+      fixture.componentRef.setInput('stepperConfiguration', buildConfig({ allowTemplateExpansion: true }));
       // The protected-field check is deliberately skipped while metadata is hidden from the
       // editor (their absence would otherwise look like a deletion), so this test has to make
       // the metadata visible to exercise it.
@@ -159,7 +159,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('flags an invalid change when a JSON array is used with a non-SmartFunction mapping', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      fixture.componentRef.setInput('mapping', buildMapping({ transformationType: TransformationType.DEFAULT }));
       const changes: ContentChanges = {
         previousContent: { json: {} } as Content,
         updatedContent: { json: [1, 2, 3] } as Content
@@ -170,7 +170,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('does not record target edits as source issues', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.DEFAULT });
+      fixture.componentRef.setInput('mapping', buildMapping({ transformationType: TransformationType.DEFAULT }));
       component.onTargetTemplateChanged({ previousContent: { json: {} } as Content, updatedContent: { json: [1] } as Content });
 
       expect(component.sourceIssues.arrayNeedsSmartFunction).toBeFalse();
@@ -231,8 +231,8 @@ describe('MappingTemplateStepComponent', () => {
       expect(mockStepperService.evaluateFilterExpression as unknown as jasmine.Spy).toHaveBeenCalledWith({ foo: 1 }, '$exists(foo)');
       expect(component.filterModel.filterExpression).toEqual(evaluated);
       expect(announced).toEqual(['$exists(foo)']);
-      expect(component.mapping.filterMapping).toBe(''); // the step never writes the mapping
-      expect(component.filterFormly.get('filterMapping')?.value).toBe('$exists(foo)');
+      expect(component.mapping().filterMapping).toBe(''); // the step never writes the mapping
+      expect(component.filterFormly().get('filterMapping')?.value).toBe('$exists(foo)');
     });
 
     it('marks the expression invalid and sets a form error when evaluation throws', async () => {
@@ -241,7 +241,7 @@ describe('MappingTemplateStepComponent', () => {
       await component.updateFilterExpressionResult('$broken(');
 
       expect(component.filterModel.filterExpression?.valid).toBe(false);
-      expect(component.filterFormly.get('filterMapping')?.errors).toBeTruthy();
+      expect(component.filterFormly().get('filterMapping')?.errors).toBeTruthy();
     });
 
     it('surfaces the evaluated value and a form error when the result is not boolean', async () => {
@@ -256,7 +256,7 @@ describe('MappingTemplateStepComponent', () => {
       await component.updateFilterExpressionResult('id', { id: '6aa7d0c0211301ebaeef09f9' });
 
       expect(component.filterModel.filterExpression).toEqual(evaluated);
-      expect(component.filterFormly.get('filterMapping')?.errors).toEqual({
+      expect(component.filterFormly().get('filterMapping')?.errors).toEqual({
         validationError: { message: evaluated.message }
       });
     });
@@ -296,7 +296,7 @@ describe('MappingTemplateStepComponent', () => {
 
       component.onSampleTargetTemplatesButton();
 
-      expect(mockStepperService.computeSampleTargetTemplate as unknown as jasmine.Spy).toHaveBeenCalledWith(component.mapping, component.stepperConfiguration);
+      expect(mockStepperService.computeSampleTargetTemplate as unknown as jasmine.Spy).toHaveBeenCalledWith(component.mapping(), component.stepperConfiguration());
       expect(emitted).toEqual([{ sample: true }]);
     });
   });
@@ -306,7 +306,7 @@ describe('MappingTemplateStepComponent', () => {
     const editor = (content: any) => ({ get: () => content }) as any;
 
     it('restores hidden metadata keys onto what the editor holds', () => {
-      component.sourceTemplate = full;
+      fixture.componentRef.setInput('sourceTemplate', full);
       component.showSourceMetadata = false;
       Object.assign(component, { editorSourceStepTemplate: () => editor({ value: 2 }) }); // displayed template, metadata stripped
 
@@ -314,7 +314,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('returns the editor content as is while metadata is shown', () => {
-      component.targetTemplate = full;
+      fixture.componentRef.setInput('targetTemplate', full);
       component.showTargetMetadata = true;
       Object.assign(component, { editorTargetStepTemplate: () => editor({ value: 2 }) }); // user removed the metadata on purpose
 
@@ -322,7 +322,7 @@ describe('MappingTemplateStepComponent', () => {
     });
 
     it('does not resurrect a key the user edited into a different value', () => {
-      component.sourceTemplate = full;
+      fixture.componentRef.setInput('sourceTemplate', full);
       component.showSourceMetadata = false;
       Object.assign(component, { editorSourceStepTemplate: () => editor({ value: 2, _IDENTITY_: { externalId: 'edited' } }) });
 
