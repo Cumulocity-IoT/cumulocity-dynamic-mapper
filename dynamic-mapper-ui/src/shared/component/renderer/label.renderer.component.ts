@@ -51,7 +51,7 @@ export class LabelRendererComponent {
   constructor(public context: CellRendererContext) {
     // console.log("Context:", context.item, context)
   }
-  isArray(value: any): boolean {
+  isArray(value: unknown): boolean {
     return Array.isArray(value);
   }
 }

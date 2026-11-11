@@ -45,7 +45,7 @@ export class DeviceSelectorTreeComponent {
   /** Embedded in a page instead of a drawer: no header or buttons; every edit is emitted as `selectionChange`. */
   @Input() inline = false;
 
-  @Output() cancel = new EventEmitter<any>();
+  @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<IIdentified[]>();
   @Output() selectionChange = new EventEmitter<IIdentified[]>();
 

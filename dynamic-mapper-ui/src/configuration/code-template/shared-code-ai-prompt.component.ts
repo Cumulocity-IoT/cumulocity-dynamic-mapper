@@ -54,7 +54,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   private _save!: (value: string) => void;
-  private _cancel!: (reason?: any) => void;
+  private _cancel!: (reason?: unknown) => void;
   result: Promise<string> = new Promise((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;

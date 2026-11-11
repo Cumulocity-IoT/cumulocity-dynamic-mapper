@@ -114,7 +114,7 @@ export class InputListComponent implements OnInit, OnDestroy {
     return this.dataInternal;
   }
 
-  trackByIndex(index: number, item: any): number {
+  trackByIndex(index: number, item: unknown): number {
     return index;
   }
 

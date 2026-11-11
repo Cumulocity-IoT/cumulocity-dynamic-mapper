@@ -48,7 +48,7 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 190 `any`, 4 components over 500 lines). Delete a directory's line from
+3. Pay down the debt (198 `prefer-signals`, 153 `any`, 4 components over 500 lines). Delete a directory's line from
    the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
@@ -180,7 +180,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | Components on `OnPush` (lint count) | 5 of 91 by grep | 92 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
-| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 190 |
+| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 153 |
 | Unit tests | 978 | 1012 |
 
 | Phase | State |
@@ -944,3 +944,24 @@ Run against a tenant with at least one inbound and one outbound mapping:
 
 Note on counts: the review's "31" counted `detectChanges()` and `markForCheck()` together. Counting
 `detectChanges()` alone, there were 29 before phase 3 step 2 and 26 after it.
+
+### `any` conversion, first batch (done, not yet browser-checked)
+
+The 188 `any` warnings are down to 153, and 21 directories are at zero and now fail on `any`: the root `src/*.ts`,
+`configuration`, `configuration/code-template`, `extension/{add,grid,properties,share}`,
+`mapping/{deprecation-notice,grid,renderer,step-properties,stepper}`, the four `mapping/subscription/*` folders,
+`monitoring`, `monitoring/logs`, `shared/component/{formly,renderer}`, and `shared/configuration`. Their lines are
+gone from the second "Known debt" block. Tests pass (1027 of 1027), lint reports 0 errors and 354 warnings, and the
+AOT check shows the same 8 baseline errors.
+
+What replaced the `any`:
+- `cancel` outputs are `EventEmitter<void>` (they never carried a value).
+- Track-by functions take `number, unknown`. Renderer `isArray` takes `unknown`.
+- `ServiceConfiguration.codeTemplates` is `CodeTemplateMap`. Grid rows are `MappingEnriched`.
+- The monitoring navigation factory returns `Promise<NavigatorNode[]>`.
+- Upload errors use a local `UploadError` union, the log service reads `res.status` through a typed cast, and the
+  JSONata AST walker has a small `JsonataNode` interface.
+- `polyfills.ts` writes the zone flags through a `Record<string, unknown>` view of `window`.
+
+Left: 153 `any` in 19 directories, mostly `shared/mapping` (24), `mapping/client-relation` (14), `mapping/core` (14),
+`mapping/message-explorer` (11), `mapping/prompt` (10), and `mapping/service` (10).

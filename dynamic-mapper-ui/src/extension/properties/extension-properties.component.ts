@@ -35,7 +35,7 @@ interface ExtensionEntry {
   extensionType: string;
   direction: string;
   loaded: boolean;
-  parameter?: Record<string, any>;
+  parameter?: Record<string, unknown>;
 }
 
 interface ExtensionWithEntries extends IManagedObject {
@@ -105,7 +105,7 @@ export class ExtensionPropertiesComponent implements OnInit {
     return properties;
   }
 
-  configurationToYaml(configuration: Record<string, any> | undefined): string {
+  configurationToYaml(configuration: Record<string, unknown> | undefined): string {
     if (!configuration) {
       return '';
     }

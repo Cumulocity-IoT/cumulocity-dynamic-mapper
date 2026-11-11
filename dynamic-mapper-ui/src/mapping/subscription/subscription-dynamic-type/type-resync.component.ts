@@ -83,7 +83,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
     this.rebuildRows();
   }
 
-  @Output() cancel = new EventEmitter<any>();
+  @Output() cancel = new EventEmitter<void>();
   @Output() resync = new EventEmitter<string>();
 
   constructor(

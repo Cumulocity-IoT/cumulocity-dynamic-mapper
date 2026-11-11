@@ -70,8 +70,10 @@ export const packageProperties: PropertiesListItem[] = [
   {
     label: gettext('Source'),
     key: 'repository',
-    transform: (repository: any) =>
-      repository?.url ? repository.url : repository,
+    transform: value => {
+      const repository = value as string | { url?: string } | undefined;
+      return typeof repository === 'object' && repository?.url ? repository.url : (repository as string);
+    },
     type: 'link',
     action: (e, link) =>
       window.open(link as string, '_blank', 'noopener,noreferrer')

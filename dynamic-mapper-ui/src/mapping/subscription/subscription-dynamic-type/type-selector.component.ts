@@ -59,14 +59,14 @@ export class TypeSelectorComponent {
   @Input() resyncTypes: string[] = [];
   @Output() resyncTypesChange = new EventEmitter<string[]>();
 
-  @Output() cancel = new EventEmitter<any>();
+  @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<string[]>();
   @Output() typesChange = new EventEmitter<string[]>();
 
   typeListInternal: string[] = [];
   private typeListInitialized = false;
 
-  trackByFn(index: any, _item: any) {
+  trackByFn(index: number, _item: unknown) {
     return index;
   }
 

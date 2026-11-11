@@ -134,7 +134,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     await this.refreshAllMappings();
   }
 
-  handleDeprecation(_mapping: any): void {
+  handleDeprecation(_mapping: unknown): void {
     // Deprecation notice disabled for 6.3.2 — no active deprecations to surface.
   }
 

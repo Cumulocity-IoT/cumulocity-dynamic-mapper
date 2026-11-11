@@ -71,7 +71,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
     return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
   }
 
-  @ViewChild('modal', { static: false }) private modal: any;
+  @ViewChild('modal', { static: false }) private modal?: { _dismiss(): void };
 
   constructor(
     private sharedService: SharedService,

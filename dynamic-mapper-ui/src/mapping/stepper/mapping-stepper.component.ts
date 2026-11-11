@@ -77,7 +77,7 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   protected get substitutionStepIndex(): number { return this.layout.transformation; }
   get STEP_DEFINE_SUBSTITUTIONS(): number { return this.layout.transformation; }
 
-  labels: any = { next: gettext('Next'), cancel: gettext('Cancel') };
+  readonly labels = { next: gettext('Next'), cancel: gettext('Cancel') };
   readonly labelsFinal = { custom: gettext('Confirm') };
 
   stepperForward = true;

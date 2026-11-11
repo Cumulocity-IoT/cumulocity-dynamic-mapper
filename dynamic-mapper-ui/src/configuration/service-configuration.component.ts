@@ -102,7 +102,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   get inventoryFragmentsList(): string[] { return this.inventoryFragmentsListState(); }
   set inventoryFragmentsList(value: string[]) { this.inventoryFragmentsListState.set(value); }
 
-  trackByFragmentFn(index: any, _item: any) {
+  trackByFragmentFn(index: number, _item: unknown) {
     return index;
   }
 

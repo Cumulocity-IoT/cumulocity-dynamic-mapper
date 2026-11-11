@@ -54,7 +54,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
 
 
   extensions$: Observable<IManagedObject[]>;
-  listClass: any;
+  listClass = '';
 
   get reloading(): boolean {
     return this.state().reloading;

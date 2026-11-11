@@ -26,6 +26,9 @@ import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ErrorType } from '../share/extension.model';
 import { ExtensionService } from '../extension.service';
 
+/** Upload rejections: a plain string (transport failure) or `{ data }` with the backend's error body. */
+type UploadError = string | { data?: { message?: string; error?: string } } | null | undefined;
+
 @Component({
   selector: 'd11r-mapping-add-extension',
   templateUrl: './add-extension.component.html',
@@ -74,7 +77,7 @@ export class AddExtensionComponent implements OnDestroy {
   }
 
 
-  onFileDroppedEvent(event: any[]): void {
+  onFileDroppedEvent(event: { file?: File }[]): void {
     if (event?.[0]?.file) {
       this.onFile(event[0].file);
     }
@@ -121,7 +124,7 @@ export class AddExtensionComponent implements OnDestroy {
     };
   }
 
-  private handleUploadError(error: any): void {
+  private handleUploadError(error: UploadError): void {
     this.isLoading = false;
     this.progress$.next(0);
     this.extensionService.cancelProcessorExtensionCreation(this.app);
@@ -141,7 +144,7 @@ export class AddExtensionComponent implements OnDestroy {
    * the former (a known, reachable case) and the backend's own message for the latter; anything
    * else is truly unrecognized and falls back to the generic server-failure alert.
    */
-  private extractErrorMessage(error: any): string | undefined {
+  private extractErrorMessage(error: UploadError): string | undefined {
     if (typeof error === 'string') {
       return ERROR_MESSAGES[ErrorType.UPLOAD_FAILED];
     }

@@ -87,7 +87,7 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   get editorOptions(): EditorComponent['editorOptions'] { return this.editorOptionsState(); }
   set editorOptions(value: EditorComponent['editorOptions']) { this.editorOptionsState.set(value); }
   feature!: Feature;
-  private completionProviderDisposable: any;
+  private completionProviderDisposable?: { dispose(): void };
   /** Code of the selected template as last loaded/saved; Save is only enabled when the editor differs. */
   private readonly savedCodeState = signal<string>('');
   private get savedCode(): string { return this.savedCodeState(); }
