@@ -26,14 +26,14 @@ import { Pipe, PipeTransform } from "@angular/core";
   standalone: true
 })
 export class FilterJsonPipe implements PipeTransform {
-  transform(value: any, excludedProperties: string[] = [], exclude: boolean = false): any {
+  transform<T extends Record<string, unknown>>(value: T | null | undefined, excludedProperties: string[] = [], exclude: boolean = false): Partial<T> | null | undefined {
     if (!value) return value;
 
     if (!excludedProperties.length) {
       return value;
     }
 
-    const filteredObject: any = {};
+    const filteredObject: Record<string, unknown> = {};
 
     Object.keys(value).forEach(key => {
       if (exclude) {
@@ -49,6 +49,6 @@ export class FilterJsonPipe implements PipeTransform {
       }
     });
 
-    return filteredObject;
+    return filteredObject as Partial<T>;
   }
 }

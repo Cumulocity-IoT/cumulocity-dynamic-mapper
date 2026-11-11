@@ -30,6 +30,7 @@ import {
   DisplayOptions,
   LoadMoreMode,
   Pagination,
+  ServerSideDataCallback,
   ServerSideDataResult
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../testing-device.service';
@@ -137,7 +138,7 @@ export class TestingComponent implements OnInit {
   columns: Column[];
   pagination: Pagination;
   infiniteScroll: LoadMoreMode = 'auto';
-  serverSideDataCallback: any;
+  serverSideDataCallback!: ServerSideDataCallback;
   selectable: boolean = true;
   private readonly actionControlsState = signal<ActionControl[]>([]);
   get actionControls(): ActionControl[] { return this.actionControlsState(); }
@@ -146,7 +147,7 @@ export class TestingComponent implements OnInit {
   get bulkActionControls(): BulkActionControl[] { return this.bulkActionControlsState(); }
   set bulkActionControls(value: BulkActionControl[]) { this.bulkActionControlsState.set(value); }
 
-  refresh: EventEmitter<any> = new EventEmitter<any>();
+  refresh = new EventEmitter<void>();
 
 
   /**

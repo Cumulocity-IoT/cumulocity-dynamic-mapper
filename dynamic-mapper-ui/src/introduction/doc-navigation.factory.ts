@@ -399,7 +399,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
   ) {
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
       const feature = await this.sharedService.getFeatures();
       const navs = Object.values(this.staticNodesStandalone) as NavigatorNode[];

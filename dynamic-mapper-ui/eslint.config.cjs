@@ -122,24 +122,13 @@ module.exports = [
   },
   {
     files: [
-      'src/introduction/*.ts',
-      'src/mapping-tree/*.ts',
       'src/mapping/client-relation/*.ts',
       'src/mapping/core/*.ts',
-      'src/mapping/mapping-create/*.ts',
       'src/mapping/message-explorer/*.ts',
       'src/mapping/prompt/*.ts',
       'src/mapping/service/*.ts',
-      'src/mapping/versions/*.ts',
-      'src/shared/component/json-editor/*.ts',
-      'src/shared/connector-configuration/*.ts',
-      'src/shared/connector-details/*.ts',
       'src/shared/mapping/*.ts',
-      'src/shared/mapping/processor/*.ts',
-      'src/shared/misc/*.ts',
-      'src/shared/service/*.ts',
-      'src/test-device/*.ts',
-      'src/test-device/grid/*.ts'
+      'src/shared/mapping/processor/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {

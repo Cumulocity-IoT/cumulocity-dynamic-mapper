@@ -34,6 +34,7 @@ import {
   ConnectorType
 } from '..';
 import { ServiceConfiguration } from '../configuration/configuration.model';
+import { ConnectorStatusEvent } from './connector-log.model';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
@@ -63,7 +64,7 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   specifications$: Observable<ConnectorSpecification[]>;
-  statusLogs$: Observable<any[]>;
+  statusLogs$: Observable<ConnectorStatusEvent[]>;
   private readonly configurationState = signal<ConnectorConfiguration>(undefined as unknown as ConnectorConfiguration);
   get configuration(): ConnectorConfiguration { return this.configurationState(); }
   set configuration(value: ConnectorConfiguration) { this.configurationState.set(value); }
@@ -80,7 +81,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
-  initialStateDrawer: any;
+  initialStateDrawer: (Partial<ConnectorConfigurationDrawerComponent> & { add?: boolean }) | undefined;
   private readonly isTogglingConnectionState = signal<boolean>(false);
   get isTogglingConnection(): boolean { return this.isTogglingConnectionState(); }
   set isTogglingConnection(value: boolean) { this.isTogglingConnectionState.set(value); }
@@ -180,7 +181,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       this.configuration = resultOf as ConnectorConfiguration;
     }
 
-    if (this.initialStateDrawer.add) {
+    if (this.initialStateDrawer?.add) {
       await this.handleModalResponse(
         resultOf,
         'Added successfully.',
@@ -223,7 +224,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
   ): Promise<void> {
     await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }

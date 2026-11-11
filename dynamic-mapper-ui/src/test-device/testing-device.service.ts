@@ -23,7 +23,8 @@ import { transform } from 'lodash-es';
 import {
   IManagedObject,
   InventoryService,
-  QueriesUtil
+  QueriesUtil,
+  QueryObjectWithDedicatedFilter
 } from '@c8y/client';
 import {
   ActionControl,
@@ -45,6 +46,12 @@ import { TranslateService } from '@ngx-translate/core';
  * Data source of the Test device page: provides the columns, the pagination and the delete actions, and queries the
  * inventory for devices carrying the `d11r_testDevice` fragment (the ones created by a Live Test).
  */
+/** The query object the c8y QueriesUtil builds a query string from. */
+interface ColumnQuery {
+  __filter: Record<string, unknown>;
+  __orderby: Record<string, number>[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class TestingDeviceService {
   /** This will be used to build the inventory queries. */
@@ -126,8 +133,8 @@ export class TestingDeviceService {
 
   /** Returns filters for given columns and pagination setup. */
   private getFilters(columns: Column[], pagination: Pagination) {
-    const query1: any = this.getQueryString(columns);
-    const query2 = this.queriesUtil.addAndFilter(query1, {
+    const query1 = this.getQueryObj(columns);
+    const query2 = this.queriesUtil.addAndFilter(query1 as QueryObjectWithDedicatedFilter, {
       __has: MAPPING_TEST_DEVICE_TYPE
     });
     const queryBuilt = this.queriesUtil.buildQuery(query2);
@@ -140,16 +147,9 @@ export class TestingDeviceService {
     };
   }
 
-  /** Returns a query string based on columns setup. */
-  private getQueryString(columns: Column[]): string {
-    // const fullQuery = this.getQueryObj(columns);
-    // return this.queriesUtil.buildQuery(fullQuery);
-    return this.getQueryObj(columns);
-  }
-
   /** Returns a query object based on columns setup. */
-  private getQueryObj(columns: Column[]): any {
-    return transform(
+  private getQueryObj(columns: Column[]): ColumnQuery {
+    return transform<Column, ColumnQuery>(
       columns,
       (query, column) => this.addColumnQuery(query, column),
       {
@@ -160,20 +160,20 @@ export class TestingDeviceService {
   }
 
   /** Extends given query with a part based on the setup of given column. */
-  private addColumnQuery(query: any, column: Column): void {
-    let queryx = query;
+  private addColumnQuery(query: ColumnQuery, column: Column): void {
+    let queryx: ColumnQuery | ReturnType<QueriesUtil['addAndFilter']> = query;
     // when a column is marked as filterable
     if (column.filterable) {
       // in the case of default filtering form, `filterPredicate` will contain the string entered by a user
       if (column.filterPredicate) {
         // so we use it as the expected value, * allow to search for it anywhere in the property
-        queryx.__filter[column.path] = `*${column.filterPredicate}*`;
+        (queryx as ColumnQuery).__filter[column.path] = `*${column.filterPredicate}*`;
       }
 
       // in the case of custom filtering form, we're storing the queryx in `externalFilterQuery.queryx`
       if (column.externalFilterQuery) {
         queryx = this.queriesUtil.addAndFilter(
-          queryx,
+          queryx as QueryObjectWithDedicatedFilter,
           column.externalFilterQuery.query
         );
       }
@@ -182,12 +182,11 @@ export class TestingDeviceService {
     // when a column is sortable and has a specified sorting order
     if (column.sortable && column.sortOrder) {
       // add sorting condition for the configured column `path`
-      queryx.__orderby.push({
+      (queryx as ColumnQuery).__orderby.push({
         [column.path]: column.sortOrder === 'asc' ? 1 : -1
       });
     }
 
-    return queryx;
   }
 
   async onItemDelete(m: Partial<IManagedObject>): Promise<void> {
@@ -203,7 +202,7 @@ export class TestingDeviceService {
    * happened (the success alert used to appear before any delete had finished), and always refreshes the grid.
    */
   private async deleteTestDevices(ids: string[]): Promise<void> {
-    const params: any = {
+    const params = {
       cascade: true
     };
     const results = await Promise.allSettled(ids.map((id) => this.inventoryService.delete(id, params)));

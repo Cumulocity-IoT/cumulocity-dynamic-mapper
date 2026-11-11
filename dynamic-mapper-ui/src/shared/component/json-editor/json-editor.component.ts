@@ -43,8 +43,12 @@ import {
   isMultiSelection,
   createMultiSelection,
   isValueSelection,
-  ContextMenuItem
+  ContextMenuItem,
+  JSONSchema
 } from 'vanilla-jsoneditor';
+
+/** Editor props, plus `removeModes`: mode buttons to hide from the menu. */
+export type JsonEditorInputOptions = Record<string, unknown> & { removeModes?: readonly string[] };
 
 import type { JSONPath } from 'immutable-json-patch';
 import { parseJSONPathCustom, stringifyJSONPathCustom } from './util';
@@ -95,14 +99,14 @@ export function withoutButton(items: ContextMenuItem[], text: string): ContextMe
 export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   /** Editor props, plus `removeModes`: mode buttons (e.g. 'text', 'table') to hide from the menu. */
   @Input()
-  set options(value: any) {
+  set options(value: JsonEditorInputOptions) {
     const changed = JSON.stringify(value) !== JSON.stringify(this._options);
     this._options = value;
     if (changed) {
       this.editor?.updateProps(this.libraryProps());
     }
   }
-  get options(): any {
+  get options(): JsonEditorInputOptions {
     return this._options;
   }
 
@@ -114,7 +118,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   @Input()
-  set schema(value: any) {
+  set schema(value: JSONSchema | null | undefined) {
     if (value) {
       this.setSchema(value);
     }
@@ -131,11 +135,11 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   @ViewChild('jsonEditorContainer', { static: true })
   jsonEditorContainer: ElementRef<HTMLElement>;
 
-  private _options: any;
+  private _options: JsonEditorInputOptions;
   private editor: JsonEditor | undefined;
   /** Content/schema received before the editor exists; applied on creation. */
   private content: Content = { json: {} };
-  private pendingSchema: any;
+  private pendingSchema: JSONSchema | undefined;
 
   ngAfterViewInit() {
     this.editor = createJSONEditor({
@@ -183,7 +187,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private onRenderMenu(items: MenuItem[]): MenuItem[] {
-    const removeModes: string[] = this._options?.removeModes ?? [];
+    const removeModes: readonly string[] = this._options?.removeModes ?? [];
     return items.filter(
       (i) => i['className'] !== 'jse-transform' && !removeModes.includes(i['text'])
     );
@@ -198,7 +202,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  setSchema(schema: any) {
+  setSchema(schema: JSONSchema) {
     if (this.editor) {
       this.editor.updateProps({ validator: createAjvValidator({ schema }) });
     } else {
@@ -241,13 +245,13 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   /** Current content as JSON, parsing the text if the editor is in text mode. */
-  get(): any {
+  get<T = unknown>(): T {
     const content = this.editor.get();
-    return isJSONContent(content) ? content.json : JSON.parse(content.text);
+    return (isJSONContent(content) ? content.json : JSON.parse(content.text)) as T;
   }
 
   /** Replaces the content. Does not emit `contentChanged`. */
-  set(json: any) {
+  set(json: unknown) {
     this.content = { json };
     this.editor?.set(this.content);
   }

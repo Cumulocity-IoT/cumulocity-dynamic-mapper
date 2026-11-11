@@ -64,9 +64,9 @@ export class TestNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
-      const feature: any = await this.sharedService.getFeatures();
+      const feature = await this.sharedService.getFeatures();
       const copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
       const navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
 

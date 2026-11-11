@@ -70,7 +70,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
   // Static: the template is at the top level of the grid's own template, so it exists before the first
   // render and the header controls can be set in ngOnInit instead of forcing a render after the view init.
-  @ViewChild('autoRefreshTemplate', { static: true }) autoRefreshTemplate: TemplateRef<any>;
+  @ViewChild('autoRefreshTemplate', { static: true }) autoRefreshTemplate: TemplateRef<unknown>;
   @ViewChild(CountdownIntervalComponent)
   countdownIntervalComponent: CountdownIntervalComponent;
   toggleIntervalForm: FormGroup;
@@ -104,7 +104,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   currentPollingInterval: number;
   private destroy$: Subject<void> = new Subject<void>();
   private featurePromise: Promise<Feature>;
-  initialStateDrawer: any;
+  initialStateDrawer: Partial<ConnectorConfigurationDrawerComponent> | undefined;
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -359,7 +359,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
   ): Promise<void> {
     await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }
@@ -378,7 +378,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     const copiedConfig = this.prepareCopyConfiguration(config);
     this.initialStateDrawer = {
       action: 'create',
-      configuration: copiedConfig,
+      configuration: copiedConfig as ConnectorConfiguration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
       allowedConnectors: this.computeAllowedConnectors()
@@ -422,7 +422,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
     this.initialStateDrawer = {
       action,
-      configuration,
+      configuration: configuration as ConnectorConfiguration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
       allowedConnectors: this.computeAllowedConnectors()

@@ -48,9 +48,9 @@ export class DocOverviewComponent implements OnInit {
   private readonly injector = inject(Injector);
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
-  countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countConnector$: Subject<any> = new BehaviorSubject<any>(0);
+  countMappingInbound$ = new BehaviorSubject<number | string>(0);
+  countMappingOutbound$ = new BehaviorSubject<number | string>(0);
+  countConnector$ = new BehaviorSubject<number | string>(0);
   feature: Feature;
 
   // The overview page is now short: the intro prose, the live tenant counts, then the

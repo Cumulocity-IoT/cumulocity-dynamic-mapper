@@ -66,6 +66,9 @@ interface SaveResult {
   generateSmartFunctionWithAI?: boolean;
 }
 
+/** A c8y-select value: a plain string or a `{ value, label }` object. */
+type SelectValue = string | { value?: string; label?: string } | null | undefined;
+
 @Component({
   selector: 'd11r-mapping-type-drawer',
   host: { class: 'flex-grow d-col fit-h' },
@@ -162,7 +165,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   // Promise for modal result
   private _resolve: (value: SaveResult) => void;
-  private _reject: (reason?: any) => void;
+  private _reject: (reason?: unknown) => void;
   
   result = new Promise<SaveResult>((resolve, reject) => {
     this._resolve = resolve;
@@ -595,8 +598,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     eventNameControl.updateValueAndValidity({ emitEvent: false });
   }
 
-  private onExtensionNameChange(selected: any): void {
-    const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+  private onExtensionNameChange(selected: SelectValue): void {
+    const extensionName = this.resolveSelectString(selected);
     if (!extensionName) {
       this.extensionEvents$.next([]);
       this.formGroup.patchValue({ eventName: null }, { emitEvent: false });
@@ -618,10 +621,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.hasExtensionParameter = false;
   }
 
-  private onExtensionEventChange(selected: any): void {
-    const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+  private onExtensionEventChange(selected: SelectValue): void {
+    const eventName = this.resolveSelectString(selected);
     const rawExtName = this.formGroup.get('extensionName')?.value;
-    const extensionName = typeof rawExtName === 'string' ? rawExtName : rawExtName?.value ?? rawExtName;
+    const extensionName = this.resolveSelectString(rawExtName);
     if (!extensionName || !eventName) {
       this.hasExtensionParameter = false;
       return;
@@ -637,7 +640,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     );
   }
 
-  private configurationToYaml(configuration: Record<string, any> | undefined): string {
+  private configurationToYaml(configuration: Record<string, unknown> | undefined): string {
     if (!configuration) return '';
     try {
       return jsYaml.dump(configuration, { indent: 2 });
@@ -646,20 +649,20 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+  private yamlToConfiguration(yaml: string): Record<string, unknown> | undefined {
     if (!yaml?.trim()) return undefined;
     try {
       const parsed = jsYaml.load(yaml);
-      return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+      return (parsed && typeof parsed === 'object') ? parsed as Record<string, unknown> : undefined;
     } catch {
       return undefined;
     }
   }
 
   /** Normalize a c8y-select value (may be a plain string or a {value, label} object) to a string. */
-  private resolveSelectString(raw: any): string | null {
+  private resolveSelectString(raw: SelectValue): string | null {
     if (!raw) return null;
-    return typeof raw === 'string' ? raw : raw?.value ?? null;
+    return typeof raw === 'string' ? raw : (raw?.value ?? null);
   }
 
   getExtensionNameString(): string {

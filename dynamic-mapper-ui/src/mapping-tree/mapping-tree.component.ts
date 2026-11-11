@@ -41,8 +41,8 @@ export class MappingTreeComponent implements OnInit {
   ) { }
 
   @ViewChild('editorTree', { static: false }) editorTree: JsonEditorComponent;
-  mappingTree$: BehaviorSubject<any> = new BehaviorSubject([]);
-  editorOptionsTree: any = {
+  mappingTree$ = new BehaviorSubject<unknown>([]);
+  readonly editorOptionsTree = {
     mode: 'tree',
     removeModes: ['text', 'table'],
     mainMenuBar: true,

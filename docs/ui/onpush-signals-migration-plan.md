@@ -48,7 +48,7 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 153 `any`, 4 components over 500 lines). Delete a directory's line from
+3. Pay down the debt (198 `prefer-signals`, 89 `any`, 4 components over 500 lines). Delete a directory's line from
    the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
@@ -180,7 +180,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | Components on `OnPush` (lint count) | 5 of 91 by grep | 92 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
-| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 153 |
+| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 89 |
 | Unit tests | 978 | 1012 |
 
 | Phase | State |
@@ -965,3 +965,25 @@ What replaced the `any`:
 
 Left: 153 `any` in 19 directories, mostly `shared/mapping` (24), `mapping/client-relation` (14), `mapping/core` (14),
 `mapping/message-explorer` (11), `mapping/prompt` (10), and `mapping/service` (10).
+
+### `any` conversion, second batch (done, not yet browser-checked)
+
+`any` is down from 153 to 89, and 11 more directories are at zero and now fail on `any`: `introduction`, `mapping-tree`,
+`mapping/mapping-create`, `mapping/versions`, `shared/component/json-editor`, `shared/connector-configuration`,
+`shared/connector-details`, `shared/misc`, `shared/service`, `test-device`, and `test-device/grid`. The `any` block in
+`eslint.config.cjs` now lists only the seven directories that still have findings. Tests pass (1027 of 1027), lint
+reports 0 errors and 291 warnings, and the AOT check shows the same 8 baseline errors.
+
+Choices worth knowing:
+- `JsonEditorComponent`: `options` is `JsonEditorInputOptions` (a record plus `removeModes`), `schema` is the library's
+  `JSONSchema`, and `get<T = unknown>()` replaces `get(): any`.
+- Raw events use `IEvent` from `@c8y/client` (`ConnectorStatusEvent.raw`, the log service, `getEventMetadata`).
+  Realtime events are narrowed to `IEvent`, because the realtime payload is `IEvent | number`.
+- `ConnectorConfiguration.properties`, `status`, and `defaultValue` are `unknown`. Nothing else needed a change.
+- `testing-device.service.ts`: the column query has a `ColumnQuery` interface. `getQueryString` was removed: it was
+  typed `string` but returned the query object. The reassigned `queryx` after an external filter still discards the
+  new object, as before (a column with an external filter loses its own sort; not changed here).
+- The four navigation factories return `Promise<NavigatorNode[]>`.
+
+Left: 89 `any` in seven directories: `shared/mapping` (24), `mapping/client-relation` (14), `mapping/core` (14),
+`mapping/message-explorer` (11), `mapping/prompt` (10), `mapping/service` (10), and `shared/mapping/processor` (6).

@@ -184,9 +184,9 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
-      const feature: any = await this.sharedService.getFeatures();
+      const feature = await this.sharedService.getFeatures();
       let navs;
       let copyStaticNodesPlugin;
 
