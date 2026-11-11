@@ -49,7 +49,7 @@
                 @if (isKnownType(typeListInternal[i])) {
                 <span class="text-muted text-12" translate>subscribed already</span>
                 } @else {
-                <label class="c8y-checkbox m-b-0" [attr.title]="'Subscribe the devices of this type that already exist, in addition to the ones created afterward' | translate">
+                <label class="c8y-switch m-b-0" [attr.title]="'Subscribe the devices of this type that already exist, in addition to the ones created afterward' | translate">
                   <input type="checkbox" [ngModel]="isResync(typeListInternal[i])" (ngModelChange)="setResync(typeListInternal[i], $event)"
                     [disabled]="!isNewType(typeListInternal[i])" [ngModelOptions]="{ standalone: true }"
                     [attr.data-cy]="'dm-type-selector-resync-' + i" />

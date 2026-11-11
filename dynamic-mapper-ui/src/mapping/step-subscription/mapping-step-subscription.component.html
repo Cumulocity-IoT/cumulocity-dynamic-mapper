@@ -231,10 +231,10 @@
         <span class="badge badge--primary m-t-4">{{ type }}</span>
         @if (isTypeSubscribed(type)) { <span class="text-muted text-12 m-l-4" translate>already subscribed</span> }
         @if (!isTypeSubscribed(type) && contextChoice === 'type') {
-        <label class="c8y-checkbox m-t-8 d-block">
+        <label class="c8y-switch m-t-8 d-block">
           <input type="checkbox" [checked]="contextResync" [disabled]="!canEdit" (change)="setContextResync($any($event.target).checked)"
             [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-type-resync'" />
-          <span></span>
+          <span class="m-r-8"></span>
           <span translate>Also subscribe existing devices</span>
         </label>
         }
