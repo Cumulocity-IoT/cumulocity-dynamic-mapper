@@ -125,12 +125,11 @@ describe('Mapping — execution filter across the General Settings and Templates
           .should('not.eq', before);
       });
 
-    // Edit the expression here; General Settings follows it.
+    // Edit the expression here; General Settings follows it, even when the tab is left right away.
     formField('filterMapping').clear();
     formField('filterMapping').type(FROM_TEMPLATES, { parseSpecialCharSequences: false });
-    // The edit reaches the mapping after a debounce and the evaluation, and the editor drops a pending
-    // edit when the tab is left, so wait for the evaluated result before leaving.
-    cy.getByData('dm-mapping-template-filter-result').should('have.value', 'true');
+    // Leave the tab at once, inside the filter's 500 ms debounce: the editor destroys the step, which has to
+    // hand the pending edit to the mapping rather than drop it.
     openEditorTab('General Settings');
     expectFilterMode('Filter by fragment');
     formField('executionFilterValue').should('have.value', 'type');

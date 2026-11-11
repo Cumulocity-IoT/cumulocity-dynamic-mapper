@@ -334,4 +334,37 @@ describe('MappingTemplateStepComponent', () => {
       expect(component.getTargetTemplate() as unknown).toBeUndefined();
     });
   });
+  describe('a filter edit made just before the step is destroyed', () => {
+    it('is handed to the host instead of being dropped by the debounce', () => {
+      const emitted: string[] = [];
+      component.filterMappingChange.subscribe(value => emitted.push(value));
+      fixture.detectChanges(); // the input effects subscribe to the filter form
+
+      component.filterFormly().get('filterMapping')!.setValue("type = 'c8y_Edited'");
+      fixture.destroy(); // the editor does this when the user leaves the tab
+
+      expect(emitted).toEqual(["type = 'c8y_Edited'"]);
+    });
+
+    it('is not announced again when it equals what the mapping already holds', () => {
+      const emitted: string[] = [];
+      fixture.componentRef.setInput('mapping', buildMapping({ filterMapping: "type = 'c8y_Same'" }));
+      component.filterMappingChange.subscribe(value => emitted.push(value));
+      fixture.detectChanges();
+
+      component.filterFormly().get('filterMapping')!.setValue("type = 'c8y_Same'");
+      fixture.destroy();
+
+      expect(emitted).toEqual([]);
+    });
+
+    it('announces nothing when the filter was not touched', () => {
+      const emitted: string[] = [];
+      component.filterMappingChange.subscribe(value => emitted.push(value));
+      fixture.detectChanges();
+      fixture.destroy();
+
+      expect(emitted).toEqual([]);
+    });
+  });
 });

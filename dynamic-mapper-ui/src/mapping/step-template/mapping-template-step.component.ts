@@ -148,6 +148,8 @@ export class MappingTemplateStepComponent implements OnDestroy {
    * and would otherwise be invisible to the author.
    */
   private filterFormlySubscribed = false;
+  private pendingFilterMapping: string | undefined;
+  private destroyed = false;
   sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
@@ -245,12 +247,19 @@ export class MappingTemplateStepComponent implements OnDestroy {
     // (Formly creates it during template rendering, which runs after this).
     // Using filterFormly.valueChanges (always available) and extracting filterMapping
     // avoids the silent no-op that occurred with the optional-chained control access.
-    filterFormly.valueChanges.pipe(
+    const filterValues$ = filterFormly.valueChanges.pipe(
       map((v: { filterMapping?: string } | null) => v?.filterMapping as string),
-      debounceTime(500),
-      distinctUntilChanged(),
       takeUntil(this.destroy$)
+    );
+    // The newest text the user typed that the debounced evaluation below has not handled yet. The editor
+    // destroys this step when the user leaves the tab, so ngOnDestroy hands it to the host instead of
+    // losing an edit made within the debounce window.
+    filterValues$.subscribe(path => (this.pendingFilterMapping = path));
+    filterValues$.pipe(
+      debounceTime(500),
+      distinctUntilChanged()
     ).subscribe(path => {
+      this.pendingFilterMapping = undefined;
       if (path) this.updateFilterExpressionResult(path);
     });
     // A filter that was set before this step opened (Message Explorer prefill, existing
@@ -298,6 +307,13 @@ export class MappingTemplateStepComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Outputs are still connected while ngOnDestroy runs, so the host receives the edit.
+    const pending = this.pendingFilterMapping;
+    if (pending !== undefined && pending !== this.mapping()?.filterMapping) {
+      this.filterMappingChange.emit(pending);
+    }
+    this.pendingFilterMapping = undefined;
+    this.destroyed = true;
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -394,6 +410,8 @@ export class MappingTemplateStepComponent implements OnDestroy {
     this.filterModel = { ...this.filterModel };
     // OnPush: this runs after an await, from the debounced filter input, from the input effects, and when
     // the host calls it directly, so no event of this view marks it for checking.
+    // The user may have left the tab while the evaluation ran; a destroyed step has no view left to refresh.
+    if (this.destroyed) return;
     this.cdr.markForCheck();
     afterNextRenderInZone(this.injector, () => this.manualResize());
   }

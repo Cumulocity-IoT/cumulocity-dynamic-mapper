@@ -1089,6 +1089,8 @@ input list.
 Running Cypress locally needs `ng serve --url <tenant>` and, to avoid the login loop, the temporary `-dev` suffix on
 `contextPath` and `key` in `cumulocity.config.ts` (see `cypress/README.md`). Never commit that change.
 
-Findings from writing the specs: the unified editor drops a pending Templates edit if the tab is left within the
-500 ms debounce of the filter field, so a fast tab switch loses the edit. A test has to wait for the evaluated result
-before leaving the tab.
+Finding from writing the specs, now fixed: the unified editor destroys the Templates step when the user leaves the
+tab, and the filter field's 500 ms debounce dropped an edit made just before that. The step now keeps the newest
+typed text and hands it to the host in `ngOnDestroy` (outputs are still connected there), unless it equals what the
+mapping already holds. Evaluations that finish after the step is gone no longer touch its view. Three unit tests
+cover it, and `mapping-template-properties-edit` now leaves the tab right after typing; it passed twice.
