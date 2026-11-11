@@ -68,29 +68,35 @@ module.exports = [
     },
   },
   {
-    // Known debt, to be paid down directory by directory (docs/ui/onpush-signals-migration-plan.md). Everything
-    // else is an error, so new code and new directories are strict from the start. When a directory reaches
-    // zero, delete its line here.
-    files: [
-      'src/configuration/code-template/*.ts',
-      'src/mapping/deprecation-notice/*.ts',
-      'src/mapping/grid/copy-source-modal/*.ts',
-      'src/mapping/mapping-create/*.ts',
-      'src/mapping/message-explorer/*.ts',
-      'src/mapping/prompt/*.ts',
-      'src/mapping/step-properties/*.ts',
-      'src/mapping/step-template/*.ts',
-      'src/mapping/validation/*.ts',
-      'src/mapping/versions/*.ts',
-      'src/shared/component/code-explorer/*.ts',
-      'src/shared/component/code-template/*.ts',
-      'src/shared/component/confirmation/*.ts',
-      'src/shared/component/select/*.ts',
-      'src/shared/connector-configuration/edit/*.ts'
-    ],
-    ignores: ['**/*.spec.ts'],
+    // Not a dynamic component, but it cannot move either: SelectKeyboardService.register$ (from @c8y/ngx-components)
+    // takes the `QueryList` of its list items, which only @ViewChildren produces, and the select is a form control
+    // that writes its own `disabled` state. Converting the inputs alone would still leave one decorator to exempt.
+    files: ['src/shared/component/select/custom-select.component.ts'],
     rules: {
-      '@angular-eslint/prefer-signals': 'warn',
+      '@angular-eslint/prefer-signals': 'off',
+    },
+  },
+  {
+    // Components that BottomDrawerService.openDrawer or BsModalService.show create. Both copy `initialState` onto the
+    // instance with Object.assign, which cannot write a signal input (the field is readonly), so these keep
+    // @Input(). List a component here only if it is opened that way (docs/ui/architecture.md, "State and change
+    // detection").
+    files: [
+      'src/configuration/code-template/shared-code-ai-prompt.component.ts',
+      'src/mapping/grid/copy-source-modal/copy-source-modal.component.ts',
+      'src/mapping/mapping-create/mapping-type-drawer.component.ts',
+      'src/mapping/message-explorer/message-explorer-drawer.component.ts',
+      'src/mapping/prompt/ai-prompt.component.ts',
+      'src/mapping/validation/mapping-validation-drawer.component.ts',
+      'src/mapping/versions/mapping-version-drawer.component.ts',
+      'src/mapping/versions/publish-version-modal.component.ts',
+      'src/shared/component/code-explorer/code-editor-drawer.component.ts',
+      'src/shared/component/code-template/manage-template.component.ts',
+      'src/shared/component/confirmation/confirmation-modal.component.ts',
+      'src/shared/connector-configuration/edit/connector-configuration-drawer.component.ts'
+    ],
+    rules: {
+      '@angular-eslint/prefer-signals': 'off',
     },
   },
   {

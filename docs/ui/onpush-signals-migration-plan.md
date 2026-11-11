@@ -14,7 +14,7 @@ none from this work):
 | `detectChanges()` calls | 29 | 2 on purpose (AI prompt `ngOnInit`, connector drawer direction filter) |
 | `ngDoCheck` | 1 | 0 |
 | `prefer-on-push` warnings | 73 | 1 (`ai-prompt`, on purpose) |
-| `prefer-signals` warnings | 198 | 198 (not started) |
+| `prefer-signals` warnings | 198 | 0 (13 components exempt, see "Signal inputs and queries") |
 | Explicit `any` (non-spec) | 277 | 0 |
 
 Converted last, with no browser check yet (6): `shared-code-ai-prompt`,
@@ -48,8 +48,8 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 4 components over 500 lines). Delete a directory's line from
-   the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
+3. Split the 4 components still over 500 lines. There is no lint debt left: `prefer-signals` and `no-explicit-any`
+   are errors everywhere, with the exemptions listed in `eslint.config.cjs`.
 
 ## Why
 
@@ -1024,3 +1024,49 @@ Choices worth knowing:
   object on in that case, which no select produces.
 - Message explorer drawer: selected devices are read as `IManagedObject` with bracket access (`['type']`), because
   `IManagedObject` types those fields through an index signature.
+
+### Signal inputs and queries (done, not yet browser-checked)
+
+`prefer-signals` had 198 findings (151 `@Input`, 44 `@ViewChild`, 3 content queries). It is at zero and an error
+for all app code. The "Known debt" block is deleted from `eslint.config.cjs`. Tests pass (1026 of 1027 before: one
+test that pinned "a plain assignment does not re-render" was removed, because a signal input cannot be assigned),
+lint reports 0 errors and 4 warnings (the size check), and the AOT check shows the same 8 baseline errors.
+
+What changed:
+- **`viewChild()`** replaces every `@ViewChild` (the field is now a signal: `this.grid()`). Parents that read a
+  child's query (`mappingTestingStep()?.editorTestingRequest()`) call both. The two former `static: true` queries
+  (`autoRefreshTemplate`, `jsonEditorContainer`) are read in `ngOnInit` and `ngAfterViewInit`; a probe test showed a
+  signal query already resolves before `ngOnInit` for a top-level element.
+- **`input()`** replaces `@Input` in about 20 components, and their templates read `name()`. Rewritten with a
+  script that only touches expressions; the compiler checks the rest.
+- **`model()`** replaces an input the component also writes itself, with the change event as the model's own output:
+  `deploymentMapEntry` (connector step), `selection` (subscription step), `deviceList` (group and device-tree
+  selectors), and `resyncTypes` (type selector).
+- **`effect()`** replaces `ngOnChanges` and `@Input` setters: the template step (sample fields, filter form
+  subscription, filter evaluation, displayed templates), the properties step (follow a replaced mapping), the
+  extension selector (form subscription), the connector grid (direction filter), the JSON editor (options, data,
+  schema), the input list (incoming data), and the two type-subscription components (type list).
+- The properties step keeps its effect body in `onMappingReplaced()`, and its spec calls it directly, because the
+  spec never renders the template.
+
+Exempt in `eslint.config.cjs`, with the reason in the config:
+- 11 components that `BottomDrawerService.openDrawer` or `BsModalService.show` create (the validation, version,
+  type, explorer and connector drawers, both AI prompts, the confirmation, copy-source, publish-version and
+  manage-template modals). Both services copy `initialState` onto the instance, which cannot write a signal input.
+- `custom-select`: the platform's `SelectKeyboardService.register$` takes a `QueryList`, which only `@ViewChildren`
+  produces, and the select is a form control that writes its own `disabled` state.
+
+Browser checks for this round, in order of risk:
+1. **Template step:** open it for an inbound and an outbound mapping. The filter expression shows its result when
+   the step opens (with and without an existing filter), the filter result updates while typing, source and
+   target templates show, and hiding or showing metadata still works.
+2. **Properties step:** edit the filter in the Templates step, go back, and check the execution filter follows.
+3. **JSON editors everywhere** (templates, substitutions, testing, tree): content loads, editing works, and a
+   schema marks invalid content.
+4. **Extension selector:** pick an extension and an event; validity and the event description update.
+5. **Subscription step and selectors:** switch dynamic and static, edit types with the resync column, pick
+   devices and groups, and check the host receives every edit.
+6. **Connector grid and connector step:** filter by direction, select connectors in the deployment picker.
+7. **Headers and `Header` tabs of the connector configuration form** (input list): add and remove rows while
+   typing; a row in progress must not disappear.
+8. KPI cards, the substitution grid, and the extension card.

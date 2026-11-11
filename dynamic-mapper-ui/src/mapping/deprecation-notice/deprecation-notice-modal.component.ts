@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
+import { Component, input, OnDestroy, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -54,7 +54,7 @@ function versionLessThan(a: string | null | undefined, b: string): boolean {
 })
 export class DeprecationNoticeModalComponent implements OnDestroy {
   /** Set via BsModalService initialState — the version stored in tenant config. */
-  @Input() acceptedVersion: string | null = null;
+  readonly acceptedVersion = input<string | null>(null);
 
   readonly closeSubject = new Subject<boolean>();
   readonly currentVersion = DEPRECATION_NOTICE_VERSION;
@@ -68,7 +68,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
   /** True when the user has never accepted the 6.3 SUBSTITUTION_AS_CODE removal notice,
    *  i.e. they need the action-required banner, not just the historical info note. */
   get needsSubstitutionMigration(): boolean {
-    return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
+    return versionLessThan(this.acceptedVersion(), SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
   }
 
   private readonly modal = viewChild<{ _dismiss(): void }>('modal');

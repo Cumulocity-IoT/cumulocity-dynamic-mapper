@@ -53,9 +53,11 @@ Every component uses `ChangeDetectionStrategy.OnPush`. The lint rules enforce it
 ### Lint rules
 
 `eslint.config.cjs`: `prefer-on-push-component-change-detection`, `prefer-signals`, and `no-explicit-any` are errors
-for all app code except specs. `no-explicit-any` has no exceptions left. The directories that still have
-`prefer-signals` findings are listed in the "Known debt" block, as warnings. When a directory reaches zero, delete its
-line so that it stays at zero.
+for all app code except specs. `no-explicit-any` has no exceptions. `prefer-signals` has one: components that
+`BottomDrawerService.openDrawer` or `BsModalService.show` create keep `@Input()`, because both copy `initialState`
+onto the instance and a signal input cannot be written that way. Those files, and `custom-select`, are listed with
+the reason in `eslint.config.cjs`; add a component there only if it is opened that way. A component that writes an
+input itself uses `model()`, and one that reacts to a changed input uses `effect()` instead of `ngOnChanges`.
 
 ## Translations
 
