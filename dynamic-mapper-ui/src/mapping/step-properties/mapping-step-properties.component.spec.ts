@@ -19,9 +19,9 @@
  */
 
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { MappingStepPropertiesComponent } from './mapping-step-properties.component';
@@ -43,18 +43,22 @@ function makeStepperConfiguration(): StepperConfiguration {
   return { direction: Direction.INBOUND, persistence: 'create' };
 }
 
+/** The fixture of each component the helpers built, to bind inputs the way a host does. */
+const fixtures = new WeakMap<MappingStepPropertiesComponent, ComponentFixture<MappingStepPropertiesComponent>>();
+
 async function createComponent(
   deployedConnectors?: string[]
 ): Promise<MappingStepPropertiesComponent> {
   const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
   const component = fixture.componentInstance;
-  component.mapping = makeMapping();
-  component.stepperConfiguration = makeStepperConfiguration();
-  component.propertyFormly = new FormGroup({});
+  fixtures.set(component, fixture);
+  fixture.componentRef.setInput('mapping', makeMapping());
+  fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+  fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
   // Act as the host: apply every patch to the mapping.
-  component.propertiesChange.subscribe(patch => Object.assign(component.mapping, patch));
+  component.propertiesChange.subscribe(patch => Object.assign(component.mapping(), patch));
   if (deployedConnectors) {
-    component.deploymentMapEntry = { identifier: 'mapping-1', connectors: deployedConnectors };
+    fixture.componentRef.setInput('deploymentMapEntry', { identifier: 'mapping-1', connectors: deployedConnectors });
   }
   await component.ngOnInit();
   return component;
@@ -66,9 +70,10 @@ async function createComponent(
 
 /** What the editor host does when another step edits the mapping: it binds a new mapping object. */
 function hostReplacesMapping(component: MappingStepPropertiesComponent, patch: Partial<Mapping>): void {
-  const previous = component.mapping;
-  component.mapping = { ...previous, ...patch };
-  component.ngOnChanges({ mapping: new SimpleChange(previous, component.mapping, false) });
+  const previous = component.mapping();
+  fixtures.get(component)!.componentRef.setInput('mapping', { ...previous, ...patch });
+  // The component calls this from an effect; the spec drives it directly, as it never renders the template.
+  component.onMappingReplaced();
 }
 
 describe('MappingStepPropertiesComponent', () => {
@@ -133,10 +138,11 @@ describe('MappingStepPropertiesComponent', () => {
     async function outboundComponent(filterMapping?: string) {
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const component = fixture.componentInstance;
-      component.mapping = { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterMapping } as unknown as Mapping;
-      component.stepperConfiguration = { direction: Direction.OUTBOUND, persistence: 'create' };
-      component.propertyFormly = new FormGroup({});
-      component.propertiesChange.subscribe(patch => Object.assign(component.mapping, patch));
+      fixtures.set(component, fixture);
+      fixture.componentRef.setInput('mapping', { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterMapping } as unknown as Mapping);
+      fixture.componentRef.setInput('stepperConfiguration', { direction: Direction.OUTBOUND, persistence: 'create' });
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
+      component.propertiesChange.subscribe(patch => Object.assign(component.mapping(), patch));
       await component.ngOnInit();
       return component;
     }
@@ -172,7 +178,7 @@ describe('MappingStepPropertiesComponent', () => {
     it('opens any other expression as "custom" and leaves it untouched', async () => {
       const component = await outboundComponent("type = 'a' and $exists(b)");
       expect(component.model.executionFilterMode).toBe('custom');
-      expect(component.mapping.filterMapping).toBe("type = 'a' and $exists(b)");
+      expect(component.mapping().filterMapping).toBe("type = 'a' and $exists(b)");
     });
 
     it('writes the expression to filterMapping when the user changes the control', async () => {
@@ -180,12 +186,12 @@ describe('MappingStepPropertiesComponent', () => {
       component.model.executionFilterMode = 'fragment';
       component.model.executionFilterValue = 'c8y_Temperature';
       component.onExecutionFilterChanged();
-      expect(component.mapping.filterMapping).toBe('$exists(c8y_Temperature)');
+      expect(component.mapping().filterMapping).toBe('$exists(c8y_Temperature)');
 
       component.model.executionFilterMode = 'type';
       component.model.executionFilterValue = 'lora';
       component.onExecutionFilterChanged();
-      expect(component.mapping.filterMapping).toBe("type = 'lora'");
+      expect(component.mapping().filterMapping).toBe("type = 'lora'");
     });
 
     it('shows the custom expression read-only in the value column', async () => {
@@ -210,7 +216,7 @@ describe('MappingStepPropertiesComponent', () => {
       hostReplacesMapping(component, { filterMapping: "type = 'a' and $exists(b)" });
       component.model.name = 'renamed';
       component.commitModel();
-      expect(component.mapping.filterMapping).toBe("type = 'a' and $exists(b)");
+      expect(component.mapping().filterMapping).toBe("type = 'a' and $exists(b)");
     });
 
     it('keeps a chosen option with an empty value while the user types', async () => {
@@ -225,7 +231,7 @@ describe('MappingStepPropertiesComponent', () => {
       const component = await outboundComponent("type = 'lora'");
       component.model.executionFilterMode = 'custom';
       component.onExecutionFilterChanged();
-      expect(component.mapping.filterMapping).toBe('');
+      expect(component.mapping().filterMapping).toBe('');
     });
   });
 
@@ -233,9 +239,9 @@ describe('MappingStepPropertiesComponent', () => {
     async function component(filterInventory?: string) {
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const c = fixture.componentInstance;
-      c.mapping = { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterInventory } as unknown as Mapping;
-      c.stepperConfiguration = { direction: Direction.OUTBOUND, persistence: 'create' };
-      c.propertyFormly = new FormGroup({});
+      fixture.componentRef.setInput('mapping', { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterInventory } as unknown as Mapping);
+      fixture.componentRef.setInput('stepperConfiguration', { direction: Direction.OUTBOUND, persistence: 'create' });
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
       await c.ngOnInit();
       return c;
     }
@@ -356,7 +362,7 @@ describe('MappingStepPropertiesComponent', () => {
     it('does not warn for an expression that is not valid', async () => {
       mockMappingService.evaluateExpression.and.rejectWith(new Error('Unexpected end of expression'));
       const { component } = await componentWithField();
-      component.propertyFormly.addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
+      component.propertyFormly().addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
 
       await component.updateFilterInventoryExpressionResult('name = ');
 
@@ -388,22 +394,22 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.filterInventoryModel.filterExpression.resultType).toBe('Boolean');
       expect(component.model.filterInventory).toBe('type = "lora_device_type"');
       expect(emitted).toContain(jasmine.objectContaining({ filterInventory: 'type = "lora_device_type"' }));
-      expect(component.mapping.filterInventory).toBe('type = "lora_device_type"'); // applied by the host stand-in
+      expect(component.mapping().filterInventory).toBe('type = "lora_device_type"'); // applied by the host stand-in
     });
 
     it('rejects a non-boolean-valued expression and surfaces a form control error instead of updating mapping.filterInventory', async () => {
       mockMappingService.evaluateExpression.and.resolveTo('not-a-boolean' as any);
       const component = await createComponent();
-      component.propertyFormly.addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
+      component.propertyFormly().addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
 
       await component.updateFilterInventoryExpressionResult('type');
 
       expect(component.filterInventoryModel.filterExpression.valid).toBeFalse();
-      expect(component.propertyFormly.get('filterInventory')?.errors).toEqual(
+      expect(component.propertyFormly().get('filterInventory')?.errors).toEqual(
         jasmine.objectContaining({ validationError: jasmine.anything() })
       );
       expect(component.model.filterInventory).toBeUndefined();
-      expect(component.mapping.filterInventory).toBeUndefined();
+      expect(component.mapping().filterInventory).toBeUndefined();
     });
 
     it('does not raise the "fragments to cache" note as a toast: it is part of the field help text', async () => {
@@ -437,9 +443,9 @@ describe('MappingStepPropertiesComponent', () => {
       const before = JSON.stringify(mapping);
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const component = fixture.componentInstance;
-      component.mapping = mapping;
-      component.stepperConfiguration = makeStepperConfiguration();
-      component.propertyFormly = new FormGroup({});
+      fixture.componentRef.setInput('mapping', mapping);
+      fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
 
       await component.ngOnInit();
 
@@ -450,9 +456,9 @@ describe('MappingStepPropertiesComponent', () => {
     it('announces the default external id type once, as a patch', async () => {
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const component = fixture.componentInstance;
-      component.mapping = makeMapping();
-      component.stepperConfiguration = makeStepperConfiguration();
-      component.propertyFormly = new FormGroup({});
+      fixture.componentRef.setInput('mapping', makeMapping());
+      fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
 
@@ -465,7 +471,7 @@ describe('MappingStepPropertiesComponent', () => {
       const component = await createComponent();
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
-      component.mapping.externalIdType = 'c8y_Serial';
+      component.mapping().externalIdType = 'c8y_Serial';
 
       component.commitModel();
       expect(patches).toEqual([]);
@@ -478,7 +484,7 @@ describe('MappingStepPropertiesComponent', () => {
 
     it('never carries mapping state outside its own properties, so the host can change it meanwhile', async () => {
       const component = await createComponent();
-      component.mapping.substitutions = [{ pathSource: 'a', pathTarget: 'b' } as any];
+      component.mapping().substitutions = [{ pathSource: 'a', pathTarget: 'b' } as any];
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
 

@@ -23,15 +23,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   EventEmitter,
+  effect,
   inject,
-  Input,
-  OnChanges,
   OnDestroy,
   OnInit,
-  SimpleChanges,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  untracked,
+  ViewEncapsulation, input } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -104,15 +102,15 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, PopoverModule]
 })
-export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDestroy {
-  @Input() mapping: Mapping;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() propertyFormly: FormGroup;
+export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
+  readonly mapping = input<Mapping>();
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly propertyFormly = input<FormGroup>();
   /**
    * The connectors this mapping is deployed to. Used to tell the user when the QoS they picked
    * cannot be honoured by one of those connectors — the backend clamps it silently otherwise.
    */
-  @Input() deploymentMapEntry: DeploymentMapEntry;
+  readonly deploymentMapEntry = input<DeploymentMapEntry>();
   @Output() targetAPIChanged = new EventEmitter<string>();
   /**
    * Changed properties, as a patch. The step edits a working copy (`model`), never the host's
@@ -184,12 +182,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
     // The host object below exposes live members through getters, so it needs the component under another name.
     const self = this;
     this.propertyFormlyFields = buildPropertyFields({
-      direction: this.stepperConfiguration.direction,
+      direction: this.stepperConfiguration().direction,
       isFieldDisabled: this.isFieldDisabled,
       filterInventoryDescription: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
-      get mapping() { return self.mapping; },
+      get mapping() { return self.mapping(); },
       get model() { return self.model; },
-      get form() { return self.propertyFormly; },
+      get form() { return self.propertyFormly(); },
       destroy$: this.destroy$,
       get filterInventoryField() { return self.filterInventoryField; },
       set filterInventoryField(field) { self.filterInventoryField = field; },
@@ -258,10 +256,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
       await this.refreshFilterInventoryWarning(path);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
-      this.propertyFormly
+      this.propertyFormly()
         .get('filterInventory')
         .setErrors({ validationError: { message: error.message } });
-      this.propertyFormly.get('filterInventory').markAsTouched();
+      this.propertyFormly().get('filterInventory').markAsTouched();
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
     this.syncFilterInventoryResultField();
@@ -334,7 +332,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
    * non-fatal: without the capability the QoS hint simply omits the connector-specific part.
    */
   private async loadQosCapabilities(): Promise<void> {
-    const identifiers = this.deploymentMapEntry?.connectors ?? [];
+    const identifiers = this.deploymentMapEntry()?.connectors ?? [];
     if (!identifiers.length) {
       return;
     }
@@ -389,7 +387,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
 
   private initializeDirection(): void {
     // A mapping without a direction is treated as inbound; the host's mapping is not modified.
-    const direction = this.mapping.direction ?? Direction.INBOUND;
+    const direction = this.mapping().direction ?? Direction.INBOUND;
     this.targetSystem = direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
   }
@@ -397,14 +395,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
   private initializeModel(): void {
     const model: Record<string, unknown> = {};
     for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
-      model[key] = this.mapping[key];
+      model[key] = this.mapping()[key];
     }
     // The field's own defaultValue would only reach this copy, so apply it here and commit it.
     model['externalIdType'] ??= 'c8y_Serial';
     // Show the stored filter expression as one of the three options (an unknown expression is "custom").
     // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
     // An existing inventory filter must not be hidden from the user.
-    model['expertMode'] = !!this.mapping.filterInventory?.trim();
+    model['expertMode'] = !!this.mapping().filterInventory?.trim();
     this.model = model as Partial<Mapping>;
     this.deriveExecutionFilter();
     this.commitModel();
@@ -415,7 +413,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
 
   /** Shows the host's `filterMapping` as one of the three options (an unknown expression is "custom"). */
   private deriveExecutionFilter(): void {
-    const expression = this.mapping.filterMapping;
+    const expression = this.mapping().filterMapping;
     const choice = fromFilterMapping(expression);
     // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
     this.model.executionFilterMode = expression?.trim() ? choice.mode : undefined;
@@ -429,23 +427,32 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
    * The host replaces its mapping object on every edit, so a new `mapping` input is the signal to
    * follow such a change and keep the control from showing (or writing back) a stale expression.
    */
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['mapping'] && this.model && this.mapping && this.mapping.filterMapping !== this.knownFilterMapping) {
+  constructor() {
+    effect(() => {
+      this.mapping();
+      untracked(() => this.onMappingReplaced());
+    });
+  }
+
+  /** Re-derives the execution filter when the host bound a mapping whose `filterMapping` this step does not know. */
+  onMappingReplaced(): void {
+    const mapping = this.mapping();
+    if (this.model && mapping && mapping.filterMapping !== this.knownFilterMapping) {
       this.deriveExecutionFilter();
     }
   }
 
   /** Writes the execution-filter control to `filterMapping`. Only runs on user input, never on load. */
   onExecutionFilterChanged(): void {
-    const mode = (this.propertyFormly.get('executionFilterMode')?.value ?? this.model.executionFilterMode) as ExecutionFilterMode;
-    const value = this.propertyFormly.get('executionFilterValue')?.value ?? this.model.executionFilterValue;
+    const mode = (this.propertyFormly().get('executionFilterMode')?.value ?? this.model.executionFilterMode) as ExecutionFilterMode;
+    const value = this.propertyFormly().get('executionFilterValue')?.value ?? this.model.executionFilterValue;
     this.model.executionFilterMode = mode;
     this.model.executionFilterValue = value;
     const expression = toFilterMapping({ mode, value });
     this.model.filterMapping = expression;
     this.knownFilterMapping = expression;
     // Not part of commitModel: the Templates step also owns this property.
-    if (expression !== this.mapping.filterMapping) {
+    if (expression !== this.mapping().filterMapping) {
       this.propertiesChange.emit({ filterMapping: expression });
     }
     this.commitModel();
@@ -455,7 +462,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
   commitModel(): void {
     const patch: Record<string, unknown> = {};
     for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
-      if (this.model[key] !== this.mapping[key]) {
+      if (this.model[key] !== this.mapping()[key]) {
         patch[key] = this.model[key];
       }
     }
@@ -471,7 +478,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnChanges, OnDest
   }
 
   private get isReadOnly(): boolean {
-    return !!this.stepperConfiguration.readOnly;
+    return !!this.stepperConfiguration().readOnly;
   }
 
   private get canEdit(): boolean {
