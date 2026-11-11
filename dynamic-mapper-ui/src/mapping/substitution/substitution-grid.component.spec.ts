@@ -63,7 +63,7 @@ describe('SubstitutionGridComponent', () => {
 
     fixture = TestBed.createComponent(SubstitutionGridComponent);
     component = fixture.componentInstance;
-    component.settings = settings();
+    fixture.componentRef.setInput('settings', settings());
   });
 
   it('creates', () => {
@@ -108,7 +108,7 @@ describe('SubstitutionGridComponent', () => {
   it('emits the selected index and leaves the settings to the host', (done) => {
     component.selectSub.subscribe((i) => {
       expect(i).toBe(2);
-      expect(component.settings.selectedSubstitutionIndex).toBe(-1); // the host owns it
+      expect(component.settings().selectedSubstitutionIndex).toBe(-1); // the host owns it
       done();
     });
     component.onSubstitutionSelect(2);
@@ -124,7 +124,7 @@ describe('SubstitutionGridComponent', () => {
 
     closeSubject.next(true); // user confirms
     expect(deleted).toEqual([3]);
-    expect(component.settings.selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
+    expect(component.settings().selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
     expect(modalHide).toHaveBeenCalled();
   });
 

@@ -27,8 +27,7 @@ import {
   Input,
   OnInit,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -78,10 +77,10 @@ import {
 })
 export class MappingStepSubscriptionComponent implements OnInit {
   @Input({ required: true }) selection!: OutboundSubscriptionSelection;
-  @Input() suggestions?: SubscriptionSuggestions;
-  @Input() feature?: Feature;
+  readonly suggestions = input<SubscriptionSuggestions>();
+  readonly feature = input<Feature>();
   /** The host data-cy prefix, so stepper and unified editor keep separate test ids. */
-  @Input() dataCyPrefix = 'dm-mapping-stepper';
+  readonly dataCyPrefix = input('dm-mapping-stepper');
   @Output() selectionChange = new EventEmitter<OutboundSubscriptionSelection>();
 
   private readonly selectionService = inject(SubscriptionSelectionService);
@@ -144,7 +143,7 @@ export class MappingStepSubscriptionComponent implements OnInit {
   }
 
   get canEdit(): boolean {
-    return !!(this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole);
+    return !!(this.feature()?.userHasMappingAdminRole || this.feature()?.userHasMappingCreateRole);
   }
 
   /** Editing is only safe on top of a loaded baseline: the drawers re-commit the complete list. */
@@ -181,15 +180,15 @@ export class MappingStepSubscriptionComponent implements OnInit {
    * offers Skip, Dynamic and Static instead.
    */
   get contextMode(): boolean {
-    const s = this.suggestions;
+    const s = this.suggestions();
     return !!(s?.deviceId || s?.deviceType || s?.groups?.length);
   }
 
-  get contextType(): string | undefined { return this.suggestions?.deviceType || undefined; }
-  get contextGroups(): { id: string; name: string }[] { return this.suggestions?.groups ?? []; }
+  get contextType(): string | undefined { return this.suggestions()?.deviceType || undefined; }
+  get contextGroups(): { id: string; name: string }[] { return this.suggestions()?.groups ?? []; }
   get contextDevice(): { id: string; name?: string } | undefined {
-    const id = this.suggestions?.deviceId;
-    return id ? { id, name: this.suggestions?.deviceName } : undefined;
+    const id = this.suggestions()?.deviceId;
+    return id ? { id, name: this.suggestions()?.deviceName } : undefined;
   }
 
   /** The group picked when the device has several groups; defaults to the first. */

@@ -24,13 +24,12 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  Input,
   Output,
   EventEmitter,
   ViewChild,
   OnDestroy,
   OnInit,
-  inject, viewChild } from '@angular/core';
+  inject, viewChild, input } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -70,25 +69,25 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionGridComponent]
 })
 export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
-  @Input() mapping: Mapping;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() sourceTemplate: Template | undefined;
-  @Input() targetTemplate: Template | undefined;
-  @Input() sourceSystem: string;
-  @Input() targetSystem: string;
-  @Input() feature: Feature;
-  @Input() aiAgentDeployed: boolean;
-  @Input() aiCapabilitiesDisabled = false;
-  @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() schemaSource: JsonSchema | undefined;
-  @Input() schemaTarget: JsonSchema | undefined;
-  @Input() mappingCode: string;
-  @Input() codeEditorLabel: string;
-  @Input() codeEditorHelp: string;
+  readonly mapping = input<Mapping>();
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly sourceTemplate = input<Template | undefined>();
+  readonly targetTemplate = input<Template | undefined>();
+  readonly sourceSystem = input<string>();
+  readonly targetSystem = input<string>();
+  readonly feature = input<Feature>();
+  readonly aiAgentDeployed = input<boolean>();
+  readonly aiCapabilitiesDisabled = input(false);
+  readonly aiAgent = input<AgentObjectDefinition | AgentTextDefinition | null>();
+  readonly schemaSource = input<JsonSchema | undefined>();
+  readonly schemaTarget = input<JsonSchema | undefined>();
+  readonly mappingCode = input<string>();
+  readonly codeEditorLabel = input<string>();
+  readonly codeEditorHelp = input<string>();
   // A boolean, not the raw step/tab index: this component is shared by both the stepper and the
   // unified editor, which number their steps/tabs independently — comparing a bare index here
   // would silently break if either caller's ordering changes without both staying in sync.
-  @Input() isBeforeSubstitutionStep: boolean;
+  readonly isBeforeSubstitutionStep = input<boolean>();
 
   @Output() mappingCodeChange = new EventEmitter<string>();
   /**
@@ -114,7 +113,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   readonly Direction = Direction;
 
   get identitySubstitutionHint(): string {
-    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
+    const side = this.mapping()?.direction === Direction.OUTBOUND ? 'source' : 'target';
     return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
       + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
   }
@@ -130,7 +129,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   /** Help shown next to the disabled AI button. */
   get aiDisabledHelp(): string {
-    return this.aiCapabilitiesDisabled
+    return this.aiCapabilitiesDisabled()
       ? gettext('AI capabilities are disabled in this tenant.')
       : gettext('AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.');
   }
@@ -175,7 +174,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   private initializeSubstitutionModel(): void {
     this.substitutionModel = {
-      stepperConfiguration: this.stepperConfiguration,
+      stepperConfiguration: this.stepperConfiguration(),
       pathSource: '',
       pathTarget: '',
       pathSourceIsExpression: false,
@@ -212,8 +211,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         props: {
           label: gettext('Source Expression'),
           class: 'input-sm',
-          disabled: this.stepperConfiguration.readOnly ||
-            !this.stepperConfiguration.allowDefiningSubstitutions,
+          disabled: this.stepperConfiguration().readOnly ||
+            !this.stepperConfiguration().allowDefiningSubstitutions,
           placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
@@ -238,8 +237,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         props: {
           label: gettext('Target Expression'),
           class: 'input-sm',
-          disabled: this.stepperConfiguration.readOnly ||
-            !this.stepperConfiguration.allowDefiningSubstitutions,
+          disabled: this.stepperConfiguration().readOnly ||
+            !this.stepperConfiguration().allowDefiningSubstitutions,
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
           customMessage: this.targetCustomMessage$
@@ -258,7 +257,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   }
 
   private updateEditorPermissions(): void {
-    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+    if (!this.feature()?.userHasMappingAdminRole && !this.feature()?.userHasMappingCreateRole) {
       this.editorOptionsSourceSubstitution.readOnly = true;
       this.editorOptionsTargetSubstitution.readOnly = true;
     }
@@ -350,7 +349,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
 
     this.applySubstitutions(
-      this.substitutionService.addSubstitution(this.substitutionModel, this.mapping.substitutions)
+      this.substitutionService.addSubstitution(this.substitutionModel, this.mapping().substitutions)
     );
 
     this.selectedSubstitution = -1;
@@ -360,7 +359,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     const update = this.substitutionService.updateSubstitution(
       this.selectedSubstitution,
       this.substitutionModel,
-      this.mapping.substitutions
+      this.mapping().substitutions
     );
     if (!update) return;
 
@@ -395,12 +394,12 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   /** Inline expandArray/repairStrategy edit in the grid: no selection/model change is needed. */
   onGridSubstitutionPatch(change: { index: number; patch: Partial<Substitution> }): void {
     this.applySubstitutions(
-      this.substitutionService.patchSubstitution(this.mapping.substitutions, change.index, change.patch)
+      this.substitutionService.patchSubstitution(this.mapping().substitutions, change.index, change.patch)
     );
   }
 
   onDeleteSubstitution(selected: number): void {
-    const remaining = this.substitutionService.deleteSubstitution(selected, this.mapping.substitutions);
+    const remaining = this.substitutionService.deleteSubstitution(selected, this.mapping().substitutions);
     if (remaining) this.applySubstitutions(remaining);
     // Deleting shifts every later index down by one, so a stale selectedSubstitution would
     // otherwise point at the wrong row (or go out of range) for "Update substitution".
@@ -413,19 +412,19 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   private readonly refreshSubstitutionValidity = (): void => {
     this.stepperService.refreshSubstitutionValidity(
-      this.mapping,
-      this.stepperConfiguration,
-      this.isBeforeSubstitutionStep
+      this.mapping(),
+      this.stepperConfiguration(),
+      this.isBeforeSubstitutionStep()
     );
   };
 
   async onSelectSubstitution(selected: number): Promise<void> {
-    if (selected < 0 || selected >= this.mapping.substitutions.length) return;
+    if (selected < 0 || selected >= this.mapping().substitutions.length) return;
 
     this.selectedSubstitution = selected;
     this.substitutionModel = {
-      ...this.mapping.substitutions[selected],
-      stepperConfiguration: this.stepperConfiguration
+      ...this.mapping().substitutions[selected],
+      stepperConfiguration: this.stepperConfiguration()
     };
     this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
     // The host calls this directly (to jump to a validation problem), so no event of this view marks it.
@@ -456,31 +455,31 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   }
 
   async openGenerateSubstitutionDrawer(): Promise<void> {
-    const testMapping: MappingForAiDrawer = { ...this.mapping };
-    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    const testMapping: MappingForAiDrawer = { ...this.mapping() };
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate());
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate());
     // Out-of-band transport fields (e.g. the Kafka record key of the message this mapping was
     // created from) are not part of the payload, so they can only reach AI generation this way.
     // Attached to the drawer's copy only — never persisted on the mapping itself.
-    if (this.stepperConfiguration.sampleTransportFields) {
-      testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+    if (this.stepperConfiguration().sampleTransportFields) {
+      testMapping.sampleTransportFields = this.stepperConfiguration().sampleTransportFields;
     }
 
-    if (this.stepperConfiguration.sampleMessageInfo) {
-      testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+    if (this.stepperConfiguration().sampleMessageInfo) {
+      testMapping.sampleMessageInfo = this.stepperConfiguration().sampleMessageInfo;
     }
-      if (this.stepperConfiguration.additionalSamples?.length) {
-        testMapping.additionalSamples = this.stepperConfiguration.additionalSamples;
+      if (this.stepperConfiguration().additionalSamples?.length) {
+        testMapping.additionalSamples = this.stepperConfiguration().additionalSamples;
       }
 
     const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent(), existingMapping: this.stepperConfiguration().persistence === 'draft' }
     });
 
     try {
       const resultOf = await drawer.instance.result;
 
-      if (isSubstitutionsAsCode(this.mapping)) {
+      if (isSubstitutionsAsCode(this.mapping())) {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
         } else {
@@ -514,15 +513,15 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     // Mutually exclusive with "Update substitution": while a row is selected for editing, Add
     // would otherwise stay clickable too and push a near-duplicate of the row being edited.
     // Cancel/New substitution (selectedSubstitution = -1) is the explicit way back to add-mode.
-    return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.readOnly ||
+    return !this.stepperConfiguration().showEditorSource ||
+      this.stepperConfiguration().readOnly ||
       this.selectedSubstitution !== -1 ||
       !this.isSubstitutionValid();
   }
 
   updateSubstitutionDisabled(): boolean {
-    return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.readOnly ||
+    return !this.stepperConfiguration().showEditorSource ||
+      this.stepperConfiguration().readOnly ||
       this.selectedSubstitution === -1 ||
       !this.isSubstitutionValid();
   }

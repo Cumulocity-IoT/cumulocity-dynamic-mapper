@@ -72,7 +72,7 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     emitted = [];
     alertService = jasmine.createSpyObj('AlertService', ['info', 'warning']);
     refresh = jasmine.createSpy('refreshSubstitutionValidity');
-    step.mapping = mapping;
+    step.mapping = () => mapping;
     step.substitutionService = new SubstitutionManagementService();
     step.alertService = alertService;
     step.translateService = { instant: interpolateMessage };

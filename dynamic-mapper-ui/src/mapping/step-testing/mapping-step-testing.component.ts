@@ -24,12 +24,11 @@ import {
   Component,
   EventEmitter,
   inject,
-  Input,
   OnDestroy,
   OnInit,
   Output,
   ViewChild,
-  ViewEncapsulation, viewChild } from '@angular/core';
+  ViewEncapsulation, viewChild, input } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
@@ -84,11 +83,11 @@ function stableStringify(value: unknown): string {
 
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
-  @Input() mapping!: Mapping;
+  readonly mapping = input<Mapping>();
   /** The Connector tab has changes that are not saved yet; an outbound Live Test ignores them. */
-  @Input() connectorsUnsaved = false;
-  @Input() stepperConfiguration!: StepperConfiguration;
-  @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
+  readonly connectorsUnsaved = input(false);
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly updateTestingTemplate = input<ReplaySubject<Mapping>>();
   @Output() sourceTemplateChanged = new EventEmitter<Template>();
 
   readonly editorTestingPayload = viewChild<JsonEditorComponent>('editorTestingPayload');
@@ -221,19 +220,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * by an explanation rather than showing inert controls.
    */
   get testingUnavailable(): boolean {
-    return !this.stepperConfiguration?.allowTestTransformation
-      && !this.stepperConfiguration?.allowTestSending;
+    return !this.stepperConfiguration()?.allowTestTransformation
+      && !this.stepperConfiguration()?.allowTestSending;
   }
 
   get liveTestTitle(): string {
-    return this.mapping?.direction === Direction.OUTBOUND
+    return this.mapping()?.direction === Direction.OUTBOUND
       ? gettext('Publishes the result to the connected broker')
       : gettext('Sends the result to Cumulocity using a test device');
   }
 
   get testHelpText(): string {
     const dryRun = this.t(gettext('Dry Run runs the mapping without writing anything to your tenant.'));
-    if (this.mapping?.direction === Direction.OUTBOUND) {
+    if (this.mapping()?.direction === Direction.OUTBOUND) {
       return this.t(gettext('Dry Run runs the mapping without sending anything.'))
         + ' ' + this.t(gettext('Live Test publishes the result to the connected broker and needs a mapping that uses an external id and a Dry Run result.'));
     }
@@ -252,7 +251,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * keeps it disabled for good).
    */
   get liveTestDisabledReason(): string | undefined {
-    if (!this.stepperConfiguration.allowTestSending) {
+    if (!this.stepperConfiguration().allowTestSending) {
       return gettext('Live Test is not available for this combination of payload type and transformation type');
     }
     if (!this.testMapping.useExternalId) {
@@ -287,19 +286,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private initializeMapping(): void {
     // A mapping without a direction is treated as inbound; the host's mapping is not modified.
-    const isInbound = (this.mapping.direction ?? Direction.INBOUND) === Direction.INBOUND;
+    const isInbound = (this.mapping().direction ?? Direction.INBOUND) === Direction.INBOUND;
     this.sourceSystem = isInbound ? 'Broker' : 'Cumulocity';
     this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
 
     // Initialize testMapping with the full mapping object
-    this.updateTestMapping(this.mapping);
+    this.updateTestMapping(this.mapping());
 
     // Initialize testing model with the payload
     this.resetTestingModel();
   }
 
   private setupSubscriptions(): void {
-    this.updateTestingTemplate
+    this.updateTestingTemplate()
       .pipe(takeUntil(this.destroy$))
       .subscribe(mapping => {
         this.updateTestMapping(mapping);
@@ -519,7 +518,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
-      if (sendPayload && this.mapping?.direction === Direction.OUTBOUND && this.connectorsUnsaved) {
+      if (sendPayload && this.mapping()?.direction === Direction.OUTBOUND && this.connectorsUnsaved()) {
         this.testingModel.logs.push('INFO ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.')));
       }
       // The errors are listed in the console output; no alert repeats them.
@@ -548,7 +547,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
    */
   describeSendResult(result: TestResult): string {
-    if (this.mapping?.direction === Direction.OUTBOUND) {
+    if (this.mapping()?.direction === Direction.OUTBOUND) {
       return this.describePublishResult(result);
     }
     const first = result.requests?.[0];
@@ -616,7 +615,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (connectors) {
       text += ' ' + this.t(gettext('Published through connector(s): {{connectors}}.'), { connectors });
     }
-    if (this.connectorsUnsaved) {
+    if (this.connectorsUnsaved()) {
       text += ' ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.'));
     }
     return text;

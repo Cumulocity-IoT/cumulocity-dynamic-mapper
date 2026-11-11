@@ -23,10 +23,10 @@
   <div class="row p-b-8">
     <div class="col-lg-5">
       <div class="d-flex">
-        <label class="m-t-4" [textContent]="label | translate"></label>
+        <label class="m-t-4" [textContent]="label() | translate"></label>
         <span class="hidden-xs hidden-sm">
           <ng-template #popupTemplateCodeHelp>
-            <div [innerHtml]="help | translate"></div>
+            <div [innerHtml]="help() | translate"></div>
           </ng-template>
           <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus" class="btn-help"
             [attr.aria-label]="'Help content' | translate"></button>
@@ -34,13 +34,13 @@
       </div>
     </div>
     <div class="flex-grow col-lg-2 p-t-4">
-      <button type="button" name="generateSubstitution" [attr.data-cy]="dataCyPrefix + '-generate-ai'" class="btn btn-ai btn-sm"
-        (click)="generate.emit()" [title]="aiButtonLabel | translate" [disabled]="aiGenerationDisabled">
-        <span>{{ aiButtonLabel | translate }}</span>
+      <button type="button" name="generateSubstitution" [attr.data-cy]="dataCyPrefix() + '-generate-ai'" class="btn btn-ai btn-sm"
+        (click)="generate.emit()" [title]="aiButtonLabel() | translate" [disabled]="aiGenerationDisabled()">
+        <span>{{ aiButtonLabel() | translate }}</span>
       </button>
-      @if (!aiAgentDeployed) {
+      @if (!aiAgentDeployed()) {
       <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-        [popover]="(aiCapabilitiesDisabled
+        [popover]="(aiCapabilitiesDisabled()
           ? 'AI capabilities are disabled in this tenant.'
           : 'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.') | translate"
         placement="right" container="body" triggers="focus" type="button"></button>
@@ -48,17 +48,17 @@
     </div>
     <div class="col-lg-5 p-r-16">
       <div class="input-group">
-        <c8y-select [attr.data-cy]="dataCyPrefix + '-code-template-select'" [items]="codeTemplateItems" [ngModel]="templateId"
+        <c8y-select [attr.data-cy]="dataCyPrefix() + '-code-template-select'" [items]="codeTemplateItems" [ngModel]="templateId()"
           (ngModelChange)="onTemplateSelected($event)" name="templateSelect" [filterItems]="true" labelProperty="label"
           placeholder="{{ 'Select template...' | translate }}" [attr.aria-label]="'Code Template' | translate" class="select-template">
         </c8y-select>
         <div class="input-group-btn">
-          <button type="button" name="replace" [attr.data-cy]="dataCyPrefix + '-code-template-replace'" class="btn btn-default btn-sm"
-            (click)="replaceCode.emit()" [disabled]="!templateId"
+          <button type="button" name="replace" [attr.data-cy]="dataCyPrefix() + '-code-template-replace'" class="btn btn-default btn-sm"
+            (click)="replaceCode.emit()" [disabled]="!templateId()"
             [title]="'Replace the code in the editor with the selected template' | translate" translate>
             Replace code
           </button>
-          <button type="button" name="update" [attr.data-cy]="dataCyPrefix + '-code-template-create'" class="btn btn-default btn-sm"
+          <button type="button" name="update" [attr.data-cy]="dataCyPrefix() + '-code-template-create'" class="btn btn-default btn-sm"
             (click)="createTemplate.emit()" translate>
             Create code template
           </button>
@@ -66,14 +66,14 @@
       </div>
     </div>
   </div>
-  @if (showEditor) {
-  <c8y-editor #codeEditor [attr.data-cy]="dataCyPrefix + '-code-editor'" [editorOptions]="editorOptions" class="form-control flex-grow"
-    style="min-height: 630px" monacoEditorMarkerValidator [ngModel]="code" (ngModelChange)="codeChange.emit($event)"
+  @if (showEditor()) {
+  <c8y-editor #codeEditor [attr.data-cy]="dataCyPrefix() + '-code-editor'" [editorOptions]="editorOptions()" class="form-control flex-grow"
+    style="min-height: 630px" monacoEditorMarkerValidator [ngModel]="code()" (ngModelChange)="codeChange.emit($event)"
     (editorInit)="editorInit.emit()">
   </c8y-editor>
   }
 </div>
-@if (showInternalNote) {
+@if (showInternalNote()) {
 <div class="p-t-48">
   <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
 </div>

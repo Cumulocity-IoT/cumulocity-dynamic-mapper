@@ -111,9 +111,9 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
     fixture = TestBed.createComponent(MappingStepTestingComponent);
     component = fixture.componentInstance;
-    component.mapping = buildMapping();
-    component.stepperConfiguration = { persistence: 'create', direction: Direction.INBOUND } as StepperConfiguration;
-    component.updateTestingTemplate = new ReplaySubject<Mapping>(1);
+    fixture.componentRef.setInput('mapping', buildMapping());
+    fixture.componentRef.setInput('stepperConfiguration', { persistence: 'create', direction: Direction.INBOUND } as StepperConfiguration);
+    fixture.componentRef.setInput('updateTestingTemplate', new ReplaySubject<Mapping>(1));
     await component.ngOnInit();
   });
 
@@ -131,7 +131,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
   it('marks itself for checking when the host pushes a new test mapping', () => {
     const markForCheck = spyOn(component['cdr'], 'markForCheck');
 
-    component.updateTestingTemplate.next(buildMapping());
+    component.updateTestingTemplate().next(buildMapping());
 
     expect(markForCheck).toHaveBeenCalled();
   });
@@ -279,7 +279,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     });
 
     beforeEach(() => {
-      component.mapping.direction = Direction.OUTBOUND;
+      component.mapping().direction = Direction.OUTBOUND;
     });
 
     it('names the connectors the message went through', () => {
@@ -289,13 +289,13 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     });
 
     it('warns that unsaved connector changes were not applied', () => {
-      component.connectorsUnsaved = true;
+      fixture.componentRef.setInput('connectorsUnsaved', true);
       const text = component.describeSendResult(published({ publishedConnectors: ['Hive'] }));
       expect(text).toContain('unsaved changes in the Connector tab are not applied');
     });
 
     it('stays silent about the connector selection when it is saved', () => {
-      component.connectorsUnsaved = false;
+      fixture.componentRef.setInput('connectorsUnsaved', false);
       expect(component.describeSendResult(published())).not.toContain('Connector tab');
     });
   });
@@ -329,7 +329,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
   describe('Live Test availability', () => {
     beforeEach(() => {
-      component.stepperConfiguration.allowTestSending = true;
+      component.stepperConfiguration().allowTestSending = true;
       component.testMapping.useExternalId = true;
     });
 
@@ -353,7 +353,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     });
 
     it('explains when sending is not allowed for the payload/transformation combination', () => {
-      component.stepperConfiguration.allowTestSending = false;
+      component.stepperConfiguration().allowTestSending = false;
 
       expect(component.liveTestDisabledReason).toContain('not available');
     });
@@ -396,7 +396,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(component.testHelpText).toContain('test device');
       expect(component.liveTestTitle).toContain('test device');
 
-      component.mapping.direction = Direction.OUTBOUND;
+      component.mapping().direction = Direction.OUTBOUND;
       expect(component.testHelpText).toContain('connected broker');
       expect(component.testHelpText).not.toContain('d11r_liveTest_');
       expect(component.liveTestTitle).toContain('broker');
@@ -405,11 +405,11 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
   describe('behaviour around the buttons', () => {
     it('shows an explanation instead of dead buttons when neither test is permitted', () => {
-      component.stepperConfiguration.allowTestTransformation = false;
-      component.stepperConfiguration.allowTestSending = false;
+      component.stepperConfiguration().allowTestTransformation = false;
+      component.stepperConfiguration().allowTestSending = false;
       expect(component.testingUnavailable).toBeTrue();
 
-      component.stepperConfiguration.allowTestTransformation = true;
+      component.stepperConfiguration().allowTestTransformation = true;
       expect(component.testingUnavailable).toBeFalse();
     });
 
@@ -634,7 +634,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
   describe('outbound Live Test result', () => {
     beforeEach(() => {
-      component.mapping.direction = Direction.OUTBOUND;
+      component.mapping().direction = Direction.OUTBOUND;
     });
 
     it('says what was published instead of claiming an object was created', () => {
@@ -663,7 +663,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     beforeEach(() => {
       emitted = [];
       component.sourceTemplateChanged.subscribe(v => emitted.push(v));
-      originalSource = component.mapping.sourceTemplate;
+      originalSource = component.mapping().sourceTemplate;
     });
 
     it('running a Dry Run leaves the mapping and the host untouched', async () => {
@@ -671,14 +671,14 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onTestTransformation();
 
-      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(component.mapping().sourceTemplate).toBe(originalSource);
       expect(emitted).toEqual([]);
     });
 
     it('Reset leaves the mapping and the host untouched', async () => {
       await component.onResetTransformation();
 
-      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(component.mapping().sourceTemplate).toBe(originalSource);
       expect(emitted).toEqual([]);
     });
 
@@ -695,13 +695,13 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       component.onSourceTemplateChanged({ updatedContent: { json: { a: 2 } } } as any);
 
       expect(emitted).toEqual([{ a: 2 }]);
-      expect(component.mapping.sourceTemplate).toBe(originalSource); // the step never writes the mapping
+      expect(component.mapping().sourceTemplate).toBe(originalSource); // the step never writes the mapping
     });
 
     it('a change event that only re-serializes the same payload is not an edit', () => {
       component.onSourceTemplateChanged({ updatedContent: { text: '{ "a": 1 }' } } as any);
 
-      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(component.mapping().sourceTemplate).toBe(originalSource);
       expect(emitted).toEqual([]);
     });
 

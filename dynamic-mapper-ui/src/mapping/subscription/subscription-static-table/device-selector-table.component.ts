@@ -21,11 +21,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   EventEmitter,
-  Input,
   OnInit,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, input } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { Column, ColumnDataType, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -45,10 +43,10 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, Registratio
     DeviceGridService]
 })
 export class DeviceSelectorTableComponent implements OnInit {
-  @Input() deviceList: IIdentified[];
+  readonly deviceList = input<IIdentified[]>();
 
   /** Embedded in a page instead of a drawer: no header or buttons; every selection change is emitted as `selectionChange`. */
-  @Input() inline = false;
+  readonly inline = input(false);
 
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<IIdentified[]>();
@@ -69,14 +67,14 @@ export class DeviceSelectorTableComponent implements OnInit {
    * unsubscribe a device.
    */
   clickedUpdateSubscription() {
-    const existingIds = new Set(this.deviceList.map(device => device.id));
+    const existingIds = new Set(this.deviceList().map(device => device.id));
 
     // Only add new IDs that don't already exist. The host's list is not changed: it receives
     // the combined list and decides what to keep.
     const added = (this.selectedItemIds ?? [])
       .filter(id => !existingIds.has(id))
       .map(id => ({ id }));
-    this.commit.emit([...this.deviceList, ...added]);
+    this.commit.emit([...this.deviceList(), ...added]);
   }
 
   clickedCancel() {
@@ -87,7 +85,7 @@ export class DeviceSelectorTableComponent implements OnInit {
   onItemsSelect(selectedItemIds: string[]) {
     const previous = new Set(this.selectedItemIds);
     this.selectedItemIds = selectedItemIds;
-    if (this.inline) {
+    if (this.inline()) {
       this.emitInline(previous);
     }
   }
@@ -99,7 +97,7 @@ export class DeviceSelectorTableComponent implements OnInit {
    */
   private emitInline(previous: Set<string>) {
     const selected = new Set(this.selectedItemIds ?? []);
-    const base = (this.deviceList ?? []).filter(d => !(previous.has(String(d.id)) && !selected.has(String(d.id))));
+    const base = (this.deviceList() ?? []).filter(d => !(previous.has(String(d.id)) && !selected.has(String(d.id))));
     const existingIds = new Set(base.map(d => String(d.id)));
     const added = [...selected].filter(id => !existingIds.has(id)).map(id => ({ id }));
     this.selectionChange.emit([...base, ...added]);

@@ -25,7 +25,7 @@
           data-cy="dm-device-table-grid"></c8y-device-grid>
 </ng-template>
 
-@if (inline) {
+@if (inline()) {
 <ng-container *ngTemplateOutlet="gridBody"></ng-container>
 } @else {
 <div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">

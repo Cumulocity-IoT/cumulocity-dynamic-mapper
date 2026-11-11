@@ -21,11 +21,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   EventEmitter,
-  Input,
   OnDestroy,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
@@ -66,10 +64,8 @@ export interface SubstitutionGridSettings {
   imports: [CoreModule, PopoverModule, SharedModule, FormsModule]
 })
 export class SubstitutionGridComponent implements OnDestroy {
-  @Input()
-  mapping!: Mapping;
-  @Input()
-  settings!: SubstitutionGridSettings;
+  readonly mapping = input<Mapping>();
+  readonly settings = input<SubstitutionGridSettings>();
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
@@ -141,11 +137,11 @@ export class SubstitutionGridComponent implements OnDestroy {
   /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
    *  expand into, so "Expand as array" has no effect and stays locked for that direction. */
   isExpandArrayDisabled(): boolean {
-    return this.settings.readOnly || this.mapping.direction === Direction.OUTBOUND;
+    return this.settings().readOnly || this.mapping().direction === Direction.OUTBOUND;
   }
 
   isRepairStrategyDisabled(): boolean {
-    return this.settings.readOnly;
+    return this.settings().readOnly;
   }
 
   /** Called from the template on every change detection pass: reuse the arrays instead of rebuilding one per row. */

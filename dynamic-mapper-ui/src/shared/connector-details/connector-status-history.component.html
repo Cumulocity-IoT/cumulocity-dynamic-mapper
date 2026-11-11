@@ -20,13 +20,13 @@
 -->
 
 <div class="d11r-connector-status-history">
-  @if (history?.historyTruncated) {
+  @if (history()?.historyTruncated) {
   <div class="text-muted text-10 m-b-4">
     <i c8yIcon="info-circle"></i>
-    @if (history.historyOmittedCount === 1) {
-    <span [textContent]="'… {{count}} earlier entry omitted …' | translate: { count: history.historyOmittedCount }"></span>
+    @if (history().historyOmittedCount === 1) {
+    <span [textContent]="'… {{count}} earlier entry omitted …' | translate: { count: history().historyOmittedCount }"></span>
     } @else {
-    <span [textContent]="'… {{count}} earlier entries omitted …' | translate: { count: history.historyOmittedCount }"></span>
+    <span [textContent]="'… {{count}} earlier entries omitted …' | translate: { count: history().historyOmittedCount }"></span>
     }
   </div>
   }
@@ -37,10 +37,10 @@
        center to the last dot's center sidesteps both problems entirely — its height comes from
        top/bottom anchors against this wrapper, not from any one row's content. -->
   <div style="position: relative;">
-    @if (history?.history?.length > 1) {
+    @if (history()?.history?.length > 1) {
     <div style="position: absolute; left: 7px; top: 10px; bottom: 10px; width: 2px; background: var(--c8y-border-color-1, #e0e0e0); z-index: 0;"></div>
     }
-    @for (entry of history?.history; track $index) {
+    @for (entry of history()?.history; track $index) {
     <div class="d-flex">
       <div style="width: 16px; flex-shrink: 0;">
         <div class="d-flex a-i-center j-c-center" style="height: 20px;">

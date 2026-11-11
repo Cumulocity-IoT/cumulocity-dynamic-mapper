@@ -19,7 +19,7 @@
  */
 
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, ViewChild, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, ViewChild, viewChild, input } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -41,20 +41,20 @@ import { TemplateType } from '../../shared/configuration/configuration.model';
   imports: [CoreModule, CommonModule, EditorComponent, PopoverModule]
 })
 export class MappingCodeEditorSectionComponent {
-  @Input() label = '';
-  @Input() help = '';
-  @Input() code?: string;
-  @Input() editorOptions?: EditorComponent['editorOptions'];
-  @Input() templateId?: TemplateType;
+  readonly label = input('');
+  readonly help = input('');
+  readonly code = input<string>();
+  readonly editorOptions = input<EditorComponent['editorOptions']>();
+  readonly templateId = input<TemplateType>();
   @Input() codeTemplateItems: Array<{ label: string; value: string }> = [];
-  @Input() aiButtonLabel = 'Generate with AI';
-  @Input() aiGenerationDisabled = false;
-  @Input() aiAgentDeployed = false;
-  @Input() aiCapabilitiesDisabled = false;
+  readonly aiButtonLabel = input('Generate with AI');
+  readonly aiGenerationDisabled = input(false);
+  readonly aiAgentDeployed = input(false);
+  readonly aiCapabilitiesDisabled = input(false);
   /** False while the host's templates are still loading, so the editor is not created too early. */
-  @Input() showEditor = true;
-  @Input() showInternalNote = false;
-  @Input() dataCyPrefix = 'dm-mapping-stepper';
+  readonly showEditor = input(true);
+  readonly showInternalNote = input(false);
+  readonly dataCyPrefix = input('dm-mapping-stepper');
 
   @Output() codeChange = new EventEmitter<string>();
   @Output() templateSelected = new EventEmitter<TemplateType>();

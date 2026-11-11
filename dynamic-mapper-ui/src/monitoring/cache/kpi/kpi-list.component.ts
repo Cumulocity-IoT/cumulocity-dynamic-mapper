@@ -19,7 +19,7 @@
  *
  */
 
-import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Output, ChangeDetectionStrategy, input } from '@angular/core';
 import {
     BreadcrumbModule,
     C8yTranslateModule,
@@ -50,24 +50,24 @@ import { KpiDetails } from '../../shared/monitoring.service';
     standalone: true
 })
 export class KpiListComponent {
-    @Input() kpis: KpiDetails[];
+    readonly kpis = input<KpiDetails[]>();
     /** Whether the user may clear caches; disables the per-row clear buttons. */
-    @Input() canClear = false;
+    readonly canClear = input(false);
     /** Domains (e.g. `inboundIdCache`) that offer a clear action. */
-    @Input() clearableDomains: string[] = [];
+    readonly clearableDomains = input<string[]>([]);
     /** Emits the domain of the row whose clear button was clicked. */
     @Output() clear = new EventEmitter<string>();
 
     isClearable(domain: string): boolean {
-        return this.clearableDomains.includes(domain);
+        return this.clearableDomains().includes(domain);
     }
 
     get kpisByDomain(): Map<string, KpiDetails[]> {
-        if (!this.kpis) {
+        if (!this.kpis()) {
             return new Map();
         }
 
-        return this.kpis.reduce((map, kpi) => {
+        return this.kpis().reduce((map, kpi) => {
             const domain = kpi.domain;
             if (!map.has(domain)) {
                 map.set(domain, []);

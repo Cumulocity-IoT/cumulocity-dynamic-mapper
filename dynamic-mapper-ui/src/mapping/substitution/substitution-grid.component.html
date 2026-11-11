@@ -68,14 +68,14 @@
       <tbody>
         <!-- Track by index: a substitution has no id, and an edit replaces the row's object, so
              tracking by object would rebuild the row (and drop focus) on every change. -->
-        @for (sub of mapping.substitutions; track $index; let i = $index) {
+        @for (sub of mapping().substitutions; track $index; let i = $index) {
           <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
-            [class.active]="settings.selectedSubstitutionIndex === i">
+            [class.active]="settings().selectedSubstitutionIndex === i">
             <td>
               <label class="c8y-radio" [title]="'Checkbox' | translate">
                 <input type="radio" (click)="onSubstitutionSelect(i)"
                   [attr.data-cy]="'dm-substitution-select-' + i"
-                  [checked]="settings.selectedSubstitutionIndex == i" />
+                  [checked]="settings().selectedSubstitutionIndex == i" />
                 <span></span>
               </label>
             </td>
@@ -84,7 +84,7 @@
             </td>
             @if (!sub['registeredType']) {
             <td class="text-12 substitution-path-cell" [title]="sub.pathSource">
-              {{ (definesDeviceIdentifier(mapping, sub) ? '* ' : '') + sub.pathSource }}
+              {{ (definesDeviceIdentifier(mapping(), sub) ? '* ' : '') + sub.pathSource }}
             </td>
             <td class="text-12 substitution-path-cell" [title]="sub.pathTarget">
               {{ sub.pathTarget }}
@@ -115,7 +115,7 @@
               </div>
             </td>
             <td class="d-flex a-i-center j-c-end">
-              @if (settings.selectedSubstitutionIndex === i) {
+              @if (settings().selectedSubstitutionIndex === i) {
               <button title="{{ 'Cancel editing / new substitution' | translate }}" class="btn btn-icon btn-clean"
                 [attr.data-cy]="'dm-substitution-cancel-edit-' + i" (click)="cancelEdit.emit()">
                 <i c8yIcon="close"></i>
@@ -124,7 +124,7 @@
               }
               <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
                 [attr.data-cy]="'dm-substitution-delete-' + i"
-                (click)="onSubstitutionDelete(i)" [disabled]="settings.readOnly">
+                (click)="onSubstitutionDelete(i)" [disabled]="settings().readOnly">
                 <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
                 <span class="sr-only" translate>Remove</span>
               </button>

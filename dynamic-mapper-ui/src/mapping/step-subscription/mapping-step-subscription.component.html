@@ -19,7 +19,7 @@
 ~
 -->
 
-<div class="p-16" [attr.data-cy]="dataCyPrefix + '-subscription'">
+<div class="p-16" [attr.data-cy]="dataCyPrefix() + '-subscription'">
   <p class="text-muted" translate>
     Outbound mappings require a device subscription so Cumulocity pushes events to the broker.
     Choose how devices are subscribed. The subscription is created when you save the mapping.
@@ -41,7 +41,7 @@
     <!-- Skip -->
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'skip'" (onSelect)="$event && setMode('skip')"
-        [attr.data-cy]="dataCyPrefix + '-subscription-skip'"></c8y-li-radio>
+        [attr.data-cy]="dataCyPrefix() + '-subscription-skip'"></c8y-li-radio>
       <c8y-li-icon icon="forward"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Skip for now</strong>
@@ -54,7 +54,7 @@
     <!-- Dynamic -->
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'dynamic'" (onSelect)="$event && setMode('dynamic')"
-        [disabled]="!ready" [attr.data-cy]="dataCyPrefix + '-subscription-dynamic'"></c8y-li-radio>
+        [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic'"></c8y-li-radio>
       <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Dynamic</strong>
@@ -62,10 +62,10 @@
           Devices are subscribed by device type or device group. Newly created devices of a chosen type, and devices added to a chosen group, are subscribed automatically.
         </p>
         @if (selection.mode === 'dynamic' && ready) {
-        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix + '-subscription-dynamic-panel'">
+        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic-panel'">
           <c8y-li role="listitem">
             <c8y-li-radio name="dynamicSub" [selected]="expanded.types" (onSelect)="$event && selectSub('types')"
-              [attr.data-cy]="dataCyPrefix + '-subscription-sub-types'"></c8y-li-radio>
+              [attr.data-cy]="dataCyPrefix() + '-subscription-sub-types'"></c8y-li-radio>
             <c8y-li-icon icon="subscription"></c8y-li-icon>
             <c8y-li-body>
               <div class="d-flex a-i-center flex-wrap">
@@ -86,7 +86,7 @@
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.types) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-types'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix() + '-subscription-types'">
                 <d11r-type-selector [inline]="true" [typeList]="types" (typesChange)="onTypesChange($event)"
                   [showResync]="true" [knownTypes]="selection.baseline?.types ?? []" [resyncTypes]="selection.resyncTypes"
                   (resyncTypesChange)="setResyncTypes($event)"></d11r-type-selector>
@@ -99,7 +99,7 @@
           </c8y-li>
           <c8y-li role="listitem">
             <c8y-li-radio name="dynamicSub" [selected]="expanded.groups" (onSelect)="$event && selectSub('groups')"
-              [attr.data-cy]="dataCyPrefix + '-subscription-sub-groups'"></c8y-li-radio>
+              [attr.data-cy]="dataCyPrefix() + '-subscription-sub-groups'"></c8y-li-radio>
             <c8y-li-icon icon="subscription"></c8y-li-icon>
             <c8y-li-body>
               <div class="d-flex a-i-center flex-wrap">
@@ -120,7 +120,7 @@
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.groups) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-groups'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix() + '-subscription-groups'">
                 <d11r-group-selector [inline]="true" [deviceList]="groups" (selectionChange)="onGroupsChange($event)"></d11r-group-selector>
               </div>
               }
@@ -134,7 +134,7 @@
     <!-- Static -->
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'static'" (onSelect)="$event && setMode('static')"
-        [disabled]="!ready" [attr.data-cy]="dataCyPrefix + '-subscription-static'"></c8y-li-radio>
+        [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-static'"></c8y-li-radio>
       <c8y-li-icon icon="c8y-device"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Static</strong>
@@ -142,10 +142,10 @@
           Specific devices are subscribed. Devices added to a group later are not subscribed.
         </p>
         @if (selection.mode === 'static' && ready) {
-        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix + '-subscription-static-panel'">
+        <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix() + '-subscription-static-panel'">
           <c8y-li role="listitem">
             <c8y-li-radio name="staticSub" [selected]="expanded.devices" (onSelect)="$event && selectSub('devices')"
-              [attr.data-cy]="dataCyPrefix + '-subscription-sub-device-tree'"></c8y-li-radio>
+              [attr.data-cy]="dataCyPrefix() + '-subscription-sub-device-tree'"></c8y-li-radio>
             <c8y-li-icon icon="subscription"></c8y-li-icon>
             <c8y-li-body>
               <div class="d-flex a-i-center flex-wrap">
@@ -166,7 +166,7 @@
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.devices) {
-              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix + '-subscription-device-tree'">
+              <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix() + '-subscription-device-tree'">
                 <d11r-device-selector-tree [inline]="true" [deviceList]="devices" (selectionChange)="onDevicesChange($event)"></d11r-device-selector-tree>
               </div>
               }
@@ -174,7 +174,7 @@
           </c8y-li>
           <c8y-li role="listitem">
             <c8y-li-radio name="staticSub" [selected]="expanded.table" (onSelect)="$event && selectSub('table')"
-              [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-sub-device-table'"></c8y-li-radio>
+              [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix() + '-subscription-sub-device-table'"></c8y-li-radio>
             <c8y-li-icon icon="subscription"></c8y-li-icon>
             <c8y-li-body>
               <div class="d-flex a-i-center flex-wrap">
@@ -188,7 +188,7 @@
               </div>
               @if (expanded.table) {
               <button type="button" class="btn btn-link p-l-0 m-t-4" [disabled]="!canEdit" (click)="showDeviceTable = true"
-                [attr.data-cy]="dataCyPrefix + '-subscription-open-device-table'">
+                [attr.data-cy]="dataCyPrefix() + '-subscription-open-device-table'">
                 <i c8yIcon="subscription" class="m-r-4"></i>{{ 'Open device table' | translate }}
               </button>
               }
@@ -207,10 +207,10 @@
 
   <!-- Device context of the message this mapping was created from: the values of that device only -->
   @if (contextMode && ready) {
-  <c8y-list-group class="separator-top m-t-16" role="list" [attr.data-cy]="dataCyPrefix + '-subscription-suggestions'">
+  <c8y-list-group class="separator-top m-t-16" role="list" [attr.data-cy]="dataCyPrefix() + '-subscription-suggestions'">
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionContextChoice" [selected]="contextChoice === 'skip'" (onSelect)="onContextSelect('skip', $event)"
-        [attr.data-cy]="dataCyPrefix + '-subscription-skip'"></c8y-li-radio>
+        [attr.data-cy]="dataCyPrefix() + '-subscription-skip'"></c8y-li-radio>
       <c8y-li-icon icon="forward"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Skip for now</strong>
@@ -222,7 +222,7 @@
 
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionContextChoice" [selected]="contextChoice === 'type'" (onSelect)="onContextSelect('type', $event)"
-        [disabled]="!canEdit || !contextType" [attr.data-cy]="dataCyPrefix + '-subscription-suggest-type'"></c8y-li-radio>
+        [disabled]="!canEdit || !contextType" [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-type'"></c8y-li-radio>
       <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>By device type</strong>
@@ -233,7 +233,7 @@
         @if (!isTypeSubscribed(type) && contextChoice === 'type') {
         <label class="c8y-checkbox m-t-8 d-block">
           <input type="checkbox" [checked]="contextResync" [disabled]="!canEdit" (change)="setContextResync($any($event.target).checked)"
-            [attr.data-cy]="dataCyPrefix + '-subscription-suggest-type-resync'" />
+            [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-type-resync'" />
           <span></span>
           <span translate>Also subscribe existing devices</span>
         </label>
@@ -246,7 +246,7 @@
 
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionContextChoice" [selected]="contextChoice === 'group'" (onSelect)="onContextSelect('group', $event)"
-        [disabled]="!canEdit || contextGroups.length === 0" [attr.data-cy]="dataCyPrefix + '-subscription-suggest-group'"></c8y-li-radio>
+        [disabled]="!canEdit || contextGroups.length === 0" [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-group'"></c8y-li-radio>
       <c8y-li-icon icon="c8y-group"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>By device group</strong>
@@ -259,7 +259,7 @@
           @for (g of contextGroups; track g.id) {
           <c8y-li [dense]="true" role="listitem">
             <c8y-li-radio name="subscriptionContextGroup" [selected]="contextChoice === 'group' && contextGroupId === g.id" (onSelect)="$event && setContextGroup(g.id)"
-              [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-suggest-group-' + g.id"></c8y-li-radio>
+              [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-group-' + g.id"></c8y-li-radio>
             <c8y-li-body>{{ g.name }} @if (isGroupSubscribed(g.id)) { <span class="text-muted text-12 m-l-4" translate>already subscribed</span> }</c8y-li-body>
           </c8y-li>
           }
@@ -273,7 +273,7 @@
     @if (contextDevice; as device) {
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionContextChoice" [selected]="contextChoice === 'device'" (onSelect)="onContextSelect('device', $event)"
-        [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix + '-subscription-suggest-device'"></c8y-li-radio>
+        [disabled]="!canEdit" [attr.data-cy]="dataCyPrefix() + '-subscription-suggest-device'"></c8y-li-radio>
       <c8y-li-icon icon="c8y-device"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>This device only</strong>

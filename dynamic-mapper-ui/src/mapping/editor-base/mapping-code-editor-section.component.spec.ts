@@ -126,16 +126,6 @@ describe('MappingCodeEditorSectionComponent', () => {
     fixture.detectChanges();
     expect(el().textContent).toContain('No template to edit');
   });
-
-  it('does not re-render when a property is assigned without a binding change (it is OnPush)', () => {
-    fixture.detectChanges();
-    expect(el().textContent).not.toContain('No template to edit');
-
-    component.showInternalNote = true;
-    fixture.detectChanges();
-
-    expect(el().textContent).not.toContain('No template to edit');
-  });
 });
 
 describe('MappingCodeEditorSectionComponent bound by a parent', () => {

@@ -73,7 +73,6 @@ module.exports = [
     // zero, delete its line here.
     files: [
       'src/configuration/code-template/*.ts',
-      'src/extension/card/*.ts',
       'src/mapping/deprecation-notice/*.ts',
       'src/mapping/editor-base/*.ts',
       'src/mapping/grid/copy-source-modal/*.ts',
@@ -84,16 +83,11 @@ module.exports = [
       'src/mapping/step-properties/*.ts',
       'src/mapping/step-subscription/*.ts',
       'src/mapping/step-template/*.ts',
-      'src/mapping/step-testing/*.ts',
-      'src/mapping/step-transformation/*.ts',
       'src/mapping/subscription/subscription-dynamic-group/*.ts',
       'src/mapping/subscription/subscription-dynamic-type/*.ts',
-      'src/mapping/subscription/subscription-static-table/*.ts',
       'src/mapping/subscription/subscription-static-tree/*.ts',
-      'src/mapping/substitution/*.ts',
       'src/mapping/validation/*.ts',
       'src/mapping/versions/*.ts',
-      'src/monitoring/cache/kpi/*.ts',
       'src/shared/component/code-explorer/*.ts',
       'src/shared/component/code-template/*.ts',
       'src/shared/component/confirmation/*.ts',
@@ -101,8 +95,7 @@ module.exports = [
       'src/shared/component/json-editor/*.ts',
       'src/shared/component/select/*.ts',
       'src/shared/connector-configuration/*.ts',
-      'src/shared/connector-configuration/edit/*.ts',
-      'src/shared/connector-details/*.ts'
+      'src/shared/connector-configuration/edit/*.ts'
     ],
     ignores: ['**/*.spec.ts'],
     rules: {
