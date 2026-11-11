@@ -23,7 +23,7 @@ import {
   EventEmitter,
   Input,
   Output,
-  ViewEncapsulation, input } from '@angular/core';
+  ViewEncapsulation, input, model } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { CoreModule } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
@@ -40,7 +40,8 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 })
 export class GroupSelectorComponent {
-  @Input() deviceList: IIdentified[];
+  /** Two-way: the selector replaces it with the user's edit. */
+  readonly deviceList = model<IIdentified[]>();
 
   /** Embedded in a page instead of a drawer: no header or buttons; every edit is emitted as `selectionChange`. */
   readonly inline = input(false);
@@ -50,12 +51,12 @@ export class GroupSelectorComponent {
   @Output() selectionChange = new EventEmitter<IIdentified[]>();
 
   onSelectionChange(list: IIdentified[]) {
-    this.deviceList = list;
+    this.deviceList.set(list);
     if (this.inline()) this.selectionChange.emit(list);
   }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.deviceList);
+    this.commit.emit(this.deviceList());
   }
 
   clickedCancel() {

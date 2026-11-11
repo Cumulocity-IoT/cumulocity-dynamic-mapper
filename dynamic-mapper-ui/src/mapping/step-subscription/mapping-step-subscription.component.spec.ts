@@ -57,7 +57,7 @@ describe('MappingStepSubscriptionComponent', () => {
     fixture.componentRef.setInput('selection', selection);
     fixture.componentRef.setInput('feature', feature);
     emitted = [];
-    component.selectionChange.subscribe(s => {
+    component.selection.subscribe(s => {
       emitted.push(s);
       // The host owns the selection and hands it back, as the editors do.
       fixture.componentRef.setInput('selection', s);
@@ -145,7 +145,7 @@ describe('MappingStepSubscriptionComponent', () => {
       expect(q('dm-mapping-stepper-subscription-skip')).not.toBeNull();
       expect(q('dm-mapping-stepper-subscription-dynamic')).not.toBeNull();
       expect(q('dm-mapping-stepper-subscription-static')).not.toBeNull();
-      expect(component.selection.mode).toBe('skip');
+      expect(component.selection().mode).toBe('skip');
       expect(q('dm-mapping-stepper-subscription-dynamic-panel')).toBeNull();
       expect(q('dm-mapping-stepper-subscription-static-panel')).toBeNull();
     });
@@ -273,7 +273,7 @@ describe('MappingStepSubscriptionComponent', () => {
     });
 
     it('is off by default and is set per type', () => {
-      expect(component.selection.resyncTypes).toEqual([]);
+      expect(component.selection().resyncTypes).toEqual([]);
       component.setResyncTypes(['c8y_New']);
       expect(emitted.at(-1)!.resyncTypes).toEqual(['c8y_New']);
     });
@@ -310,7 +310,7 @@ describe('MappingStepSubscriptionComponent', () => {
 
     it('starts on skip and writes nothing', () => {
       expect(component.contextChoice).toBe('skip');
-      expect(hasPendingSubscriptionChanges(component.selection)).toBe(false);
+      expect(hasPendingSubscriptionChanges(component.selection())).toBe(false);
     });
 
     it('choosing the type adds it to the existing types and is dynamic', () => {
@@ -337,7 +337,7 @@ describe('MappingStepSubscriptionComponent', () => {
     });
 
     it('offers no resync when the type is already subscribed', () => {
-      component.selection = { ...component.selection, baseline: { ...baseline, types: ['c8y_SensorPhone'] } };
+      component.selection.set({ ...component.selection(), baseline: { ...baseline, types: ['c8y_SensorPhone'] } });
       component.setContextChoice('type');
       fixture.detectChanges();
       expect(q('dm-mapping-stepper-subscription-suggest-type-resync')).toBeNull();
@@ -362,7 +362,7 @@ describe('MappingStepSubscriptionComponent', () => {
       component.setContextChoice('type');
       component.setContextChoice('skip');
       expect(emitted.at(-1)!.mode).toBe('skip');
-      expect(hasPendingSubscriptionChanges(component.selection)).toBe(false);
+      expect(hasPendingSubscriptionChanges(component.selection())).toBe(false);
     });
 
     it('has no suggestion block without suggestions', async () => {

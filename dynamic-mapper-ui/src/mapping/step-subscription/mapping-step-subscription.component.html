@@ -40,7 +40,7 @@
   <c8y-list-group class="separator-top m-t-16" role="list">
     <!-- Skip -->
     <c8y-li role="listitem">
-      <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'skip'" (onSelect)="$event && setMode('skip')"
+      <c8y-li-radio name="subscriptionMode" [selected]="selection().mode === 'skip'" (onSelect)="$event && setMode('skip')"
         [attr.data-cy]="dataCyPrefix() + '-subscription-skip'"></c8y-li-radio>
       <c8y-li-icon icon="forward"></c8y-li-icon>
       <c8y-li-body>
@@ -53,7 +53,7 @@
 
     <!-- Dynamic -->
     <c8y-li role="listitem">
-      <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'dynamic'" (onSelect)="$event && setMode('dynamic')"
+      <c8y-li-radio name="subscriptionMode" [selected]="selection().mode === 'dynamic'" (onSelect)="$event && setMode('dynamic')"
         [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic'"></c8y-li-radio>
       <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
       <c8y-li-body>
@@ -61,7 +61,7 @@
         <p class="text-muted m-b-0 m-t-4 text-12" translate>
           Devices are subscribed by device type or device group. Newly created devices of a chosen type, and devices added to a chosen group, are subscribed automatically.
         </p>
-        @if (selection.mode === 'dynamic' && ready) {
+        @if (selection().mode === 'dynamic' && ready) {
         <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic-panel'">
           <c8y-li role="listitem">
             <c8y-li-radio name="dynamicSub" [selected]="expanded.types" (onSelect)="$event && selectSub('types')"
@@ -88,7 +88,7 @@
               @if (expanded.types) {
               <div class="m-t-8 m-b-8" [class.selector-readonly]="!canEdit" [attr.inert]="canEdit ? null : ''" [attr.data-cy]="dataCyPrefix() + '-subscription-types'">
                 <d11r-type-selector [inline]="true" [typeList]="types" (typesChange)="onTypesChange($event)"
-                  [showResync]="true" [knownTypes]="selection.baseline?.types ?? []" [resyncTypes]="selection.resyncTypes"
+                  [showResync]="true" [knownTypes]="selection().baseline?.types ?? []" [resyncTypes]="selection().resyncTypes"
                   (resyncTypesChange)="setResyncTypes($event)"></d11r-type-selector>
                 <p class="text-muted text-12 m-b-0 m-t-4" translate>
                   A device type rule only subscribes devices created afterward. Tick the box of a new type to also subscribe the devices of that type that already exist. This rescans the inventory in the background and can take a while on large inventories.
@@ -133,7 +133,7 @@
 
     <!-- Static -->
     <c8y-li role="listitem">
-      <c8y-li-radio name="subscriptionMode" [selected]="selection.mode === 'static'" (onSelect)="$event && setMode('static')"
+      <c8y-li-radio name="subscriptionMode" [selected]="selection().mode === 'static'" (onSelect)="$event && setMode('static')"
         [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-static'"></c8y-li-radio>
       <c8y-li-icon icon="c8y-device"></c8y-li-icon>
       <c8y-li-body>
@@ -141,7 +141,7 @@
         <p class="text-muted m-b-0 m-t-4 text-12" translate>
           Specific devices are subscribed. Devices added to a group later are not subscribed.
         </p>
-        @if (selection.mode === 'static' && ready) {
+        @if (selection().mode === 'static' && ready) {
         <c8y-list-group class="m-t-8" role="list" [attr.data-cy]="dataCyPrefix() + '-subscription-static-panel'">
           <c8y-li role="listitem">
             <c8y-li-radio name="staticSub" [selected]="expanded.devices" (onSelect)="$event && selectSub('devices')"

@@ -69,9 +69,9 @@ describe('MappingConnectorComponent', () => {
 
   it('stores and re-emits deployment-map-entry changes', (done) => {
     const entry: DeploymentMapEntry = { identifier: 'm', connectors: ['c1'] };
-    component.deploymentMapEntryChange.subscribe((value) => {
+    component.deploymentMapEntry.subscribe((value) => {
       expect(value).toBe(entry);
-      expect(component.deploymentMapEntry).toBe(entry);
+      expect(component.deploymentMapEntry()).toBe(entry);
       done();
     });
     component.onDeploymentMapEntryChanged(entry);

@@ -25,7 +25,7 @@ import {
   Input,
   OnInit,
   Output,
-  ViewEncapsulation, input } from '@angular/core';
+  ViewEncapsulation, input, model } from '@angular/core';
 import { C8yTranslateDirective } from '@c8y/ngx-components';
 import {
   ConnectorGridComponent,
@@ -47,8 +47,8 @@ export class MappingConnectorComponent implements OnInit {
   readonly showHeader = input<boolean>(false);
   readonly stepperConfiguration = input<StepperConfiguration>();
   readonly directions = input<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
-  @Input() deploymentMapEntry: DeploymentMapEntry;
-  @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
+  /** Two-way: setting it announces `deploymentMapEntryChange` to the host. */
+  readonly deploymentMapEntry = model<DeploymentMapEntry>();
 
   readOnly: boolean;
 
@@ -57,7 +57,6 @@ export class MappingConnectorComponent implements OnInit {
   }
 
   onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {
-    this.deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
+    this.deploymentMapEntry.set(value);
   }
 }

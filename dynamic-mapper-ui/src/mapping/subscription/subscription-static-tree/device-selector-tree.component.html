@@ -20,7 +20,7 @@
   -->
 
 <ng-template #selectorBody>
-  <c8y-asset-selector-miller [ngModel]="deviceList" (ngModelChange)="onSelectionChange($event)" data-cy="dm-device-tree-selector" [config]="{
+  <c8y-asset-selector-miller [ngModel]="deviceList()" (ngModelChange)="onSelectionChange($event)" data-cy="dm-device-tree-selector" [config]="{
             groupsSelectable: true,
             columnHeaders: true,
             showFilter: true,
