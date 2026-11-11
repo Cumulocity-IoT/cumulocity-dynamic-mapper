@@ -24,7 +24,11 @@ package dynamic.mapper.configuration;
 
 import com.cumulocity.model.DateTimeConverter;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.joda.time.DateTime;
 import org.svenson.converter.JSONConverter;
 

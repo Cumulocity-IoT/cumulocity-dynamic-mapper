@@ -24,7 +24,11 @@
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import lombok.Getter;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 
 /**

@@ -166,11 +166,14 @@ public class BinaryAttachmentService {
 
         try {
             c8ySemaphore.acquire();
-            return restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
         } catch (InterruptedException e) {
-            log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", 
+            Thread.currentThread().interrupt();
+            log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ",
                     tenant, eventId, e);
             throw new RuntimeException(e);
+        }
+        try {
+            return restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
         } finally {
             c8ySemaphore.release();
         }

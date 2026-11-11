@@ -51,6 +51,7 @@ import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.mapping.deployment.DeploymentMapService;
 import dynamic.mapper.notification.NotificationSubscriber;
+import dynamic.mapper.notification.service.SubscriptionManager;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
@@ -699,9 +700,12 @@ public class ConnectorLifecycleService {
             return;
         }
 
-        if (!notificationSubscriber.isNotificationServiceAvailable(tenant)) {
+        if (notificationSubscriber.checkNotificationServiceAvailability(tenant)
+                == SubscriptionManager.ServiceAvailability.UNAVAILABLE) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
+            // AVAILABLE, or UNKNOWN after a transient probe failure: never persist a disabled
+            // configuration because of a blip. The reconnect has its own failure handling.
             notificationSubscriber.notificationSubscriberReconnect(tenant);
             notificationSubscriber.startTokenRefresh(tenant);
         }

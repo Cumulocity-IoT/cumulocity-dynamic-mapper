@@ -154,6 +154,22 @@ class UpdateSubscriptionDeviceGroupTaskTest {
                 eq(TENANT), argThat(m -> DEVICE_A.equals(m.getId().getValue())), any());
     }
 
+    /** A failed type-subscription lookup must not read as "not covered" and drop the subscription. */
+    @Test
+    void call_removedMember_typeLookupFails_keepsSubscription() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Set.of(DEVICE_A));
+
+        C8YMessage msg = message(GROUP_ID, List.of());
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_A), anyBoolean())).thenReturn(device(DEVICE_A));
+        when(notificationSubscriber.getSubscriptionsByDeviceType(TENANT))
+                .thenThrow(new RuntimeException("c8y unavailable"));
+
+        task(msg).call();
+
+        verify(notificationSubscriber, never()).unsubscribeDeviceAndDisconnect(eq(TENANT), any(), any());
+    }
+
     // ------------------------------------------------------------------
     // Cache-miss re-sync path
     // ------------------------------------------------------------------

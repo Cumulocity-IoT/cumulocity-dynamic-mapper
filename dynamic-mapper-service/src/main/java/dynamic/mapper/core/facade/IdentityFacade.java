@@ -63,16 +63,19 @@ public class IdentityFacade {
         if (testing == null || !testing) {
             try {
                 c8ySemaphore.acquire();
-                return identityApi.getExternalId(externalID);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 log.error("Failed to acquire semaphore for resolving external ID to global ID", e);
+                return null;
+            }
+            try {
+                return identityApi.getExternalId(externalID);
             } finally {
                 c8ySemaphore.release();
             }
         } else {
             return identityMock.getExternalId(externalID);
         }
-        return null;
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
@@ -81,6 +84,12 @@ public class IdentityFacade {
             MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
             try {
                 c8ySemaphore.acquire();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Failed to acquire semaphore for resolving global ID to external ID", e);
+                return null;
+            }
+            try {
                 ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
                 for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
                     if (externalId.getType().equals(externalIdType)) {
@@ -88,8 +97,6 @@ public class IdentityFacade {
                         break;
                     }
                 }
-            } catch (InterruptedException e) {
-                log.error("Failed to acquire semaphore for resolving external ID to global ID", e);
             } finally {
                 c8ySemaphore.release();
             }

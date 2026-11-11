@@ -35,8 +35,7 @@ import dynamic.mapper.notification.task.UpdateSubscriptionDeviceTypeTask;
 import dynamic.mapper.notification.websocket.Notification;
 import jakarta.annotation.PreDestroy;
 import java.net.URI;
-import java.util.concurrent.*;
-
+import java.util.concurrent.ExecutorService;
 @Slf4j
 /**
  * Handles management notifications for device groups and device types.

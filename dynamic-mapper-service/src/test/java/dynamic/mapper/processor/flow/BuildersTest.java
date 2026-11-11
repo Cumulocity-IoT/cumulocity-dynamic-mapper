@@ -30,8 +30,8 @@ import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.model.Message;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 
 /**

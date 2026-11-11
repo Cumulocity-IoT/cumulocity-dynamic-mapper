@@ -81,6 +81,9 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            if (this.executorService != null) {
+                this.executorService.shutdownNow();
+            }
             this.executorService = Executors.newScheduledThreadPool(1);
             this.callback.onOpen(this.uri);
             // send(ByteBuffer.allocate(0));
@@ -139,12 +142,12 @@ public class CustomWebSocketClient extends WebSocketClient {
                         if (outcome == AckOutcome.ACK) {
                             failureTracker.clear(messageId);
                             if (notification.getAckHeader() != null) {
-                                log.info(
+                                log.debug(
                                         "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
                                         tenant, notification.getApi(), mappingQos, connectorId.displayName());
                                 send(notification.getAckHeader()); // ack message
                             } else {
-                                throw new RuntimeException("No message id found for ack");
+                                throw new IllegalStateException("No message id found for ack");
                             }
                         } else {
                             // Not ACKed: reconnect so Cumulocity retransmits the message (until the limit)
@@ -168,7 +171,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                             tenant, notification.getApi(), mappingQos, connectorId.displayName());
                     send(notification.getAckHeader()); // ack message
                 } else {
-                    throw new RuntimeException("No message id found for ack");
+                    throw new IllegalStateException("No message id found for ack");
                 }
             }
         }

@@ -21,34 +21,45 @@
 
 package dynamic.mapper.notification.service;
 
-import dynamic.mapper.notification.NotificationClientOperations;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.java_websocket.enums.ReadyState;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import dynamic.mapper.connector.core.client.ConnectorType;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
+
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.notification.OutboundDispatcherRegistry;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.core.ConnectorStatusEventService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.notification.CacheInventoryUpdateClient;
 import dynamic.mapper.notification.ManagementSubscriptionClient;
+import dynamic.mapper.notification.NotificationClientOperations;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
-import lombok.extern.slf4j.Slf4j;
-import org.java_websocket.enums.ReadyState;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import jakarta.annotation.PreDestroy;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Manages WebSocket connections for device and management subscriptions.
@@ -149,13 +160,21 @@ public class NotificationConnectionManager {
             CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
             if (client != null) {
                 CustomWebSocketClient old = explorerDeviceClients.put(sessionId, client);
-                if (old != null) { try { old.close(); } catch (Exception ignored) {} }
+                if (old != null) { closeQuietly(old, sessionId); }
                 explorerDeviceSessionMeta.put(sessionId, new String[]{tenant, tokenSeed});
                 log.info("{} - Explorer device WebSocket opened for session {}", tenant, sessionId);
             }
         } catch (Exception e) {
             log.error("{} - Failed to open explorer device WebSocket for session {}: {}",
                     tenant, sessionId, e.getMessage(), e);
+        }
+    }
+
+    private void closeQuietly(CustomWebSocketClient client, String sessionId) {
+        try {
+            client.close();
+        } catch (Exception e) {
+            log.debug("Error closing explorer device WebSocket for session {}: {}", sessionId, e.getMessage());
         }
     }
 
@@ -167,7 +186,7 @@ public class NotificationConnectionManager {
     public void closeExplorerDeviceClient(String sessionId) {
         CustomWebSocketClient client = explorerDeviceClients.remove(sessionId);
         if (client != null) {
-            try { client.close(); } catch (Exception ignored) {}
+            closeQuietly(client, sessionId);
             log.info("Explorer device WebSocket closed for session {}", sessionId);
         }
         String[] meta = explorerDeviceSessionMeta.remove(sessionId);

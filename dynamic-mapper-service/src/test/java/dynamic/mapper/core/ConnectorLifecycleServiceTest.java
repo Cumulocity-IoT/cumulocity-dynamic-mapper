@@ -89,6 +89,30 @@ class ConnectorLifecycleServiceTest {
     }
 
     @Test
+    void outboundIsDisabledOnlyWhenNotificationServiceIsDefinitelyAbsent() throws Exception {
+        ServiceConfiguration config = serviceConfigs.getServiceConfiguration(TENANT);
+        when(notifications.checkNotificationServiceAvailability(TENANT))
+                .thenReturn(dynamic.mapper.notification.service.SubscriptionManager.ServiceAvailability.UNAVAILABLE);
+
+        service.initializeOutboundResources(TENANT, config);
+
+        assertFalse(config.getOutboundMappingEnabled());
+        verify(serviceConfigs).saveServiceConfiguration(eq(TENANT), any());
+    }
+
+    @Test
+    void outboundStaysEnabledWhenTheAvailabilityProbeIsInconclusive() throws Exception {
+        ServiceConfiguration config = serviceConfigs.getServiceConfiguration(TENANT);
+        when(notifications.checkNotificationServiceAvailability(TENANT))
+                .thenReturn(dynamic.mapper.notification.service.SubscriptionManager.ServiceAvailability.UNKNOWN);
+
+        service.initializeOutboundResources(TENANT, config);
+
+        assertTrue(config.getOutboundMappingEnabled());
+        verify(serviceConfigs, never()).saveServiceConfiguration(anyString(), any());
+    }
+
+    @Test
     void deleteReportsAMissingConnectorAsNotFound() throws Exception {
         ConnectorOperationException e = assertThrows(ConnectorOperationException.class,
                 () -> service.deleteConnector(TENANT, ID));

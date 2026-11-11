@@ -25,7 +25,12 @@ import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.*;
+import dynamic.mapper.connector.core.ConnectorProperty;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
+import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -42,13 +47,21 @@ import dynamic.mapper.util.TenantLogContext;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pulsar.client.api.*;
+import org.apache.pulsar.client.api.AuthenticationFactory;
+import org.apache.pulsar.client.api.ClientBuilder;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.ConsumerEventListener;
+import org.apache.pulsar.client.api.Producer;
+import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.SubscriptionType;
 import org.apache.pulsar.client.api.PulsarClientException.UnsupportedAuthenticationException;
 import org.apache.pulsar.client.impl.MultiplierRedeliveryBackoff;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -314,6 +327,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 try {
                     Thread.sleep(delay);  // Intentional sleep for retry backoff
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                 }
             }

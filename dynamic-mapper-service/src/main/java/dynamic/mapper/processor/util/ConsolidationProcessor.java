@@ -22,7 +22,6 @@ package dynamic.mapper.processor.util;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.mapping.MappingService;
@@ -55,8 +54,11 @@ import dynamic.mapper.processor.runtime.ProcessingContext;
 @Component
 public class ConsolidationProcessor extends CommonProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public ConsolidationProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
 
     public void process(ProcessingContext<?> context) throws Exception {
         if (context != null) {

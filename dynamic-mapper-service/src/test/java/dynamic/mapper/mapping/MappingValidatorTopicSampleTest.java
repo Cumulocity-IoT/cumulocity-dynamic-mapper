@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * MQTT wildcard semantics for validateMappingTopicAndSampleConsistency:
  * a trailing "#" must match any number (incl. zero) of remaining topic

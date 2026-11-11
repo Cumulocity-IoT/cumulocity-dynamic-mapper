@@ -32,8 +32,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.Notification;
 import java.net.URI;
-import java.util.*;
-
+import java.util.Map;
 /**
  * Handles inventory cache update notifications.
  * Processes UPDATE operations to keep the local inventory cache synchronized, and DELETE
