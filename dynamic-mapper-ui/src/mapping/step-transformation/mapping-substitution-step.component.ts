@@ -157,6 +157,12 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     statusBar: true
   };
 
+  /** Rows for a read-only result box: one per line, clamped so it shrinks and grows with the content. */
+  resultRows(result: unknown): number {
+    const lines = String(result ?? '').split('\n').length;
+    return Math.min(Math.max(lines, 1), 12);
+  }
+
   ngOnInit(): void {
     this.isSubstitutionValid$ = this.stepperService.isSubstitutionValid$;
     this.sourceCustomMessage$ = this.stepperService.sourceCustomMessage$;
