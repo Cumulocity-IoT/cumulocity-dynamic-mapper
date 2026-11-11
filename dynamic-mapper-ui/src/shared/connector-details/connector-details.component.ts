@@ -31,7 +31,8 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
   SharedService,
-  ConnectorType
+  ConnectorType,
+  ROUTE_CONNECTORS
 } from '..';
 import { ServiceConfiguration } from '../configuration/configuration.model';
 import { ConnectorStatusEvent } from './connector-log.model';
@@ -62,6 +63,8 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
   ]
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
+  readonly ROUTE_CONNECTORS = ROUTE_CONNECTORS;
+
   version: string = packageJson.version;
   specifications$: Observable<ConnectorSpecification[]>;
   statusLogs$: Observable<ConnectorStatusEvent[]>;

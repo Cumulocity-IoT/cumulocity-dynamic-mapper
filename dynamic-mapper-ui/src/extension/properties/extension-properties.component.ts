@@ -23,7 +23,7 @@ import { IManagedObject } from '@c8y/client';
 import * as jsYaml from 'js-yaml';
 
 import { CoreModule, PropertiesListItem } from '@c8y/ngx-components';
-import { NODE3, SharedModule } from '../../shared';
+import { ROUTE_EXTENSIONS, SharedModule } from '../../shared';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 interface ExtensionEntry {
@@ -57,7 +57,7 @@ interface ExtensionWithEntries extends IManagedObject {
 export class ExtensionPropertiesComponent implements OnInit {
   extension: ExtensionWithEntries;
   directionFilter: 'ANY' | 'INBOUND' | 'OUTBOUND' = 'ANY';
-  readonly LINK = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
+  readonly LINK = ROUTE_EXTENSIONS;
 
   constructor(private route: ActivatedRoute) {}
 

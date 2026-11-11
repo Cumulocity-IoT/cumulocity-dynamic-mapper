@@ -25,11 +25,12 @@ import {
   ColumnDataType,
   CommonModule,
   CoreModule,
-  Pagination
+  Pagination,
+  PopoverConfirmComponent
 } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
 import {
-  ConfirmationModalComponent,
   Direction,
   Feature,
   MAPPING_STATUS_UNSPECIFIED,
@@ -40,7 +41,6 @@ import {
 } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../../shared/component/renderer/number.renderer.component';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { NameRendererComponent } from '../../shared/component/renderer/name.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -69,7 +69,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private readonly translateService = inject(TranslateService);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
-  private readonly bsModalService = inject(BsModalService);
   private readonly sharedService = inject(SharedService);
   private readonly route = inject(ActivatedRoute);
 
@@ -282,17 +281,15 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     }
   }
 
-  async resetStatisticsMapping(): Promise<void> {
-    const modalRef = this.showConfirmationModal();
-
-    modalRef.content.closeSubject
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(async (confirmed: boolean) => {
-        if (confirmed) {
-          await this.performReset();
-        }
-        modalRef.hide();
-      });
+  async resetStatisticsMapping(popover: PopoverConfirmComponent): Promise<void> {
+    const confirmed = await confirmWithPopover(popover, {
+      title: gettext('Reset mapping statistic'),
+      message: gettext('You are about to delete the mapping statistic. Do you want to proceed?'),
+      okLabel: gettext('Delete')
+    });
+    if (confirmed) {
+      await this.performReset();
+    }
   }
 
   /**
@@ -396,22 +393,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         });
       });
   }
-  private showConfirmationModal(): BsModalRef {
-    const initialState = {
-      title: gettext('Reset mapping statistic'),
-      message: gettext('You are about to delete the mapping statistic. Do you want to proceed?'),
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-
-    return this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-  }
-
   private async performReset(): Promise<void> {
     try {
       this.updateState({ isLoading: true });

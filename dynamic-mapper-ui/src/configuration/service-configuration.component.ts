@@ -106,12 +106,26 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  /** Text for the aria-live region; screen readers announce each add and remove. */
+  readonly fragmentLiveMessage = signal('');
+
+  private announceFragment(message: string) {
+    this.fragmentLiveMessage.set(message);
+    setTimeout(() => this.fragmentLiveMessage.set(''), 1000);
+  }
+
   addFragment() {
     this.inventoryFragmentsList.push('');
+    this.announceFragment('Item added');
   }
 
   removeFragment(index: number) {
     this.inventoryFragmentsList.splice(index, 1);
+    // Keep one empty row so the list never has zero rows and always offers an add button.
+    if (this.inventoryFragmentsList.length === 0) {
+      this.inventoryFragmentsList.push('');
+    }
+    this.announceFragment('Item removed');
   }
 
 

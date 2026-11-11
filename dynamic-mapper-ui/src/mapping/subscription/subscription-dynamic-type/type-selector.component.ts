@@ -24,6 +24,7 @@ import {
   EventEmitter,
   input,
   model,
+  signal,
   Output,
   untracked,
   ViewEncapsulation
@@ -77,13 +78,23 @@ export class TypeSelectorComponent {
     return index;
   }
 
+  /** Text for the aria-live region; screen readers announce each add and remove. */
+  readonly liveMessage = signal('');
+
+  private announce(message: string) {
+    this.liveMessage.set(message);
+    setTimeout(() => this.liveMessage.set(''), 1000);
+  }
+
   add() {
     this.typeListInternal.push("");
+    this.announce('Item added');
     this.emitInline();
   }
 
   remove(index: number) {
     this.typeListInternal = this.typeListInternal.filter((_, i) => i !== index);
+    this.announce('Item removed');
     this.emitInline();
   }
 

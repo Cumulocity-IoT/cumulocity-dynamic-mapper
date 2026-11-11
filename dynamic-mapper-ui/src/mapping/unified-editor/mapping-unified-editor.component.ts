@@ -53,7 +53,7 @@ import {
   MappingContentSnapshot
 } from '../../shared/mapping/util';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent, ROUTE_MAPPINGS_INBOUND, ROUTE_MAPPINGS_OUTBOUND } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
@@ -117,6 +117,14 @@ const STEP_FOR_BLOCKER: Partial<Record<CommitBlocker, StepId>> = {
   ]
 })
 export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
+  /** The list this mapping belongs to: the breadcrumb's way back. */
+  get listRoute(): string {
+    return this.stepperConfiguration.direction === this.Direction.INBOUND ? ROUTE_MAPPINGS_INBOUND : ROUTE_MAPPINGS_OUTBOUND;
+  }
+  get listLabel(): string {
+    return this.stepperConfiguration.direction === this.Direction.INBOUND ? gettext('Inbound') : gettext('Outbound');
+  }
+
   /** Tab labels with a trailing `*` while the tab still misses required input. */
   connectorTabLabel(): string {
     return this.connectorSelectionEmpty() ? gettext('Connector *') : gettext('Connector');

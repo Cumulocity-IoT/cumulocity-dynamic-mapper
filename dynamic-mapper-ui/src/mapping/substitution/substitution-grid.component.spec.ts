@@ -21,8 +21,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { Subject } from 'rxjs';
+import { PopoverConfirmComponent } from '@c8y/ngx-components';
 import '../../shared';
 import { RepairStrategy, Substitution } from '../../shared';
 import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
@@ -36,9 +35,6 @@ import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitut
 describe('SubstitutionGridComponent', () => {
   let component: SubstitutionGridComponent;
   let fixture: ComponentFixture<SubstitutionGridComponent>;
-  let mockBsModalService: jasmine.SpyObj<BsModalService>;
-  let closeSubject: Subject<boolean>;
-  let modalHide: jasmine.Spy;
 
   const settings = (): SubstitutionGridSettings => ({
     color: '#fff',
@@ -47,18 +43,13 @@ describe('SubstitutionGridComponent', () => {
   });
 
   beforeEach(async () => {
-    closeSubject = new Subject<boolean>();
-    modalHide = jasmine.createSpy('hide');
-    mockBsModalService = jasmine.createSpyObj('BsModalService', ['show']);
-    mockBsModalService.show.and.returnValue({ content: { closeSubject }, hide: modalHide } as any);
-
     TestBed.overrideComponent(SubstitutionGridComponent, {
       set: { imports: [], providers: [], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
     });
 
     await TestBed.configureTestingModule({
       imports: [SubstitutionGridComponent],
-      providers: [{ provide: BsModalService, useValue: mockBsModalService }, provideTranslateStub()]
+      providers: [provideTranslateStub()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SubstitutionGridComponent);
@@ -114,28 +105,38 @@ describe('SubstitutionGridComponent', () => {
     component.onSubstitutionSelect(2);
   });
 
-  it('emits deleteSub only after the confirmation modal is confirmed', () => {
+  const fakePopover = (answer: 'confirm' | 'cancel' | 'dismiss') =>
+    ({
+      show: jasmine.createSpy('show').and.callFake((buttons: { action: () => Promise<boolean> }[]) =>
+        answer === 'dismiss' ? Promise.reject() : buttons[answer === 'confirm' ? 1 : 0].action()
+      )
+    }) as unknown as PopoverConfirmComponent;
+
+  it('emits deleteSub only after the confirmation popover is confirmed', async () => {
     const deleted: number[] = [];
     component.deleteSub.subscribe((i) => deleted.push(i));
 
-    component.onSubstitutionDelete(3);
-    expect(mockBsModalService.show).toHaveBeenCalled();
-    expect(deleted).toEqual([]); // nothing yet — awaiting confirmation
+    await component.onSubstitutionDelete(3, fakePopover('confirm'));
 
-    closeSubject.next(true); // user confirms
     expect(deleted).toEqual([3]);
     expect(component.settings().selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
-    expect(modalHide).toHaveBeenCalled();
   });
 
-  it('does not emit deleteSub when the user cancels the modal', () => {
+  it('does not emit deleteSub when the user cancels the popover', async () => {
     const deleted: number[] = [];
     component.deleteSub.subscribe((i) => deleted.push(i));
 
-    component.onSubstitutionDelete(3);
-    closeSubject.next(false); // user cancels
+    await component.onSubstitutionDelete(3, fakePopover('cancel'));
 
     expect(deleted).toEqual([]);
-    expect(modalHide).toHaveBeenCalled();
+  });
+
+  it('does not emit deleteSub when the popover is dismissed with Escape or an outside click', async () => {
+    const deleted: number[] = [];
+    component.deleteSub.subscribe((i) => deleted.push(i));
+
+    await component.onSubstitutionDelete(3, fakePopover('dismiss'));
+
+    expect(deleted).toEqual([]);
   });
 });

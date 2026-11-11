@@ -20,6 +20,10 @@
 -->
 
 <c8y-title translate>{{mapping.name}}</c8y-title>
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item [icon]="stepperConfiguration.direction === Direction.INBOUND ? 'swipe-right' : 'swipe-left'" [label]="listLabel | translate" [path]="listRoute"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="mapping.name"></c8y-breadcrumb-item>
+</c8y-breadcrumb>
 
 <div class="card card--fullpage content-fullpage d-col">
 

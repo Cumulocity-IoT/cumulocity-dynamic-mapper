@@ -21,7 +21,7 @@
 
 // input-list.component.ts
 
-import { Component, EventEmitter, OnDestroy, OnInit, Output, ChangeDetectionStrategy, effect, input, untracked } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ChangeDetectionStrategy, effect, input, signal, untracked } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 
@@ -130,13 +130,23 @@ export class InputListComponent implements OnInit, OnDestroy {
 
   dataInternal: Array<{ key: string; value: string | undefined }> = [];
 
+  /** Text for the aria-live region; screen readers announce each add and remove. */
+  readonly liveMessage = signal('');
+
+  private announce(message: string) {
+    this.liveMessage.set(message);
+    setTimeout(() => this.liveMessage.set(''), 1000);
+  }
+
   add() {
     this.dataInternal.push({ key: '', value: '' });
+    this.announce('Item added');
     this.emitChange();
   }
 
   remove(index: number) {
     this.dataInternal.splice(index, 1);
+    this.announce('Item removed');
     // If all items are removed, add an empty one but don't emit yet
     if (this.dataInternal.length === 0) {
       this.dataInternal.push({ key: '', value: '' });

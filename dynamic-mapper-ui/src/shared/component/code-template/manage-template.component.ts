@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, Input, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
-import { CoreModule, ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, InputGroupEditableComponent, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { CapitalizeCasePipe } from '../../../shared';
 import { CodeTemplate } from '../../configuration/configuration.model';
@@ -29,7 +29,7 @@ import { CodeTemplate } from '../../configuration/configuration.model';
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports:[CoreModule]
+  imports:[CoreModule, InputGroupEditableComponent]
 })
 export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';

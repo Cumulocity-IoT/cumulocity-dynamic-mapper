@@ -29,7 +29,9 @@ import {
   DataGridComponent,
   DisplayOptions,
   Pagination,
+  PopoverConfirmComponent,
 } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import {
   ConfirmationModalComponent,
   Direction,
@@ -163,28 +165,15 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.destroy$.unsubscribe();
   }
 
-  async onDeleteAllClientRelations() {
-    let result: boolean = false;
-    const initialState = {
+  async onDeleteAllClientRelations(popover: PopoverConfirmComponent) {
+    const confirmed = await confirmWithPopover(popover, {
       title: gettext('Delete all relations'),
-      message: gettext('You are about to delete all relations. Do you want to proceed to delete ALL?')
-      ,
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-
-    result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-    if (result) {
+      message: gettext('You are about to delete all relations. Do you want to proceed to delete ALL?'),
+      okLabel: gettext('Delete')
+    });
+    if (confirmed) {
       await this.clientRelationService.deleteAllClientRelations();
-      this.alertService.success(
-        gettext('Relations deleted successfully')
-      );
+      this.alertService.success(gettext('Relations deleted successfully'));
       this.loadAllClientRelations();
     }
   }

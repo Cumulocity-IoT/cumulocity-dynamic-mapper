@@ -27,9 +27,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
-  ConfirmationModalComponent,
   definesDeviceIdentifier,
   Direction,
   Mapping,
@@ -37,9 +35,10 @@ import {
   SharedModule,
   Substitution
 } from '../../shared';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, PopoverConfirmComponent } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 
 interface RepairStrategyOption {
   label: string;
@@ -75,7 +74,6 @@ export class SubstitutionGridComponent implements OnDestroy {
   @Output() cancelEdit = new EventEmitter<void>();
 
   constructor(
-    private bsModalService: BsModalService,
     private translateService: TranslateService
   ) { }
 
@@ -191,26 +189,13 @@ export class SubstitutionGridComponent implements OnDestroy {
     this.substitutionPatch.emit({ index, patch: { repairStrategy: repairStrategy as RepairStrategy } });
   }
 
-  onSubstitutionDelete(index: number): void {
-    const initialState = {
+  async onSubstitutionDelete(index: number, popover: PopoverConfirmComponent): Promise<void> {
+    const confirmed = await confirmWithPopover(popover, {
       title: gettext('Delete substitution'),
-      message: gettext('You are about to delete a substitution. Do you want to proceed?'),
-      labels: {
-        ok: gettext('Delete'),
-        cancel: gettext('Cancel')
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-    confirmDeletionModalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(
-      (result: boolean) => {
-        if (result) {
-          this.deleteSub.emit(index);
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
+      message: gettext('You are about to delete a substitution. Do you want to proceed?')
+    });
+    if (confirmed) {
+      this.deleteSub.emit(index);
+    }
   }
 }
