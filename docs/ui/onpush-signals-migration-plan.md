@@ -1028,7 +1028,7 @@ Choices worth knowing:
 ### Signal inputs and queries (done, not yet browser-checked)
 
 `prefer-signals` had 198 findings (151 `@Input`, 44 `@ViewChild`, 3 content queries). It is at zero and an error
-for all app code. The "Known debt" block is deleted from `eslint.config.cjs`. Tests pass (1026 of 1027 before: one
+for all app code. The "Known debt" block is deleted from `eslint.config.cjs`. Tests pass (1026; one
 test that pinned "a plain assignment does not re-render" was removed, because a signal input cannot be assigned),
 lint reports 0 errors and 4 warnings (the size check), and the AOT check shows the same 8 baseline errors.
 
@@ -1050,9 +1050,9 @@ What changed:
   spec never renders the template.
 
 Exempt in `eslint.config.cjs`, with the reason in the config:
-- 11 components that `BottomDrawerService.openDrawer` or `BsModalService.show` create (the validation, version,
-  type, explorer and connector drawers, both AI prompts, the confirmation, copy-source, publish-version and
-  manage-template modals). Both services copy `initialState` onto the instance, which cannot write a signal input.
+- 12 components that `BottomDrawerService.openDrawer` or `BsModalService.show` create (the validation, version,
+  type, explorer, code-editor and connector drawers, both AI prompts, the confirmation, copy-source,
+  publish-version and manage-template modals). Both services copy `initialState` onto the instance, which cannot write a signal input.
 - `custom-select`: the platform's `SelectKeyboardService.register$` takes a `QueryList`, which only `@ViewChildren`
   produces, and the select is a form control that writes its own `disabled` state.
 
