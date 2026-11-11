@@ -1070,3 +1070,25 @@ Browser checks for this round, in order of risk:
 7. **Headers and `Header` tabs of the connector configuration form** (input list): add and remove rows while
    typing; a row in progress must not disappear.
 8. KPI cards, the substitution grid, and the extension card.
+
+### Cypress run on the signals build (2026-11-11)
+
+The whole Cypress suite ran against the tenant with the final build: 22 specs, 32 of 34 tests passed on the first
+pass. Both failures were not caused by the signals work. `deploy-mapping` looked for the lowercase text
+"connector assignments", but the toast reads "Connector assignments for {{name}} saved." (spec fixed).
+`delete-connector` failed once with the connector grid stuck on "Loading items…" although the list request had
+returned 200, and passed on two reruns; it is recorded as a flake, not explained. Three new specs cover areas that
+had no UI test: `mapping-versions` (activate an older version, edit a note, publish the draft),
+`mapping-import-export` (export file, import as a new inactive mapping, broken file) and
+`mapping-template-properties-edit` (execution filter followed across the General Settings and Templates tabs, metadata
+toggle, save). Together they exercise the `effect()` and `input()` conversions of the template step, the properties
+step, the type drawer's neighbours and the version drawer in a browser. Still not covered by any automated test: the
+message explorer, the JSON editors beyond the template step, the subscription selectors with the resync column, and the
+input list.
+
+Running Cypress locally needs `ng serve --url <tenant>` and, to avoid the login loop, the temporary `-dev` suffix on
+`contextPath` and `key` in `cumulocity.config.ts` (see `cypress/README.md`). Never commit that change.
+
+Findings from writing the specs: the unified editor drops a pending Templates edit if the tab is left within the
+500 ms debounce of the filter field, so a fast tab switch loses the edit. A test has to wait for the evaluated result
+before leaving the tab.
