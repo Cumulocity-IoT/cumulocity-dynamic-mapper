@@ -118,14 +118,14 @@ export class MappingService {
 
   // ===== MAPPING OPERATIONS =====
 
-  async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
+  async changeActivationMapping(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.ACTIVATE_MAPPING,
       parameter
     });
   }
 
-  async addSampleMappings(parameter: any): Promise<IFetchResponse> {
+  async addSampleMappings(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.ADD_SAMPLE_MAPPINGS,
       parameter
@@ -140,7 +140,7 @@ export class MappingService {
     this.updateMappingEnriched$.next(mapping);
   }
 
-  async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
+  async changeDebuggingMapping(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.DEBUG_MAPPING,
       parameter

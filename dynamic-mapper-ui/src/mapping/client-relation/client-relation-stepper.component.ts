@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { CdkStep } from '@angular/cdk/stepper';
+import { CdkStep, StepperSelectionEvent } from '@angular/cdk/stepper';
 import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
@@ -42,6 +42,12 @@ const CONSTANTS = {
   HOUSEKEEPING_INTERVAL_SECONDS: 30
 } as const;
 
+/** A client name offered in the selector; `id` is the list index, or the name for a new client. */
+interface ClientOption {
+  id: number | string;
+  name: string;
+}
+
 @Component({
   selector: 'd11r-relation-stepper',
   host: { class: 'flex-grow d-col fit-h' },
@@ -57,17 +63,16 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
   private readonly injector = inject(Injector);
   clients: string[] = [];
   @Output() cancel = new EventEmitter<void>();
-  @Output() commit = new EventEmitter<any>();
+  @Output() commit = new EventEmitter<{ client: string; devices: string[] }>();
 
   isButtonDisabled = true;
   private readonly destroy$ = new Subject<void>();
 
-  clientsAsOptions: any[] = [];
+  clientsAsOptions: ClientOption[] = [];
 
   @ViewChild('stepper', { static: false })
   stepper: C8yStepper;
 
-  stepLabel: any;
   labels: StepperLabels = {
     next: gettext('Next'),
     cancel: gettext('Cancel')
@@ -76,14 +81,13 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   feature: Feature;
 
-  client: any;
-  filteredClients: any = [];
-  selectedClient: any;
+  filteredClients: ClientOption[] = [];
+  selectedClient: ClientOption | undefined;
   pattern = "";
 
   selectedDevices: IIdentified[] = [];
 
-  searchTerm: any;
+  searchTerm = '';
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -100,7 +104,7 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
   }
 
   async ngAfterViewInit(): Promise<void> {
-    const { clients } = await this.clientRelationService.getAllClients();
+    const { clients } = (await this.clientRelationService.getAllClients()) ?? { clients: [] };
 
     if (clients?.length) {
       this.clients = clients;
@@ -118,7 +122,7 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
 
   async onCommitButton(): Promise<void> {
     try {
-      const devices = this.selectedDevices?.map(d => d.id) || [];
+      const devices = this.selectedDevices?.map(d => String(d.id)) || [];
       this.commit.emit({ client: this.selectedClient.name, devices });
     } catch (error) {
       this.handleError('Error committing changes', error);
@@ -137,11 +141,11 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
     }
   }
 
-  async onStepChange(event: any): Promise<void> {
+  async onStepChange(event: StepperSelectionEvent): Promise<void> {
     const currentStepIndex = event['selectedIndex'];
     if (currentStepIndex == 1) {
       try {
-        const { devices } = await this.clientRelationService.getDevicesForClient(this.selectedClient.name);
+        const { devices } = (await this.clientRelationService.getDevicesForClient(this.selectedClient.name)) ?? { devices: [] };
 
         // The device selector of this step exists after the render that shows the step.
         afterNextRenderInZone(this.injector, () => {
@@ -163,7 +167,7 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
     // console.log(event);
   }
 
-  selectClient(client: any): void {
+  selectClient(client: ClientOption): void {
     this.selectedClient = client;
     this.isButtonDisabled = !client;
   }
@@ -175,7 +179,7 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
     );
   }
 
-  addNewClient(client: any) {
+  addNewClient(client: string) {
     this.selectedClient = { id: client, name: client };
     this.isButtonDisabled = !client;
   }

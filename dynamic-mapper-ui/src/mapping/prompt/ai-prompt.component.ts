@@ -26,7 +26,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction, JsonValue } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -51,6 +51,19 @@ import { base64ToString } from '../../shared/mapping/util';
 /** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
 const SUBMIT_SMART_FUNCTION_TOOL = 'submit-smart-function';
 const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
+
+/**
+ * The mapping as the agent sees it: templates are parsed (the stored ones are JSON strings), substitutions are
+ * dropped, and the code and ESM flag are added.
+ */
+interface MappingForAi extends Record<string, unknown> {
+  sourceTemplate?: unknown;
+  targetTemplate?: unknown;
+  additionalSamples?: { payload: unknown; [key: string]: unknown }[];
+  substitutions?: unknown;
+  code?: string;
+  supportESM?: boolean;
+}
 
 // Default change detection on purpose: a change to it was followed by reports of a lost conversation history.
 // See docs/ui/onpush-signals-migration-plan.md, "Last components on OnPush".
@@ -83,7 +96,7 @@ export class AiPromptComponent implements OnInit {
   @Input() existingMapping = false;
 
   private _save: (value: Substitution[] | string) => void;
-  private _cancel: (reason?: any) => void;
+  private _cancel: (reason?: unknown) => void;
   valid: boolean = false;
 
   result: Promise<Substitution[] | string> = new Promise((resolve, reject) => {
@@ -214,7 +227,7 @@ export class AiPromptComponent implements OnInit {
    */
   suggestions?: Suggestion[];
   /** Cached mapping object (without substitutions) ready to send to AI */
-  private mappingForAI: any = null;
+  private mappingForAI: MappingForAi | null = null;
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -245,7 +258,7 @@ export class AiPromptComponent implements OnInit {
     this.variables = this.aiAgent?.agent?.variables ?? {};
     this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
 
-    this.mappingForAI = this.buildMappingForAI();
+    this.mappingForAI = this.buildMappingForAi();
 
     if (this.isCodeMapping) {
       this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
@@ -465,18 +478,18 @@ export class AiPromptComponent implements OnInit {
     this.bottomDrawerRef.close();
   }
 
-  private buildMappingForAI(): any {
-    const m: any = { ...this.mapping };
+  private buildMappingForAi(): MappingForAi {
+    const m: MappingForAi = { ...this.mapping } as unknown as MappingForAi;
     delete m.substitutions;
-    m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
-    m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    m.sourceTemplate = JSON.parse(m.sourceTemplate as string);
+    m.targetTemplate = JSON.parse(m.targetTemplate as string);
     // Further samples of the same payload type (Message Explorer multi-select), so the agent can
     // generalize instead of fitting a single message. Payloads are parsed like sourceTemplate;
     // raw text that is not JSON stays a string.
     if (Array.isArray(m.additionalSamples) && m.additionalSamples.length > 0) {
-      m.additionalSamples = m.additionalSamples.map((sample: any) => {
+      m.additionalSamples = m.additionalSamples.map((sample) => {
         let payload = sample.payload;
-        try { payload = JSON.parse(sample.payload); } catch { /* keep as string */ }
+        try { payload = JSON.parse(sample.payload as string); } catch { /* keep as string */ }
         return { ...sample, payload };
       });
     } else {
@@ -628,7 +641,7 @@ export class AiPromptComponent implements OnInit {
    * here previously always grabbed the FIRST code block, which could be an earlier example
    * instead of the final function and silently produced the wrong generatedCode.
    */
-  checkIfResponseContainsJavaScript(content: any): void {
+  checkIfResponseContainsJavaScript(content: unknown): void {
     try {
       const trimmedContent = typeof content === 'string' ? content.trim() : '';
       if (!trimmedContent) return;
@@ -677,7 +690,7 @@ export class AiPromptComponent implements OnInit {
    * multi-turn conversation and must NOT revoke a previously extracted, valid `substitutions` array —
    * so this only ever flips `valid` from false to true, never the other way around.
    */
-  async checkIfResponseContainsSubstitutions(content: any): Promise<void> {
+  async checkIfResponseContainsSubstitutions(content: unknown): Promise<void> {
     const trimmedContent = typeof content === 'string' ? content.trim() : '';
     if (!trimmedContent) return;
 
@@ -770,8 +783,8 @@ export class AiPromptComponent implements OnInit {
    */
   private async validateSubstitutions(substitutions: Substitution[]): Promise<string[]> {
     const issues: string[] = [];
-    const sourceTemplate = this.mappingForAI?.sourceTemplate;
-    const targetTemplate = this.mappingForAI?.targetTemplate;
+    const sourceTemplate = this.mappingForAI?.sourceTemplate as JsonValue;
+    const targetTemplate = this.mappingForAI?.targetTemplate as JsonValue;
 
     for (const [index, sub] of substitutions.entries()) {
       const label = `Substitution ${index + 1} [${sub.pathTarget}]`;
@@ -813,13 +826,13 @@ export class AiPromptComponent implements OnInit {
   }
 
   /** Returns the error message if evaluating `path` against `template` fails, else null. */
-  private async evaluationIssue(template: any, path: string): Promise<string | null> {
+  private async evaluationIssue(template: JsonValue, path: string): Promise<string | null> {
     if (!path || template === undefined) return null;
     try {
       await this.mappingService.evaluateExpression(template, path);
       return null;
     } catch (error) {
-      return error?.message ?? 'unknown error';
+      return (error as Error | undefined)?.message ?? 'unknown error';
     }
   }
 

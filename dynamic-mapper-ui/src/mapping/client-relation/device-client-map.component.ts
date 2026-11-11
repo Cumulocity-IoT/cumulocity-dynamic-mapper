@@ -41,7 +41,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { ClientRelationService } from '../core/client-relation.service';
+import { ClientRelation, ClientRelationService, ClientRelationsResponse } from '../core/client-relation.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { CommonModule } from '@angular/common';
 import { ClientRelationStepperComponent } from './client-relation-stepper.component';
@@ -78,10 +78,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   private bsModalService = inject(BsModalService);
   private alertService = inject(AlertService);
 
-  clientRelations: any;
-  private readonly mapEntriesState = signal<any[]>([]);
-  get mapEntries(): any[] { return this.mapEntriesState(); }
-  set mapEntries(value: any[]) { this.mapEntriesState.set(value); }
+  clientRelations: ClientRelationsResponse | null = null;
+  private readonly mapEntriesState = signal<ClientRelation[]>([]);
+  get mapEntries(): ClientRelation[] { return this.mapEntriesState(); }
+  set mapEntries(value: ClientRelation[]) { this.mapEntriesState.set(value); }
   Direction = Direction;
 
   titleMapping: string;

@@ -79,7 +79,7 @@ export class ExplorerMappingContextService {
         if (deviceType === null) {
           deviceType = data['type'] ?? null;
         }
-        const parentIds: string[] = (data.assetParents?.references ?? []).map((ref: any) =>
+        const parentIds: string[] = (data.assetParents?.references ?? []).map((ref) =>
           String(ref.managedObject.id)
         );
         groups = await Promise.all(
@@ -123,7 +123,7 @@ export class ExplorerMappingContextService {
     if (sourceId) {
       try {
         const { data: extIds } = await this.identityService.list(sourceId);
-        const serial = extIds.find((e: any) => e.type === 'c8y_Serial');
+        const serial = extIds.find((e) => e.type === 'c8y_Serial');
         if (serial?.externalId) {
           externalIdLabel = serial.externalId;
         }

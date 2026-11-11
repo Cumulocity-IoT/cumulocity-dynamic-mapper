@@ -114,7 +114,7 @@ export class MessageExplorerPayloadRendererComponent {
     { id: 'hex' as const, label: gettext('Hex') },
     { id: 'base64' as const, label: gettext('Base64') }
   ];
-  parsedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
+  parsedPayload: { isJson: boolean; parsed: unknown; raw: string } | null = null;
 
   private bytesCache: Uint8Array | null | undefined;
   private textCache: string | undefined;

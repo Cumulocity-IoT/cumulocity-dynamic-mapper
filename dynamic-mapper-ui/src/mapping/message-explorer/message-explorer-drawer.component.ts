@@ -23,7 +23,7 @@ import { Component, inject, Input, OnInit, OnChanges, ChangeDetectionStrategy, s
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { IIdentified, InventoryService } from '@c8y/client';
+import { IIdentified, IManagedObject, InventoryService } from '@c8y/client';
 import { combineLatest } from 'rxjs';
 import { ConnectorConfiguration, Direction } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
@@ -153,9 +153,9 @@ export class MessageExplorerDrawerComponent implements OnInit {
     }
     try {
       const { data } = await this.inventoryService.detail(sourceId);
-      const device = data as any;
-      this.selectedDeviceList = [{ id: sourceId, name: device.name ?? knownName, type: device.type } as unknown as IIdentified];
-      this.selectedDeviceType = device.type ?? null;
+      const device = data;
+      this.selectedDeviceList = [{ id: sourceId, name: device['name'] ?? knownName, type: device['type'] } as unknown as IIdentified];
+      this.selectedDeviceType = device['type'] ?? null;
       this.deviceTypeFetch = Promise.resolve(this.selectedDeviceType);
     } catch (err) {
       this.selectedDeviceList = [{ id: sourceId, name: knownName } as unknown as IIdentified];
@@ -184,7 +184,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
   private filterConnectorsByDirection(): void {
     const dir = this.direction === 'OUTBOUND' ? Direction.OUTBOUND : Direction.INBOUND;
     this.connectors = this.allConnectors.filter(c =>
-      (c as any).supportedDirections?.includes(dir)
+      c.supportedDirections?.includes(dir)
     );
   }
 
@@ -195,16 +195,16 @@ export class MessageExplorerDrawerComponent implements OnInit {
   onDeviceSelected(event: AssetSelectionChangeEvent): void {
     const items = event.items;
     this.selectedDeviceList = Array.isArray(items) ? items : (items ? [items] : []);
-    const selected = this.selectedDeviceList[0] as any;
+    const selected = this.selectedDeviceList[0] as IManagedObject | undefined;
     if (selected?.id) {
       // Asset selector may already return a full managed object with type
-      if (selected.type) {
-        this.selectedDeviceType = selected.type;
-        this.deviceTypeFetch = Promise.resolve(selected.type);
+      if (selected['type']) {
+        this.selectedDeviceType = selected['type'];
+        this.deviceTypeFetch = Promise.resolve(selected['type']);
       } else {
         this.deviceTypeFetch = this.inventoryService.detail(String(selected.id))
           .then(({ data }) => {
-            this.selectedDeviceType = (data as any)['type'] ?? null;
+            this.selectedDeviceType = data['type'] ?? null;
             return this.selectedDeviceType;
           })
           .catch((err) => { this.selectedDeviceType = null; return null; });
@@ -236,8 +236,8 @@ export class MessageExplorerDrawerComponent implements OnInit {
     }
     const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const selectedDevice = useSourceMode && this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
-    const sourceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
-    const deviceName = selectedDevice ? ((selectedDevice as any).name ?? sourceId) : undefined;
+    const sourceId = selectedDevice ? String(selectedDevice.id ?? '') : undefined;
+    const deviceName = selectedDevice ? ((selectedDevice as IManagedObject)['name'] ?? sourceId) : undefined;
     // Await in case the user clicked Start before the detail() promise resolved
     const deviceType = sourceId ? await this.deviceTypeFetch : null;
     this._resolve({

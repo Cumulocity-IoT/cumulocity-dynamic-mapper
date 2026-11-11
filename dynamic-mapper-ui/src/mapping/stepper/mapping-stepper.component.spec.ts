@@ -567,7 +567,8 @@ describe('MappingStepperComponent', () => {
       component.mappingCode = 'code';
 
       component.commit.subscribe((state: CommitEditorState) => {
-        expect(state).toEqual({
+        // Compared as unknown: matching the recursive JsonValue templates exceeds the compiler's depth limit.
+        expect(state as unknown).toEqual({
           mapping: component.mapping,
           stepperConfiguration: component.stepperConfiguration,
           sourceTemplate: { a: 1 },
@@ -588,7 +589,8 @@ describe('MappingStepperComponent', () => {
 
       component.onCommitButton();
 
-      expect(mockCommitService.encodeMappingForCommit).not.toHaveBeenCalled();
+      // Typed as a plain spy: matching the recursive JsonValue parameters exceeds the compiler's depth limit.
+      expect(mockCommitService.encodeMappingForCommit as unknown as jasmine.Spy).not.toHaveBeenCalled();
       expect(mockCommitService.commitMapping).not.toHaveBeenCalled();
     });
   });

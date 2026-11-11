@@ -333,7 +333,7 @@ export class MappingStepperService {
         return decodeCodeTemplates(await this.sharedService.getCodeTemplates(), base64ToString);
     }
 
-    async createCodeTemplate(name: string, description: string, code: string, direction: Direction, transformationType: TransformationType): Promise<any> {
+    async createCodeTemplate(name: string, description: string, code: string, direction: Direction, transformationType: TransformationType) {
         const encodedCode = stringToBase64(code);
         const id = createCustomUuid();
         const templateType = toTemplateType(direction, transformationType);

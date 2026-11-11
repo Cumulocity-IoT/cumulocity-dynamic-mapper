@@ -21,9 +21,12 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
-import { Direction, Feature, Mapping, StepperConfiguration } from '../../shared';
+import { Direction, Feature, JsonValue, Mapping, StepperConfiguration } from '../../shared';
 import { StepperViewModel } from '../editor-base/stepper-view.model';
 import { configurationToYaml, expandC8YTemplate, yamlToConfiguration } from '../../shared/mapping/util';
+
+/** A c8y-select value: a plain string or a `{ value, label }` object. */
+type SelectValue = string | { value?: string; label?: string } | null | undefined;
 
 /** The reactive state the session forms read; supplied by the service that owns it. */
 export interface EditorSessionState {
@@ -37,8 +40,8 @@ export interface EditorSessionState {
 export interface EditorSessionCallbacks {
     onSelectExtensionName: (extensionName: string) => void;
     onSelectExtensionEvent: (extensionEvent: string) => void;
-    getSourceTemplate: () => any;
-    setSourceTemplate: (template: any) => void;
+    getSourceTemplate: () => JsonValue;
+    setSourceTemplate: (template: JsonValue) => void;
 }
 
 /**
@@ -130,16 +133,16 @@ export function buildTemplateForm(
         .pipe(debounceTime(300), takeUntil(destroy$))
         .subscribe(yaml => {
             if (!mapping.extension) {
-                mapping.extension = {} as any;
+                mapping.extension = {} as NonNullable<Mapping['extension']>;
             }
             mapping.extension.parameter = yamlToConfiguration(yaml);
         });
 
     templateForm.get('extensionName')?.valueChanges
         .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(destroy$))
-        .subscribe((selected: any) => {
+        .subscribe((selected: SelectValue) => {
             // When using simple string arrays, c8y-select binds the string directly
-            const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+            const extensionName = typeof selected === 'string' ? selected : selected?.value;
             if (extensionName) {
                 callbacks.onSelectExtensionName(extensionName);
             }
@@ -147,8 +150,8 @@ export function buildTemplateForm(
 
     templateForm.get('eventName')?.valueChanges
         .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(destroy$))
-        .subscribe((selected: any) => {
-            const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+        .subscribe((selected: SelectValue) => {
+            const eventName = typeof selected === 'string' ? selected : selected?.value;
             if (eventName) {
                 callbacks.onSelectExtensionEvent(eventName);
             }

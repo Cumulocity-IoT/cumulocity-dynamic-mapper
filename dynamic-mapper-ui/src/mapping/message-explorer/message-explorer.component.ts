@@ -419,12 +419,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-    } catch (e: any) {
+    } catch (e) {
       const text =
         mode === 'start'
           ? gettext('Failed to start explorer session: {{error}}')
           : gettext('Failed to update explorer session: {{error}}');
-      this.alertService.danger(this.translateService.instant(text, { error: e.message }));
+      this.alertService.danger(this.translateService.instant(text, { error: (e as Error).message }));
     }
   }
 
@@ -505,7 +505,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       // Binary, XML and plain-text payloads cannot be parsed as JSON, so preselect Any Payload.
       initialState: { direction, preferredMappingType: isRawPayload(msg) ? MappingType.ANY_PAYLOAD : undefined }
     });
-    let mappingResult: any;
+    let mappingResult: Awaited<typeof typeDrawer.instance.result>;
     try {
       mappingResult = await typeDrawer.instance.result;
     } catch {

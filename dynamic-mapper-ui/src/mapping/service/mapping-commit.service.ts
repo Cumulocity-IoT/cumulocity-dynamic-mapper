@@ -22,7 +22,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSubstitutionsAsCode, Mapping, StepperConfiguration } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSubstitutionsAsCode, JsonValue, Mapping, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionSelectionService } from '../core/subscription-selection.service';
 import { hasPendingSubscriptionChanges, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
@@ -202,8 +202,8 @@ export class MappingCommitService {
 
     encodeMappingForCommit(
         mapping: Mapping,
-        sourceTemplate: any,
-        targetTemplate: any,
+        sourceTemplate: JsonValue,
+        targetTemplate: JsonValue,
         mappingCode: string | undefined,
         initialContentSnapshot: MappingContentSnapshot | undefined,
         allowTemplateExpansion: boolean,
@@ -216,8 +216,8 @@ export class MappingCommitService {
             : true; // CREATE / COPY always persist
 
         if (allowTemplateExpansion) {
-            mapping.sourceTemplate = reduceSourceTemplate(sourceTemplate, false);
-            mapping.targetTemplate = reduceSourceTemplate(targetTemplate, false);
+            mapping.sourceTemplate = reduceSourceTemplate(sourceTemplate as object, false);
+            mapping.targetTemplate = reduceSourceTemplate(targetTemplate as object, false);
         } else {
             mapping.sourceTemplate = JSON.stringify(sourceTemplate);
             mapping.targetTemplate = JSON.stringify(targetTemplate);
@@ -277,8 +277,8 @@ export interface CommitMappingRequest {
     /** {@link snapshotConnectors} taken when the editor opened, to detect connector-only changes. */
     initialDeploymentConnectors: string;
     stepperConfiguration: StepperConfiguration;
-    sourceTemplate: any;
-    targetTemplate: any;
+    sourceTemplate: JsonValue;
+    targetTemplate: JsonValue;
     mappingCode: string | undefined;
     initialContentSnapshot?: MappingContentSnapshot;
     /** Outbound only: what the Subscription step collected. Written after the mapping is saved. */

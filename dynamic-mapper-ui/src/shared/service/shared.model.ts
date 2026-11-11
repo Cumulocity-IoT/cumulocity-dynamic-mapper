@@ -40,5 +40,6 @@ export enum Operation {
 export class ServiceOperation{
   tenant?: string;
   operation:Operation;
-  parameter?: Record<string, string>;
+  /** Operation arguments, sent as JSON: flags such as `active` and `debug` are booleans. */
+  parameter?: Record<string, string | boolean>;
 }

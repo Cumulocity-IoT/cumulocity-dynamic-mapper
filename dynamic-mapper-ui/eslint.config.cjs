@@ -121,19 +121,6 @@ module.exports = [
     },
   },
   {
-    files: [
-      'src/mapping/client-relation/*.ts',
-      'src/mapping/core/*.ts',
-      'src/mapping/message-explorer/*.ts',
-      'src/mapping/prompt/*.ts',
-      'src/mapping/service/*.ts'
-    ],
-    ignores: ['**/*.spec.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-  {
     // Size check: a component class over 500 lines is a candidate for splitting along the seams the OnPush work
     // exposed (docs/ui/onpush-signals-migration-plan.md, "Oversized components"). A warning, not an error: the
     // existing large components are listed in the plan and are split one pull request at a time.

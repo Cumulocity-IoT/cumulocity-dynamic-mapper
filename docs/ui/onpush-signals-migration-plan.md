@@ -15,7 +15,7 @@ none from this work):
 | `ngDoCheck` | 1 | 0 |
 | `prefer-on-push` warnings | 73 | 1 (`ai-prompt`, on purpose) |
 | `prefer-signals` warnings | 198 | 198 (not started) |
-| Explicit `any` (non-spec) | 277 | 190 (second round added 2 casts) |
+| Explicit `any` (non-spec) | 277 | 0 |
 
 Converted last, with no browser check yet (6): `shared-code-ai-prompt`,
 `connector-configuration-drawer`, `custom-form-field-wrapper`, `input-list-formly`, `input-list`, and
@@ -48,7 +48,7 @@ Next steps, in this order:
    a `markForCheck()`.
 2. Test the six converted last first (checklist in their entry). Keep `ai-prompt` on default change detection. Do not replace the `detectChanges()` in `ai-prompt`
    `ngOnInit` with a render wait; see "Regression: AI conversation not restored".
-3. Pay down the debt (198 `prefer-signals`, 59 `any`, 4 components over 500 lines). Delete a directory's line from
+3. Pay down the debt (198 `prefer-signals`, 4 components over 500 lines). Delete a directory's line from
    the "Known debt" blocks in `eslint.config.cjs` when it reaches zero.
 
 ## Why
@@ -180,7 +180,7 @@ Measured on 2026-11-10 (at the stop) against the starting numbers in the review.
 | Components on `OnPush` (lint count) | 5 of 91 by grep | 92 of 93 (see the status block at the top) |
 | `detectChanges()` calls | 29 | 2 (two justified synchronous renders, see below) |
 | `ngDoCheck` | 1 | 0 |
-| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 59 |
+| Explicit `any` (lint count, non-spec) | 277 (235 by the first grep, which counted fewer patterns) | 0 |
 | Unit tests | 978 | 1012 |
 
 | Phase | State |
@@ -1004,3 +1004,23 @@ Choices worth knowing:
   `monaco-editor`, so nothing is added to the bundle). The completion spec passes a partial stub, so it casts it.
 - `getSchema` and `getExternalTemplate` lost their `: any` and return the inferred constant types. No caller broke.
 - `findFieldInObject` and `validateProtectedFields` take `unknown`, and use `Object.prototype.hasOwnProperty.call`.
+
+### `any` conversion, last batch: the `mapping/*` directories (done, not yet browser-checked)
+
+No explicit `any` is left in app code (277 at the start). The `no-explicit-any` rule is an error everywhere, and its
+"Known debt" block is deleted from `eslint.config.cjs`. Tests pass (1027 of 1027), lint reports 0 errors and 202
+warnings (all `prefer-signals` and the size check), and the AOT check shows the same 8 baseline errors.
+
+Choices worth knowing:
+- Client relations have response types in `client-relation.service.ts` (`ClientsResponse`, `ClientRelation`,
+  `ClientRelationsResponse`, `DevicesForClientResponse`). The stepper used to destructure `getAllClients()` directly,
+  which throws when output mapping is disabled and the service returns `null`; it now falls back to an empty list.
+- `ServiceOperation.parameter` is `Record<string, string | boolean>`. Callers already sent booleans (`active`,
+  `debug`); the old `Record<string, string>` was never checked because the callers took `any`.
+- Templates in the editor session and commit service are `JsonValue`. Two specs cast around it, because jasmine's
+  matcher types exceed the compiler's depth limit on the recursive type (`mapping-stepper.component.spec.ts`).
+- `ai-prompt.component.ts` only gained types (`MappingForAi`); it stays on default change detection.
+- The extension-select handlers read `selected.value` and skip a value that has none. They used to pass the whole
+  object on in that case, which no select produces.
+- Message explorer drawer: selected devices are read as `IManagedObject` with bracket access (`['type']`), because
+  `IManagedObject` types those fields through an index signature.
