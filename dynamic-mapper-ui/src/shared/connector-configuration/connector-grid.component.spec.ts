@@ -19,7 +19,7 @@ describe('ConnectorGridComponent deployment map entry', () => {
 
   beforeEach(() => {
     component = Object.create(ConnectorGridComponent.prototype);
-    component.readOnly = false;
+    Object.assign(component, { readOnly: () => false });
     component.deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
     emitted = [];
     component.deploymentMapEntryChange.subscribe(e => emitted.push(e));
@@ -27,7 +27,7 @@ describe('ConnectorGridComponent deployment map entry', () => {
 
   it('emits a new entry with the selected connectors and leaves the input untouched', () => {
     const input = { identifier: 'm1', connectors: ['a'] } as DeploymentMapEntry;
-    component.deploymentMapEntry = input;
+    Object.assign(component, { deploymentMapEntry: () => input });
 
     (component as any).updateDeploymentMapEntry(['a', 'b']);
 
@@ -38,7 +38,7 @@ describe('ConnectorGridComponent deployment map entry', () => {
   });
 
   it('emits nothing without an entry', () => {
-    component.deploymentMapEntry = undefined as any;
+    Object.assign(component, { deploymentMapEntry: () => undefined as any });
 
     (component as any).updateDeploymentMapEntry(['a']);
 
@@ -60,7 +60,7 @@ describe('ConnectorGridComponent connector list (OnPush)', () => {
     list$ = new BehaviorSubject<any[]>([{ identifier: 'a', name: 'Alpha' }]);
     component = Object.create(ConnectorGridComponent.prototype);
     component.cdr = { markForCheck };
-    component.selectable = false;
+    component.selectable = () => false;
     component.destroy$ = new Subject<void>();
     component.selected$ = new BehaviorSubject<string[]>([]);
     component.configurations$ = list$;

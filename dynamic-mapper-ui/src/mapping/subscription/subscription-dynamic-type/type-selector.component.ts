@@ -20,9 +20,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   EventEmitter,
-  Input,
+  input,
+  model,
   Output,
+  untracked,
   ViewEncapsulation
 } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
@@ -38,26 +41,17 @@ import { CoreModule } from '@c8y/ngx-components';
   imports:[CoreModule]
 })
 export class TypeSelectorComponent {
-  @Input() set typeList(list: string[]) {
-    // Inline, the component owns the rows after the first value: the host echoes back only the
-    // non-blank types, which would otherwise wipe a row the user has just added and not yet typed.
-    if (this.inline && this.typeListInitialized) return;
-    this.typeListInitialized = true;
-    this.typeListInternal = [...list];
-  }
-  get typeList(): string[] {
-    return this.typeListInternal;
-  }
+  readonly typeList = input<string[]>([]);
 
   /** Embedded in a page instead of a drawer: no header or buttons; every edit is emitted as `typesChange`. */
-  @Input() inline = false;
+  readonly inline = input(false);
 
   /** Inline only: offer, per new type, to subscribe its already existing devices too (a second column). */
-  @Input() showResync = false;
+  readonly showResync = input(false);
   /** The types that are subscribed already; a type not in this list is new and can be resynced. */
-  @Input() knownTypes: string[] = [];
-  @Input() resyncTypes: string[] = [];
-  @Output() resyncTypesChange = new EventEmitter<string[]>();
+  readonly knownTypes = input<string[]>([]);
+  /** Two-way: ticking a type's resync box replaces it and announces `resyncTypesChange`. */
+  readonly resyncTypes = model<string[]>([]);
 
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<string[]>();
@@ -65,6 +59,19 @@ export class TypeSelectorComponent {
 
   typeListInternal: string[] = [];
   private typeListInitialized = false;
+
+  constructor() {
+    effect(() => {
+      const list = this.typeList();
+      untracked(() => {
+        // Inline, the component owns the rows after the first value: the host echoes back only the
+        // non-blank types, which would otherwise wipe a row the user has just added and not yet typed.
+        if (this.inline() && this.typeListInitialized) return;
+        this.typeListInitialized = true;
+        this.typeListInternal = [...list];
+      });
+    });
+  }
 
   trackByFn(index: number, _item: unknown) {
     return index;
@@ -82,29 +89,29 @@ export class TypeSelectorComponent {
 
   isNewType(type: string | undefined): boolean {
     const t = type?.trim();
-    return !!t && !this.knownTypes.includes(t);
+    return !!t && !this.knownTypes().includes(t);
   }
 
   /** A non-blank type the server has already. A blank row is neither known nor new: its checkbox is shown disabled. */
   isKnownType(type: string | undefined): boolean {
     const t = type?.trim();
-    return !!t && this.knownTypes.includes(t);
+    return !!t && this.knownTypes().includes(t);
   }
 
   isResync(type: string | undefined): boolean {
-    return this.resyncTypes.includes(type?.trim() ?? '');
+    return this.resyncTypes().includes(type?.trim() ?? '');
   }
 
   setResync(type: string | undefined, checked: boolean) {
     const t = type?.trim();
     if (!t) return;
-    const others = this.resyncTypes.filter(x => x !== t);
-    this.resyncTypesChange.emit(checked ? [...others, t] : others);
+    const others = this.resyncTypes().filter(x => x !== t);
+    this.resyncTypes.set(checked ? [...others, t] : others);
   }
 
   /** Inline mode only: blank rows stay on screen while being typed but are never emitted. */
   emitInline() {
-    if (!this.inline) return;
+    if (!this.inline()) return;
     this.typesChange.emit(this.typeListInternal.map(t => t?.trim()).filter(t => !!t));
   }
 

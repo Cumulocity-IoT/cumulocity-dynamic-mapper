@@ -24,12 +24,10 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  Input,
   OnDestroy,
   Output,
-  ViewChild,
   ViewEncapsulation,
-  AfterViewInit, viewChild } from '@angular/core';
+  AfterViewInit, effect, input, untracked, viewChild } from '@angular/core';
 import {
   JsonEditor,
   createJSONEditor,
@@ -88,7 +86,7 @@ export function withoutButton(items: ContextMenuItem[], text: string): ContextMe
  */
 @Component({
   selector: 'd11r-mapping-json-editor',
-  template: '<div [class]="class" #jsonEditorContainer></div>',
+  template: '<div [class]="class()" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./json-editor.style.css'],
@@ -97,34 +95,11 @@ export function withoutButton(items: ContextMenuItem[], text: string): ContextMe
 })
 export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   /** Editor props, plus `removeModes`: mode buttons (e.g. 'text', 'table') to hide from the menu. */
-  @Input()
-  set options(value: JsonEditorInputOptions) {
-    const changed = JSON.stringify(value) !== JSON.stringify(this._options);
-    this._options = value;
-    if (changed) {
-      this.editor?.updateProps(this.libraryProps());
-    }
-  }
-  get options(): JsonEditorInputOptions {
-    return this._options;
-  }
-
-  @Input()
-  set data(value: unknown) {
-    if (value && Object.keys(value).length !== 0) {
-      this.set(value);
-    }
-  }
-
-  @Input()
-  set schema(value: JSONSchema | null | undefined) {
-    if (value) {
-      this.setSchema(value);
-    }
-  }
-
-  @Input()
-  class: string;
+  readonly options = input<JsonEditorInputOptions>();
+  /** Replaces the content; empty values are ignored. */
+  readonly data = input<unknown>();
+  readonly schema = input<JSONSchema | null>();
+  readonly class = input<string>();
 
   @Output()
   contentChanged: EventEmitter<ContentChanges> = new EventEmitter<ContentChanges>();
@@ -133,11 +108,41 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
 
   readonly jsonEditorContainer = viewChild<ElementRef<HTMLElement>>('jsonEditorContainer');
 
-  private _options: JsonEditorInputOptions;
+  /** The options last applied, to skip an update when only the object identity changed. */
+  private appliedOptions: JsonEditorInputOptions | undefined;
   private editor: JsonEditor | undefined;
   /** Content/schema received before the editor exists; applied on creation. */
   private content: Content = { json: {} };
   private pendingSchema: JSONSchema | undefined;
+
+  constructor() {
+    effect(() => {
+      const value = this.options();
+      untracked(() => {
+        const changed = JSON.stringify(value) !== JSON.stringify(this.appliedOptions);
+        this.appliedOptions = value;
+        if (changed) {
+          this.editor?.updateProps(this.libraryProps());
+        }
+      });
+    });
+    effect(() => {
+      const value = this.data();
+      untracked(() => {
+        if (value && Object.keys(value).length !== 0) {
+          this.set(value);
+        }
+      });
+    });
+    effect(() => {
+      const value = this.schema();
+      untracked(() => {
+        if (value) {
+          this.setSchema(value);
+        }
+      });
+    });
+  }
 
   ngAfterViewInit() {
     this.editor = createJSONEditor({
@@ -168,7 +173,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
 
   /** Editor props without the wrapper-only `removeModes`. */
   private libraryProps() {
-    const { removeModes, ...props } = this._options ?? {};
+    const { removeModes, ...props } = this.options() ?? {};
     return props;
   }
 
@@ -185,7 +190,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private onRenderMenu(items: MenuItem[]): MenuItem[] {
-    const removeModes: readonly string[] = this._options?.removeModes ?? [];
+    const removeModes: readonly string[] = this.options()?.removeModes ?? [];
     return items.filter(
       (i) => i['className'] !== 'jse-transform' && !removeModes.includes(i['text'])
     );

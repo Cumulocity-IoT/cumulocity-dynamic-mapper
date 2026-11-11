@@ -46,7 +46,7 @@ export class MappingCodeEditorSectionComponent {
   readonly code = input<string>();
   readonly editorOptions = input<EditorComponent['editorOptions']>();
   readonly templateId = input<TemplateType>();
-  @Input() codeTemplateItems: Array<{ label: string; value: string }> = [];
+  readonly codeTemplateItems = input<Array<{ label: string; value: string }>>([]);
   readonly aiButtonLabel = input('Generate with AI');
   readonly aiGenerationDisabled = input(false);
   readonly aiAgentDeployed = input(false);

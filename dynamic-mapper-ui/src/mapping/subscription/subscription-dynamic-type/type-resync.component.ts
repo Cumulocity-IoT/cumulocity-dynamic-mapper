@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild, effect, input, untracked } from '@angular/core';
 import {
   ActionControl,
   Column,
@@ -78,10 +78,7 @@ import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
 export class TypeResyncComponent implements OnInit, OnDestroy {
   readonly typeResyncGrid = viewChild<DataGridComponent>('typeResyncGrid');
 
-  @Input() set typeList(list: string[]) {
-    this.typeListInternal = list ?? [];
-    this.rebuildRows();
-  }
+  readonly typeList = input<string[]>([]);
 
   @Output() cancel = new EventEmitter<void>();
   @Output() resync = new EventEmitter<string>();
@@ -89,7 +86,15 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
   constructor(
     private readonly eventService: EventService,
     private readonly sharedService: SharedService
-  ) {}
+  ) {
+    effect(() => {
+      const list = this.typeList();
+      untracked(() => {
+        this.typeListInternal = list ?? [];
+        this.rebuildRows();
+      });
+    });
+  }
 
   typeListInternal: string[] = [];
   private readonly rowsState = signal<DeviceTypeRow[]>([]);

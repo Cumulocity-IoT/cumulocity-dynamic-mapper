@@ -19,11 +19,10 @@
  */
 
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, effect, inject, input } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { CoreModule } from '@c8y/ngx-components';
-import { merge, Observable, Subscription } from 'rxjs';
+import { merge, Observable } from 'rxjs';
 import { Mapping } from '../../shared';
 
 /**
@@ -41,39 +40,34 @@ import { Mapping } from '../../shared';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule]
 })
-export class MappingExtensionSelectorComponent implements OnChanges {
-  @Input() form!: FormGroup;
-  @Input() side: 'source' | 'target' = 'source';
-  @Input() mapping!: Mapping;
-  @Input() showSelectors = false;
-  @Input() showInternalNote = false;
-  @Input() isLoading = false;
-  @Input() hasParameter = false;
-  @Input() extensionItems: string[] = [];
-  @Input() extensionEvents!: Observable<{ label: string; value: string; description?: string }[]>;
-  @Input() dataCyPrefix = 'dm-mapping-stepper';
+export class MappingExtensionSelectorComponent {
+  readonly form = input.required<FormGroup>();
+  readonly side = input<'source' | 'target'>('source');
+  readonly mapping = input.required<Mapping>();
+  readonly showSelectors = input(false);
+  readonly showInternalNote = input(false);
+  readonly isLoading = input(false);
+  readonly hasParameter = input(false);
+  readonly extensionItems = input<string[]>([]);
+  readonly extensionEvents = input.required<Observable<{ label: string; value: string; description?: string }[]>>();
+  readonly dataCyPrefix = input('dm-mapping-stepper');
 
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly destroyRef = inject(DestroyRef);
-  private formSubscription?: Subscription;
 
-  /**
-   * The host fills the form programmatically (when it opens a saved mapping and when the extension
-   * changes), which fires no event in this component's view. The template shows the form's validity and
-   * the selected event's description, so mark the view dirty whenever the form's value or status changes.
-   */
-  ngOnChanges(changes: SimpleChanges): void {
-    if (!changes['form']) return;
-    this.formSubscription?.unsubscribe();
-    this.formSubscription = this.form
-      ? merge(this.form.valueChanges, this.form.statusChanges)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe(() => this.cdr.markForCheck())
-      : undefined;
+  constructor() {
+    // The host fills the form programmatically (when it opens a saved mapping and when the extension
+    // changes), which fires no event in this component's view. The template shows the form's validity and
+    // the selected event's description, so mark the view dirty whenever the form's value or status changes.
+    effect((onCleanup) => {
+      const form = this.form();
+      if (!form) return;
+      const subscription = merge(form.valueChanges, form.statusChanges).subscribe(() => this.cdr.markForCheck());
+      onCleanup(() => subscription.unsubscribe());
+    });
   }
 
   /** Description of the currently selected event, shown below the dropdown instead of inside it. */
   descriptionFor(events: { value: string; description?: string }[] | null): string | undefined {
-    return events?.find(e => e.value === this.form?.get('eventName')?.value)?.description;
+    return events?.find(e => e.value === this.form()?.get('eventName')?.value)?.description;
   }
 }

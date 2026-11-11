@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, OnInit, Output, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector, viewChild, input, effect } from '@angular/core';
 import { afterNextRenderInZone } from '../misc/after-render';
 import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -54,17 +54,17 @@ import { provideGridPersistence } from '../misc/grid-persistence';
     CoreModule,
   ]
 })
-export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly injector = inject(Injector);
-  @Input() selectable = true;
-  @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
+  readonly selectable = input(true);
+  readonly directions = input<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
   private directions$ = new BehaviorSubject<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
   private userDirectionFilter$ = new BehaviorSubject<Direction | 'ALL'>('ALL');
   selectedDirectionFilter: Direction | 'ALL' = 'ALL';
   readonly Direction = Direction;
-  @Input() readOnly = false;
-  @Input() deploy: string[];
-  @Input() deploymentMapEntry: DeploymentMapEntry;
+  readonly readOnly = input(false);
+  readonly deploy = input<string[]>();
+  readonly deploymentMapEntry = input<DeploymentMapEntry>();
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   readonly connectorGrid = viewChild<DataGridComponent>('connectorGrid');
@@ -117,12 +117,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   constructor() {
     this.toggleIntervalForm = this.initForm();
     this.featurePromise = this.sharedService.getFeatures();
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['directions']) {
-      this.directions$.next(changes['directions'].currentValue);
-    }
+    // The host's direction filter feeds the configurations stream.
+    effect(() => this.directions$.next(this.directions()));
   }
 
   async ngOnInit(): Promise<void> {
@@ -157,7 +153,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   ngAfterViewInit(): void {
-    if (this.selectable) {
+    if (this.selectable()) {
       afterNextRenderInZone(this.injector, () => this.connectorGrid().setItemsSelected(this.selected, true));
     }
     afterNextRenderInZone(this.injector, () => this.startCountdown());
@@ -232,7 +228,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   private initializeActionControls(): void {
     this.actionControls = ACTION_CONTROLS
-      .filter(control => !this.selectable || control.type === 'VIEW')
+      .filter(control => !this.selectable() || control.type === 'VIEW')
       .map(control => ({
         ...control,
         callback: this[control.callbackName].bind(this),
@@ -241,7 +237,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
         // 'connectorType' rule that excludes the auto-created default HTTP connector everywhere
         // else. Only the role-gating rule is meant to be bypassed here.
         showIf: (item: ConnectorConfiguration) => {
-          const rules = this.selectable && control.type === 'VIEW'
+          const rules = this.selectable() && control.type === 'VIEW'
             ? control.visibilityRules.filter(rule => rule.type !== 'userRole')
             : control.visibilityRules;
           return this.checkActionVisibility(item, rules);
@@ -252,7 +248,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private initializeBulkActionControls(): void {
     // Bulk selection is only offered on the main connector list; the deployment-map
     // picker (selectable=true) keeps its own single-purpose selection behavior.
-    if (this.selectable) return;
+    if (this.selectable()) return;
 
     this.bulkActionControls = [
       {
@@ -266,13 +262,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   private initializeColumns(): void {
     this.columns = GRID_COLUMNS
-      .filter(column => !(this.selectable && column.name === 'enabled'))
+      .filter(column => !(this.selectable() && column.name === 'enabled'))
       .map(column => ({
         ...column,
         gridTrackSize: column.name === 'status' || column.name === 'enabled'
-          ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
+          ? this.selectable() ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
           : column.gridTrackSize,
-        cellRendererComponent: this.selectable && column.name === 'name' ? undefined : column.cellRendererComponent,
+        cellRendererComponent: this.selectable() && column.name === 'name' ? undefined : column.cellRendererComponent,
       }));
   }
 
@@ -305,14 +301,14 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   private initializeSelection(): void {
-    this.selected = this.deploymentMapEntry?.connectors ?? [];
+    this.selected = this.deploymentMapEntry()?.connectors ?? [];
     this.selected$.next(this.selected);
   }
 
   private setupConfigurationsSubscription(): void {
     combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe(([selected, configurations]) => {
       this.configurations = configurations;
-      if (this.selectable) {
+      if (this.selectable()) {
         this.updateDeploymentMapEntry(selected);
       }
       // OnPush: the selected connectors' names are looked up in `configurations`, which changes here, from
@@ -322,12 +318,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   private updateDeploymentMapEntry(selected: string[]): void {
-    if (!this.deploymentMapEntry) return;
+    if (!this.deploymentMapEntry()) return;
 
     // A new object: the host owns the entry and hands the new one back through the input.
-    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry, connectors: selected });
+    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry(), connectors: selected });
 
-    if (this.readOnly) {
+    if (this.readOnly()) {
       this.updateReadOnlyConfigurations(selected);
     }
   }
@@ -335,7 +331,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private updateReadOnlyConfigurations(selected: string[]): void {
     this.configurations?.forEach(conf => {
       conf['checked'] = selected.includes(conf.identifier);
-      conf['readOnly'] = this.readOnly;
+      conf['readOnly'] = this.readOnly();
     });
   }
 
@@ -415,7 +411,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     } as Partial<ConnectorConfiguration>;
     if (config) {
       // Determine action: view for enabled connectors or when in selectable mode, otherwise update
-      action = (config.enabled || this.selectable) ? 'view' : 'update';
+      action = (config.enabled || this.selectable()) ? 'view' : 'update';
       configuration = cloneDeep(config);
     }
 
@@ -493,8 +489,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
-    //return this.selectable && this.readOnly;
-    return this.readOnly;
+    //return this.selectable() && this.readOnly();
+    return this.readOnly();
   }
 
   private showConfirmationModal(): BsModalRef {
@@ -528,7 +524,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
         case 'enabled':
           return item.enabled === rule.value;
         case 'readOnly':
-          return this.readOnly === rule.value;
+          return this.readOnly() === rule.value;
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
         case 'userRole':

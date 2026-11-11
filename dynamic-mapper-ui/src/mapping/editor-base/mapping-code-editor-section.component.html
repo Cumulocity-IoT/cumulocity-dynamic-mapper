@@ -48,7 +48,7 @@
     </div>
     <div class="col-lg-5 p-r-16">
       <div class="input-group">
-        <c8y-select [attr.data-cy]="dataCyPrefix() + '-code-template-select'" [items]="codeTemplateItems" [ngModel]="templateId()"
+        <c8y-select [attr.data-cy]="dataCyPrefix() + '-code-template-select'" [items]="codeTemplateItems()" [ngModel]="templateId()"
           (ngModelChange)="onTemplateSelected($event)" name="templateSelect" [filterItems]="true" labelProperty="label"
           placeholder="{{ 'Select template...' | translate }}" [attr.aria-label]="'Code Template' | translate" class="select-template">
         </c8y-select>

@@ -21,7 +21,7 @@
 
 // input-list.component.ts
 
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ChangeDetectionStrategy, effect, input, untracked } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 
@@ -52,8 +52,19 @@ export class InputListComponent implements OnInit, OnDestroy {
   // there's nothing in it dataInternal doesn't already (more currently) reflect.
   private lastEmittedMeaningful?: Array<{ key: string; value: string | undefined }>;
 
-  @Input()
-  set data(list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined) {
+  readonly data = input<Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined>();
+
+  constructor() {
+    // Applies the host's value to the rows. The host binds a method call, so this runs on every
+    // change-detection pass; the echo check below is what keeps it from overwriting a row being typed.
+    effect(() => {
+      const list = this.data();
+      untracked(() => this.applyIncoming(list));
+    });
+  }
+
+  private applyIncoming(list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined): void {
+
     const incoming = InputListComponent.toEntries(list);
     const incomingMeaningful = incoming.filter((e) => e.key?.trim());
 
@@ -110,15 +121,11 @@ export class InputListComponent implements OnInit, OnDestroy {
     this.changeSubject.complete();
   }
 
-  get data(): Array<{ key: string; value: string | undefined }> {
-    return this.dataInternal;
-  }
-
   trackByIndex(index: number, item: unknown): number {
     return index;
   }
 
-  @Input() disabled = false;
+  readonly disabled = input(false);
   @Output() dataChange = new EventEmitter<Array<{ key: string; value: string | undefined }>>();
 
   dataInternal: Array<{ key: string; value: string | undefined }> = [];
@@ -144,7 +151,7 @@ export class InputListComponent implements OnInit, OnDestroy {
 
   private emitChange() {
     // Record what we're telling the parent, so a later echo of exactly this (however stale by
-    // the time it round-trips back through the `data` setter above) is recognized as our own and
+    // the time it round-trips back through the `data` input above) is recognized as our own and
     // ignored rather than clobbering whatever the user has typed since.
     this.lastEmittedMeaningful = this.dataInternal.filter((e) => e.key?.trim());
     // Emit all data for UI updates

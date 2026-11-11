@@ -18,17 +18,18 @@
  * @authors Christof Strack
  */
 
+import { TestBed } from '@angular/core/testing';
 import { TypeSelectorComponent } from './type-selector.component';
 
 describe('TypeSelectorComponent (inline resync column)', () => {
   let component: TypeSelectorComponent;
 
   beforeEach(() => {
-    component = new TypeSelectorComponent();
-    component.inline = true;
-    component.showResync = true;
-    component.knownTypes = ['c8y_Old'];
-    component.typeList = ['c8y_Old', 'c8y_New'];
+    // Built in an injection context (signal inputs need one) and never rendered: the inputs the logic reads are
+    // replaced by plain functions, and the rows the typeList input would have produced are set directly.
+    component = TestBed.runInInjectionContext(() => new TypeSelectorComponent());
+    Object.assign(component, { inline: () => true, showResync: () => true, knownTypes: () => ['c8y_Old'] });
+    component.typeListInternal = ['c8y_Old', 'c8y_New'];
   });
 
   it('offers the resync only for types the server does not have yet', () => {
@@ -48,12 +49,12 @@ describe('TypeSelectorComponent (inline resync column)', () => {
 
   it('emits the ticked types, adding and removing one at a time', () => {
     const emitted: string[][] = [];
-    component.resyncTypesChange.subscribe(v => emitted.push(v));
+    component.resyncTypes.subscribe(v => emitted.push(v));
 
     component.setResync(' c8y_New ', true);
     expect(emitted.at(-1)).toEqual(['c8y_New']);
 
-    component.resyncTypes = ['c8y_New', 'c8y_Other'];
+    component.resyncTypes.set(['c8y_New', 'c8y_Other']);
     component.setResync('c8y_New', false);
     expect(emitted.at(-1)).toEqual(['c8y_Other']);
     expect(component.isResync('c8y_Other')).toBeTrue();
@@ -61,7 +62,7 @@ describe('TypeSelectorComponent (inline resync column)', () => {
 
   it('ignores a blank type', () => {
     const emitted: string[][] = [];
-    component.resyncTypesChange.subscribe(v => emitted.push(v));
+    component.resyncTypes.subscribe(v => emitted.push(v));
     component.setResync('  ', true);
     expect(emitted).toEqual([]);
   });

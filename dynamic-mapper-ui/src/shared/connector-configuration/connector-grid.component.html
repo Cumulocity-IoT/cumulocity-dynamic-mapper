@@ -46,7 +46,7 @@
   </form>
 </ng-template>
 
-@if (!selectable) {
+@if (!selectable()) {
 <div class="d-flex a-i-center m-b-8 p-l-8 p-t-8">
   <label class="text-normal text-muted flex-no-shrink m-r-8 m-b-0">{{ 'Direction' | translate }}</label>
   <div class="c8y-select-wrapper" style="min-width: 130px">
@@ -62,7 +62,7 @@
 }
 
 <c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors' | translate"
-  [selectable]="(selectable || bulkActionControls.length > 0) && !readOnly"
+  [selectable]="(selectable() || bulkActionControls.length > 0) && !readOnly()"
   [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
   [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls"
   [bulkActionControls]="bulkActionControls" [headerActionControls]="headerActionControls"
@@ -75,11 +75,11 @@
 </c8y-data-grid>
 
 
-@if (selectable) {
+@if (selectable()) {
 <div>
   <label translate>Selected connectors for mapping</label>
   <div class="bg-level-1 p-t-2 p-b-2">
-    @for (identifier of deploymentMapEntry?.connectors; track identifier; let i = $index) {
+    @for (identifier of deploymentMapEntry()?.connectors; track identifier; let i = $index) {
     <span class="text-12 label label-primary m-r-8">
       {{ findNameByIdent(identifier) }}</span>
     }
