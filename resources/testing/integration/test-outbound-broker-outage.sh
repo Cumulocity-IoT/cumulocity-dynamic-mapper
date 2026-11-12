@@ -64,6 +64,9 @@ set_connector_endpoint() {   # <host> <port>
     _body=$(printf '%s' "$_cfg" | jq -c --arg h "$1" --argjson p "$2" '.properties.mqttHost = $h | .properties.mqttPort = $p')
     dm_api PUT "/configuration/connector/instance/$CONNECTOR_ID" "$_body" >/dev/null
     dm_info "Connector endpoint set to $1:$2"
+    # A saved configuration is only applied on the next connect: CONNECT reconnects the running client
+    # with the stored configuration. It can answer with an error while the new endpoint is unreachable.
+    dm_connect_connector "$CONNECTOR_ID" || true
 }
 
 cleanup() {
