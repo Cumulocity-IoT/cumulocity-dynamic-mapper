@@ -226,7 +226,9 @@ public class CustomWebSocketClient extends WebSocketClient {
                     tenant, connectorId.displayName(), CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS, messageId,
                     notification.getApi());
             Thread.sleep(CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS);
-            this.reconnect();
+            if (isOpen()) { // closed means the connector was paused: it opens a new WebSocket when it is up
+                this.reconnect();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {

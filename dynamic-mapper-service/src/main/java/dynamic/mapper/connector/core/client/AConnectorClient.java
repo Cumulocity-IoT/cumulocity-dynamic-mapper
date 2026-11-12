@@ -321,6 +321,16 @@ public abstract class AConnectorClient {
      *
      * @return {@code true} if the connector is not connected and the publish must be skipped
      */
+    /**
+     * Whether outbound notifications must not be consumed while this connector is disconnected. When true, the
+     * Notification 2.0 device WebSockets of the connector are closed until the broker connection is up again
+     * (see {@code NotificationConnectionManager#syncConnectorAvailability}). Only for connectors whose
+     * {@link #publishMEAO} calls {@link #failPublishIfNotConnected}.
+     */
+    public boolean holdsOutboundWhileDisconnected() {
+        return false;
+    }
+
     protected boolean failPublishIfNotConnected(ProcessingContext<?> context) {
         if (isConnected()) {
             return false;

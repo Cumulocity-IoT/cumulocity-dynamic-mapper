@@ -411,6 +411,11 @@ public class AMQP10Client extends AConnectorClient {
     // -------------------------------------------------------------------------
 
     @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         if (failPublishIfNotConnected(context)) {
             return;

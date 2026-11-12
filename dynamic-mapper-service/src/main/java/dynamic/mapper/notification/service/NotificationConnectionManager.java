@@ -122,6 +122,9 @@ public class NotificationConnectionManager {
     // Scheduled executor for reconnection
     private volatile ScheduledExecutorService reconnectExecutor;
 
+    /** Connectors (as {@code tenant|connectorId}) whose device WebSockets are closed because the broker is down. */
+    private final Set<String> pausedConnectors = ConcurrentHashMap.newKeySet();
+
     /**
      * Create a subscriber token for EXPLORER_DEVICE_SUBSCRIPTION and open a WebSocket
      * so the explorer session receives Notification 2.0 events for the subscribed device.
@@ -661,6 +664,8 @@ public class NotificationConnectionManager {
             });
             reconnectExecutor.scheduleAtFixedRate(this::reconnectAll,
                     120, Utils.RECONNECT_INTERVAL_SECONDS, TimeUnit.SECONDS);
+            reconnectExecutor.scheduleWithFixedDelay(this::syncConnectorAvailabilityAllTenants,
+                    30, Utils.CONNECTOR_AVAILABILITY_CHECK_SECONDS, TimeUnit.SECONDS);
             log.debug("Started reconnect scheduler");
         }
     }
@@ -676,6 +681,14 @@ public class NotificationConnectionManager {
 
         for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
             if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)) {
+                continue;
+            }
+            if (isHeldWhileDisconnected(dispatcher)) {
+                // Do not consume while the broker connection is down: the unacked messages stay queued in
+                // Cumulocity and are delivered once syncConnectorAvailability() sees the connector connected.
+                pausedConnectors.add(pauseKey(tenant, dispatcher.getConnectorClient().getConnectorIdentifier()));
+                log.info("{} - Not opening device WebSocket for connector {}: broker connection is down",
+                        tenant, dispatcher.getConnectorClient().getConnectorIdentifier());
                 continue;
             }
 
@@ -737,6 +750,14 @@ public class NotificationConnectionManager {
 
         for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
             if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)) {
+                continue;
+            }
+            if (isHeldWhileDisconnected(dispatcher)) {
+                // Do not consume while the broker connection is down: the unacked messages stay queued in
+                // Cumulocity and are delivered once syncConnectorAvailability() sees the connector connected.
+                pausedConnectors.add(pauseKey(tenant, dispatcher.getConnectorClient().getConnectorIdentifier()));
+                log.info("{} - Not opening device WebSocket for connector {}: broker connection is down",
+                        tenant, dispatcher.getConnectorClient().getConnectorIdentifier());
                 continue;
             }
 
@@ -1034,6 +1055,88 @@ public class NotificationConnectionManager {
                 log.warn("{} - Error closing cache inventory client: {}", tenant, e.getMessage());
             }
         }
+    }
+
+    private static String pauseKey(String tenant, String connectorId) {
+        return tenant + "|" + connectorId;
+    }
+
+    /** A connector that holds outbound messages while its broker connection is down, and is down now. */
+    private boolean isHeldWhileDisconnected(OutboundMessageDispatcher dispatcher) {
+        return dispatcher.getConnectorClient().holdsOutboundWhileDisconnected()
+                && !dispatcher.getConnectorClient().isConnected();
+    }
+
+    private void syncConnectorAvailabilityAllTenants() {
+        try {
+            subscriptionsService.runForEachTenant(() -> syncConnectorAvailability(subscriptionsService.getTenant()));
+        } catch (Exception e) {
+            log.error("Error while syncing connector availability: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Keeps the device WebSockets in step with the broker connections, so outbound messages are not consumed
+     * (and lost) while a broker is down. Cumulocity keeps what was not acknowledged and delivers it again when
+     * the WebSocket is opened. Nothing is buffered here and the subscription is kept: unsubscribing would drop
+     * the queued messages.
+     * <ul>
+     *   <li>connector down: close its static and dynamic device WebSocket, without unsubscribing;</li>
+     *   <li>connector up again: open them again.</li>
+     * </ul>
+     */
+    void syncConnectorAvailability(String tenant) {
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
+        if (dispatchers == null || dispatchers.isEmpty()) {
+            return;
+        }
+        boolean resume = false;
+        for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
+            if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)
+                    || !dispatcher.getConnectorClient().holdsOutboundWhileDisconnected()) {
+                continue;
+            }
+            String connectorId = dispatcher.getConnectorClient().getConnectorIdentifier();
+            String key = pauseKey(tenant, connectorId);
+            if (!dispatcher.getConnectorClient().isConnected()) {
+                if (closeDeviceClientsForConnector(tenant, connectorId) | pausedConnectors.add(key)) {
+                    log.warn("{} - Broker connection of connector {} is down: paused its device WebSockets, "
+                            + "unacknowledged outbound messages stay queued in Cumulocity", tenant, connectorId);
+                }
+            } else if (pausedConnectors.remove(key)) {
+                log.info("{} - Broker connection of connector {} is up again: resuming its device WebSockets",
+                        tenant, connectorId);
+                resume = true;
+            }
+        }
+        if (resume) {
+            try {
+                initializeStaticDeviceConnections(tenant);
+                initializeDynamicDeviceConnections(tenant);
+            } catch (URISyntaxException e) {
+                log.error("{} - Error resuming device connections: {}", tenant, e.getMessage(), e);
+            }
+        }
+    }
+
+    /** Closes the connector's device WebSockets without unsubscribing. @return whether one was open */
+    private boolean closeDeviceClientsForConnector(String tenant, String connectorId) {
+        boolean closed = false;
+        for (Map<String, Map<String, CustomWebSocketClient>> clientsByTenant
+                : List.of(staticDeviceClients, dynamicDeviceClients)) {
+            Map<String, CustomWebSocketClient> clients = clientsByTenant.get(tenant);
+            CustomWebSocketClient client = clients == null ? null : clients.remove(connectorId);
+            if (client != null) {
+                closed |= client.isOpen();
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing device WebSocket of connector {}: {}", tenant, connectorId,
+                            e.getMessage());
+                }
+            }
+        }
+        return closed;
     }
 
     private void reconnectAll() {

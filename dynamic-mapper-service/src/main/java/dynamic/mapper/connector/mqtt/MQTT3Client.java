@@ -450,6 +450,11 @@ public class MQTT3Client extends AMQTTClient {
     }
 
     @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         if (failPublishIfNotConnected(context)) {
             return;
