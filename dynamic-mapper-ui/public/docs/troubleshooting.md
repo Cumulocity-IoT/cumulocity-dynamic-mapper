@@ -116,6 +116,20 @@ record connector, subscription, and mapping state changes, for example a mapping
 - The setting needs an unsubscribe and subscribe of the microservice to take effect. See
   [Service configuration](/c8y-pkg-dynamic-mapper/introduction/service-configuration).
 
+#### Outbound messages arrive late after a broker outage
+
+- While the connector has no broker connection, the Dynamic Mapper leaves outbound messages in Cumulocity. They are
+  published after the connector is connected again. Check the connector status under
+  **Configuration → Connectors**.
+- Search the microservice log for `paused its device WebSockets` and `resuming its device WebSockets` to see when a
+  connector was held and released. See [Reading the microservice log](#microservice-log).
+- If the messages never arrive after the connector is connected again, the outage was probably longer than
+  Cumulocity keeps waiting Notification 2.0 messages. The messages are lost, and the Dynamic Mapper cannot recover
+  them.
+- Messages can arrive more than once after an outage. Make the receiving system tolerate duplicates.
+- For the background and the list of connectors, see
+  [Reliability settings](/c8y-pkg-dynamic-mapper/introduction/reliability-settings#broker-outage).
+
 #### Connector disconnects repeatedly
 
 - Check the broker's access logs for authentication or authorization errors.

@@ -95,10 +95,6 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Smart_Function.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png'
-      },
-      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
