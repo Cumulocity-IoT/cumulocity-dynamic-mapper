@@ -94,6 +94,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /** Set when housekeeping saw the platform consumer disconnected; cleared (and logged) when it is connected again. */
     private volatile boolean platformConsumerLost;
     private Producer<byte[]> deviceProducer;
+    /** Housekeeping cycles in a row in which {@link #deviceProducer} was not connected. Housekeeping thread only. */
+    private int deviceProducerDownCycles;
+    private static final int DEVICE_PRODUCER_RECREATE_AFTER_CYCLES = 3;
     // Guards all check-then-recreate sequences on platformConsumer/deviceProducer: without it,
     // concurrent callers (e.g. two publishMEAO() calls racing to recreate a disconnected
     // deviceProducer, or a housekeeping-triggered resubscribe racing a connect-triggered one)
@@ -847,9 +850,45 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             }
         }
 
+        // Outbound notifications are held while this connector is disconnected (see
+        // holdsOutboundWhileDisconnected()), so nothing publishes and the lazy recreate in publishMEAO() would
+        // never run. The Pulsar client reconnects a producer that merely lost its connection by itself, so
+        // only a producer that stays disconnected for several cycles is replaced.
         if (deviceProducer != null && !deviceProducer.isConnected()) {
-            log.warn("{} - Device producer disconnected, will reconnect on next publish", tenant);
+            deviceProducerDownCycles++;
+            if (deviceProducerDownCycles >= DEVICE_PRODUCER_RECREATE_AFTER_CYCLES
+                    && pulsarClient != null && !pulsarClient.isClosed() && shouldConnect()) {
+                log.warn("{} - Device producer disconnected for {} housekeeping cycles, recreating", tenant,
+                        deviceProducerDownCycles);
+                pulsarChannelLock.lock();
+                try {
+                    if (deviceProducer == null || !deviceProducer.isConnected()) {
+                        createTowardsDeviceProducer();
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Failed to recreate device producer, will retry next housekeeping cycle: {}",
+                            tenant, e.getMessage());
+                } finally {
+                    pulsarChannelLock.unlock();
+                }
+            } else {
+                log.warn("{} - Device producer disconnected, will reconnect on next publish", tenant);
+            }
+        } else {
+            deviceProducerDownCycles = 0;
         }
+
+        // isConnected() only calls isPhysicallyConnected() while the state is connected, so once the state is
+        // disconnected nothing marks it connected again. Let it sync the state when consumer and producer are
+        // back, otherwise the held outbound notifications are never released.
+        if (shouldConnect() && !connectionStateManager.isConnected()) {
+            isPhysicallyConnected();
+        }
+    }
+
+    @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
     }
 
     /**

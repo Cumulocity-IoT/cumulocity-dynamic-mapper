@@ -709,6 +709,74 @@ class MQTTServicePulsarClientTest {
         }
     }
 
+    private MQTTServicePulsarClient clientWithMocks() {
+        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, clientServices, connectorRegistry,
+                connectorConfiguration, dispatcher, TEST_SUBSCRIPTION_ID, TEST_TENANT);
+        injectTopicNames(mqttServicePulsarClient);
+        injectPulsarClient(mqttServicePulsarClient, pulsarClient);
+        injectConsumerAndProducer(mqttServicePulsarClient, platformConsumer, deviceProducer);
+        return mqttServicePulsarClient;
+    }
+
+    private void housekeeping(MQTTServicePulsarClient client) throws Exception {
+        invokePrivateMethod(client, "connectorSpecificHousekeeping", new Class<?>[] { String.class }, TEST_TENANT);
+    }
+
+    @Test
+    void holdsOutboundWhileDisconnected() {
+        assertTrue(clientWithMocks().holdsOutboundWhileDisconnected());
+    }
+
+    @Test
+    void aDeviceProducerThatStaysDisconnectedIsRecreatedByHousekeeping() throws Exception {
+        MQTTServicePulsarClient client = clientWithMocks();
+        when(pulsarClient.isClosed()).thenReturn(false);
+        when(deviceProducer.isConnected()).thenReturn(false);
+        when(platformConsumer.isConnected()).thenReturn(true);
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.autoUpdatePartitions(false)).thenReturn(producerBuilder);
+        when(producerBuilder.create()).thenReturn(mock(Producer.class));
+
+        housekeeping(client);
+        housekeeping(client);
+        verify(pulsarClient, never()).newProducer(); // a producer that is only reconnecting is left alone
+
+        housekeeping(client);
+        verify(pulsarClient).newProducer();
+    }
+
+    @Test
+    void aReconnectedDeviceProducerResetsTheCountdown() throws Exception {
+        MQTTServicePulsarClient client = clientWithMocks();
+        when(pulsarClient.isClosed()).thenReturn(false);
+        when(platformConsumer.isConnected()).thenReturn(true);
+
+        // isConnected() is read more than once per cycle, so set the value for each cycle explicitly
+        for (boolean connected : new boolean[] { false, false, true, false, false }) {
+            when(deviceProducer.isConnected()).thenReturn(connected);
+            housekeeping(client);
+        }
+
+        verify(pulsarClient, never()).newProducer();
+    }
+
+    @Test
+    void housekeepingMarksTheConnectorConnectedAgainWhenConsumerAndProducerAreBack() throws Exception {
+        MQTTServicePulsarClient client = clientWithMocks();
+        when(pulsarClient.isClosed()).thenReturn(false);
+        when(platformConsumer.isConnected()).thenReturn(true);
+        when(deviceProducer.isConnected()).thenReturn(true);
+        dynamic.mapper.connector.core.client.ConnectionStateManager state =
+                mock(dynamic.mapper.connector.core.client.ConnectionStateManager.class);
+        when(state.isConnected()).thenReturn(false);
+        org.springframework.test.util.ReflectionTestUtils.setField(client, "connectionStateManager", state);
+
+        housekeeping(client);
+
+        verify(state).setConnected(true);
+    }
+
     @Test
     void testGetSubscriptionName() throws Exception {
         String result = invokePrivateStaticMethod(
