@@ -25,8 +25,13 @@
 # Skipped when mosquitto is missing or the service cannot connect to the local broker.
 #
 # Environment:
-#   DM_OUTAGE_BROKER_HOST   address the service uses to reach the broker (default 127.0.0.1)
-#   DM_OUTAGE_BROKER_PORT   broker port (default 18831)
+#   DM_OUTAGE_BROKER_HOST    address the service uses to reach the broker (default 127.0.0.1)
+#   DM_OUTAGE_BROKER_PORT    port the local mosquitto listens on (default 18831)
+#   DM_OUTAGE_CONNECTOR_PORT port the connector connects to (default: the listen port;
+#                            set it when a TCP tunnel forwards to the local broker)
+#
+# The test must stop and start the broker, so it cannot use a public broker such as
+# broker.hivemq.com: DM_OUTAGE_BROKER_HOST has to lead to the local mosquitto.
 #
 # Usage:
 #   ./test-outbound-broker-outage.sh [--cleanup|--keep|--validate-only]
@@ -42,7 +47,11 @@ TEST_TITLE="Outbound messages survive a broker outage"
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 BROKER_HOST="${DM_OUTAGE_BROKER_HOST:-127.0.0.1}"
 BROKER_PORT="${DM_OUTAGE_BROKER_PORT:-18831}"
-CONNECTOR_ID="test-outage-mqtt"
+# Port the connector uses. Differs from the listen port when a TCP tunnel sits in between.
+CONNECTOR_PORT="${DM_OUTAGE_CONNECTOR_PORT:-$BROKER_PORT}"
+# Alphanumeric only: Cumulocity builds the Notification 2.0 subscriber name from the identifier
+# and rejects anything else (HTTP 422 "has to be alphanumeric"). Cleaned up by --cleanup-only.
+CONNECTOR_ID="testoutagemqtt"
 DEVICE_NAME="dmtest-out-outage-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
 EXT_ID="$DEVICE_NAME"
@@ -114,13 +123,13 @@ CONF
 dm_step "Starting local broker on port $BROKER_PORT ..."
 start_broker || dm_skip_exit "Could not start mosquitto on port $BROKER_PORT (port in use?)"
 
-dm_step "Creating MQTT connector to $BROKER_HOST:$BROKER_PORT ..."
-dm_setup_mqtt_test_connector "$CONNECTOR_ID" "Test outage MQTT connector" "$BROKER_HOST" "$BROKER_PORT"
+dm_step "Creating MQTT connector to $BROKER_HOST:$CONNECTOR_PORT ..."
+dm_setup_mqtt_test_connector "$CONNECTOR_ID" "Test outage MQTT connector" "$BROKER_HOST" "$CONNECTOR_PORT"
 CONNECTOR_CREATED=true
 dm_enable_connector "$CONNECTOR_ID"
 dm_connect_connector "$CONNECTOR_ID"
 if ! dm_wait_for_connector_status "$CONNECTOR_ID" CONNECTED 40 2 >/dev/null; then
-    dm_skip_exit "Connector could not connect to $BROKER_HOST:$BROKER_PORT. Set DM_OUTAGE_BROKER_HOST to the address of this host as seen from the service."
+    dm_skip_exit "Connector could not connect to $BROKER_HOST:$CONNECTOR_PORT. Set DM_OUTAGE_BROKER_HOST to the address of this host as seen from the service."
 fi
 dm_success "Connector is CONNECTED"
 
