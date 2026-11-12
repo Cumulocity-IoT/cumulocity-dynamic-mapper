@@ -100,16 +100,6 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('an in-grid edit is announced as a new list and leaves the old substitution untouched', () => {
-    const original = mapping.substitutions[1];
-
-    step.onGridSubstitutionPatch({ index: 1, patch: { expandArray: true } });
-
-    expect(emitted[0][1].expandArray).toBeTrue();
-    expect(original.expandArray).toBeFalse();
-    expect(refresh).toHaveBeenCalledTimes(1);
-  });
-
   it('a replaced duplicate target is reported to the user', () => {
     step.substitutionModel = { pathSource: '$.new', pathTarget: '$.tgtA', sourceExpression: { valid: true }, targetExpression: { valid: true } };
 
@@ -118,6 +108,33 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(emitted[0].map(s => s.pathSource)).toEqual(['$.new', '$.b']);
     expect(alertService.info).toHaveBeenCalledWith(jasmine.stringContaining('Replaced substitution # 1'));
     expect(step.selectedSubstitution).toBe(-1);
+  });
+
+  it('adds the options chosen in the editor, then resets them for the next substitution', () => {
+    step.substitutionModel = {
+      pathSource: '$.new', pathTarget: '$.tgtNew', expandArray: true, repairStrategy: RepairStrategy.IGNORE,
+      sourceExpression: { valid: true }, targetExpression: { valid: true }
+    };
+
+    step.onAddSubstitution();
+
+    expect(emitted[0][2]).toEqual(jasmine.objectContaining({ expandArray: true, repairStrategy: RepairStrategy.IGNORE }));
+    expect(step.substitutionModel.expandArray).toBeFalse();
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.DEFAULT);
+  });
+
+  it('save adds when no row is selected and updates when one is', () => {
+    step.onAddSubstitution = jasmine.createSpy('add');
+    step.onUpdateSubstitution = jasmine.createSpy('update');
+
+    step.selectedSubstitution = -1;
+    step.onSaveSubstitution();
+    expect(step.onAddSubstitution).toHaveBeenCalledTimes(1);
+    expect(step.onUpdateSubstitution).not.toHaveBeenCalled();
+
+    step.selectedSubstitution = 1;
+    step.onSaveSubstitution();
+    expect(step.onUpdateSubstitution).toHaveBeenCalledTimes(1);
   });
 
   it('adding an invalid substitution warns and announces nothing', () => {
@@ -195,5 +212,85 @@ describe('MappingSubstitutionStepComponent async results (OnPush)', () => {
     stepperService.evaluateTargetExpression.and.rejectWith(new Error('bad'));
     await step.updateTargetExpressionResult('$.b');
     expect(markForCheck).toHaveBeenCalled();
+  });
+});
+
+describe('MappingSubstitutionStepComponent editor options', () => {
+  let step: any;
+
+  beforeEach(() => {
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    step.substitutionModel = { expandArray: false, repairStrategy: RepairStrategy.DEFAULT };
+    step.translateService = { instant: (s: string) => s, getCurrentLang: () => 'en' };
+    step.repairStrategyOptionsCache = new Map();
+  });
+
+  it('enabling expand as array resets an array-only repair strategy', () => {
+    step.substitutionModel.repairStrategy = RepairStrategy.USE_FIRST_VALUE_OF_ARRAY;
+
+    step.onExpandArrayChange(true);
+
+    expect(step.substitutionModel.expandArray).toBeTrue();
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.DEFAULT);
+  });
+
+  it('enabling expand as array keeps any other repair strategy', () => {
+    step.substitutionModel.repairStrategy = RepairStrategy.IGNORE;
+
+    step.onExpandArrayChange(true);
+
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.IGNORE);
+  });
+
+  it('offers the array-only strategies only while expand as array is off', () => {
+    const disabled = () => step.repairStrategyOptions().filter((o: any) => o.disabled).map((o: any) => o.value);
+
+    expect(disabled()).toEqual([]);
+
+    step.onExpandArrayChange(true);
+
+    expect(disabled()).toEqual([RepairStrategy.USE_FIRST_VALUE_OF_ARRAY, RepairStrategy.USE_LAST_VALUE_OF_ARRAY]);
+  });
+
+  it('builds the repair strategy options once per language and expand setting', () => {
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+
+    const before = step.repairStrategyOptions();
+    step.onExpandArrayChange(true);
+
+    expect(step.repairStrategyOptions()).not.toBe(before);
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+  });
+
+  describe('hasFieldError', () => {
+    it('follows the flag the field wrapper shows the message with', () => {
+      step.substitutionFormlyFieldsSource = [{ showError: false }];
+      step.substitutionFormlyFieldsTarget = [{ showError: true }];
+
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+      expect(step.hasFieldError('pathTarget')).toBeTrue();
+    });
+
+    it('falls back to an invalid control the user has touched', () => {
+      step.substitutionFormlyFieldsSource = [{}];
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: false }) };
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: true }) };
+      expect(step.hasFieldError('pathSource')).toBeTrue();
+    });
+  });
+
+  it('outbound mappings and read-only users cannot expand', () => {
+    step.mapping = () => ({ direction: 'INBOUND' });
+    step.stepperConfiguration = () => ({ readOnly: false });
+    expect(step.expandArrayDisabled).toBeFalse();
+
+    step.mapping = () => ({ direction: 'OUTBOUND' });
+    expect(step.expandArrayDisabled).toBeTrue();
+
+    step.mapping = () => ({ direction: 'INBOUND' });
+    step.stepperConfiguration = () => ({ readOnly: true });
+    expect(step.expandArrayDisabled).toBeTrue();
   });
 });

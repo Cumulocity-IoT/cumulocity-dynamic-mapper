@@ -96,7 +96,6 @@ describe('SubstitutionManagementService', () => {
       service.addSubstitution(makeSubstitutionModel(true, true, '$.b2', '$.tgtB'), current);
       service.updateSubstitution(0, makeSubstitutionModel(true, true, '$.x', '$.tgtB'), current);
       service.deleteSubstitution(0, current);
-      service.patchSubstitution(current, 1, { expandArray: true });
 
       expect(JSON.stringify(current)).toBe(snapshot);
     });
@@ -159,13 +158,23 @@ describe('SubstitutionManagementService', () => {
       expect(update.notice).toBeUndefined();
     });
 
-    it('preserves repairStrategy/expandArray, which are edited inline in the grid', () => {
+    it('keeps repairStrategy/expandArray when the form holds none', () => {
       const existing = { ...makeSubstitution('$.src', '$.tgt'), repairStrategy: RepairStrategy.IGNORE, expandArray: true };
 
       const update = service.updateSubstitution(0, makeSubstitutionModel(true, true, '$.src2', '$.tgt2'), [existing]);
 
       expect(update.substitutions[0].repairStrategy).toBe(RepairStrategy.IGNORE);
       expect(update.substitutions[0].expandArray).toBe(true);
+    });
+
+    it('takes repairStrategy/expandArray from the form', () => {
+      const existing = makeSubstitution('$.src', '$.tgt');
+      const model = { ...makeSubstitutionModel(true, true, '$.src', '$.tgt'), expandArray: true, repairStrategy: RepairStrategy.IGNORE };
+
+      const update = service.updateSubstitution(0, model as any, [existing]);
+
+      expect(update.substitutions[0]).toEqual(jasmine.objectContaining({ expandArray: true, repairStrategy: RepairStrategy.IGNORE }));
+      expect(existing.expandArray).toBe(false);
     });
 
     it('keeps the old paths when either expression is invalid', () => {
@@ -214,19 +223,6 @@ describe('SubstitutionManagementService', () => {
     it('returns undefined for an index outside the list', () => {
       expect(service.deleteSubstitution(3, [makeSubstitution()])).toBeUndefined();
       expect(service.deleteSubstitution(-1, [makeSubstitution()])).toBeUndefined();
-    });
-  });
-
-  describe('patchSubstitution', () => {
-    it('changes only the addressed substitution', () => {
-      const result = service.patchSubstitution(
-        [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB')],
-        1,
-        { expandArray: true, repairStrategy: RepairStrategy.IGNORE }
-      );
-
-      expect(result[0].expandArray).toBe(false);
-      expect(result[1]).toEqual(jasmine.objectContaining({ pathSource: '$.b', expandArray: true, repairStrategy: RepairStrategy.IGNORE }));
     });
   });
 

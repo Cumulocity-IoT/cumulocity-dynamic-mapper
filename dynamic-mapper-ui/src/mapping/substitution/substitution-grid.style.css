@@ -18,21 +18,93 @@
  * @authors Christof Strack
  */
 
-.c8y-list__item__body:has(> c8y-li-body) {
-  padding-top: 6px;
-  padding-bottom: 4px;
+.d11r-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.substitution-grid-thead {
-  position: sticky;
-  z-index: 10;
-  background-color: var(--c8y-root-component-bg, #fff);
+.d11r-sub-empty {
+  padding: 24px 16px;
+  text-align: center;
 }
 
-.substitution-grid-body {
-  max-height: 200px;
-  overflow-y: scroll;
-  border-bottom: 1px solid var(--c8y-root-component-separator-color, #ddd);
+.d11r-sub-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid var(--c8y-root-component-separator-color, #ddd);
+  border-radius: 4px;
+  background: var(--c8y-root-component-bg, #fff);
+  cursor: pointer;
+}
+
+.d11r-sub-row:hover {
+  border-color: var(--c8y-text-muted, #6f7a82);
+}
+
+.d11r-sub-row:focus-visible {
+  outline: 2px solid var(--c8y-brand-primary, #1776bf);
+  outline-offset: 1px;
+}
+
+/* Same highlight as the platform grids use for a selected row. */
+.d11r-sub-row.active {
+  border-color: var(--c8y-brand-primary, #1776bf);
+  background: var(--c8y-component-background-active, #e8f2fb);
+}
+
+.d11r-sub-index {
+  padding-top: 1px;
+}
+
+.d11r-sub-body {
+  min-width: 0;
+}
+
+.d11r-sub-source,
+.d11r-sub-target {
+  font-family: var(--c8y-font-family-monospace, monospace);
+  overflow-wrap: anywhere;
+}
+
+.d11r-sub-target::before {
+  content: '→ ';
+}
+
+.d11r-sub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.d11r-sub-chips:not(:empty) {
+  margin-top: 6px;
+}
+
+.d11r-chip {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--c8y-root-component-separator-color, #ddd);
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--c8y-text-muted, #6f7a82);
+}
+
+.d11r-chip--info {
+  border-color: transparent;
+  background: var(--c8y-component-background-active, #e8f2fb);
+  color: var(--c8y-brand-primary, #1776bf);
+}
+
+.d11r-chip--expression {
+  border-color: transparent;
+  font-weight: 600;
+  background: var(--c8y-root-component-bg-level-1, #f1f3f5);
+  color: var(--c8y-brand-primary, #1776bf);
 }
 
 .substitution-grid-delete-btn {
@@ -40,59 +112,6 @@
   padding-top: 0 !important;
 }
 
-.table-head-fixed {
-  overflow-y: auto;
-  /* height: 110px;  */
-}
-
-tbody tr td button i {
+.d11r-sub-row button i {
   position: unset !important;
-}
-
-.table-head-fixed thead tr th {
-  background-color: white;
-  position: sticky;
-  top: 0;
-}
-
-/* Selected-row highlight is the plain Bootstrap/c8y ".active" row (same class
-   c8y-data-grid's own activeClassName defaults to), styled globally via
-   table-row-variant('active', $component-background-active) in @c8y/style's _tables.scss
-   for any .table > tbody > tr.active - no custom CSS needed here, and it stays visually
-   consistent with every other c8y grid in the app instead of using a different color. */
-
-/* Reserves a permanent scrollbar-width gutter (like .substitution-grid-body's overflow-y: scroll
-   below) so the header table - which never scrolls - renders at the same effective width as the
-   scrollable body table. Without this, columns visibly drift out of alignment on platforms whose
-   scrollbars take up layout space (most non-macOS browsers, or macOS with "always show
-   scrollbars"). */
-.substitution-grid-head-scroll-spacer {
-  overflow-y: scroll;
-}
-
-/* Fixed layout so the header and body tables' percentage-width columns line up, and so
-   .substitution-path-cell's ellipsis truncation has a bounded width to truncate against. */
-.substitution-grid-head-scroll-spacer table.table-condensed,
-.substitution-grid-body table.table-condensed {
-  table-layout: fixed;
-}
-
-/* table-layout: fixed keeps each header cell's own width fixed, but does NOT stop its content
-   from visually overflowing into neighbouring cells - which throws off the (correctly
-   positioned) columns below by making every subsequent header look shifted right. Clip it. */
-.substitution-grid-thead th {
-  overflow: hidden;
-}
-
-.substitution-path-cell {
-  max-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.substitution-repair-strategy-select select {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

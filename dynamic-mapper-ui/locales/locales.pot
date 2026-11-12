@@ -107,12 +107,6 @@ msgstr ""
 msgid "AI-generated responses can contain errors. Verify the details before use."
 msgstr ""
 
-msgid "All devices in the selected group will be subscribed automatically."
-msgstr ""
-
-msgid "already subscribed"
-msgstr ""
-
 msgid "AMQP 0-9-1 connector"
 msgstr ""
 
@@ -158,9 +152,6 @@ msgstr ""
 msgid "Add Processor Extension"
 msgstr ""
 
-msgid "Add a device type first."
-msgstr ""
-
 msgid "Add a note…"
 msgstr ""
 
@@ -170,13 +161,7 @@ msgstr ""
 msgid "Add connector"
 msgstr ""
 
-msgid "Add device"
-msgstr ""
-
 msgid "Add extension"
-msgstr ""
-
-msgid "Add group"
 msgstr ""
 
 msgid "Add mapping"
@@ -206,9 +191,6 @@ msgstr ""
 msgid "Add substitution"
 msgstr ""
 
-msgid "Add type"
-msgstr ""
-
 msgid "Add your first extension by clicking below."
 msgstr ""
 
@@ -224,10 +206,10 @@ msgstr ""
 msgid "All"
 msgstr ""
 
-msgid "All event types"
+msgid "All devices in the selected group will be subscribed automatically."
 msgstr ""
 
-msgid "All extensions"
+msgid "All event types"
 msgstr ""
 
 msgid "All lines"
@@ -245,13 +227,10 @@ msgstr ""
 msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves."
 msgstr ""
 
-msgid "Allow to define expressions using JSONata"
-msgstr ""
-
 msgid "Already removed in 6.3.0:"
 msgstr ""
 
-msgid "Also subscribe existing devices of these types"
+msgid "Also subscribe existing devices"
 msgstr ""
 
 msgid "An extension must be selected for an Extension (Java) mapping."
@@ -368,15 +347,15 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-msgid "Cancel editing / new substitution"
-msgstr ""
-
 msgid ""
 "Capture raw JSON payloads from the Cumulocity Notification 2.0 API.\n"
 "          Specify a device / device group to subscribe for messages. And then select a message to build a mapping."
 msgstr ""
 
 msgid "Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping."
+msgstr ""
+
+msgid "Change note"
 msgstr ""
 
 msgid "Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code> directly in templates is not supported. Use substitutions instead. Changes are reverted!"
@@ -389,9 +368,6 @@ msgid "Chart processed"
 msgstr ""
 
 msgid "Check the generated result before saving"
-msgstr ""
-
-msgid "Checkbox"
 msgstr ""
 
 msgid "Choose another file"
@@ -556,6 +532,9 @@ msgstr ""
 msgid "Could not verify AI agent availability — proceeding with manual entry only."
 msgstr ""
 
+msgid "Create code template"
+msgstr ""
+
 msgid "Create device"
 msgstr ""
 
@@ -563,9 +542,6 @@ msgid "Create mapping"
 msgstr ""
 
 msgid "Create mapping from selected messages"
-msgstr ""
-
-msgid "Create code template"
 msgstr ""
 
 msgid "Create new shared code"
@@ -593,6 +569,12 @@ msgid "Cumulocity API connector"
 msgstr ""
 
 msgid "Cumulocity MQTT Service connector"
+msgstr ""
+
+msgid "Current active version"
+msgstr ""
+
+msgid "Custom filter"
 msgstr ""
 
 msgid "Custom routing"
@@ -733,7 +715,7 @@ msgstr ""
 msgid "Device does not exist"
 msgstr ""
 
-msgid "Device groups"
+msgid "Device identifier"
 msgstr ""
 
 msgid "Device metadata made available to mappings."
@@ -874,6 +856,9 @@ msgstr ""
 msgid "Enter agent name"
 msgstr ""
 
+msgid "Enter it in the Templates step"
+msgstr ""
+
 msgid "Error"
 msgstr ""
 
@@ -920,6 +905,9 @@ msgid "Events published to Cumulocity"
 msgstr ""
 
 msgid "Exactly once"
+msgstr ""
+
+msgid "Execution filter"
 msgstr ""
 
 msgid "Expand array"
@@ -1210,67 +1198,16 @@ msgstr ""
 msgid "Filter by Direction"
 msgstr ""
 
-msgid "Filter execution mapping"
-msgstr ""
-
-msgid "Execution filter"
+msgid "Filter by fragment"
 msgstr ""
 
 msgid "Filter by type"
 msgstr ""
 
-msgid "Filter by fragment"
-msgstr ""
-
-msgid "Custom filter"
-msgstr ""
-
-msgid "Fragment"
-msgstr ""
-
-msgid "Replace code"
-msgstr ""
-
-msgid "Replace the code in the editor with the selected template"
-msgstr ""
-
-msgid "Writes the \"Filter execution mapping\" of the Templates step: by type (<code>type = '...'</code>), by fragment (<code>$exists(...)</code>), or custom (empty, enter the expression there)."
+msgid "Filter execution mapping"
 msgstr ""
 
 msgid "Filter expression"
-msgstr ""
-
-msgid "Enter it in the Templates step"
-msgstr ""
-
-msgid "Select a filter"
-msgstr ""
-
-msgid "Already subscribed device types:"
-msgstr ""
-
-msgid "Already subscribed device groups:"
-msgstr ""
-
-msgid "Already subscribed devices:"
-msgstr ""
-
-msgid "selected"
-msgstr ""
-
-msgid "Open device table"
-msgstr ""
-
-msgid "Also subscribe existing devices"
-msgstr ""
-
-msgid "subscribed already"
-msgstr ""
-
-msgid "Subscribe the devices of this type that already exist, in addition to the ones created afterward"
-msgstr ""
-
-msgid "Inventory filter"
 msgstr ""
 
 msgid "Filtered"
@@ -1292,6 +1229,9 @@ msgid "Flow state"
 msgstr ""
 
 msgid "For connectors"
+msgstr ""
+
+msgid "Fragment"
 msgstr ""
 
 msgid "Fragments from inventory to cache"
@@ -1404,9 +1344,6 @@ msgid ""
 "                    errors do not count, so an outage never skips data. The default is 3."
 msgstr ""
 
-msgid "How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array."
-msgstr ""
-
 msgid "How to migrate"
 msgstr ""
 
@@ -1508,10 +1445,16 @@ msgstr ""
 msgid "Inventory cache"
 msgstr ""
 
+msgid "Inventory filter"
+msgstr ""
+
 msgid "JSONata"
 msgstr ""
 
 msgid "JSONata AI Agent"
+msgstr ""
+
+msgid "JSONata expression"
 msgstr ""
 
 msgid "Java Extension"
@@ -1681,6 +1624,9 @@ msgstr ""
 msgid "MQTT connector"
 msgstr ""
 
+msgid "Major"
+msgstr ""
+
 msgid "Manage relations"
 msgstr ""
 
@@ -1834,6 +1780,9 @@ msgstr ""
 msgid "Milliseconds (60000 to 86400000) between two clean-ups."
 msgstr ""
 
+msgid "Minor"
+msgstr ""
+
 msgid "Minutes lifetime flow state"
 msgstr ""
 
@@ -1861,16 +1810,10 @@ msgstr ""
 msgid "MultiLevel wildcard \"#\" can only appear at the end."
 msgstr ""
 
+msgid "Must be MAJOR.MINOR.PATCH (e.g. 1.2.3)"
+msgstr ""
+
 msgid "Must be greater than the CPU time limit — otherwise the CPU limit is never reached."
-msgstr ""
-
-msgid "Newly created devices of this type will be subscribed automatically."
-msgstr ""
-
-msgid "No group detected for this device. A group must be available to use this option."
-msgstr ""
-
-msgid "No type detected for this device. A type must be available to use this option."
 msgstr ""
 
 msgid "NOTE: this level is not supported by: {{connectors}}."
@@ -1901,6 +1844,15 @@ msgid "New client: {{selectedClient.name}}"
 msgstr ""
 
 msgid "New code template"
+msgstr ""
+
+msgid "New substitution"
+msgstr ""
+
+msgid "New version"
+msgstr ""
+
+msgid "Newly created devices of this type will be subscribed automatically."
 msgstr ""
 
 msgid "Next"
@@ -1948,6 +1900,9 @@ msgstr ""
 msgid "No extension to display."
 msgstr ""
 
+msgid "No group detected for this device. A group must be available to use this option."
+msgstr ""
+
 msgid "No lines for this mapping in the part of the platform log that is loaded."
 msgstr ""
 
@@ -1981,7 +1936,13 @@ msgstr ""
 msgid "No subscriptions for devices exist."
 msgstr ""
 
+msgid "No substitution selected"
+msgstr ""
+
 msgid "No substitutions were generated."
+msgstr ""
+
+msgid "No substitutions yet"
 msgstr ""
 
 msgid "No target template"
@@ -1994,6 +1955,9 @@ msgid "No test devices exist."
 msgstr ""
 
 msgid "No timing data yet. It appears once a mapping has processed a message."
+msgstr ""
+
+msgid "No type detected for this device. A type must be available to use this option."
 msgstr ""
 
 msgid "No valid JavaScript code was generated."
@@ -2076,6 +2040,9 @@ msgstr ""
 msgid "Only with errors"
 msgstr ""
 
+msgid "Open device table"
+msgstr ""
+
 msgid "Open the Message Explorer from the mapper navigation menu."
 msgstr ""
 
@@ -2107,16 +2074,19 @@ msgstr ""
 
 msgid ""
 "Outbound mappings require a device subscription so Cumulocity pushes events to the broker.\n"
-"              Would you like to set one up now?"
-msgstr ""
-
-msgid "Outbound mappings require a device subscription so Cumulocity pushes events to the broker. Choose how devices are subscribed. The subscription is created when you save the mapping."
+"    Choose how devices are subscribed. The subscription is created when you save the mapping."
 msgstr ""
 
 msgid "Overview"
 msgstr ""
 
 msgid "Partially"
+msgstr ""
+
+msgid "Patch"
+msgstr ""
+
+msgid "Path"
 msgstr ""
 
 msgid "Pause"
@@ -2290,9 +2260,6 @@ msgstr ""
 msgid "Removed in 6.4.0:"
 msgstr ""
 
-msgid "Removed, applied on save"
-msgstr ""
-
 msgid "Rename"
 msgstr ""
 
@@ -2302,6 +2269,12 @@ msgstr ""
 msgid "Repair strategy"
 msgstr ""
 
+msgid "Replace code"
+msgstr ""
+
+msgid "Replace the code in the editor with the selected template"
+msgstr ""
+
 msgid "Request"
 msgstr ""
 
@@ -2309,6 +2282,9 @@ msgid "Requests (failed)"
 msgstr ""
 
 msgid "Required platform version"
+msgstr ""
+
+msgid "Requires the Mapping Admin or Mapping Create role."
 msgstr ""
 
 msgid "Reset Dry Run"
@@ -2398,6 +2374,9 @@ msgstr ""
 msgid "Save & Activate"
 msgstr ""
 
+msgid "Save change"
+msgstr ""
+
 msgid "Saved code template"
 msgstr ""
 
@@ -2438,6 +2417,15 @@ msgid "Select Payload Format and Transformation Type"
 msgstr ""
 
 msgid "Select a device or group to create a dedicated Notification 2.0 subscription."
+msgstr ""
+
+msgid "Select a filter"
+msgstr ""
+
+msgid "Select a node in the source template and a node in the target template, then add the substitution."
+msgstr ""
+
+msgid "Select a substitution from the list, or add a new one."
 msgstr ""
 
 msgid "Select agent"
@@ -2644,9 +2632,6 @@ msgstr ""
 msgid "Source Expression"
 msgstr ""
 
-msgid "Source Result"
-msgstr ""
-
 msgid "Source Template - {{system}}"
 msgstr ""
 
@@ -2671,7 +2656,7 @@ msgstr ""
 msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
 msgstr ""
 
-msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; tick the box of the type to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
 msgstr ""
 
 msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
@@ -2730,6 +2715,9 @@ msgstr ""
 msgid "Submitting the substitutions"
 msgstr ""
 
+msgid "Subscribe the devices of this type that already exist, in addition to the ones created afterward"
+msgstr ""
+
 msgid "Subscribed`application`"
 msgstr ""
 
@@ -2775,7 +2763,19 @@ msgstr ""
 msgid "Substitution as JavaScript (SUBSTITUTION_AS_CODE)"
 msgstr ""
 
-msgid "Substitutions defining the device identifier are marked with an \"*\". Before adding a substitution target and source property in templates have to be selected."
+msgid "Substitution details"
+msgstr ""
+
+msgid "Substitution {{number}}"
+msgstr ""
+
+msgid "Substitution {{number}}: {{source}} to {{target}}"
+msgstr ""
+
+msgid "Substitutions"
+msgstr ""
+
+msgid "Substitutions defining the device identifier are marked as \"Device identifier\". Before adding a substitution target and source property in templates have to be selected."
 msgstr ""
 
 msgid "Support ESM modules"
@@ -2800,9 +2800,6 @@ msgid "Target API"
 msgstr ""
 
 msgid "Target Expression"
-msgstr ""
-
-msgid "Target Result"
 msgstr ""
 
 msgid "Target Template - {{system}}"
@@ -2859,9 +2856,6 @@ msgstr ""
 msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
 msgstr ""
 
-msgid "The JSON path in the target template where the value extracted from the source is written to."
-msgstr ""
-
 msgid "The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name"
 msgstr ""
 
@@ -2875,9 +2869,6 @@ msgid "The complete log of the selected microservice instance, including the lin
 msgstr ""
 
 msgid "The current subscriptions could not be loaded. Subscriptions cannot be changed here. Use the Subscription outbound page instead."
-msgstr ""
-
-msgid "The expression extracts an array. To create one request per element, add the substitution and then switch on \"Expand as array\" in the substitution table."
 msgstr ""
 
 msgid "The extension {{extensionName}} with event {{eventName}} is not loaded..."
@@ -2922,9 +2913,6 @@ msgstr ""
 msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
 msgstr ""
 
-msgid "The mapping was saved, but checking the device subscriptions failed."
-msgstr ""
-
 msgid "The mapping was saved, but updating the subscriptions failed:"
 msgstr ""
 
@@ -2952,7 +2940,16 @@ msgstr ""
 msgid "The referenced device does not exist and createNonExistingDevice is disabled for this mapping. Do you want to assume for this test that the device exists?"
 msgstr ""
 
+msgid "The selected code template was not found. Reload the page and try again."
+msgstr ""
+
+msgid "The source returns an array. Create one request per element?"
+msgstr ""
+
 msgid "The subscriptions were changed elsewhere while this mapping was open. Your selection replaces them."
+msgstr ""
+
+msgid "The subscriptions were not updated because the mapping could not be deployed. Save again to retry."
 msgstr ""
 
 msgid "The template contains the dummy field <code>_TOPIC_LEVEL_</code>..."
@@ -3081,9 +3078,6 @@ msgstr ""
 msgid "Update existing device"
 msgstr ""
 
-msgid "Update substitution"
-msgstr ""
-
 msgid "Update successful"
 msgstr ""
 
@@ -3208,6 +3202,9 @@ msgstr ""
 msgid "Write the extracted value to the target path as-is. The path must already exist in the target template."
 msgstr ""
 
+msgid "Writes the \"Filter execution mapping\" of the Templates step: by type (<code>type = '...'</code>), by fragment (<code>$exists(...)</code>), or custom (empty, enter the expression there)."
+msgstr ""
+
 msgid "Yes"
 msgstr ""
 
@@ -3274,6 +3271,9 @@ msgstr ""
 msgid "alarm"
 msgstr ""
 
+msgid "already subscribed"
+msgstr ""
+
 msgid "and"
 msgstr ""
 
@@ -3305,6 +3305,9 @@ msgid "device type:"
 msgstr ""
 
 msgid "draft"
+msgstr ""
+
+msgid "e.g. 1.2.3"
 msgstr ""
 
 msgid "e.g. c8y_MQTTDevice"
@@ -3349,9 +3352,6 @@ msgstr ""
 msgid "measurement"
 msgstr ""
 
-msgid "more"
-msgstr ""
-
 msgid "not saved yet"
 msgstr ""
 
@@ -3370,6 +3370,9 @@ msgstr ""
 msgid "operation"
 msgstr ""
 
+msgid "optional"
+msgstr ""
+
 msgid "outbound"
 msgstr ""
 
@@ -3382,6 +3385,9 @@ msgstr ""
 msgid "removed"
 msgstr ""
 
+msgid "selected"
+msgstr ""
+
 msgid "setting(s)"
 msgstr ""
 
@@ -3392,6 +3398,9 @@ msgid "show more"
 msgstr ""
 
 msgid "source:"
+msgstr ""
+
+msgid "subscribed already"
 msgstr ""
 
 msgid "the session is active, but the broker rejected the subscribe request, so no messages will arrive:"
