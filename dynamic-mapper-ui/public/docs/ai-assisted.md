@@ -2,7 +2,7 @@
 title: AI-assisted mapping
 ---
 
-The Dynamic Mapper can generate Smart Function code, or JSONata substitutions in Expert Mode, from your source and
+The Dynamic Mapper can generate Smart Function code, or JSONata substitutions, from your source and
 target templates. You describe in natural language what the mapping must do, review the result, and save it.
 
 #### Requirements

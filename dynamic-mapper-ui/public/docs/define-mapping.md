@@ -51,7 +51,7 @@ The wizard has five steps:
 2. **General settings**: topic, target API, and the options described below.
 3. **Select templates**: enter or select the source payload template. For a Smart Function it is the sample input
    for the test. For JSONata it is the source of the substitution paths.
-4. **Transformation**: the Smart Function editor (or the JSONata substitutions, in Expert Mode), applied at runtime.
+4. **Transformation**: the Smart Function editor (or, for JSONata, the substitution editor), applied at runtime.
 5. **Test mapping**: run a Dry Run or Live Test, then save the mapping.
 
 **Outbound** mappings have one more step, **Subscription**, between **General settings** and **Select templates**
