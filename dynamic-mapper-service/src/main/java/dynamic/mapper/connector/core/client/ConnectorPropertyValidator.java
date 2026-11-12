@@ -19,7 +19,6 @@
  *
  */
 
-
 package dynamic.mapper.connector.core.client;
 
 import java.util.ArrayList;

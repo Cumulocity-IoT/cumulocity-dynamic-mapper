@@ -175,6 +175,7 @@ public abstract class AConnectorClient {
     // by the subclass constructor body, which runs after field initializers.
     private ExplorerListenerRegistry explorerListeners;
     private ExplorerListenerRegistry outboundExplorerListeners;
+    private ExplorerSubscriptionHandler explorerSubscriptions;
 
     /** Register a listener that receives every raw inbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
     public void addExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
@@ -216,24 +217,7 @@ public abstract class AConnectorClient {
      *         so callers can surface it instead of it being silently swallowed.
      */
     public String subscribeExplorerTopic(String topic) {
-        try {
-            boolean alreadySubscribed = mappingSubscriptionManager != null
-                    && mappingSubscriptionManager.isTopicSubscribed(topic);
-            if (alreadySubscribed) {
-                log.debug("{} - Explorer topic [{}] already subscribed via mapping — skipping duplicate subscribe", tenant, topic);
-                return null;
-            }
-            subscribeExplorer(topic, Qos.AT_LEAST_ONCE);
-            log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
-            return null;
-        } catch (jakarta.ws.rs.NotSupportedException e) {
-            // Some connectors (HTTP, WebHook) don't support topic subscriptions at all — that's fine
-            log.debug("{} - Explorer topic subscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.warn("{} - Explorer topic subscription failed for connector {}: {}", tenant, connectorName, e.getMessage());
-            return e.getMessage();
-        }
+        return explorerSubscriptions.subscribe(topic);
     }
 
     /**
@@ -241,19 +225,7 @@ public abstract class AConnectorClient {
      * Only unsubscribes if there are no active mappings still using this topic.
      */
     public void unsubscribeExplorerTopic(String topic) {
-        try {
-            // Only unsubscribe if no active mapping covers this topic
-            boolean mappingStillActive = mappingSubscriptionManager != null
-                    && mappingSubscriptionManager.isTopicSubscribed(topic);
-            if (!mappingStillActive) {
-                unsubscribeExplorer(topic);
-                log.info("{} - Explorer unsubscribed from topic: [{}] on connector: {}", tenant, topic, connectorName);
-            } else {
-                log.debug("{} - Kept broker subscription for topic [{}] — still used by a mapping", tenant, topic);
-            }
-        } catch (Exception e) {
-            log.debug("{} - Explorer topic unsubscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
-        }
+        explorerSubscriptions.unsubscribe(topic);
     }
 
     // Managers
@@ -622,6 +594,9 @@ public abstract class AConnectorClient {
         this.explorerListeners = new ExplorerListenerRegistry(tenant, "inbound");
         this.outboundExplorerListeners = new ExplorerListenerRegistry(tenant, "outbound");
         this.sslSupport = new ConnectorSslSupport(tenant, connectorName, c8yAgent);
+        this.explorerSubscriptions = new ExplorerSubscriptionHandler(tenant, connectorName,
+                topic -> mappingSubscriptionManager != null && mappingSubscriptionManager.isTopicSubscribed(topic),
+                this::subscribeExplorer, this::unsubscribeExplorer);
 
         this.mappingSubscriptionManager = new MappingSubscriptionManager(
                 tenant,
