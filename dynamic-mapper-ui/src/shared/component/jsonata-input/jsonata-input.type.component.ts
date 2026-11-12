@@ -57,7 +57,6 @@ const MAX_HEIGHT = 150;
         [attr.data-cy]="'dm-jsonata-editor-' + key"
         [editorOptions]="editorOptions"
         [style.height.px]="height()"
-        [formControl]="formControl"
         (editorInit)="onEditorInit($event)"
       ></c8y-editor>
     </div>
@@ -171,6 +170,13 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
     }
     monaco.editor.setModelLanguage(model, JSONATA_LANGUAGE_ID);
 
+    // The form control and the editor are synchronized here, not through the editor's own value accessor:
+    // that one calls `setValue` on every write, also with the text the editor already shows, and each
+    // call resets the cursor to the start (and the undo history), which happened a moment after every
+    // keystroke once the host echoed the value back into the form.
+    let applyingExternalValue = false;
+    const control = this.formControl;
+
     const validate = () => {
       const value = model.getValue();
       this.isEmpty.set(value.length === 0);
@@ -181,15 +187,50 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
         error ? [toMarker(error, value, monaco.MarkerSeverity.Error)] : []
       );
     };
+
+    const showControlValue = () => {
+      const value = control.value ?? '';
+      if (value === model.getValue()) return;
+      applyingExternalValue = true;
+      try {
+        // A different value came from outside (another step, selecting a substitution): show it.
+        model.setValue(String(value));
+      } finally {
+        applyingExternalValue = false;
+      }
+    };
+
+    const applyReadOnly = () =>
+      editor.updateOptions({ readOnly: control.disabled || !!this.props['readonly'] });
+
+    showControlValue();
+    applyReadOnly();
     validate();
+
+    const controlSubscription = control.valueChanges.subscribe(() => {
+      showControlValue();
+    });
+    const statusSubscription = control.statusChanges.subscribe(applyReadOnly);
 
     const templateProvider = this.props['templateProvider'] as (() => unknown) | undefined;
     this.disposables.push(
-      model.onDidChangeContent(() => this.zone.run(validate)),
+      model.onDidChangeContent(() =>
+        this.zone.run(() => {
+          validate();
+          if (applyingExternalValue) return;
+          const value = model.getValue();
+          if (value !== (control.value ?? '')) {
+            control.setValue(value);
+            control.markAsDirty();
+            control.markAsTouched();
+          }
+        })
+      ),
+      { dispose: () => controlSubscription.unsubscribe() },
+      { dispose: () => statusSubscription.unsubscribe() },
       editor.onDidContentSizeChange((e) =>
         this.zone.run(() => this.height.set(Math.min(Math.max(e.contentHeight, MIN_HEIGHT), MAX_HEIGHT)))
       ),
-      // The value is also set from outside (selecting a substitution): the content event covers that too.
       { dispose: () => monaco.editor.setModelMarkers(model, JSONATA_MARKER_OWNER, []) }
     );
     if (templateProvider) {
