@@ -1167,6 +1167,12 @@ msgstr ""
 msgid "Repeated"
 msgstr "Wiederholt"
 
+msgid "More"
+msgstr "Mehr"
+
+msgid "Less"
+msgstr "Weniger"
+
 msgid "Optional. To drop repeated messages, use $not($isDuplicate(key, seconds)), for example $not($isDuplicate(deviceId & \"|\" & time, 60))."
 msgstr "Optional. Um wiederholte Nachrichten zu verwerfen, verwenden Sie $not($isDuplicate(key, seconds)), zum Beispiel $not($isDuplicate(deviceId & \"|\" & time, 60))."
 

@@ -84,3 +84,4 @@ tmp/
 resources/testing/environments/amqp/setup.sh
 resources/testing/reliability/backend_test.argfile
 resources/testing/reliability/start.md
+resources/samples/mappings-INBOUND copy.json
