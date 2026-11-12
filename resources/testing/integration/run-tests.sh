@@ -111,7 +111,7 @@ declare -a TESTS=(
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-webhook|C8Y Measurement → WEB_HOOK connector (needs http-polling-mock)"
     "outbound|test-outbound-static-subscription|Static subscription management"    "outbound|test-outbound-subscription-api-all|Static subscription api=ALL delivers measurement, event and alarm mappings"
-    "outbound|test-outbound-broker-outage|Outbound messages survive a broker outage (local mosquitto, skipped if unreachable)"
+    "outbound|test-outbound-broker-outage|Outbound messages survive a broker outage (connector endpoint made unreachable, then restored)"
     "outbound|test-outbound-with-children|EVENT_WITH_CHILDREN / ALARM_WITH_CHILDREN subscriptions (parent + child)"
 
     "outbound|test-outbound-type-subscription|Dynamic type subscription"

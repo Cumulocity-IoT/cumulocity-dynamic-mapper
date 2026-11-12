@@ -481,7 +481,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-smartfunction-molookup` | Smart Function `getManagedObjectByExternalId` — a C8Y measurement notification is enriched with managed-object properties before publishing |
 | `test-outbound-webhook` | C8Y Measurement → WEB_HOOK connector; asserts the http-polling-mock **received** the POST (path + JSON body) |
 | `test-outbound-static-subscription` | Static subscription management |
-| `test-outbound-broker-outage` | A broker outage loses no outbound message: the device WebSocket is paused while the connector is down and the queued events are published after the reconnect. Starts and stops a local `mosquitto` (needs it installed; if the service is not on this machine, expose the broker through a TCP tunnel and set `DM_OUTAGE_BROKER_HOST` and `DM_OUTAGE_CONNECTOR_PORT`; a public broker cannot be used); skipped when the service cannot reach it |
+| `test-outbound-broker-outage` | A broker outage loses no outbound message: the device WebSocket is paused while the connector is down and the queued events are published after the reconnect. The outage is simulated by pointing the connector at an unreachable endpoint and restoring it, so it works against a deployed service and a public broker (needs `mosquitto_sub`) |
 | `test-outbound-type-subscription` | Dynamic type subscription |
 | `test-outbound-type-subscription-resync` | `POST /subscription/type/resync/{type}` backfills pre-existing devices; idempotent; unconfigured type rejected |
 | `test-outbound-group-subscription` | Dynamic group subscription |

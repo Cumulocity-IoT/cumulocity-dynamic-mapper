@@ -7,31 +7,26 @@
 # WebSocket (without unsubscribing) and Cumulocity keeps the unacknowledged messages.
 # When the connector is connected again, the queued messages are delivered.
 #
+# The outage is simulated by pointing the connector at an unreachable endpoint
+# (127.0.0.1:1, as seen from the service) and restoring the real broker afterwards, so
+# the test works against a deployed service and a public broker. No local broker needed.
+#
 # Steps:
-#   1. Start a local mosquitto broker and an MQTT connector that points to it
-#   2. Outbound EVENT mapping + static subscription; control event arrives (broker up)
-#   3. Stop the broker, wait until the connector is no longer CONNECTED
-#   4. Create 3 events while the broker is down
-#   5. Start the broker again, let the connector reconnect
-#   6. Assert all 3 events are published to the broker after the reconnect
+#   1. MQTT connector to the test broker; outbound EVENT mapping + static subscription;
+#      a control event arrives (broker reachable)
+#   2. Point the connector at an unreachable endpoint, wait until it is not CONNECTED
+#   3. Create 3 events while the connector is down
+#   4. Restore the broker, let the connector reconnect
+#   5. Assert all 3 events are published to the broker after the reconnect
 #
 # Prerequisites:
-#   - mosquitto and mosquitto_sub installed on the test host
-#   - the Dynamic Mapper service can reach the local broker. For a service run on this
-#     machine the default 127.0.0.1 works; otherwise set
-#       DM_OUTAGE_BROKER_HOST=<address of this host as seen from the service>
+#   - mosquitto_sub installed on the test host; the broker reachable from the test host
+#     and from the service
 #   - c8y CLI authenticated, jq installed
 #
-# Skipped when mosquitto is missing or the service cannot connect to the local broker.
-#
-# Environment:
-#   DM_OUTAGE_BROKER_HOST    address the service uses to reach the broker (default 127.0.0.1)
-#   DM_OUTAGE_BROKER_PORT    port the local mosquitto listens on (default 18831)
-#   DM_OUTAGE_CONNECTOR_PORT port the connector connects to (default: the listen port;
-#                            set it when a TCP tunnel forwards to the local broker)
-#
-# The test must stop and start the broker, so it cannot use a public broker such as
-# broker.hivemq.com: DM_OUTAGE_BROKER_HOST has to lead to the local mosquitto.
+# Environment (harness defaults):
+#   MQTT_HOST / MQTT_PORT   broker for the connector and the test subscriber
+#                           (default broker.hivemq.com:1883)
 #
 # Usage:
 #   ./test-outbound-broker-outage.sh [--cleanup|--keep|--validate-only]
@@ -45,52 +40,35 @@ source "${SCRIPT_DIR}/test-harness.sh"
 TEST_TITLE="Outbound messages survive a broker outage"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
-BROKER_HOST="${DM_OUTAGE_BROKER_HOST:-127.0.0.1}"
-BROKER_PORT="${DM_OUTAGE_BROKER_PORT:-18831}"
-# Port the connector uses. Differs from the listen port when a TCP tunnel sits in between.
-CONNECTOR_PORT="${DM_OUTAGE_CONNECTOR_PORT:-$BROKER_PORT}"
-# Alphanumeric only: Cumulocity builds the Notification 2.0 subscriber name from the identifier
-# and rejects anything else (HTTP 422 "has to be alphanumeric"). Cleaned up by --cleanup-only.
+BROKER_HOST="${MQTT_HOST:-broker.hivemq.com}"
+BROKER_PORT="${MQTT_PORT:-1883}"
+# Unreachable from the service (connection refused): simulates the broker being down
+DOWN_HOST="127.0.0.1"
+DOWN_PORT=1
 CONNECTOR_ID="testoutagemqtt"
 DEVICE_NAME="dmtest-out-outage-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
 EXT_ID="$DEVICE_NAME"
-TOPIC="dmtest/out/outage"
+TOPIC="dmtest/out/outage/$$-$RANDOM"
 OUTAGE_EVENTS=3
 
 DEVICE_ID=""
 MAPPING_ID=""
 CONNECTOR_CREATED=false
-BROKER_PID=""
 SUB_PID=""
 WORK_DIR=""
 
-start_broker() {
-    mosquitto -c "$WORK_DIR/mosquitto.conf" >"$WORK_DIR/mosquitto.log" 2>&1 &
-    BROKER_PID=$!
-    # wait until the port accepts connections
-    local _i
-    for _i in $(seq 1 20); do
-        if (exec 3<>"/dev/tcp/127.0.0.1/$BROKER_PORT") 2>/dev/null; then
-            return 0
-        fi
-        sleep 0.5
-    done
-    return 1
-}
-
-stop_broker() {
-    if [ -n "$BROKER_PID" ]; then
-        kill "$BROKER_PID" 2>/dev/null || true
-        wait "$BROKER_PID" 2>/dev/null || true
-        BROKER_PID=""
-    fi
+set_connector_endpoint() {   # <host> <port>
+    local _cfg _body
+    _cfg=$(dm_api GET "/configuration/connector/instance/$CONNECTOR_ID")
+    _body=$(printf '%s' "$_cfg" | jq -c --arg h "$1" --argjson p "$2" '.properties.mqttHost = $h | .properties.mqttPort = $p')
+    dm_api PUT "/configuration/connector/instance/$CONNECTOR_ID" "$_body" >/dev/null
+    dm_info "Connector endpoint set to $1:$2"
 }
 
 cleanup() {
     dm_info "Cleaning up ..."
     [ -n "$SUB_PID" ] && kill "$SUB_PID" 2>/dev/null || true
-    stop_broker
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" || true
     [ -n "$DEVICE_ID" ] && dm_delete_static_subscription "$DEVICE_ID" "$SUBSCRIPTION_NAME" 2>/dev/null || true
     [ -n "$DEVICE_ID" ] && dm_delete_device "$DEVICE_ID" || true
@@ -109,27 +87,18 @@ dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
-command -v mosquitto >/dev/null 2>&1 && command -v mosquitto_sub >/dev/null 2>&1 \
-    || dm_skip_exit "mosquitto and mosquitto_sub are required to stop and start a local broker"
+command -v mosquitto_sub >/dev/null 2>&1 || dm_skip_exit "mosquitto_sub is required"
 dm_validate_only_exit
 
 WORK_DIR=$(mktemp -d)
-cat >"$WORK_DIR/mosquitto.conf" <<CONF
-listener $BROKER_PORT
-allow_anonymous true
-persistence false
-CONF
 
-dm_step "Starting local broker on port $BROKER_PORT ..."
-start_broker || dm_skip_exit "Could not start mosquitto on port $BROKER_PORT (port in use?)"
-
-dm_step "Creating MQTT connector to $BROKER_HOST:$CONNECTOR_PORT ..."
-dm_setup_mqtt_test_connector "$CONNECTOR_ID" "Test outage MQTT connector" "$BROKER_HOST" "$CONNECTOR_PORT"
+dm_step "Creating MQTT connector to $BROKER_HOST:$BROKER_PORT ..."
+dm_setup_mqtt_test_connector "$CONNECTOR_ID" "Test outage MQTT connector" "$BROKER_HOST" "$BROKER_PORT"
 CONNECTOR_CREATED=true
 dm_enable_connector "$CONNECTOR_ID"
 dm_connect_connector "$CONNECTOR_ID"
 if ! dm_wait_for_connector_status "$CONNECTOR_ID" CONNECTED 40 2 >/dev/null; then
-    dm_skip_exit "Connector could not connect to $BROKER_HOST:$CONNECTOR_PORT. Set DM_OUTAGE_BROKER_HOST to the address of this host as seen from the service."
+    dm_skip_exit "Connector could not connect to $BROKER_HOST:$BROKER_PORT from the service"
 fi
 dm_success "Connector is CONNECTED"
 
@@ -180,7 +149,7 @@ dm_wait 3
 
 # ── Control: with the broker up, an event is published ─────────────────────────
 dm_step "Control: event while the broker is up ..."
-mosquitto_sub -h 127.0.0.1 -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C 1 -W 30 >"$WORK_DIR/control.txt" 2>/dev/null &
+mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C 1 -W 30 >"$WORK_DIR/control.txt" 2>/dev/null &
 SUB_PID=$!
 sleep 1
 c8y events create --device "$DEVICE_ID" --type "c8y_OutageEvent" --text "outage-0" --output json >/dev/null
@@ -189,8 +158,8 @@ SUB_PID=""
 dm_assert_eq "control message published" "1" "$(grep -c 'outage-0' "$WORK_DIR/control.txt" || true)"
 
 # ── Outage ─────────────────────────────────────────────────────────────────────
-dm_step "Stopping the broker ..."
-stop_broker
+dm_step "Simulating the outage: connector endpoint -> $DOWN_HOST:$DOWN_PORT ..."
+set_connector_endpoint "$DOWN_HOST" "$DOWN_PORT"
 CONNECTOR_DOWN=false
 _status="UNKNOWN"
 for _i in $(seq 1 30); do
@@ -198,7 +167,7 @@ for _i in $(seq 1 30); do
     if [ "$_status" != "CONNECTED" ]; then CONNECTOR_DOWN=true; break; fi
     sleep 2
 done
-[ "$CONNECTOR_DOWN" = "true" ] || dm_error "Connector still CONNECTED 60s after the broker stopped"
+[ "$CONNECTOR_DOWN" = "true" ] || dm_error "Connector still CONNECTED 60s after its endpoint became unreachable"
 dm_success "Connector left CONNECTED (status: $_status)"
 # The device WebSocket is paused by a check that runs every 10 seconds
 dm_wait 15 "for the mapper to pause the device WebSocket"
@@ -210,14 +179,15 @@ done
 dm_wait 10 "so any consumed message would have been dropped by now"
 
 # ── Recovery ───────────────────────────────────────────────────────────────────
-dm_step "Starting the broker again and listening ..."
-start_broker || dm_error "Could not restart mosquitto"
-mosquitto_sub -h 127.0.0.1 -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C "$OUTAGE_EVENTS" -W 120 >"$WORK_DIR/received.txt" 2>/dev/null &
+dm_step "Listening on the broker, then restoring the connector endpoint ..."
+mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C "$OUTAGE_EVENTS" -W 150 >"$WORK_DIR/received.txt" 2>/dev/null &
 SUB_PID=$!
+sleep 2
+set_connector_endpoint "$BROKER_HOST" "$BROKER_PORT"
 
 dm_step "Waiting for the connector to reconnect ..."
-dm_wait_for_connector_status "$CONNECTOR_ID" CONNECTED 120 3 >/dev/null \
-    || dm_error "Connector did not reconnect within 120s"
+dm_wait_for_connector_status "$CONNECTOR_ID" CONNECTED 150 3 >/dev/null \
+    || dm_error "Connector did not reconnect within 150s"
 dm_success "Connector is CONNECTED again"
 
 dm_step "Waiting for the queued messages ..."
