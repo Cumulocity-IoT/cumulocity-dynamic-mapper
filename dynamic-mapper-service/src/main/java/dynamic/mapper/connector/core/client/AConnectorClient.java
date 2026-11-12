@@ -1384,24 +1384,7 @@ public abstract class AConnectorClient {
      * @return true if all required properties are present and non-empty
      */
     protected boolean validateRequiredProperties(ConnectorConfiguration configuration, String... requiredProperties) {
-        if (requiredProperties == null || requiredProperties.length == 0) {
-            return true;
-        }
-
-        List<String> missingProperties = new ArrayList<>();
-        for (String propertyName : requiredProperties) {
-            Object value = configuration.getProperties().get(propertyName);
-            if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
-                missingProperties.add(propertyName);
-            }
-        }
-
-        if (!missingProperties.isEmpty()) {
-            log.warn("{} - Missing required configuration properties: {}", tenant, missingProperties);
-            return false;
-        }
-
-        return true;
+        return ConnectorPropertyValidator.validateRequiredProperties(tenant, configuration, requiredProperties);
     }
 
     /**
