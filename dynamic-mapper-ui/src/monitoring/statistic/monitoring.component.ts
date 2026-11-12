@@ -160,6 +160,16 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '90px'
     },
     {
+      header: gettext('Repeated'),
+      name: 'messagesDuplicate',
+      path: 'messagesDuplicate',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '90px'
+    },
+    {
       header: gettext('Errors'),
       name: 'errors',
       path: 'errors',

@@ -89,6 +89,7 @@ class SmartFunctionApiContractTest {
             "getStateAll",
             "getStateKeySet",
             "getTesting",
+            "isDuplicate",
             "logMessage",
             "setClientId",
             "setConfig",

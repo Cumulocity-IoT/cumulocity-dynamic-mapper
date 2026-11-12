@@ -93,7 +93,11 @@ public class ConsolidationProcessor extends CommonProcessor {
             Exception last = errors.get(errors.size() - 1);
             status.recordError(now, last.getMessage());
         } else if (context.isIgnoreFurtherProcessing()) {
-            status.recordFiltered(now);
+            if (context.isDroppedAsDuplicate()) {
+                status.recordDuplicate(now);
+            } else {
+                status.recordFiltered(now);
+            }
         } else {
             status.recordProcessed(now);
         }

@@ -171,6 +171,44 @@ Payload and SparkPlug B mappings. To filter on **device inventory** properties i
 Filter](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter), which is available for outbound mappings only.
 
 
+##### Dropping repeated messages {#drop-repeated-messages}
+
+Brokers and gateways sometimes deliver a message twice, for example after a reconnect or an MQTT QoS 1 retry. For
+**inbound** mappings, the function `$isDuplicate(key, windowSeconds)` in the execution filter drops the repeat.
+It returns `true` if the same key was seen for this mapping less than `windowSeconds` ago, so you negate it:
+
+```javascript
+// Drop a second message from the same device with the same timestamp, for 60 seconds
+$not($isDuplicate(deviceId & "|" & time, 60))
+
+// Combine it with another condition
+telemetry.telemetryReadings[0].value > 10.00 and $not($isDuplicate(deviceId & "|" & time, 60))
+
+// Drop exact repeats of the whole payload
+$not($isDuplicate($string($), 60))
+```
+
+- **Key:** any JSONata expression. Text, numbers, and booleans are used as they are; objects and arrays are
+  converted to JSON text. Join several fields with a separator such as `"|"`, so that `a` and `bc` differ from `ab`
+  and `c`. The key is kept per mapping, so you do not add the mapping or the tenant.
+- **Window:** a number of seconds from 1 to 3600. The window starts at the first message and does not restart when a
+  repeat arrives.
+- **Topic:** the topic is not part of the key. For mappings that are not Smart Functions and have a JSON object
+  payload, the key can use `_TOPIC_LEVEL_`, for example `_TOPIC_LEVEL_[2] & "|" & time`.
+- **Memory only:** the service keeps keys in memory. They are lost on restart and are not shared between service
+  instances. A mapping keeps at most 100,000 keys. When that limit is reached, new messages are processed without a
+  check.
+- **Missing key or invalid window:** the message is processed and the service logs a warning.
+- **Failed messages:** a key is recorded when the message passes the filter. If the mapping fails later, the retry of
+  that message is dropped as a repeat.
+- **Tests:** Dry Run and Live Test do not record keys.
+- **Outbound mappings:** the function is ignored with a warning and always returns `false`.
+- **Editor:** the **Filter Result** field always shows `false` for `$isDuplicate`, because the editor has no message
+  history.
+
+The function detects exact repeats within a short window of up to 60 minutes. It does not detect near duplicates,
+such as the same timestamp with a changed value.
+
 ### Managing mappings {#managing-mappings}
 
 The **Inbound Mappings** / **Outbound Mappings** table is the entry point for working with existing mappings:

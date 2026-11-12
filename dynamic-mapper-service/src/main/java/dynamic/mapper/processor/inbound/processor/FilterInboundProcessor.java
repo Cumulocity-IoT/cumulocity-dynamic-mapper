@@ -90,6 +90,9 @@ public class FilterInboundProcessor extends BaseProcessor {
                 log.info("{} - Inbound mapping {}/{} dropped a repeated message: key={}, window={}s",
                         tenant, mapping.getName(), mapping.getIdentifier(), keyText, window);
             }
+            if (duplicate) {
+                context.setDroppedAsDuplicate(true);
+            }
             return duplicate;
         });
     }

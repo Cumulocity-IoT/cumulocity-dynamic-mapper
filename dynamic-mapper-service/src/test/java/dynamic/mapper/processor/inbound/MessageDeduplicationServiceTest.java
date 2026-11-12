@@ -49,7 +49,6 @@ class MessageDeduplicationServiceTest {
     void secondCopyInsideTheWindowIsADuplicate() {
         assertFalse(service.isDuplicate("t", "m", "fp", 60));
         assertTrue(service.isDuplicate("t", "m", "fp", 60));
-        assertEquals(1, service.getDroppedCount("t", "m"));
     }
 
     @Test
@@ -130,7 +129,6 @@ class MessageDeduplicationServiceTest {
         pool.shutdown();
         assertTrue(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS));
         assertEquals(1, passed.get());
-        assertEquals(threads - 1, service.getDroppedCount("t", "m"));
     }
 
     @Test
@@ -149,7 +147,6 @@ class MessageDeduplicationServiceTest {
         service.isDuplicate("t", "m", "fp", 60);
         service.clearMapping("t", "m");
         assertEquals(0, service.size("t", "m"));
-        assertEquals(0, service.getDroppedCount("t", "m"));
         service.isDuplicate("t", "m", "fp", 60);
         service.removeTenant("t");
         assertEquals(0, service.size("t", "m"));

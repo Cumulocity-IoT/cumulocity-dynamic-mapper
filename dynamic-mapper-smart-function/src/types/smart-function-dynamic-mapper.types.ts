@@ -403,6 +403,34 @@ export interface SmartFunctionContext extends DataPrepContext {
    * }
    */
   getTesting(): boolean;
+
+  /**
+   * Reports whether the same key was seen for this mapping less than `windowSeconds` ago, and records it if
+   * not. Use it to drop a message that a broker or gateway delivered twice.
+   *
+   * Unlike `getState`/`setState`, the check is atomic: of two copies of a message that run at the same time,
+   * exactly one gets `false`. Keys expire after the window, and a mapping holds at most 100,000 of them. The
+   * store is the one behind the `$isDuplicate` function of the mapping filter, so a key used in both places
+   * counts once. Keys live in memory only: they are lost on restart and are not shared between service
+   * instances.
+   *
+   * The window starts at the first message and does not restart when a repeat arrives. The check fails open:
+   * it returns `false`, and adds a warning, if the key has no value or the window is not a number of seconds
+   * from 1 to 3600. In a test run it always returns `false` and records nothing.
+   *
+   * Join several fields with a separator, such as `"|"`, so that `a` and `bc` differ from `ab` and `c`.
+   * Prefer a string key.
+   *
+   * @param key - What makes two messages the same, for example device ID and timestamp.
+   * @param windowSeconds - How long a key counts as seen, from 1 to 3600 seconds.
+   * @returns `true` if this message repeats an earlier one inside the window.
+   *
+   * @example
+   * if (context.isDuplicate(msg.payload.deviceId + "|" + msg.payload.time, 60)) {
+   *   return [];
+   * }
+   */
+  isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
 }
 
 // ============================================================================
@@ -1463,6 +1491,12 @@ export interface SmartFunctionContextV2<
    * Use to skip side effects during tests.
    */
   getTesting(): boolean;
+
+  /**
+   * Returns `true` if the same key was seen for this mapping less than `windowSeconds` ago, and records it
+   * otherwise. Atomic, memory only, shared with the `$isDuplicate` filter function. See `SmartFunctionContext`.
+   */
+  isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
 }
 
 /**
@@ -1788,6 +1822,26 @@ export function createMockOutboundMessageV2<T extends C8yObjectType>(
 }
 
 /**
+ * In-memory stand-in for `context.isDuplicate` in the mock contexts: same rules as the runtime (window from 1 to
+ * 3600 seconds, fixed from the first message, `false` for a missing key or an invalid window), no cross-test state.
+ */
+function mockIsDuplicate(
+  seen: Map<string, number>,
+  key: string | number | boolean | object,
+  windowSeconds: number
+): boolean {
+  if (key === undefined || key === null) return false;
+  if (!Number.isInteger(windowSeconds) || windowSeconds < 1) return false;
+  const window = Math.min(windowSeconds, 3600);
+  const text = typeof key === 'object' ? JSON.stringify(key) : String(key);
+  const now = Date.now();
+  const expiry = seen.get(text);
+  if (expiry !== undefined && expiry > now) return true;
+  seen.set(text, now + window * 1000);
+  return false;
+}
+
+/**
  * Mock V2 runtime context for testing V2 Smart Functions.
  * Returns a {@link SmartFunctionContextV2} with fully typed config and state.
  *
@@ -1814,6 +1868,7 @@ export function createMockRuntimeContextV2<
   dtmAssets?: Record<string, C8yManagedObject>;
 }): SmartFunctionContextV2<TConfig, TState> {
   const state = {} as TState;
+  const seen = new Map<string, number>();
 
   return {
     runtime: 'dynamic-mapper',
@@ -1862,6 +1917,9 @@ export function createMockRuntimeContextV2<
     },
     getTesting(): boolean {
       return false;
+    },
+    isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
+      return mockIsDuplicate(seen, key, windowSeconds);
     }
   };
 }
@@ -1889,6 +1947,7 @@ export function createMockRuntimeContext(options: {
   dtmAssets?: Record<string, any>;
 }): SmartFunctionContext {
   const state: Record<string, any> = {};
+  const seen = new Map<string, number>();
 
   return {
     runtime: "dynamic-mapper",
@@ -1937,6 +1996,9 @@ export function createMockRuntimeContext(options: {
     },
     getTesting(): boolean {
       return false;
+    },
+    isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
+      return mockIsDuplicate(seen, key, windowSeconds);
     }
   };
 }

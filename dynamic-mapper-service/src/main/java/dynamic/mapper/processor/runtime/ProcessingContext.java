@@ -190,6 +190,10 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private boolean ignoreFurtherProcessing = false;
 
+    /** Set by the filter function {@code $isDuplicate} when it reports a repeat; counted in the mapping status. */
+    @Builder.Default
+    private boolean droppedAsDuplicate = false;
+
     private String key;
 
     /** Broker metadata of the inbound message (Kafka headers, Pulsar properties, ...); may be null. */

@@ -35,6 +35,7 @@ import org.graalvm.polyglot.Value;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.inbound.MessageDeduplicationService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -60,6 +61,8 @@ public class SmartFunctionContext implements DataPrepContext {
     // Keys this invocation wrote, and whether it called clearState(): only these reach the store.
     private final java.util.Set<String> changedKeys = new java.util.HashSet<>();
     private boolean wipeRequested;
+    // Atomic "seen this fingerprint within the window?" check; null in test runs, where nothing may be recorded.
+    private final java.util.function.BiPredicate<String, Integer> duplicateCheck;
 
     /**
      * Creates a context without persistence (backward-compatible constructor).
@@ -82,6 +85,21 @@ public class SmartFunctionContext implements DataPrepContext {
      */
     public SmartFunctionContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
             Boolean testing, FlowStateStore stateStore, String mappingIdentifier, Map<String, Object> initialState) {
+        this(graalContext, tenant, inventoryEnrichmentClient, testing, stateStore, mappingIdentifier, initialState,
+                null);
+    }
+
+    /**
+     * Creates a context with persistent state and the de-duplication check behind {@link #isDuplicate}.
+     *
+     * @param duplicateCheck takes a fingerprint and a window in seconds, records the fingerprint, and returns
+     *                       true if it was already recorded inside the window; null makes
+     *                       {@code isDuplicate} always return false (test runs)
+     */
+    public SmartFunctionContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+            Boolean testing, FlowStateStore stateStore, String mappingIdentifier, Map<String, Object> initialState,
+            java.util.function.BiPredicate<String, Integer> duplicateCheck) {
+        this.duplicateCheck = duplicateCheck;
         this.state = (initialState != null && !initialState.isEmpty()) ? new HashMap<>(initialState) : new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
@@ -144,6 +162,40 @@ public class SmartFunctionContext implements DataPrepContext {
         changedKeys.add(key);
 
         log.debug("{} - Flow state set: {}={}", tenant, key, javaValue);
+    }
+
+    /**
+     * Reports whether the same key was seen for this mapping less than {@code windowSeconds} ago, and records it
+     * if not (issue #692). Called by a Smart Function as {@code context.isDuplicate(key, 60)}.
+     *
+     * <p>Unlike {@code getState}/{@code setState} the check is atomic: of two copies of a message running at the
+     * same time, exactly one gets {@code false}. Keys expire with the window and a mapping holds a bounded
+     * number of them. It shares its store with the {@code $isDuplicate} filter function.</p>
+     *
+     * <p>Fails open: it returns false, and adds a warning, when the key has no value or the window is not a
+     * number from 1 to 3600. It always returns false in a test run, which records nothing.</p>
+     */
+    public boolean isDuplicate(Value key, Value windowSeconds) {
+        if (duplicateCheck == null) {
+            return false;
+        }
+        if (key == null || key.isNull()) {
+            addWarning("isDuplicate: the key has no value, the message is processed without a check");
+            return false;
+        }
+        int window = windowSeconds != null && windowSeconds.fitsInInt()
+                ? MessageDeduplicationService.clampWindowSeconds(windowSeconds.asInt())
+                : 0;
+        if (window == 0) {
+            addWarning("isDuplicate: the window must be a number of seconds from "
+                    + MessageDeduplicationService.MIN_WINDOW_SECONDS + " to "
+                    + MessageDeduplicationService.MAX_WINDOW_SECONDS + ", the message is processed without a check");
+            return false;
+        }
+        String keyText = key.isString() ? key.asString()
+                : key.isNumber() || key.isBoolean() ? key.toString()
+                        : graalContext.eval("js", "JSON.stringify").execute(key).asString();
+        return duplicateCheck.test(MessageDeduplicationService.fingerprint(keyText), window);
     }
 
     @Override

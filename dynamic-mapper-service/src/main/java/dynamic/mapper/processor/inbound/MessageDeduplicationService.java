@@ -26,7 +26,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.HexFormat;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.springframework.stereotype.Service;
 
@@ -52,10 +51,6 @@ public class MessageDeduplicationService {
 
     // <tenant, <mappingIdentifier, <fingerprint, expiry in epoch millis>>>
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, ConcurrentHashMap<String, Long>>> store =
-            new ConcurrentHashMap<>();
-
-    // <tenant, <mappingIdentifier, dropped messages since service start>>
-    private final ConcurrentHashMap<String, ConcurrentHashMap<String, LongAdder>> dropped =
             new ConcurrentHashMap<>();
 
     private final Clock clock;
@@ -110,22 +105,7 @@ public class MessageDeduplicationService {
             return now + window * 1000L;
         });
 
-        if (duplicate[0]) {
-            dropped.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
-                    .computeIfAbsent(mappingIdentifier, k -> new LongAdder())
-                    .increment();
-        }
         return duplicate[0];
-    }
-
-    /** Number of messages this mapping dropped as repeats since the service started. */
-    public long getDroppedCount(String tenant, String mappingIdentifier) {
-        var perTenant = dropped.get(tenant);
-        if (perTenant == null) {
-            return 0;
-        }
-        LongAdder adder = perTenant.get(mappingIdentifier);
-        return adder == null ? 0 : adder.sum();
     }
 
     /** Number of fingerprints currently held for the mapping, including expired ones not yet removed. */
@@ -159,15 +139,10 @@ public class MessageDeduplicationService {
         if (perTenant != null) {
             perTenant.remove(mappingIdentifier);
         }
-        var counters = dropped.get(tenant);
-        if (counters != null) {
-            counters.remove(mappingIdentifier);
-        }
     }
 
     public void removeTenant(String tenant) {
         store.remove(tenant);
-        dropped.remove(tenant);
     }
 
     /** SHA-256 of the topic and the raw payload bytes, as lower-case hex. */

@@ -1,8 +1,6 @@
 # Message de-duplication (issue #692)
 
-Status: approach B (`$isDuplicate` in the mapping filter), phase 1 (backend) implemented on branch
-`feature/deduplication-message`. The mapping model is unchanged. Approach A (Smart Function pattern) and phases
-2 to 4 are open.
+Status: all phases implemented on branch `feature/deduplication-message`. The mapping model is unchanged.
 
 ## Problem
 
@@ -49,7 +47,7 @@ The filter must be true for a message to pass. Combine it with other conditions:
 | Expiry of fingerprints | **Gap.** No per-key TTL. The script must prune its own keys. The only automatic cleanup is `flowStateRetention` (default 1440 minutes), which acts on the whole mapping state. | Yes. Entries expire at the end of the window. A job removes them every minute. |
 | Memory bound | **Gap.** State has no size limit (finding 5 in `docs/improvements/flow-state-review.md`). | Yes. 100,000 fingerprints per mapping, then fail open. |
 | Cost per message | **Gap.** Each message copies the whole state map, so cost grows with the number of fingerprints held. About 1,500 keys for the customer case, which is acceptable. | Constant. One map lookup. |
-| Drop counter and log line | **Gap.** Only what the script writes itself. | Per-mapping counter and a debug log line. A drop shows as a filter mismatch in the status. |
+| Drop counter and log line | **Gap.** Only what the script writes itself. | **Repeated** column in the mapping statistics (a part of **Filtered**), and a debug log line. |
 | Works for every transformation type | **Gap.** Smart Function mappings only. | Yes. The filter runs before the transformation. |
 | Hash of the whole payload | **Open question.** Not verified that the script sandbox allows Java classes. | `$string($)` as the key covers exact repeats. Object key order may differ between copies. |
 | Custom rules, for example per-device windows | Yes. Any logic the script can express. | Yes for key and window. No custom logic beyond JSONata. |
@@ -65,10 +63,9 @@ The filter must be true for a message to pass. Combine it with other conditions:
 | A only covers Smart Function mappings | A | Not closable. Use B for JSONata and Java extension mappings. |
 | B has no outbound support | B | Out of scope. Decide later if outbound brokers need it. |
 | B records before the transformation succeeds | B | Document it. Option for later: record after a successful send. |
-| B counts drops as filter mismatches | B | Phase 2 shows a separate drop counter. |
 
-The sample template (phase 1b) is a stopgap for approach A. Until `context.isDuplicate` exists, it carries the
-concurrency and expiry gaps listed above, and the template header says so.
+Approach A with state only stays possible, but the template now uses `context.isDuplicate`, which closes the
+concurrency, expiry, memory, and counter gaps for Smart Function mappings.
 
 ## Design of approach B
 
@@ -80,8 +77,9 @@ The key is a JSONata expression evaluated against the payload.
 - The final text is hashed with SHA-256, so long keys use no extra memory.
 - The author adds a separator between fields, for example `"|"`, so `a` + `bc` differs from `ab` + `c`.
 - The store is per tenant and mapping, so neither is part of the key.
-- The topic is not part of the key. Use `_TOPIC_LEVEL_` in the key if topics matter. Not yet verified that the
-  filter can see it.
+- The topic is not part of the key. Use `_TOPIC_LEVEL_` in the key if topics matter. Verified in code: enrichment
+  runs before the filter and adds `_TOPIC_LEVEL_` to a JSON object payload. It does not for Smart Function
+  mappings or for payloads that are not a JSON object.
 - If the key has no value, or the window is not a number from 1 to 3600, the function returns `false`, logs a
   warning, and the message is processed. The check fails open so that a bad expression never drops data.
 
@@ -109,21 +107,26 @@ The key is a JSONata expression evaluated against the payload.
 
 ## Phases
 
-1. **Backend, approach B (done):** store, `$isDuplicate` in the inbound filter, outbound no-op, browser stub,
-   cleanup, unit tests.
-   - **1b. Sample template (open):** `SMART-INBOUND-xx` with the script pattern, a window, and pruning of old keys.
-     The header lists the gaps above.
-2. **Visibility and UI:** drop counter in the mapping status. Editor hint and an example for `$isDuplicate`. UI
-   tests for the stub.
-3. **Smart Function access:** `context.isDuplicate(key, windowSeconds)` on the same store. Both entry points share
-   one store per mapping, so a key used in both places counts once.
-4. **Docs:** user guide section that says when to use the filter function, the script pattern, or
-   `context.isDuplicate`. Mention the retry-after-failure caveat.
+1. **Backend, approach B (done):** store, `$isDuplicate` in the inbound filter, outbound no-op, browser stub with
+   a UI test, cleanup, unit tests, and the user guide section `Dropping repeated messages` in
+   `dynamic-mapper-ui/public/docs/define-mapping.md`.
+2. **Visibility and UI (done):** `messagesDuplicate` in the mapping status (a subset of `messagesFiltered`), set
+   through a flag on the processing context and booked in `ConsolidationProcessor`. **Repeated** column in the
+   monitoring table, editor hint for inbound mappings, German translations, monitoring guide row. The status counter
+   is persisted with the status and is the only counter; the store keeps none.
+3. **Smart Function access (done):** `context.isDuplicate(key, windowSeconds)` on the same store, passed to
+   `SmartFunctionContext` through its constructor so a script cannot replace it. Mirrored into the TypeScript types
+   (interfaces and both mocks), the generated editor table, `smartfunction.md`, the AI prompt, and the contract
+   test's canonical list. Sample template `template-SMART-INBOUND-14.js`. Both entry points hash the key the same
+   way, so a key used in both places counts once. The editor offers `$isDuplicate` only in the inbound execution
+   filter field (`props.mapperFunctions`).
+4. **Docs (done):** `define-mapping.md` (filter function), `smartfunction.md` (`context.isDuplicate`),
+   `monitoring.md` (Repeated). The retry-after-failure caveat is documented.
 
 ## Open points
 
-- The drop counter is in memory. Decide whether it belongs in the persisted mapping status.
+- The **Repeated** counter is not in the monitoring chart, which splits Processed, Filtered, and Errors.
 - Whether to add outbound support. The issue only describes inbound brokers.
-- Whether the filter can see `_TOPIC_LEVEL_`, and whether the script sandbox can hash a payload.
+- Whether the script sandbox can hash a payload (affects only approach A).
 - The customer case (25 devices, about 40 duplicates a week) is covered by either approach. Pick the default
   recommendation for the user guide once phase 3 is decided.

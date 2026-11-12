@@ -68,8 +68,12 @@ export function buildFilterFormlyFields(
                             !stepperConfiguration.allowDefiningSubstitutions ||
                             (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole),
                         placeholder: '$exists(c8y_TemperatureMeasurement)',
-                        description: gettext('This expression is required...'),
+                        description: mapping.direction === Direction.INBOUND
+                            ? gettext('Optional. To drop repeated messages, use $not($isDuplicate(key, seconds)), for example $not($isDuplicate(deviceId & "|" & time, 60)).')
+                            : gettext('This expression is required...'),
                         required: mapping.direction === Direction.OUTBOUND,
+                        // $isDuplicate works in the inbound filter only; see DYNAMIC_MAPPER_FUNCTIONS
+                        mapperFunctions: mapping.direction === Direction.INBOUND,
                         customMessage: sourceCustomMessage$
                     },
                     hooks: {

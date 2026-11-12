@@ -1,6 +1,5 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -41,7 +40,9 @@ class FilterInboundProcessorDeduplicationTest {
         Mapping m = mapping(FILTER);
         assertFalse(dropped(m, Map.of("id", "d1", "time", "t1", "seq", 1)));
         assertTrue(dropped(m, Map.of("id", "d1", "time", "t1", "seq", 2)), "fields outside the key are ignored");
-        assertEquals(1L, store.getDroppedCount("t", "m1"));
+        var third = context(m, Map.of("id", "d1", "time", "t1"));
+        processor.process(third);
+        assertTrue(third.isDroppedAsDuplicate(), "the context says why it was dropped");
     }
 
     @Test

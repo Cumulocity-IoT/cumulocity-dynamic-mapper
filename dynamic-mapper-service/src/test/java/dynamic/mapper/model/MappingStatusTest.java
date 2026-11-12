@@ -297,4 +297,21 @@ class MappingStatusTest {
         assertEquals(0, st.getProcessingTimeMaxMs());
         assertEquals(0, st.getRequestsCreated());
     }
+
+    @Test
+    @DisplayName("a repeat counts as filtered and as duplicate; it is snapshotted and reset")
+    void duplicateCounterIsASubsetOfFiltered() {
+        MappingStatus st = status();
+
+        st.recordFiltered(1_000L);
+        st.recordDuplicate(2_000L);
+
+        assertEquals(2, st.getMessagesFiltered());
+        assertEquals(1, st.getMessagesDuplicate());
+        assertEquals(2_000L, st.getLastMessageAt());
+        assertEquals(1, st.snapshot().getMessagesDuplicate());
+
+        st.reset();
+        assertEquals(0, st.getMessagesDuplicate());
+    }
 }

@@ -535,5 +535,77 @@
       "extensionType": "EXTENSION_INBOUND",
       "direction": "INBOUND"
     }
+  },
+  {
+    "name": "IN-18 JSONata - drop repeated messages ($isDuplicate)",
+    "targetAPI": "MEASUREMENT",
+    "direction": "INBOUND",
+    "mappingType": "JSON",
+    "transformationType": "JSONATA",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "time",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "value",
+        "pathTarget": "c8y_Temperature.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": false,
+    "debug": false,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": true,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "filterMapping": "$exists(value) and $exists(time) and $not($isDuplicate(_TOPIC_LEVEL_[1] & \"|\" & time, 60))",
+    "filterInventory": null,
+    "maxFailureCount": 0,
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1792500000000,
+    "version": "1.0.0",
+    "targetTemplate": "{\"c8y_Temperature\":{\"T\":{\"value\":23.5,\"unit\":\"C\"}},\"time\":\"2026-01-01T00:00:00.000Z\",\"type\":\"c8y_TemperatureMeasurement\"}",
+    "mappingTopic": "dedup/+",
+    "mappingTopicSample": "dedup/sensor-berlin-01",
+    "sourceTemplate": "{\"time\":\"2026-01-01T00:00:00.000Z\",\"value\":23.5}"
+  },
+  {
+    "name": "IN-19 Smart Function - drop repeated messages (context.isDuplicate)",
+    "targetAPI": "MEASUREMENT",
+    "direction": "INBOUND",
+    "mappingType": "JSON",
+    "transformationType": "SMART_FUNCTION",
+    "substitutions": [],
+    "active": false,
+    "debug": false,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": true,
+    "updateExistingDevice": false,
+    "autoAckOperation": false,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "filterMapping": "true",
+    "filterInventory": null,
+    "maxFailureCount": 0,
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1792500000000,
+    "version": "1.0.0",
+    "targetTemplate": "{}",
+    "mappingTopic": "dedupScript/+",
+    "mappingTopicSample": "dedupScript/sensor-berlin-01",
+    "sourceTemplate": "{\"externalId\":\"sensor-berlin-01\",\"time\":\"2026-01-01T00:00:00.000Z\",\"temperature\":23.5}",
+    "code": "LyoqCiAqIEBuYW1lIERyb3AgcmVwZWF0ZWQgbWVzc2FnZXMKICogQGRlc2NyaXB0aW9uIENyZWF0ZXMgYSB0ZW1wZXJhdHVyZSBtZWFzdXJlbWVudCBhbmQgZHJvcHMgYSBtZXNzYWdlIHRoYXQgcmVwZWF0cyBhbiBlYXJsaWVyIG9uZSBmcm9tIHRoZSBzYW1lCiAqICAgICAgICAgICAgICBkZXZpY2Ugd2l0aCB0aGUgc2FtZSB0aW1lc3RhbXAgd2l0aGluIDYwIHNlY29uZHMsIGZvciBleGFtcGxlIGFmdGVyIGEgYnJva2VyIHJlY29ubmVjdCBvciBhbgogKiAgICAgICAgICAgICAgTVFUVCBRb1MgMSByZXRyeS4gVGhlIGNoZWNrIGlzIGF0b21pYywga2V5cyBleHBpcmUgd2l0aCB0aGUgd2luZG93LCBhbmQgdGhlIG1vbml0b3JpbmcgdGFibGUKICogICAgICAgICAgICAgIGNvdW50cyBldmVyeSBkcm9wIHVuZGVyIFJlcGVhdGVkLgogKiBAdGVtcGxhdGVUeXBlIElOQk9VTkRfU01BUlRfRlVOQ1RJT04KICogQHNhbXBsZVRvcGljIGRlZHVwU2NyaXB0L3NlbnNvci1iZXJsaW4tMDEKICogQHNhbXBsZVBheWxvYWQKICogICB7CiAqICAgICAiZXh0ZXJuYWxJZCI6ICJzZW5zb3ItYmVybGluLTAxIiwKICogICAgICJ0aW1lIjogIjIwMjYtMDEtMDFUMDA6MDA6MDAuMDAwWiIsCiAqICAgICAidGVtcGVyYXR1cmUiOiAyMy41CiAqICAgfQogKiAodGhlIG5hbWUgYW5kIGRlc2NyaXB0aW9uIGFib3ZlIGNhbiBiZSBlZGl0ZWQgaGVyZTsgdGhlIG90aGVyIHRhZ3MgYXJlIG1hbmFnZWQgYXV0b21hdGljYWxseSkKICogLS0tIG1ldGFkYXRhIGFib3ZlIGlzIGF1dG8tZ2VuZXJhdGVkLCBhZGQgeW91ciBkb2N1bWVudGF0aW9uIGJlbG93IC0tLQogKgogKiBTZW5kIHRoZSBzYW1wbGUgcGF5bG9hZCB0d2ljZSB3aXRoaW4gNjAgc2Vjb25kczogdGhlIGZpcnN0IG1lc3NhZ2UgY3JlYXRlcyBhIG1lYXN1cmVtZW50LCB0aGUgc2Vjb25kCiAqIHJldHVybnMgbm8gb3V0cHV0IGFuZCBpcyBjb3VudGVkIGFzIFJlcGVhdGVkLgogKgogKiBLZXlzIGxpdmUgaW4gbWVtb3J5IG9ubHkuIFRoZXkgYXJlIGxvc3Qgb24gcmVzdGFydCBhbmQgYXJlIG5vdCBzaGFyZWQgYmV0d2VlbiBzZXJ2aWNlIGluc3RhbmNlcy4gRHJ5IFJ1bgogKiBhbmQgTGl2ZSBUZXN0IG5ldmVyIHJlY29yZCBhIGtleSwgc28gdGVzdGluZyBkb2VzIG5vdCBjaGFuZ2Ugd2hhdCBwcm9kdWN0aW9uIGRyb3BzLgogKgogKiBUbyBkcm9wIHJlcGVhdHMgd2l0aG91dCBjb2RlLCB1c2UgdGhlIGZpbHRlciBmdW5jdGlvbiBpbnN0ZWFkLCBmb3IgZXhhbXBsZQogKiAgICRub3QoJGlzRHVwbGljYXRlKGV4dGVybmFsSWQgJiAifCIgJiB0aW1lLCA2MCkpCiAqIGluIHRoZSBGaWx0ZXIgZXhlY3V0aW9uIG1hcHBpbmcuCiovCgovKioKICogQHBhcmFtIHtpbXBvcnQoJ0BjOHkvZHluYW1pYy1tYXBwZXItc21hcnQtZnVuY3Rpb24nKS5EeW5hbWljTWFwcGVyRGV2aWNlTWVzc2FnZX0gbXNnCiAqIEBwYXJhbSB7aW1wb3J0KCdAYzh5L2R5bmFtaWMtbWFwcGVyLXNtYXJ0LWZ1bmN0aW9uJykuU21hcnRGdW5jdGlvbkNvbnRleHR9IGNvbnRleHQKICovCmZ1bmN0aW9uIG9uTWVzc2FnZShtc2csIGNvbnRleHQpIHsKICAgIHZhciBwYXlsb2FkID0gbXNnLnBheWxvYWQ7CiAgICB2YXIgZXh0ZXJuYWxJZCA9IGNvbnRleHQuZ2V0Q2xpZW50SWQoKSB8fCBwYXlsb2FkWyJleHRlcm5hbElkIl07CiAgICB2YXIgdGltZSA9IHBheWxvYWRbInRpbWUiXSB8fCBtc2cudGltZTsKCiAgICAvLyBUaGUga2V5IHNheXMgd2hhdCBtYWtlcyB0d28gbWVzc2FnZXMgdGhlIHNhbWUuIEEgc2VwYXJhdG9yIGtlZXBzICJhIiArICJiYyIgYXBhcnQgZnJvbSAiYWIiICsgImMiLgogICAgaWYgKGNvbnRleHQuaXNEdXBsaWNhdGUoZXh0ZXJuYWxJZCArICJ8IiArIHRpbWUsIDYwKSkgewogICAgICAgIGNvbnNvbGUubG9nKCJEcm9wcGluZyByZXBlYXRlZCBtZXNzYWdlIGZyb20gIiArIGV4dGVybmFsSWQgKyAiIGF0ICIgKyB0aW1lKTsKICAgICAgICByZXR1cm4gW107CiAgICB9CgogICAgcmV0dXJuIHsKICAgICAgICBjdW11bG9jaXR5VHlwZTogIm1lYXN1cmVtZW50IiwKICAgICAgICBhY3Rpb246ICJjcmVhdGUiLAogICAgICAgIHBheWxvYWQ6IHsKICAgICAgICAgICAgInRpbWUiOiB0aW1lLAogICAgICAgICAgICAidHlwZSI6ICJjOHlfVGVtcGVyYXR1cmVNZWFzdXJlbWVudCIsCiAgICAgICAgICAgICJjOHlfVGVtcGVyYXR1cmUiOiB7CiAgICAgICAgICAgICAgICAiVCI6IHsKICAgICAgICAgICAgICAgICAgICAidW5pdCI6ICJDIiwKICAgICAgICAgICAgICAgICAgICAidmFsdWUiOiBwYXlsb2FkWyJ0ZW1wZXJhdHVyZSJdCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9LAogICAgICAgIGV4dGVybmFsU291cmNlOiBbeyJ0eXBlIjogImM4eV9TZXJpYWwiLCAiZXh0ZXJuYWxJZCI6IGV4dGVybmFsSWR9XQogICAgfTsKfQoKZXhwb3J0IHtvbk1lc3NhZ2V9Owo="
   }
 ]
