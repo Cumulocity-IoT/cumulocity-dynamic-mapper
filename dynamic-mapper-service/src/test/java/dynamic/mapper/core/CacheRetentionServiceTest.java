@@ -44,6 +44,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.inbound.MessageDeduplicationService;
 
 class CacheRetentionServiceTest {
 
@@ -53,7 +54,8 @@ class CacheRetentionServiceTest {
     private final CacheManager cacheManager = mock(CacheManager.class);
     private final ServiceConfigurationService configService = mock(ServiceConfigurationService.class);
     private final CacheRetentionService service = new CacheRetentionService(cacheManager, configService,
-            mock(MicroserviceSubscriptionsService.class), mock(FlowStateStore.class));
+            mock(MicroserviceSubscriptionsService.class), mock(FlowStateStore.class),
+            mock(MessageDeduplicationService.class));
 
     @SuppressWarnings("unchecked")
     private Map<String, Instant> retentionMap(String field) throws Exception {
