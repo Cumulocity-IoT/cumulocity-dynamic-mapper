@@ -50,7 +50,7 @@
   outline-offset: 1px;
 }
 
-/* Same highlight the platform grids use for a selected row. */
+/* Same highlight as the platform grids use for a selected row. */
 .d11r-sub-row.active {
   border-color: var(--c8y-brand-primary, #1776bf);
   background: var(--c8y-component-background-active, #e8f2fb);

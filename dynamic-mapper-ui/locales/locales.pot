@@ -3486,3 +3486,6 @@ msgstr ""
 
 msgid "Substitution {{number}}"
 msgstr ""
+
+msgid "Substitution {{number}}: {{source}} to {{target}}"
+msgstr ""

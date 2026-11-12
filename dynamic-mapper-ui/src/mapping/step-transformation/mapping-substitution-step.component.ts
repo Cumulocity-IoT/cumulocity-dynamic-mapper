@@ -68,8 +68,15 @@ import { SubstitutionManagementService, SubstitutionsUpdate } from '../service/s
 import { isExpression } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { FormatStringPipe } from '../../shared/misc/format-string.pipe';
+import { formatStringAsWords } from '../../shared/misc/format-string.pipe';
 import { ARRAY_ONLY_STRATEGIES, REPAIR_STRATEGY_DESCRIPTIONS } from '../substitution/repair-strategy';
+
+interface RepairStrategyOption {
+  value: string;
+  label: string;
+  description: string;
+  disabled: boolean;
+}
 
 @Component({
   selector: 'd11r-mapping-transformation-step',
@@ -142,7 +149,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   substitutionModel: SubstitutionModel = {};
   selectedSubstitution: number = -1;
   readonly isExpression = isExpression;
-  private readonly formatAsWords = new FormatStringPipe();
   targetTemplateHelp = gettext('The template contains the dummy field <code>_TOPIC_LEVEL_</code>...');
 
   /** Help shown next to the disabled AI button. */
@@ -359,11 +365,20 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
 
   /**
    * A field with a validation message shows it right under the input, in the space the preview uses.
-   * The preview then moves below the message.
+   * The preview then moves below the message. Follows the flag the field wrapper shows the message
+   * with (Formly's `showError`), so the preview does not move before the message appears: a required
+   * field is invalid on load, but its message only shows once the user has interacted.
    */
   hasFieldError(key: 'pathSource' | 'pathTarget'): boolean {
+    // `showError` is set on the field by Formly's core, but is not part of the public FormlyFieldConfig type.
+    const field = (key === 'pathSource' ? this.substitutionFormlyFieldsSource : this.substitutionFormlyFieldsTarget)?.[0] as
+      | (FormlyFieldConfig & { showError?: boolean })
+      | undefined;
+    if (field && typeof field.showError === 'boolean') {
+      return field.showError;
+    }
     const control = this.substitutionFormly?.get(key);
-    return !!control?.errors;
+    return !!control?.invalid && !!(control.dirty || control.touched);
   }
 
   /** Header of the editor: which substitution is being edited, or that a new one is being defined. */
@@ -391,13 +406,23 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionModel = { ...this.substitutionModel, repairStrategy: repairStrategy as RepairStrategy };
   }
 
-  repairStrategyOptions(): { value: string; label: string; description: string; disabled: boolean }[] {
-    return Object.keys(RepairStrategy).map(key => ({
-      value: key,
-      label: this.formatAsWords.transform(key),
-      description: this.describeStrategy(key),
-      disabled: ARRAY_ONLY_STRATEGIES.includes(key) && !!this.substitutionModel.expandArray
-    }));
+  /** Only the language and `expandArray` change the options, so they are built once per combination. */
+  private readonly repairStrategyOptionsCache = new Map<string, RepairStrategyOption[]>();
+
+  repairStrategyOptions(): RepairStrategyOption[] {
+    const expand = !!this.substitutionModel.expandArray;
+    const key = `${this.translateService.getCurrentLang?.() ?? ''}|${expand}`;
+    let options = this.repairStrategyOptionsCache.get(key);
+    if (!options) {
+      options = Object.keys(RepairStrategy).map(strategy => ({
+        value: strategy,
+        label: formatStringAsWords(strategy),
+        description: this.describeStrategy(strategy),
+        disabled: ARRAY_ONLY_STRATEGIES.includes(strategy) && expand
+      }));
+      this.repairStrategyOptionsCache.set(key, options);
+    }
+    return options;
   }
 
   describeStrategy(strategy: string | undefined): string {

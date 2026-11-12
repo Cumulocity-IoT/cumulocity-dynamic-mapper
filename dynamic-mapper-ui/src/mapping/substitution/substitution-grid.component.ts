@@ -38,7 +38,7 @@ import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { Subject } from 'rxjs';
 import { isExpression } from '../../shared/mapping/util';
-import { FormatStringPipe } from '../../shared/misc/format-string.pipe';
+import { formatStringAsWords } from '../../shared/misc/format-string.pipe';
 import { REPAIR_STRATEGY_DESCRIPTIONS } from './repair-strategy';
 
 export interface SubstitutionGridSettings {
@@ -73,7 +73,6 @@ export class SubstitutionGridComponent implements OnDestroy {
   readonly substitutionTemplateHelp = gettext('Substitutions defining the device identifier are marked as "Device identifier". Before adding a substitution target and source property in templates have to be selected.');
   readonly expandArrayHelp = gettext('When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings.');
 
-  private readonly formatAsWords = new FormatStringPipe();
   private destroy$ = new Subject<void>();
 
   ngOnDestroy(): void {
@@ -103,12 +102,29 @@ export class SubstitutionGridComponent implements OnDestroy {
     }
   }
 
+  /** Accessible name of a row: its number, source and target, then what its labels say. */
+  rowLabel(sub: Substitution, index: number, deviceIdentifier: boolean): string {
+    const t = (text: string) => this.translateService.instant(text);
+    const parts = [
+      this.translateService.instant(gettext('Substitution {{number}}: {{source}} to {{target}}'), {
+        number: index + 1,
+        source: sub.pathSource,
+        target: sub.pathTarget
+      })
+    ];
+    if (deviceIdentifier) parts.push(t(gettext('Device identifier')));
+    if (isExpression(sub.pathSource)) parts.push(t(gettext('JSONata expression')));
+    if (sub.expandArray) parts.push(t(gettext('Expand as array')));
+    if (this.hasCustomRepairStrategy(sub)) parts.push(this.repairStrategyLabel(sub));
+    return parts.join(', ');
+  }
+
   hasCustomRepairStrategy(sub: Substitution): boolean {
     return !!sub.repairStrategy && sub.repairStrategy !== RepairStrategy.DEFAULT;
   }
 
   repairStrategyLabel(sub: Substitution): string {
-    return this.formatAsWords.transform(sub.repairStrategy);
+    return formatStringAsWords(sub.repairStrategy);
   }
 
   /** Tooltip on the repair strategy label: what the strategy does. */

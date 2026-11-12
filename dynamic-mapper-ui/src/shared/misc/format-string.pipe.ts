@@ -19,37 +19,46 @@
  */
 import { Pipe, PipeTransform } from '@angular/core';
 
+/**
+ * "pollIntervalSeconds" or "WEB_HOOK_INTERNAL" as capitalized words ("Poll Interval Seconds",
+ * "Web Hook Internal"). A plain function, so code that is not a template can use it without
+ * the pipe or Angular's DI. The pipe below delegates to it.
+ */
+export function formatStringAsWords(value: string, removeLastWords: number = 0): string {
+  if (!value) return '';
+
+  // Split camelCase/PascalCase at lower-to-upper transitions (e.g. "pollIntervalSeconds" ->
+  // "poll Interval Seconds") before anything is lowercased below. A no-op on inputs that are
+  // already all-uppercase-with-underscores (e.g. "WEB_HOOK_INTERNAL"), since there is no
+  // lowercase-to-uppercase transition to find there.
+  const camelSplit = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+  // Then replace underscores with spaces
+  const withSpaces = camelSplit.replace(/_/g, ' ');
+
+  // Convert to lowercase and split into words
+  const words = withSpaces.toLowerCase().split(' ');
+
+  // Remove last X words if specified
+  const trimmedWords = (removeLastWords > 0 && words.length > removeLastWords)
+    ? words.slice(0, -removeLastWords)
+    : words;
+
+  // Capitalize the first letter of each word
+  const capitalizedWords = trimmedWords.map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  );
+
+  // Join the words back together
+  return capitalizedWords.join(' ');
+}
+
 @Pipe({
   name: 'formatStringAsWords',
   standalone: true,
 })
 export class FormatStringPipe implements PipeTransform {
   transform(value: string, removeLastWords: number = 0): string {
-    if (!value) return '';
-
-    // Split camelCase/PascalCase at lower-to-upper transitions (e.g. "pollIntervalSeconds" ->
-    // "poll Interval Seconds") before anything is lowercased below. A no-op on inputs that are
-    // already all-uppercase-with-underscores (e.g. "WEB_HOOK_INTERNAL"), since there is no
-    // lowercase-to-uppercase transition to find there.
-    const camelSplit = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-
-    // Then replace underscores with spaces
-    const withSpaces = camelSplit.replace(/_/g, ' ');
-
-    // Convert to lowercase and split into words
-    const words = withSpaces.toLowerCase().split(' ');
-
-    // Remove last X words if specified
-    const trimmedWords = (removeLastWords > 0 && words.length > removeLastWords)
-      ? words.slice(0, -removeLastWords)
-      : words;
-
-    // Capitalize the first letter of each word
-    const capitalizedWords = trimmedWords.map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1)
-    );
-
-    // Join the words back together
-    return capitalizedWords.join(' ');
+    return formatStringAsWords(value, removeLastWords);
   }
 }

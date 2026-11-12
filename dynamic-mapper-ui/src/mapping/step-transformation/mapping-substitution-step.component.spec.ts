@@ -221,8 +221,8 @@ describe('MappingSubstitutionStepComponent editor options', () => {
   beforeEach(() => {
     step = Object.create(MappingSubstitutionStepComponent.prototype);
     step.substitutionModel = { expandArray: false, repairStrategy: RepairStrategy.DEFAULT };
-    step.translateService = { instant: (s: string) => s };
-    step.formatAsWords = { transform: (s: string) => s };
+    step.translateService = { instant: (s: string) => s, getCurrentLang: () => 'en' };
+    step.repairStrategyOptionsCache = new Map();
   });
 
   it('enabling expand as array resets an array-only repair strategy', () => {
@@ -250,6 +250,35 @@ describe('MappingSubstitutionStepComponent editor options', () => {
     step.onExpandArrayChange(true);
 
     expect(disabled()).toEqual([RepairStrategy.USE_FIRST_VALUE_OF_ARRAY, RepairStrategy.USE_LAST_VALUE_OF_ARRAY]);
+  });
+
+  it('builds the repair strategy options once per language and expand setting', () => {
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+
+    const before = step.repairStrategyOptions();
+    step.onExpandArrayChange(true);
+
+    expect(step.repairStrategyOptions()).not.toBe(before);
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+  });
+
+  describe('hasFieldError', () => {
+    it('follows the flag the field wrapper shows the message with', () => {
+      step.substitutionFormlyFieldsSource = [{ showError: false }];
+      step.substitutionFormlyFieldsTarget = [{ showError: true }];
+
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+      expect(step.hasFieldError('pathTarget')).toBeTrue();
+    });
+
+    it('falls back to an invalid control the user has touched', () => {
+      step.substitutionFormlyFieldsSource = [{}];
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: false }) };
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: true }) };
+      expect(step.hasFieldError('pathSource')).toBeTrue();
+    });
   });
 
   it('outbound mappings and read-only users cannot expand', () => {

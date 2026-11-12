@@ -77,6 +77,26 @@ describe('SubstitutionGridComponent', () => {
     });
   });
 
+  describe('accessible row name', () => {
+    const sub = (overrides: Partial<Substitution> = {}): Substitution => ({
+      pathSource: '$.a', pathTarget: '$.b', repairStrategy: RepairStrategy.DEFAULT, expandArray: false, ...overrides
+    });
+
+    it('names the row by number, source and target', () => {
+      expect(component.rowLabel(sub(), 0, false)).toContain('1');
+      expect(component.rowLabel(sub(), 0, false)).toContain('$.a');
+      expect(component.rowLabel(sub(), 0, false)).toContain('$.b');
+    });
+
+    it('adds what the row labels say', () => {
+      const label = component.rowLabel(sub({ expandArray: true, repairStrategy: RepairStrategy.IGNORE }), 2, true);
+
+      expect(label).toContain('Device identifier');
+      expect(label).toContain('Expand as array');
+      expect(label).toContain('Ignore');
+    });
+  });
+
   describe('keyboard', () => {
     it('Enter selects the row, but not when pressed on a control inside it', () => {
       const selected: number[] = [];

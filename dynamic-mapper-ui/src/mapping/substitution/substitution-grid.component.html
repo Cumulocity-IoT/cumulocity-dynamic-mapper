@@ -30,6 +30,7 @@
        tracking by object would rebuild the row (and drop focus) on every change. -->
   @for (sub of mapping().substitutions; track $index; let i = $index) {
   <div class="d11r-sub-row" role="option" tabindex="0" id="{{ 'sub-' + id + '-' + i }}"
+    [attr.aria-label]="rowLabel(sub, i, definesDeviceIdentifier(mapping(), sub))"
     [attr.data-cy]="'dm-substitution-row-' + i" [attr.aria-selected]="settings().selectedSubstitutionIndex === i"
     [class.active]="settings().selectedSubstitutionIndex === i" (click)="onSubstitutionSelect(i)"
     (keydown.enter)="onRowEnter($event, i)" (keydown.arrowdown)="focusSibling($event, 1)"
