@@ -182,10 +182,21 @@ done
 dm_wait 10 "so any consumed message would have been dropped by now"
 
 # ── Recovery ───────────────────────────────────────────────────────────────────
-dm_step "Listening on the broker, then restoring the connector endpoint ..."
-mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C "$OUTAGE_EVENTS" -W 150 >"$WORK_DIR/received.txt" 2>/dev/null &
+dm_step "Listening on the broker ..."
+: >"$WORK_DIR/received.txt"
+mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -W 240 >"$WORK_DIR/received.txt" 2>/dev/null &
 SUB_PID=$!
-sleep 2
+# Make sure the subscriber is connected before the queued messages can arrive: publish a marker
+# until the subscriber receives it. A public broker can take a few seconds to accept the subscriber.
+SUB_READY=false
+for _i in $(seq 1 20); do
+    mosquitto_pub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -m "subscriber-ready" 2>/dev/null || true
+    sleep 1
+    if grep -q "subscriber-ready" "$WORK_DIR/received.txt"; then SUB_READY=true; break; fi
+done
+[ "$SUB_READY" = "true" ] || dm_error "Test subscriber did not connect to $BROKER_HOST:$BROKER_PORT"
+
+dm_step "Restoring the connector endpoint ..."
 set_connector_endpoint "$BROKER_HOST" "$BROKER_PORT"
 
 dm_step "Waiting for the connector to reconnect ..."
@@ -193,7 +204,15 @@ dm_wait_for_connector_status "$CONNECTOR_ID" CONNECTED 150 3 >/dev/null \
     || dm_error "Connector did not reconnect within 150s"
 dm_success "Connector is CONNECTED again"
 
-dm_step "Waiting for the queued messages ..."
+dm_step "Waiting for the queued messages (up to 90s) ..."
+RECEIVED_COUNT=0
+for _i in $(seq 1 18); do
+    RECEIVED_COUNT=$(grep -c '"outage-[1-9]"' "$WORK_DIR/received.txt" || true)
+    [ "${RECEIVED_COUNT:-0}" -ge "$OUTAGE_EVENTS" ] && break
+    dm_info "received ${RECEIVED_COUNT:-0}/$OUTAGE_EVENTS so far ..."
+    sleep 5
+done
+kill "$SUB_PID" 2>/dev/null || true
 wait "$SUB_PID" 2>/dev/null || true
 SUB_PID=""
 
@@ -201,6 +220,11 @@ SUB_PID=""
 for _n in $(seq 1 "$OUTAGE_EVENTS"); do
     dm_assert_eq "event outage-$_n published after reconnect" "1" "$(grep -c "\"outage-$_n\"" "$WORK_DIR/received.txt" || true)"
 done
+if [ "${RECEIVED_COUNT:-0}" -lt "$OUTAGE_EVENTS" ]; then
+    dm_warn "Messages the subscriber received on $TOPIC:"
+    cat "$WORK_DIR/received.txt" >&2
+    dm_warn "Search the service log for: Cannot publish, paused its device, resuming its device, POISON, OUTBOUND SEND"
+fi
 
 dm_done "$TEST_TITLE"
 dm_print_summary
