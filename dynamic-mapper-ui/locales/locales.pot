@@ -245,9 +245,6 @@ msgstr ""
 msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves."
 msgstr ""
 
-msgid "Allow to define expressions using JSONata"
-msgstr ""
-
 msgid "Already removed in 6.3.0:"
 msgstr ""
 
@@ -323,6 +320,9 @@ msgid ""
 "                    Cumulocity Edge that do not yet support this feature."
 msgstr ""
 
+msgid "New"
+msgstr ""
+
 msgid "Broker message key produced by this mapping, e.g. the Kafka record key"
 msgstr ""
 
@@ -389,9 +389,6 @@ msgid "Chart processed"
 msgstr ""
 
 msgid "Check the generated result before saving"
-msgstr ""
-
-msgid "Checkbox"
 msgstr ""
 
 msgid "Choose another file"
@@ -731,6 +728,9 @@ msgid "Device Isolation Cumulocity MQTT Service"
 msgstr ""
 
 msgid "Device does not exist"
+msgstr ""
+
+msgid "Device identifier"
 msgstr ""
 
 msgid "Device groups"
@@ -1246,6 +1246,12 @@ msgstr ""
 msgid "Select a filter"
 msgstr ""
 
+msgid "Select a node in the source template and a node in the target template, then add the substitution."
+msgstr ""
+
+msgid "Select a substitution from the list, or add a new one."
+msgstr ""
+
 msgid "Already subscribed device types:"
 msgstr ""
 
@@ -1512,6 +1518,9 @@ msgid "JSONata"
 msgstr ""
 
 msgid "JSONata AI Agent"
+msgstr ""
+
+msgid "JSONata expression"
 msgstr ""
 
 msgid "Java Extension"
@@ -1903,6 +1912,9 @@ msgstr ""
 msgid "New code template"
 msgstr ""
 
+msgid "New substitution"
+msgstr ""
+
 msgid "Next"
 msgstr ""
 
@@ -1981,7 +1993,13 @@ msgstr ""
 msgid "No subscriptions for devices exist."
 msgstr ""
 
+msgid "No substitution selected"
+msgstr ""
+
 msgid "No substitutions were generated."
+msgstr ""
+
+msgid "No substitutions yet"
 msgstr ""
 
 msgid "No target template"
@@ -2117,6 +2135,9 @@ msgid "Overview"
 msgstr ""
 
 msgid "Partially"
+msgstr ""
+
+msgid "Path"
 msgstr ""
 
 msgid "Pause"
@@ -2398,6 +2419,9 @@ msgstr ""
 msgid "Save & Activate"
 msgstr ""
 
+msgid "Save change"
+msgstr ""
+
 msgid "Saved code template"
 msgstr ""
 
@@ -2644,9 +2668,6 @@ msgstr ""
 msgid "Source Expression"
 msgstr ""
 
-msgid "Source Result"
-msgstr ""
-
 msgid "Source Template - {{system}}"
 msgstr ""
 
@@ -2775,7 +2796,13 @@ msgstr ""
 msgid "Substitution as JavaScript (SUBSTITUTION_AS_CODE)"
 msgstr ""
 
-msgid "Substitutions defining the device identifier are marked with an \"*\". Before adding a substitution target and source property in templates have to be selected."
+msgid "Substitution details"
+msgstr ""
+
+msgid "Substitutions"
+msgstr ""
+
+msgid "Substitutions defining the device identifier are marked as \"Device identifier\". Before adding a substitution target and source property in templates have to be selected."
 msgstr ""
 
 msgid "Support ESM modules"
@@ -2800,9 +2827,6 @@ msgid "Target API"
 msgstr ""
 
 msgid "Target Expression"
-msgstr ""
-
-msgid "Target Result"
 msgstr ""
 
 msgid "Target Template - {{system}}"
@@ -2877,9 +2901,6 @@ msgstr ""
 msgid "The current subscriptions could not be loaded. Subscriptions cannot be changed here. Use the Subscription outbound page instead."
 msgstr ""
 
-msgid "The expression extracts an array. To create one request per element, add the substitution and then switch on \"Expand as array\" in the substitution table."
-msgstr ""
-
 msgid "The extension {{extensionName}} with event {{eventName}} is not loaded..."
 msgstr ""
 
@@ -2950,6 +2971,9 @@ msgid "The publish topic sample must have the same structure and number of level
 msgstr ""
 
 msgid "The referenced device does not exist and createNonExistingDevice is disabled for this mapping. Do you want to assume for this test that the device exists?"
+msgstr ""
+
+msgid "The source returns an array. Create one request per element?"
 msgstr ""
 
 msgid "The subscriptions were changed elsewhere while this mapping was open. Your selection replaces them."
@@ -3079,9 +3103,6 @@ msgid "Update connector"
 msgstr ""
 
 msgid "Update existing device"
-msgstr ""
-
-msgid "Update substitution"
 msgstr ""
 
 msgid "Update successful"
@@ -3461,4 +3482,7 @@ msgid "… {{count}} earlier entries omitted …"
 msgstr ""
 
 msgid "… {{count}} earlier entry omitted …"
+msgstr ""
+
+msgid "Substitution {{number}}"
 msgstr ""

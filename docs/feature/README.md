@@ -31,6 +31,7 @@ decided against rather than forgotten.
 | [mapping-processing-outbound.md](mapping-processing-outbound.md) | Cumulocity → broker pipeline |
 | [mapping-validation.md](mapping-validation.md) | The rules a mapping is checked against |
 | [mapping-versioning.md](mapping-versioning.md) | Drafts, publishing, rollback, retention |
+| [substitution-editor.md](substitution-editor.md) | The Transformation step's substitution list and editor, in a split view |
 | [mapping-testing.md](mapping-testing.md) | Dry Run and Live Test of a mapping, test devices |
 | [mapping-testing-isolation.md](mapping-testing-isolation.md) | Keeping tests apart from live state: caches, mapping status, Smart Function state, real devices |
 | [identity-resolution.md](identity-resolution.md) | External ID ↔ managed object, implicit device creation |

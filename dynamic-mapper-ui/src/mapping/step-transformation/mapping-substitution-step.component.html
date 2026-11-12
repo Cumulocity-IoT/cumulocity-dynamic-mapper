@@ -82,100 +82,141 @@
         </div>
       </div>
     </div>
-    <!-- Substitution Form -->
-    <div [formGroup]="substitutionFormly">
-      <!-- @if (selectedSubstitution !== -1) {
-      <div class="d-flex j-c-center p-t-8" data-cy="dm-mapping-transform-editing-indicator">
-        <span class="label label-info">Editing substitution #{{ selectedSubstitution + 1 }}</span>
-      </div>
-      } -->
-      <!-- Action Buttons -->
-      <div class="d-flex j-c-center p-t-8">
-        <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-transform-add-substitution" (click)="onAddSubstitution()"
-          [disabled]="addSubstitutionDisabled()">
-          <i c8yIcon="plus-circle-o"></i>&nbsp;<span translate>Add substitution</span>
-        </button>
-        <button type="button" class="btn btn-default btn-sm m-l-4" data-cy="dm-mapping-transform-update-substitution" (click)="onUpdateSubstitution()"
-          [disabled]="updateSubstitutionDisabled()">
-          <i c8yIcon="pencil"></i>&nbsp;<span translate>Update substitution</span>
-        </button>
-        <button type="button" class="btn btn-ai btn-sm m-l-4" data-cy="dm-mapping-transform-generate-ai" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration().showEditorSource ||
-              stepperConfiguration().readOnly || 
-              !aiAgentDeployed()">
-          @if (stepperConfiguration().persistence === 'draft') {
-          <span translate>Review / Refine with AI</span>
-          } @else {
-          <span translate>Generate substitutions</span>
+    <!-- Substitutions in the Codex split view: the list on one side, the editor beside it. The editor
+         is always shown: "no row selected" is the "new substitution" state, which the split view
+         sees as the selection -1. Narrow containers stack the panes, with a back button to the list. -->
+    <div class="m-t-16 d11r-sub-panel" data-cy="dm-substitution-panel">
+      <c8y-sv #splitView [initialSelection]="-1"
+        [resizableConfig]="{ trackId: 'dm-substitution-split-view', collapsible: false }">
+        <c8y-sv-list [title]="'Substitutions' | translate" [showEmptyState]="false">
+          <c8y-sv-header-actions>
+            <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-transform-new-substitution"
+              (click)="cancelEditSubstitution()"
+              [disabled]="!stepperConfiguration().showEditorSource || stepperConfiguration().readOnly">
+              <i c8yIcon="plus-circle-o"></i>&nbsp;<span translate>New substitution</span>
+            </button>
+            <button type="button" class="btn btn-ai btn-sm m-l-4" data-cy="dm-mapping-transform-generate-ai" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration().showEditorSource ||
+                  stepperConfiguration().readOnly || 
+                  !aiAgentDeployed()">
+              @if (stepperConfiguration().persistence === 'draft') {
+              <span translate>Review / Refine with AI</span>
+              } @else {
+              <span translate>Generate substitutions</span>
+              }
+            </button>
+            @if (!aiAgentDeployed()) {
+            <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+              [popover]="aiDisabledHelp | translate"
+              placement="right" container="body" triggers="focus" type="button"></button>
+            }
+          </c8y-sv-header-actions>
+          @if (aiCapabilitiesDisabled()) {
+          <c8y-sv-alerts>
+            <div class="alert alert-info m-8" data-cy="dm-ai-disabled-info">
+              <i c8yIcon="info"></i>
+              {{ 'AI capabilities are disabled in this tenant.' | translate }}
+            </div>
+          </c8y-sv-alerts>
           }
-        </button>
-        @if (!aiAgentDeployed()) {
-        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          [popover]="aiDisabledHelp | translate"
-          placement="right" container="body" triggers="focus" type="button"></button>
-        }
-      </div>
-      @if (aiCapabilitiesDisabled()) {
-      <div class="alert alert-info m-t-8" data-cy="dm-ai-disabled-info">
-        <i c8yIcon="info"></i>
-        {{ 'AI capabilities are disabled in this tenant.' | translate }}
-      </div>
-      }
-      <!-- Expert Mode collapsible header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-transform-expert-toggle" (click)="toggleExpertMode()" style="cursor:pointer">
-        <i [c8yIcon]="expertMode ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
-        <span translate>Expert Mode</span>
-        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          [popover]="'Allow to define expressions using JSONata' | translate" triggers="focus" type="button"
-          container="body" (click)="$event.stopPropagation()"></button>
-      </div>
-      <!-- Expert Mode Fields -->
-      <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
-        <!-- One grid with shared rows, so a taller source cell (hint shown) pushes both result boxes down
-             together and the two columns stay aligned. Plain bindings for the results, not Formly fields: a Formly
-             label expression left the label reading "[empty]" while the result text was current. -->
-        <div class="d-grid grid__col--6-6 p-t-4 gap-4">
-          <!-- While the hint shows, it replaces the field's validation-message space: the field's bottom
-               margin is dropped (d11r-flush-field) so the hint sits right under the input, like an error. -->
-          <div [class.d11r-flush-field]="showExpandArrayHint">
-            <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
-            </formly-form>
-            @if (showExpandArrayHint) {
-            <small class="text-info d-block m-t-4" data-cy="dm-substitution-expand-array-hint">
-              {{ 'The expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.' | translate }}
-            </small>
+          <div [formGroup]="templateForm" class="p-8">
+            <d11r-mapping-substitution-grid [mapping]="mapping()" [settings]="{
+                  color: COLOR_HIGHLIGHTED,
+                  selectedSubstitutionIndex: selectedSubstitution,
+                  readOnly: !!stepperConfiguration().readOnly
+                }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
+            </d11r-mapping-substitution-grid>
+            @if (!(isSubstitutionValid$ | async)) {
+            <span class="text-warning text-12 d-block p-t-8" [innerHTML]="identitySubstitutionHint"></span>
             }
           </div>
-          <div>
-            <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
-            </formly-form>
+        </c8y-sv-list>
+
+        <c8y-sv-details emptyStateIcon="pencil" [ariaLabel]="'Substitution details' | translate"
+          [title]="detailsTitle"
+          [emptyStateTitle]="'No substitution selected' | translate"
+          [emptyStateSubtitle]="'Select a substitution from the list, or add a new one.' | translate"
+          (backClick)="onSplitBack()">
+          <div class="d11r-sub-editor" [formGroup]="substitutionFormly" data-cy="dm-substitution-editor">
+            <!-- The preview sits right under the field, where its validation message would be. -->
+            <div class="d11r-flush-field">
+              <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
+              </formly-form>
+              <!-- Plain bindings for the results, not Formly fields: a Formly label expression left the label
+                   reading "[empty]" while the result text was current. -->
+              <div class="d11r-preview" [class.d11r-preview--below-error]="hasFieldError('pathSource')" data-cy="dm-substitution-source-preview">
+                <code class="d11r-preview-code" data-cy="dm-field-sourceExpression-result"
+                  [textContent]="substitutionModel.sourceExpression?.result ?? ''"></code>
+                <span class="label label-default" [textContent]="substitutionModel.sourceExpression?.resultType ?? 'empty'"></span>
+                @if (substitutionModel.pathSource) {
+                <span class="label" [class.label-info]="isExpression(substitutionModel.pathSource)"
+                  [class.label-default]="!isExpression(substitutionModel.pathSource)"
+                  data-cy="dm-substitution-source-mode">
+                  @if (isExpression(substitutionModel.pathSource)) {
+                  <span translate>JSONata expression</span>
+                  } @else {
+                  <span translate>Path</span>
+                  }
+                </span>
+                }
+              </div>
+            </div>
+
+            <div class="d11r-expand" [class.d11r-expand--prompt]="showExpandArrayHint" data-cy="dm-substitution-expand-array-hint">
+              @if (showExpandArrayHint) {
+              <span>{{ 'The source returns an array. Create one request per element?' | translate }}</span>
+              }
+              <label class="c8y-switch" [title]="'Expand as array' | translate">
+                <input type="checkbox" data-cy="dm-substitution-expand-array" [checked]="substitutionModel.expandArray"
+                  [disabled]="expandArrayDisabled"
+                  (change)="onExpandArrayChange($any($event.target).checked)" />
+                <span></span>
+                <span translate>Expand as array</span>
+              </label>
+            </div>
+
+            <div class="d11r-flush-field">
+              <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
+              </formly-form>
+              <div class="d11r-preview" [class.d11r-preview--below-error]="hasFieldError('pathTarget')" data-cy="dm-substitution-target-preview">
+                <code class="d11r-preview-code" data-cy="dm-field-targetExpression-result"
+                  [textContent]="substitutionModel.targetExpression?.result ?? ''"></code>
+                <span class="label label-default" [textContent]="substitutionModel.targetExpression?.resultType ?? 'empty'"></span>
+              </div>
+            </div>
+
+            <div class="form-group m-b-0">
+              <label for="dm-repair-strategy" translate>Repair strategy</label>
+              <div class="c8y-select-wrapper">
+                <select id="dm-repair-strategy" class="form-control input-sm" data-cy="dm-substitution-repair-strategy"
+                  [title]="describeStrategy(substitutionModel.repairStrategy)"
+                  [disabled]="!!stepperConfiguration().readOnly"
+                  (change)="onRepairStrategyChange($any($event.target).value)">
+                  @for (opt of repairStrategyOptions(); track opt.value) {
+                  <option [value]="opt.value" [selected]="opt.value === substitutionModel.repairStrategy"
+                    [disabled]="opt.disabled" [title]="opt.description">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="form-group m-b-0">
-            <label class="text-pre-wrap" for="dm-source-result">{{ 'Source Result' | translate }} [{{ substitutionModel.sourceExpression?.resultType ?? 'empty' }}]</label>
-            <textarea id="dm-source-result" class="form-control font-smaller" readonly [rows]="resultRows(substitutionModel.sourceExpression?.result)"
-              data-cy="dm-field-sourceExpression-result" [value]="substitutionModel.sourceExpression?.result ?? ''"></textarea>
-          </div>
-          <div class="form-group m-b-0">
-            <label class="text-pre-wrap" for="dm-target-result">{{ 'Target Result' | translate }} [{{ substitutionModel.targetExpression?.resultType ?? 'empty' }}]</label>
-            <textarea id="dm-target-result" class="form-control font-smaller" readonly [rows]="resultRows(substitutionModel.targetExpression?.result)"
-              data-cy="dm-field-targetExpression-result" [value]="substitutionModel.targetExpression?.result ?? ''"></textarea>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Substitution Grid -->
-    <div [formGroup]="templateForm">
-      <div class="m-t-16" style="min-height: 32px">
-        <d11r-mapping-substitution-grid [mapping]="mapping()" [settings]="{
-              color: COLOR_HIGHLIGHTED,
-              selectedSubstitutionIndex: selectedSubstitution,
-              readOnly: !!stepperConfiguration().readOnly
-            }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)"
-          (substitutionPatch)="onGridSubstitutionPatch($event)" (cancelEdit)="cancelEditSubstitution()">
-        </d11r-mapping-substitution-grid>
-      </div>
-      @if (!(isSubstitutionValid$ | async)) {
-      <span class="text-warning text-12 p-l-8" [innerHTML]="identitySubstitutionHint"></span>
-      }
+          <c8y-sv-footer>
+            @if (selectedSubstitution !== -1) {
+            <button type="button" class="btn btn-default" data-cy="dm-mapping-transform-cancel-substitution"
+              (click)="cancelEditSubstitution()">
+              <span translate>Cancel</span>
+            </button>
+            }
+            <button type="button" class="btn btn-primary" data-cy="dm-mapping-transform-save-substitution"
+              (click)="onSaveSubstitution()" [disabled]="saveSubstitutionDisabled()">
+              @if (selectedSubstitution === -1) {
+              <span translate>Add substitution</span>
+              } @else {
+              <span translate>Save change</span>
+              }
+            </button>
+          </c8y-sv-footer>
+        </c8y-sv-details>
+      </c8y-sv>
     </div>
   </div>
   }
