@@ -38,6 +38,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import lombok.extern.slf4j.Slf4j;
@@ -646,6 +647,8 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (pulsarClient == null || pulsarClient.isClosed()) {
             log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
             reconnect();
+            // Retry the message instead of acknowledging it unpublished
+            failAllRequestsUnavailable(context, new ConnectorNotConnectedException(connectorName));
             return;
         }
 
@@ -684,16 +687,42 @@ public class PulsarConnectorClient extends AConnectorClient {
                     log.debug("{} - Published message ({}/{}): topic={}", tenant, i + 1, requests.size(), topic);
                 } else {
                     log.error("{} - No connected producer for topic: {} ({}/{})", tenant, topic, i + 1, requests.size());
-                    request.setError(new Exception("No connected producer for topic: " + topic));
+                    failPublishUnavailable(context, request,
+                            new Exception("No connected producer for topic: " + topic));
                 }
 
             } catch (Exception e) {
                 log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
-                request.setError(e);
-                context.addError(new dynamic.mapper.processor.ProcessingException(
-                        "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
+                if (isBrokerUnavailable(e)) {
+                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                    failPublishUnavailable(context, request, e);
+                } else {
+                    request.setError(e);
+                    context.addError(new dynamic.mapper.processor.ProcessingException(
+                            "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
+                }
             }
         }
+    }
+
+    /** Whether the broker could not be reached (timeout, no connection), as opposed to a problem of the message. */
+    static boolean isBrokerUnavailable(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof PulsarClientException.TimeoutException
+                    || current instanceof PulsarClientException.NotConnectedException
+                    || current instanceof PulsarClientException.AlreadyClosedException
+                    || current instanceof PulsarClientException.ConnectException
+                    || current instanceof PulsarClientException.ProducerQueueIsFullError
+                    || current instanceof java.util.concurrent.TimeoutException) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     /**

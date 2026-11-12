@@ -1028,9 +1028,39 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    /**
+     * {@link #isConnected()} probes the broker with a round trip, which is too costly for every message: use the
+     * state it keeps. The probe still runs when the availability check asks {@code isConnected()}.
+     */
+    @Override
+    protected boolean isReadyToPublish() {
+        return kafkaProducer != null && connectionStateManager.isConnected();
+    }
+
+    /** Timeouts and retriable errors of the producer mean the broker could not be reached, not a bad message. */
+    private static boolean isBrokerUnavailable(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof org.apache.kafka.common.errors.RetriableException
+                    || current instanceof TimeoutException
+                    || current instanceof java.net.ConnectException) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (kafkaProducer == null) {
-            log.error("{} - Kafka producer is not initialized", tenant);
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 
@@ -1077,8 +1107,13 @@ public class KafkaClientV2 extends AConnectorClient {
             } catch (Exception e) {
                 String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s] (%d/%d)", tenant, topic, i + 1, requests.size());
                 log.error(errorMessage, e);
-                request.setError(e);
-                context.addError(new ProcessingException(errorMessage, e));
+                if (isBrokerUnavailable(e)) {
+                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                    failPublishUnavailable(context, request, e);
+                } else {
+                    request.setError(e);
+                    context.addError(new ProcessingException(errorMessage, e));
+                }
             }
         }
     }
@@ -1130,6 +1165,22 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     protected void connectorSpecificHousekeeping(String tenant) {
+        // isPhysicallyConnected() marks the connector disconnected when a probe fails, and nothing marked it
+        // connected again. The producer and the consumers recover by themselves, so the state has to follow:
+        // otherwise the connector, and with it the outbound notifications that are held while it is
+        // disconnected, would stay stopped after the broker is back. adminClient is only set between a
+        // successful connect and disconnect().
+        if (adminClient != null && kafkaProducer != null && shouldConnect()
+                && !connectionStateManager.isConnected()) {
+            try {
+                adminClient.listTopics().names().get(2, TimeUnit.SECONDS);
+                log.info("{} - Kafka broker is reachable again, connector: {}", tenant, connectorName);
+                connectionStateManager.setConnected(true);
+            } catch (Exception e) {
+                log.debug("{} - Kafka broker still unreachable: {}", tenant, e.getMessage());
+            }
+        }
+
         // Clean up completed tasks
         consumerTasks.entrySet().removeIf(entry -> {
             if (entry.getValue().isDone() || entry.getValue().isCancelled()) {

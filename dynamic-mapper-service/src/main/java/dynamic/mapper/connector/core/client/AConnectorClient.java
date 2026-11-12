@@ -312,6 +312,25 @@ public abstract class AConnectorClient {
     public abstract void publishMEAO(ProcessingContext<?> context);
 
     /**
+     * Whether outbound notifications must not be consumed while this connector is disconnected. When true, the
+     * Notification 2.0 device WebSockets of the connector are closed until the broker connection is up again
+     * (see {@code NotificationConnectionManager#syncConnectorAvailability}). Only for connectors whose
+     * {@link #publishMEAO} calls {@link #failPublishIfNotConnected} and whose {@link #isConnected()} follows
+     * the broker connection.
+     */
+    public boolean holdsOutboundWhileDisconnected() {
+        return false;
+    }
+
+    /**
+     * Whether {@link #publishMEAO} may try to publish now. Defaults to {@link #isConnected()}. A connector for
+     * which that call is expensive (for example a probe of the broker) overrides it with a cheap check.
+     */
+    protected boolean isReadyToPublish() {
+        return isConnected();
+    }
+
+    /**
      * Call first in {@link #publishMEAO}: if the broker connection is down, records a retryable error on every
      * request and on the context, and returns {@code true} so the caller stops.
      *
@@ -321,33 +340,42 @@ public abstract class AConnectorClient {
      *
      * @return {@code true} if the connector is not connected and the publish must be skipped
      */
-    /**
-     * Whether outbound notifications must not be consumed while this connector is disconnected. When true, the
-     * Notification 2.0 device WebSockets of the connector are closed until the broker connection is up again
-     * (see {@code NotificationConnectionManager#syncConnectorAvailability}). Only for connectors whose
-     * {@link #publishMEAO} calls {@link #failPublishIfNotConnected}.
-     */
-    public boolean holdsOutboundWhileDisconnected() {
-        return false;
-    }
-
     protected boolean failPublishIfNotConnected(ProcessingContext<?> context) {
-        if (isConnected()) {
+        if (isReadyToPublish()) {
             return false;
         }
         log.warn("{} - Cannot publish: not connected, connector: {}", tenant, connectorName);
+        failAllRequestsUnavailable(context, new ConnectorNotConnectedException(connectorName));
+        return true;
+    }
+
+    /** Records the same retryable error on every request of the context and on the context. No requests: no-op. */
+    protected void failAllRequestsUnavailable(ProcessingContext<?> context, ConnectorNotConnectedException error) {
         var requests = context.getRequests();
         if (requests == null || requests.isEmpty()) {
-            return true;
+            return;
         }
-        ConnectorNotConnectedException error = new ConnectorNotConnectedException(connectorName);
         requests.forEach(request -> {
             if (request != null) {
                 request.setError(error);
             }
         });
         context.addError(error);
-        return true;
+    }
+
+    /**
+     * For a publish that failed because the broker could not be reached (a timeout, a lost connection): records
+     * a retryable error, so the notification is redelivered and the attempt does not count as a message failure.
+     *
+     * @param request the request that failed, or {@code null} if the failure is not tied to one
+     */
+    protected void failPublishUnavailable(ProcessingContext<?> context,
+            dynamic.mapper.model.DynamicMapperRequest request, Throwable cause) {
+        ConnectorNotConnectedException error = new ConnectorNotConnectedException(connectorName, cause);
+        if (request != null) {
+            request.setError(error);
+        }
+        context.addError(error);
     }
 
     /**

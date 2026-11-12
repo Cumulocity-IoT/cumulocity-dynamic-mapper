@@ -22,6 +22,7 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.client.api.PulsarClientException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -358,6 +359,52 @@ class PulsarConnectorClientTest {
         assertArrayEquals(new String[] { "non-persistent", "t", "n" },
                 new TestPulsarConnectorClient(mock(PulsarClient.class), configuration).resolveTopicLocation());
         assertEquals("non-persistent://t/n/a-b", PulsarConnectorClient.buildPulsarTopicRegex("a/b", "t", "n", "non-persistent"));
+    }
+
+    private ProcessingContext<Object> publishWithSendFailure(Exception failure) throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        ProducerBuilder<byte[]> producerBuilder = mock();
+        Producer<byte[]> producer = mock();
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "public", "pulsarNamespace", "default"));
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.sendTimeout(anyInt(), any())).thenReturn(producerBuilder);
+        when(producerBuilder.create()).thenReturn(producer);
+        when(producer.isConnected()).thenReturn(true);
+        when(producer.send(any(byte[].class))).thenThrow(failure);
+
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .qos(Qos.AT_LEAST_ONCE)
+                .resolvedPublishTopic("device/commands")
+                .requests(List.of(DynamicMapperRequest.builder().request("{}").build()))
+                .build();
+        new TestPulsarConnectorClient(pulsarClient, configuration).publishMEAO(context);
+        return context;
+    }
+
+    @Test
+    void aSendTimeoutIsRetriedNotAcknowledged() throws Exception {
+        ProcessingContext<Object> context = publishWithSendFailure(
+                new PulsarClientException.TimeoutException("send timed out"));
+
+        assertTrue(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+    }
+
+    @Test
+    void aProblemOfTheMessageIsNotRetried() throws Exception {
+        ProcessingContext<Object> context = publishWithSendFailure(
+                new PulsarClientException.InvalidMessageException("bad message"));
+
+        assertFalse(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        assertEquals(0, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
     }
 
     private static class TestPulsarConnectorClient extends PulsarConnectorClient {

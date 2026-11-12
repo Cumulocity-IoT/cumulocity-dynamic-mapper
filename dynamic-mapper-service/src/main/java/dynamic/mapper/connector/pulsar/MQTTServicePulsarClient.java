@@ -729,6 +729,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (pulsarClient == null || pulsarClient.isClosed()) {
             log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
             reconnect();
+            // Retry the message instead of acknowledging it unpublished
+            failPublishUnavailable(context, context.getCurrentRequest(),
+                    new IllegalStateException("Pulsar client is closed"));
             return;
         }
 
@@ -776,8 +779,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         } catch (Exception e) {
             log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
-            context.addError(new dynamic.mapper.processor.ProcessingException(
-                    "Failed to publish message", e));
+            if (isBrokerUnavailable(e)) {
+                // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                failPublishUnavailable(context, request, e);
+            } else {
+                context.addError(new dynamic.mapper.processor.ProcessingException(
+                        "Failed to publish message", e));
+            }
         }
     }
 

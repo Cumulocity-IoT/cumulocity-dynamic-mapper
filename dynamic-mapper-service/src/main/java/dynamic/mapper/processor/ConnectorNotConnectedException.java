@@ -32,4 +32,10 @@ public class ConnectorNotConnectedException extends ProcessingException {
     public ConnectorNotConnectedException(String connectorName) {
         super("Cannot publish: connector " + connectorName + " is not connected", 503);
     }
+
+    /** The broker could not be reached while publishing (timeout, no connection): {@code cause} says how. */
+    public ConnectorNotConnectedException(String connectorName, Throwable cause) {
+        super("Cannot publish: broker of connector " + connectorName + " is unavailable: "
+                + (cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName()), cause, 503);
+    }
 }
