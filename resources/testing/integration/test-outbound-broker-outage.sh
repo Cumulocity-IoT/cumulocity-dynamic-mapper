@@ -158,7 +158,7 @@ sleep 1
 c8y events create --device "$DEVICE_ID" --type "c8y_OutageEvent" --text "outage-0" --output json >/dev/null
 wait "$SUB_PID" 2>/dev/null || true
 SUB_PID=""
-dm_assert_eq "control message published" "1" "$(grep -c 'outage-0' "$WORK_DIR/control.txt" || true)"
+dm_assert_eq "control message published" "1" "$(grep -c '"outage-0"' "$WORK_DIR/control.txt" || true)"
 
 # ── Outage ─────────────────────────────────────────────────────────────────────
 dm_step "Simulating the outage: connector endpoint -> $DOWN_HOST:$DOWN_PORT ..."
@@ -197,8 +197,9 @@ dm_step "Waiting for the queued messages ..."
 wait "$SUB_PID" 2>/dev/null || true
 SUB_PID=""
 
+# Match the quoted text value: the device name (deviceId in the payload) also contains "outage-<timestamp>"
 for _n in $(seq 1 "$OUTAGE_EVENTS"); do
-    dm_assert_eq "event outage-$_n published after reconnect" "1" "$(grep -c "outage-$_n" "$WORK_DIR/received.txt" || true)"
+    dm_assert_eq "event outage-$_n published after reconnect" "1" "$(grep -c "\"outage-$_n\"" "$WORK_DIR/received.txt" || true)"
 done
 
 dm_done "$TEST_TITLE"
