@@ -194,6 +194,13 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private boolean droppedAsDuplicate = false;
 
+    /**
+     * Fingerprints this message recorded in the de-duplication store. They are given back if the message does not
+     * end as delivered, see {@link #releaseDeduplicationClaims()}.
+     */
+    private final List<dynamic.mapper.processor.inbound.MessageDeduplicationService.Claim> deduplicationClaims =
+            new CopyOnWriteArrayList<>();
+
     private String key;
 
     /** Broker metadata of the inbound message (Kafka headers, Pulsar properties, ...); may be null. */
@@ -551,5 +558,17 @@ public class ProcessingContext<O> implements AutoCloseable {
             fields.put(Mapping.CONTEXT_DATA_KEY_NAME, key);
         }
         return fields;
+    }
+
+    public void addDeduplicationClaim(dynamic.mapper.processor.inbound.MessageDeduplicationService.Claim claim) {
+        if (claim != null) {
+            deduplicationClaims.add(claim);
+        }
+    }
+
+    /** Gives back every fingerprint this message recorded, so a retry of it is not dropped as a repeat. */
+    public void releaseDeduplicationClaims() {
+        deduplicationClaims.forEach(dynamic.mapper.processor.inbound.MessageDeduplicationService.Claim::release);
+        deduplicationClaims.clear();
     }
 }

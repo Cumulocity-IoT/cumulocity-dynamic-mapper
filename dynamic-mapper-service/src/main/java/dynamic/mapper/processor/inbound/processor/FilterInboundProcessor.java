@@ -72,20 +72,22 @@ public class FilterInboundProcessor extends BaseProcessor {
                         tenant, mapping.getName(), mapping.getIdentifier());
                 return false;
             }
-            int window = windowArg instanceof Number n
-                    ? MessageDeduplicationService.clampWindowSeconds(n.intValue())
-                    : 0;
+            // a whole number from 1 to 3600; anything else (0.5, 7200, "60") fails open
+            int window = windowArg instanceof Number n && n.doubleValue() == Math.rint(n.doubleValue())
+                    && MessageDeduplicationService.isValidWindow((long) n.doubleValue())
+                            ? n.intValue()
+                            : 0;
             if (window == 0) {
                 log.warn("{} - Inbound mapping {}/{}: $isDuplicate window must be a number of seconds from {} to {}, message is processed without a check",
                         tenant, mapping.getName(), mapping.getIdentifier(),
                         MessageDeduplicationService.MIN_WINDOW_SECONDS, MessageDeduplicationService.MAX_WINDOW_SECONDS);
                 return false;
             }
-            String keyText = key instanceof CharSequence || key instanceof Number || key instanceof Boolean
-                    ? String.valueOf(key)
-                    : toPrettyJsonString(key);
+            String keyText = MessageDeduplicationService.keyText(key);
             String fingerprint = MessageDeduplicationService.fingerprint(keyText);
-            boolean duplicate = deduplicationService.isDuplicate(tenant, mapping.getIdentifier(), fingerprint, window);
+            var checked = deduplicationService.check(tenant, mapping.getIdentifier(), fingerprint, window);
+            boolean duplicate = checked.duplicate();
+            context.addDeduplicationClaim(checked.claim());
             if (duplicate && mapping.getDebug()) {
                 log.info("{} - Inbound mapping {}/{} dropped a repeated message: key={}, window={}s",
                         tenant, mapping.getName(), mapping.getIdentifier(), keyText, window);

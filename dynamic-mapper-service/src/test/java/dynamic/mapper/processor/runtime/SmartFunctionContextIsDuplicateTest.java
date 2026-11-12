@@ -80,8 +80,10 @@ class SmartFunctionContextIsDuplicateTest {
         assertFalse(ctx.isDuplicate(js.eval("js", "undefined"), v(60)));
         assertFalse(ctx.isDuplicate(v("k"), v("sixty")));
         assertFalse(ctx.isDuplicate(v("k"), v(0)));
+        assertFalse(ctx.isDuplicate(v("k"), v(7200)));
+        assertFalse(ctx.isDuplicate(v("k"), v(7200)), "a window above 3600 is rejected, not clamped");
         assertFalse(ctx.isDuplicate(v("k"), v(60)), "nothing was recorded by the failed calls");
-        assertEquals(3, ((Value) ctx.getState(DataPrepContext.WARNINGS)).getArraySize());
+        assertEquals(5, ((Value) ctx.getState(DataPrepContext.WARNINGS)).getArraySize());
     }
 
     @Test
@@ -90,6 +92,20 @@ class SmartFunctionContextIsDuplicateTest {
         assertFalse(test.isDuplicate(v("k"), v(60)));
         assertFalse(test.isDuplicate(v("k"), v(60)));
         assertFalse(invocation(false).isDuplicate(v("k"), v(60)), "the test run left nothing behind");
+    }
+
+    @Test
+    void numberAndObjectKeysMatchTheFilterFunction() {
+        // the filter sees 5.0 as a Double and an object as a Map, the script as a JS number and object
+        assertFalse(store.isDuplicate("t", "m1",
+                MessageDeduplicationService.fingerprint(MessageDeduplicationService.keyText(5.0)), 60));
+        assertTrue(invocation(false).isDuplicate(v(5), v(60)));
+        var member = new java.util.LinkedHashMap<String, Object>();
+        member.put("b", 2);
+        member.put("a", 1);
+        assertFalse(store.isDuplicate("t", "m1",
+                MessageDeduplicationService.fingerprint(MessageDeduplicationService.keyText(member)), 60));
+        assertTrue(invocation(false).isDuplicate(js.eval("js", "({a: 1, b: 2})"), v(60)));
     }
 
     @Test

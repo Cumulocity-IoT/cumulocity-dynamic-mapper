@@ -116,14 +116,19 @@ public class MappingResolverService {
         return true;
     }
 
+    private final java.util.Set<String> isDuplicateWarned = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private Boolean evaluateMessageFilter(String tenant, Mapping mapping, C8YMessage message) {
         try {
             var expression = jsonata(mapping.getFilterMapping());
             // $isDuplicate is inbound only. Without this stub the unknown function would fail the
             // evaluation and silently drop every outbound message of the mapping.
             expression.registerFunction("isDuplicate", (com.dashjoin.jsonata.Jsonata.Fn2<Object, Object, Object>) (key, window) -> {
-                log.warn("{} - Outbound mapping {}: $isDuplicate is not supported for outbound mappings and is ignored",
-                        tenant, mapping.getIdentifier());
+                // once per mapping: the filter runs for every notification
+                if (isDuplicateWarned.add(tenant + "/" + mapping.getIdentifier())) {
+                    log.warn("{} - Outbound mapping {}: $isDuplicate is not supported for outbound mappings and is ignored",
+                            tenant, mapping.getIdentifier());
+                }
                 return false;
             });
             Object result = expression.evaluate(message.getParsedPayload());

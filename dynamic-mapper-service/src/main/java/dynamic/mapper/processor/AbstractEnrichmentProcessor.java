@@ -161,8 +161,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 java.util.function.BiPredicate<String, Integer> duplicateCheck = isolateState || deduplication == null
                         ? null
                         : (fingerprint, window) -> {
-                            boolean duplicate = deduplication.isDuplicate(tenant, mapping.getIdentifier(),
+                            var checked = deduplication.check(tenant, mapping.getIdentifier(),
                                     fingerprint, window);
+                            boolean duplicate = checked.duplicate();
+                            context.addDeduplicationClaim(checked.claim());
                             if (duplicate) {
                                 context.setDroppedAsDuplicate(true);
                             }

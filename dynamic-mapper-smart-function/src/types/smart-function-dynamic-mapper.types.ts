@@ -1822,8 +1822,21 @@ export function createMockOutboundMessageV2<T extends C8yObjectType>(
 }
 
 /**
+ * Key text as the runtime builds it: object members sorted by name, no spaces. A whole number has no decimal point
+ * in JavaScript either, so `5.0` and `5` already agree here.
+ */
+function canonicalKeyText(value: unknown): string {
+  if (Array.isArray(value)) return '[' + value.map(canonicalKeyText).join(',') + ']';
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return '{' + Object.keys(record).sort().map((k) => JSON.stringify(k) + ':' + canonicalKeyText(record[k])).join(',') + '}';
+  }
+  return typeof value === 'string' ? JSON.stringify(value) : String(value);
+}
+
+/**
  * In-memory stand-in for `context.isDuplicate` in the mock contexts: same rules as the runtime (window from 1 to
- * 3600 seconds, fixed from the first message, `false` for a missing key or an invalid window), no cross-test state.
+ * 3600 seconds, fixed from the first message, `false` for a missing key or a window outside 1 to 3600), no cross-test state.
  */
 function mockIsDuplicate(
   seen: Map<string, number>,
@@ -1831,9 +1844,9 @@ function mockIsDuplicate(
   windowSeconds: number
 ): boolean {
   if (key === undefined || key === null) return false;
-  if (!Number.isInteger(windowSeconds) || windowSeconds < 1) return false;
-  const window = Math.min(windowSeconds, 3600);
-  const text = typeof key === 'object' ? JSON.stringify(key) : String(key);
+  if (!Number.isInteger(windowSeconds) || windowSeconds < 1 || windowSeconds > 3600) return false;
+  const window = windowSeconds;
+  const text = typeof key === 'string' ? key : canonicalKeyText(key);
   const now = Date.now();
   const expiry = seen.get(text);
   if (expiry !== undefined && expiry > now) return true;

@@ -520,3 +520,19 @@ describe('Smart Function Runtime Types', () => {
     });
   });
 });
+
+describe('mock context.isDuplicate', () => {
+  it('reports a repeat of the same key and rejects a window outside 1 to 3600', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.isDuplicate('d1|t1', 60)).toBe(false);
+    expect(ctx.isDuplicate('d1|t1', 60)).toBe(true);
+    expect(ctx.isDuplicate('k', 7200)).toBe(false);
+    expect(ctx.isDuplicate('k', 7200)).toBe(false);
+  });
+
+  it('treats objects with the same members in another order as one key, like the runtime', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.isDuplicate({ a: 1, b: [2, 3] }, 60)).toBe(false);
+    expect(ctx.isDuplicate({ b: [2, 3], a: 1 }, 60)).toBe(true);
+  });
+});

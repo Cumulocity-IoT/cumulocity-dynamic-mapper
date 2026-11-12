@@ -184,17 +184,16 @@ public class SmartFunctionContext implements DataPrepContext {
             return false;
         }
         int window = windowSeconds != null && windowSeconds.fitsInInt()
-                ? MessageDeduplicationService.clampWindowSeconds(windowSeconds.asInt())
-                : 0;
+                && MessageDeduplicationService.isValidWindow(windowSeconds.asInt())
+                        ? windowSeconds.asInt()
+                        : 0;
         if (window == 0) {
             addWarning("isDuplicate: the window must be a number of seconds from "
                     + MessageDeduplicationService.MIN_WINDOW_SECONDS + " to "
                     + MessageDeduplicationService.MAX_WINDOW_SECONDS + ", the message is processed without a check");
             return false;
         }
-        String keyText = key.isString() ? key.asString()
-                : key.isNumber() || key.isBoolean() ? key.toString()
-                        : graalContext.eval("js", "JSON.stringify").execute(key).asString();
+        String keyText = MessageDeduplicationService.keyText(convertValueToJavaObject(key));
         return duplicateCheck.test(MessageDeduplicationService.fingerprint(keyText), window);
     }
 

@@ -75,6 +75,46 @@ class FilterInboundProcessorDeduplicationTest {
     }
 
     @Test
+    void numberAndObjectKeysMatchRegardlessOfFormatAndMemberOrder() throws Exception {
+        Mapping m = mapping("$not($isDuplicate(k, 60))");
+        dropped(m, Map.of("k", 5.0));
+        assertTrue(dropped(m, Map.of("k", 5)), "5.0 and 5 are the same key");
+
+        Mapping o = mapping("$not($isDuplicate(k, 60))");
+        var ab = new java.util.LinkedHashMap<String, Object>();
+        ab.put("a", 1);
+        ab.put("b", 2);
+        var ba = new java.util.LinkedHashMap<String, Object>();
+        ba.put("b", 2);
+        ba.put("a", 1);
+        dropped(o, Map.of("k", ab));
+        assertTrue(dropped(o, Map.of("k", ba)), "member order does not matter");
+    }
+
+    @Test
+    void windowAboveOneHourOrFractionalFailsOpen() throws Exception {
+        for (String window : new String[] { "7200", "3601", "0.5", "0" }) {
+            Mapping m = mapping("$not($isDuplicate(id, " + window + "))");
+            dropped(m, Map.of("id", "d1"));
+            assertFalse(dropped(m, Map.of("id", "d1")), "window " + window + " is rejected, not clamped");
+        }
+    }
+
+    @Test
+    void concatenatedKeyTreatsAMissingFieldAsEmptyText() throws Exception {
+        // JSONata's & turns a missing field into "", so the key is "d1|" and never "has no value".
+        // Messages without time therefore look like repeats of each other. Guard with $exists.
+        Mapping unguarded = mapping(FILTER);
+        dropped(unguarded, Map.of("id", "d1", "seq", 1));
+        assertTrue(dropped(unguarded, Map.of("id", "d1", "seq", 2)));
+
+        Mapping guarded = mapping("$exists(time) and $not($isDuplicate(id & '|' & time, 60))");
+        assertTrue(dropped(guarded, Map.of("id", "d1", "seq", 1)), "no time: filtered by the guard, not recorded");
+        assertFalse(dropped(guarded, Map.of("id", "d1", "time", "t1")));
+        assertTrue(dropped(guarded, Map.of("id", "d1", "time", "t1")));
+    }
+
+    @Test
     void combinesWithOtherConditions() throws Exception {
         Mapping m = mapping("value > 10 and $not($isDuplicate(id, 60))");
         assertTrue(dropped(m, Map.of("id", "d1", "value", 5)), "rejected by the other condition");

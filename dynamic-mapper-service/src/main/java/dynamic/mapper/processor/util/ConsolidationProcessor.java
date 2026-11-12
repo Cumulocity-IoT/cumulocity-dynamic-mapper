@@ -87,6 +87,12 @@ public class ConsolidationProcessor extends CommonProcessor {
         long durationMs = (System.nanoTime() - context.getStartedAtNanos()) / 1_000_000L;
         List<DynamicMapperRequest> requests = context.getRequests();
         int failedRequests = (int) requests.stream().filter(DynamicMapperRequest::hasError).count();
+        // A message that failed, or ended without delivering anything for a reason other than being a repeat,
+        // gives its keys back, so the broker's retry is processed instead of dropped as a repeat.
+        if (context.hasError() || failedRequests > 0
+                || (context.isIgnoreFurtherProcessing() && !context.isDroppedAsDuplicate())) {
+            context.releaseDeduplicationClaims();
+        }
         status.recordWork(durationMs, requests.size(), failedRequests, context.getWarnings().size());
         if (context.hasError()) {
             List<Exception> errors = context.getErrors();

@@ -355,7 +355,8 @@ object:
   `setState`, the check is atomic, so of two copies running at the same time exactly one gets `false`. Keys expire
   with the window, and a mapping holds at most 100,000. The window starts at the first message and does not restart
   when a repeat arrives. The check returns `false` and adds a warning when the key has no value or the window is not a
-  number from 1 to 3600. It always returns `false` in Dry Run and Live Test and records nothing. Keys are kept in
+  whole number from 1 to 3600 (larger values are not shortened). A key built with `+` from a missing field contains
+  the text `undefined`, so check the fields before you build it. Changing the code or the execution filter, or deleting the mapping, removes its keys. It always returns `false` in Dry Run and Live Test and records nothing. Keys are kept in
   memory, are lost on a service restart, and are not shared between service instances. A dropped inbound message
   counts under **Repeated** in the monitoring table. It shares its store with the `$isDuplicate` function of the
   [execution filter](/c8y-pkg-dynamic-mapper/introduction/define-mapping#drop-repeated-messages).

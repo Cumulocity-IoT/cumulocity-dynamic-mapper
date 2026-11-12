@@ -31,11 +31,21 @@ A JSONata function, available in `filterMapping`, backed by a dedicated in-memor
 the rule lives in the existing filter, which is already saved, exported, imported, and edited in the UI.
 
 ```
-$not($isDuplicate(deviceId & "|" & time, 60))
+$exists(deviceId) and $exists(time) and $not($isDuplicate(deviceId & "|" & time, 60))
 ```
 
 The filter must be true for a message to pass. Combine it with other conditions:
-`value > 10 and $not($isDuplicate(deviceId, 60))`.
+`value > 10 and $not($isDuplicate(deviceId, 60))`. The key is recorded when the function runs, and given back if the
+message does not end as delivered (see "Failed processing" below), so the order of the conditions does not matter. Put
+`$isDuplicate` last anyway: JSONata stops at the first false operand of `and`, so the lookup is skipped for messages
+that another condition rejects.
+
+One rule for authors:
+
+- **Missing fields.** `&` turns a missing field into empty text, so `deviceId & "|" & time` without `time` is
+  `"d1|"`, a normal key, not "no value". The fail-open rule below never applies to it, and all messages of that device
+  without `time` count as repeats of the first. Guard the fields with `$exists`. In a Smart Function, `+` gives the
+  text `undefined` the same way.
 
 ## Comparison and gaps
 
@@ -53,16 +63,16 @@ The filter must be true for a message to pass. Combine it with other conditions:
 | Custom rules, for example per-device windows | Yes. Any logic the script can express. | Yes for key and window. No custom logic beyond JSONata. |
 | Rule next to the mapping logic | Yes. The rule is in the script. | Yes. The rule is in the filter. |
 | Outbound mappings | Not applicable. | **Gap.** Not supported. The function is a no-op with a warning, so it cannot drop every message. |
-| Failed processing after the filter | Script decides. | **Gap.** A message that passes the filter and then fails later is already recorded, so its retry is dropped. |
+| Failed processing after the filter | Script decides. | Yes. The key is given back if the message fails or ends without delivering, so the retry passes. |
 
 ### Closing the gaps
 
 | Gap | Approach | Closing step |
 |---|---|---|
-| A is not atomic, has no TTL or size bound, no counter | A | Phase 3 adds `context.isDuplicate(key, windowSeconds)` on the store from B. |
+| A is not atomic, has no TTL or size bound, no counter | A | Phase 3 (done): `context.isDuplicate(key, windowSeconds)` on the store from B. |
 | A only covers Smart Function mappings | A | Not closable. Use B for JSONata and Java extension mappings. |
 | B has no outbound support | B | Out of scope. Decide later if outbound brokers need it. |
-| B records before the transformation succeeds | B | Document it. Option for later: record after a successful send. |
+| B records before the transformation succeeds | B | Done (phase 7): the claim is released on failure. |
 
 Approach A with state only stays possible, but the template now uses `context.isDuplicate`, which closes the
 concurrency, expiry, memory, and counter gaps for Smart Function mappings.
@@ -73,15 +83,21 @@ concurrency, expiry, memory, and counter gaps for Smart Function mappings.
 
 The key is a JSONata expression evaluated against the payload.
 
-- Strings, numbers, and booleans are used as they are. Objects and arrays are serialized to JSON.
-- The final text is hashed with SHA-256, so long keys use no extra memory.
+- Strings are used as they are. `MessageDeduplicationService.keyText` turns every other value into text, and both
+  the filter function and `context.isDuplicate` call it. A whole number has no decimal point (`5.0` is `5`), and an
+  object is written as JSON with its members sorted by name, so a copy that lists members in another order still
+  matches. Objects and arrays can therefore be used as a key in both places.
+- The text is hashed with SHA-256 and the first 128 bits are kept, as 32 hex characters. Long keys use no extra
+  memory, and a collision is practically impossible.
 - The author adds a separator between fields, for example `"|"`, so `a` + `bc` differs from `ab` + `c`.
 - The store is per tenant and mapping, so neither is part of the key.
 - The topic is not part of the key. Use `_TOPIC_LEVEL_` in the key if topics matter. Verified in code: enrichment
   runs before the filter and adds `_TOPIC_LEVEL_` to a JSON object payload. It does not for Smart Function
   mappings or for payloads that are not a JSON object.
-- If the key has no value, or the window is not a number from 1 to 3600, the function returns `false`, logs a
-  warning, and the message is processed. The check fails open so that a bad expression never drops data.
+- If the key has no value, or the window is not a whole number from 1 to 3600, the function returns `false`, logs a
+  warning, and the message is processed. A window above 3600 is rejected, not shortened to 3600: a silent change would
+  hide a configuration error. The check fails open so that a bad expression never drops data. A key built with `&`
+  from a missing field has a value (see "Missing fields" above), so it is not covered by this rule.
 
 ### Store
 
@@ -89,10 +105,26 @@ The key is a JSONata expression evaluated against the payload.
 
 - `isDuplicate` uses one atomic `ConcurrentHashMap.compute`, so two concurrent copies cannot both pass.
 - The window starts at the first copy and does not slide. A third copy after the window expires is processed.
-- Each mapping holds at most 100,000 fingerprints. When full, expired entries are removed first. If it is still
-  full, the message is processed and not recorded (fail open).
+- Each mapping holds at most 100,000 fingerprints. When full, expired entries are removed first, at most once per
+  second per mapping, so a flood does not cost a scan per message. If it is still full, the message is processed and
+  not recorded (fail open).
+- If the cleanup job removes the mapping's map, or a mapping save clears it, while a message is being checked, the
+  check looks the map up again and writes into the current one.
+- `check` returns a `Claim` for a message that was not a repeat. `ProcessingContext` keeps the claims, and
+  `ConsolidationProcessor`, the last step of every leg, calls `releaseDeduplicationClaims()` when the message has an
+  error, has a failed request, or was ignored for a reason other than being a repeat (another filter condition, the
+  inventory filter, an empty Smart Function result). `release` removes the fingerprint only if it still holds that
+  claim's expiry, so it cannot undo a newer recording. This closes the claim-then-fail gap without a second phase:
+  the atomic claim at check time stays, which keeps concurrent copies from both passing. A copy that arrived while the
+  first was still in flight has already been dropped and is not brought back.
 - A scheduled job in `CacheRetentionService` removes expired entries and empty mapping maps every minute. Tenant
   removal clears the tenant.
+- `MappingService` calls `clearMapping` when a mapping is deleted, and when an update changes the execution filter,
+  the code, or the transformation type (`changesDeduplicationKeys`). Those fields give the recorded keys their meaning,
+  and a deleted mapping that is imported again keeps its identifier. Without the call, old keys would drop messages of
+  the new definition for up to 60 minutes. A save that changes none of them, such as a rename or an activation, keeps
+  the keys, so a repeat that arrives right after it is still dropped. A previous mapping that cannot be read counts
+  as changed.
 - This is a separate store from `FlowStateStore`, for the atomicity reason in the comparison above.
 
 ### Where the filter is evaluated
@@ -121,12 +153,29 @@ The key is a JSONata expression evaluated against the payload.
    way, so a key used in both places counts once. The editor offers `$isDuplicate` only in the inbound execution
    filter field (`props.mapperFunctions`).
 4. **Docs (done):** `define-mapping.md` (filter function), `smartfunction.md` (`context.isDuplicate`),
-   `monitoring.md` (Repeated). The retry-after-failure caveat is documented.
+   `monitoring.md` (Repeated). The missing-field case is documented.
+5. **Review fixes (done):** window outside 1 to 3600 fails open in all entry points (no clamping), the store is
+   cleared when a mapping is saved or deleted, and the doc and sample filter guard missing fields. Tests: window
+   above 3600, `clearMapping`, missing field, condition order.
+6. **Review fixes, second round (done):** one key normalizer for the filter and for Smart Functions (whole numbers,
+   sorted object members), a second lookup after the write to close the cleanup race, a throttled scan when a mapping
+   is full, 128-bit fingerprints, and the unused `fingerprint(topic, payload)` overload removed. The outbound stub
+   logs once per mapping. Checked and not a bug: a Smart Function that calls `context.isDuplicate`, gets `true`, and
+   returns `[]` is booked under Repeated, because an empty result sets `ignoreFurtherProcessing` and the call set
+   `droppedAsDuplicate`.
+7. **Retry after failure, and wrap-up (done):** claims are released when a message fails or ends without delivering
+   (`Claim`, `Result`, `ProcessingContext.releaseDeduplicationClaims`, `ConsolidationProcessor`). The condition order no
+   longer changes what is dropped. The user guide recommends the filter for JSONata and Java mappings and
+   `context.isDuplicate` for Smart Functions. The TypeScript mock uses the same key text as the runtime.
 
 ## Open points
 
 - The **Repeated** counter is not in the monitoring chart, which splits Processed, Filtered, and Errors.
-- Whether to add outbound support. The issue only describes inbound brokers.
-- Whether the script sandbox can hash a payload (affects only approach A).
-- The customer case (25 devices, about 40 duplicates a week) is covered by either approach. Pick the default
-  recommendation for the user guide once phase 3 is decided.
+- Outbound support is out of scope (decided). The issue only describes inbound brokers.
+- The customer case (25 devices, about 40 duplicates a week) is covered by either approach. Phase 3 is decided:
+  recommend the filter function for JSONata and Java mappings, and `context.isDuplicate` for Smart Functions. The
+  user guide says so (phase 7).
+- Known limits: a full mapping stops recording new keys and logs a warning, and the
+  inventory filter of an outbound mapping is a separate expression that does not offer `$isDuplicate`. One race
+  remains, between the cleanup job removing an empty mapping map and a first key written at the same moment. A
+  second lookup after the write closes almost all of it, the rest fails open.
