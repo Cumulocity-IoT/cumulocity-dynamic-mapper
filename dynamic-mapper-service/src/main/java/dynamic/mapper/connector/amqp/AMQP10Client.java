@@ -412,8 +412,7 @@ public class AMQP10Client extends AConnectorClient {
 
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (!isConnected()) {
-            log.warn("{} - Cannot publish: not connected", tenant);
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 

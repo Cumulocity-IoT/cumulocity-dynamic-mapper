@@ -451,8 +451,7 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (!isConnected()) {
-            log.warn("{} - Cannot publish: not connected", tenant);
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 

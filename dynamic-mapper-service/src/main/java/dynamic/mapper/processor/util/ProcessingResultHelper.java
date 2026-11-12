@@ -35,6 +35,7 @@ import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.SDKException;
 
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.ProcessingException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -380,7 +381,12 @@ public class ProcessingResultHelper {
         /** The message is settled: acknowledge it (also for client errors, which a retry would repeat). */
         ACK,
         /** The pipeline failed in a way a retry may fix: do not acknowledge, let the broker redeliver. */
-        RETRY
+        RETRY,
+        /**
+         * Like {@link #RETRY}, but the cause is the connector's broker connection being down, not the message.
+         * Do not acknowledge, and do not count the attempt toward a poison-pill limit.
+         */
+        RETRY_CONNECTOR_UNAVAILABLE
     }
 
     /**
@@ -439,8 +445,11 @@ public class ProcessingResultHelper {
                 log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
                 return AckOutcome.RETRY;
             }
-            return extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500
-                    ? AckOutcome.ACK : AckOutcome.RETRY;
+            if (extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500) {
+                return AckOutcome.ACK;
+            }
+            return hasConnectorNotConnectedError(results)
+                    ? AckOutcome.RETRY_CONNECTOR_UNAVAILABLE : AckOutcome.RETRY;
         } catch (TimeoutException e) {
             boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Processing timed out after {}ms, not acknowledging, topic: [{}], drained: {}",
@@ -512,6 +521,30 @@ public class ProcessingResultHelper {
             }
         }
         return anyError ? maxStatus : -1;
+    }
+
+    /** Whether any context or request error is a {@link ConnectorNotConnectedException}. */
+    private static boolean hasConnectorNotConnectedError(List<? extends ProcessingContext<?>> results) {
+        if (results == null) return false;
+        for (ProcessingContext<?> context : results) {
+            for (Exception error : context.getErrors()) {
+                if (isNotConnected(error)) return true;
+            }
+            for (DynamicMapperRequest request : context.getRequests()) {
+                if (request.hasError() && isNotConnected(request.getError())) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isNotConnected(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof ConnectorNotConnectedException) return true;
+            if (current.getCause() == current) break;
+            current = current.getCause();
+        }
+        return false;
     }
 
     /** The HTTP status carried by an error or one of its causes, 0 if none carries one. */

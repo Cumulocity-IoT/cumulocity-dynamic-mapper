@@ -44,6 +44,7 @@ import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -309,6 +310,35 @@ public abstract class AConnectorClient {
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
     public abstract void publishMEAO(ProcessingContext<?> context);
+
+    /**
+     * Call first in {@link #publishMEAO}: if the broker connection is down, records a retryable error on every
+     * request and on the context, and returns {@code true} so the caller stops.
+     *
+     * <p>Returning silently would let the outbound notification be acknowledged and the message lost. The error
+     * carries HTTP 503, so the notification is not acknowledged and Cumulocity redelivers it. Nothing is
+     * buffered here. With no requests there is nothing to lose, so the message is acknowledged as before.</p>
+     *
+     * @return {@code true} if the connector is not connected and the publish must be skipped
+     */
+    protected boolean failPublishIfNotConnected(ProcessingContext<?> context) {
+        if (isConnected()) {
+            return false;
+        }
+        log.warn("{} - Cannot publish: not connected, connector: {}", tenant, connectorName);
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            return true;
+        }
+        ConnectorNotConnectedException error = new ConnectorNotConnectedException(connectorName);
+        requests.forEach(request -> {
+            if (request != null) {
+                request.setError(error);
+            }
+        });
+        context.addError(error);
+        return true;
+    }
 
     /**
      * Returns whether this connector can publish requests of the given API type.

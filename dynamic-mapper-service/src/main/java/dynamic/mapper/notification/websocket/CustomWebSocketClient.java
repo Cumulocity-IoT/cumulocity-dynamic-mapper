@@ -46,7 +46,13 @@ public class CustomWebSocketClient extends WebSocketClient {
     /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
     private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
 
+    /** Wait before a retransmission requested because the broker connection is down. */
+    private static final long CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS = 5_000;
+
     private final NotificationCallback callback;
+    /** One pending delayed reconnect at a time, however many messages hit the outage together. */
+    private final java.util.concurrent.atomic.AtomicBoolean retransmitScheduled =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
     private ScheduledExecutorService executorService = null;
     private String tenant;
 
@@ -149,6 +155,10 @@ public class CustomWebSocketClient extends WebSocketClient {
                             } else {
                                 throw new IllegalStateException("No message id found for ack");
                             }
+                        } else if (outcome == AckOutcome.RETRY_CONNECTOR_UNAVAILABLE) {
+                            // The broker connection is down, the message is fine: do not count the attempt
+                            // toward the poison-pill limit, and wait before the retransmission
+                            retransmitLater(notification, messageId);
                         } else {
                             // Not ACKed: reconnect so Cumulocity retransmits the message (until the limit)
                             handleFailureOrRetransmit(notification, messageId);
@@ -206,6 +216,24 @@ public class CustomWebSocketClient extends WebSocketClient {
      * @param notification the unacknowledged notification
      * @param messageId    unique identifier for tracking failures per notification
      */
+    private void retransmitLater(Notification notification, String messageId) {
+        if (!retransmitScheduled.compareAndSet(false, true)) {
+            return; // a reconnect is already pending and redelivers this message too
+        }
+        try {
+            log.warn("{} - Broker connection of connector {} is down: message not acknowledged, reconnecting in {}ms "
+                    + "so Cumulocity retransmits it (attempt not counted), messageId: {}, API: {}",
+                    tenant, connectorId.displayName(), CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS, messageId,
+                    notification.getApi());
+            Thread.sleep(CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS);
+            this.reconnect();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            retransmitScheduled.set(false);
+        }
+    }
+
     private void handleFailureOrRetransmit(Notification notification, String messageId) {
         if (failureTracker.recordFailureReachedLimit(messageId)) {
             log.error("{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
