@@ -477,10 +477,21 @@ export class MappingService {
 
   // ===== UTILITY METHODS =====
 
+  /**
+   * Compiles an expression for the editor's live evaluation. The backend provides `$isDuplicate(key, windowSeconds)`
+   * in the mapping filter; it needs the message history, which the browser does not have, so here it reports "no
+   * duplicate". Without it the editor would mark every filter that uses it as invalid and block saving.
+   */
+  private compileExpression(path: string) {
+    const expression = this.JSONATA(path);
+    expression.registerFunction('isDuplicate', () => false);
+    return expression;
+  }
+
   async evaluateExpression(json: Template | undefined, path: string): Promise<JsonValue> {
     let result: JsonValue = '';
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
+      const expression = this.compileExpression(path);
       result = expression.evaluate(json) as JsonValue;
     }
     return result;
@@ -489,7 +500,7 @@ export class MappingService {
   async validateExpression(json: JSON, path: string): Promise<boolean> {
     let result = true;
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
+      const expression = this.compileExpression(path);
       try {
         expression.evaluate(json) as JSON;
       } catch (error) {

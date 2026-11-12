@@ -36,6 +36,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.inbound.MessageDeduplicationService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -55,6 +56,7 @@ public class CacheRetentionService implements TenantScoped {
     private final ServiceConfigurationService serviceConfigurationService;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final FlowStateStore flowStateStore;
+    private final MessageDeduplicationService deduplicationService;
 
     private final Map<String, Instant> inboundExternalIdRetentionStart = new ConcurrentHashMap<>();
     private final Map<String, Instant> outboundExternalIdRetentionStart = new ConcurrentHashMap<>();
@@ -63,7 +65,9 @@ public class CacheRetentionService implements TenantScoped {
     public CacheRetentionService(CacheManager cacheManager,
             ServiceConfigurationService serviceConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
-            FlowStateStore flowStateStore) {
+            FlowStateStore flowStateStore,
+            MessageDeduplicationService deduplicationService) {
+        this.deduplicationService = deduplicationService;
         this.cacheManager = cacheManager;
         this.serviceConfigurationService = serviceConfigurationService;
         this.subscriptionsService = subscriptionsService;
@@ -83,7 +87,8 @@ public class CacheRetentionService implements TenantScoped {
         TenantScoped.removeAll(tenant, this,
                 () -> inboundExternalIdRetentionStart.remove(tenant),
                 () -> outboundExternalIdRetentionStart.remove(tenant),
-                () -> inventoryRetentionStart.remove(tenant));
+                () -> inventoryRetentionStart.remove(tenant),
+                () -> deduplicationService.removeTenant(tenant));
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -119,6 +124,8 @@ public class CacheRetentionService implements TenantScoped {
         if (serviceConfig.getFlowStateRetention() != null) {
             flowStateStore.clearExpiredEntries(tenant, serviceConfig.getFlowStateRetention());
         }
+
+        deduplicationService.evictExpired(tenant);
     }
 
     /** Clears one cache when its retention has elapsed, restarts its clock, and logs old and new size. */
