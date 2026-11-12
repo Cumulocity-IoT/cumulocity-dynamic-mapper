@@ -318,10 +318,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private updateDeploymentMapEntry(selected: string[]): void {
-    if (!this.deploymentMapEntry()) return;
+    const entry = this.deploymentMapEntry();
+    if (!entry) return;
 
-    // A new object: the host owns the entry and hands the new one back through the input.
-    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry(), connectors: selected });
+    // Only report a real change. Status polls and refreshes re-emit the configurations with an unchanged
+    // selection; reporting those would write to the host's signal on every pass of its change detection.
+    const current = entry.connectors ?? [];
+    const unchanged = current.length === selected.length && current.every((c, i) => c === selected[i]);
+    if (!unchanged) {
+      // A new object: the host owns the entry and hands the new one back through the input.
+      this.deploymentMapEntryChange.emit({ ...entry, connectors: selected });
+    }
 
     if (this.readOnly()) {
       this.updateReadOnlyConfigurations(selected);
