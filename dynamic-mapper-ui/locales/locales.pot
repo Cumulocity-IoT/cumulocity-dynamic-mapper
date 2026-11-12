@@ -158,9 +158,6 @@ msgstr ""
 msgid "Add Processor Extension"
 msgstr ""
 
-msgid "Add a device type first."
-msgstr ""
-
 msgid "Add a note…"
 msgstr ""
 
@@ -170,13 +167,7 @@ msgstr ""
 msgid "Add connector"
 msgstr ""
 
-msgid "Add device"
-msgstr ""
-
 msgid "Add extension"
-msgstr ""
-
-msgid "Add group"
 msgstr ""
 
 msgid "Add mapping"
@@ -206,9 +197,6 @@ msgstr ""
 msgid "Add substitution"
 msgstr ""
 
-msgid "Add type"
-msgstr ""
-
 msgid "Add your first extension by clicking below."
 msgstr ""
 
@@ -227,9 +215,6 @@ msgstr ""
 msgid "All event types"
 msgstr ""
 
-msgid "All extensions"
-msgstr ""
-
 msgid "All lines"
 msgstr ""
 
@@ -246,9 +231,6 @@ msgid "All, Inbound and Outbound narrow the list of mappings; they do not filter
 msgstr ""
 
 msgid "Already removed in 6.3.0:"
-msgstr ""
-
-msgid "Also subscribe existing devices of these types"
 msgstr ""
 
 msgid "An extension must be selected for an Extension (Java) mapping."
@@ -731,9 +713,6 @@ msgid "Device does not exist"
 msgstr ""
 
 msgid "Device identifier"
-msgstr ""
-
-msgid "Device groups"
 msgstr ""
 
 msgid "Device metadata made available to mappings."
@@ -1252,15 +1231,6 @@ msgstr ""
 msgid "Select a substitution from the list, or add a new one."
 msgstr ""
 
-msgid "Already subscribed device types:"
-msgstr ""
-
-msgid "Already subscribed device groups:"
-msgstr ""
-
-msgid "Already subscribed devices:"
-msgstr ""
-
 msgid "selected"
 msgstr ""
 
@@ -1408,9 +1378,6 @@ msgid ""
 "                    Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST\n"
 "                    polling, a page of polled data that keeps failing is skipped after this many attempts; server\n"
 "                    errors do not count, so an outage never skips data. The default is 3."
-msgstr ""
-
-msgid "How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array."
 msgstr ""
 
 msgid "How to migrate"
@@ -2128,9 +2095,6 @@ msgid ""
 "              Would you like to set one up now?"
 msgstr ""
 
-msgid "Outbound mappings require a device subscription so Cumulocity pushes events to the broker. Choose how devices are subscribed. The subscription is created when you save the mapping."
-msgstr ""
-
 msgid "Overview"
 msgstr ""
 
@@ -2309,9 +2273,6 @@ msgid "Remove"
 msgstr ""
 
 msgid "Removed in 6.4.0:"
-msgstr ""
-
-msgid "Removed, applied on save"
 msgstr ""
 
 msgid "Rename"
@@ -2692,9 +2653,6 @@ msgstr ""
 msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
 msgstr ""
 
-msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; tick the box of the type to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
-msgstr ""
-
 msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
 msgstr ""
 
@@ -2883,9 +2841,6 @@ msgstr ""
 msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
 msgstr ""
 
-msgid "The JSON path in the target template where the value extracted from the source is written to."
-msgstr ""
-
 msgid "The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name"
 msgstr ""
 
@@ -2941,9 +2896,6 @@ msgid "The mapping topic is the key to which this mapping is bound. It is used t
 msgstr ""
 
 msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
-msgstr ""
-
-msgid "The mapping was saved, but checking the device subscriptions failed."
 msgstr ""
 
 msgid "The mapping was saved, but updating the subscriptions failed:"
@@ -3368,9 +3320,6 @@ msgid "mappings are currently defined."
 msgstr ""
 
 msgid "measurement"
-msgstr ""
-
-msgid "more"
 msgstr ""
 
 msgid "not saved yet"
