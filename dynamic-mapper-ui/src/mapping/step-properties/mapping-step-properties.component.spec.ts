@@ -194,12 +194,12 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.mapping().filterMapping).toBe("type = 'lora'");
     });
 
-    it('shows the custom expression read-only in the value column', async () => {
+    it('shows the custom expression in the value column', async () => {
       const component = await outboundComponent("type = 'a' and $exists(b)");
       const field = (component.propertyFormlyFields as any[])
         .flatMap(f => f.fieldGroup ?? [])
         .find(f => f.key === 'filterMapping');
-      expect(field.props.readonly).toBeTrue();
+      expect(field.props.readonly).toBeFalsy();
       expect(field.expressions.hide()).toBeFalse();
       expect(component.model.filterMapping).toBe("type = 'a' and $exists(b)");
 
@@ -225,6 +225,23 @@ describe('MappingStepPropertiesComponent', () => {
       component.onExecutionFilterChanged();
       hostReplacesMapping(component, {});
       expect(component.model.executionFilterMode).toBe('type');
+    });
+
+    it('writes an expression typed into the custom field', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      const emitted: unknown[] = [];
+      component.propertiesChange.subscribe(p => emitted.push(p));
+      component.onCustomFilterEdited("type = 'b'");
+      expect(emitted).toContain(jasmine.objectContaining({ filterMapping: "type = 'b'" }));
+      expect(component.model.filterMapping).toBe("type = 'b'");
+    });
+
+    it('ignores the custom field outside the custom option', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      const emitted: unknown[] = [];
+      component.propertiesChange.subscribe(p => emitted.push(p));
+      component.onCustomFilterEdited('true');
+      expect(emitted).toEqual([]);
     });
 
     it('clears filterMapping for the custom option', async () => {

@@ -29,7 +29,7 @@ import {
   ViewChild,
   OnDestroy,
   OnInit,
-  inject, viewChild, input } from '@angular/core';
+  inject, viewChild, input, effect, untracked } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import {
   AlertService,
@@ -181,6 +181,17 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     statusBar: true
   };
 
+  constructor() {
+    // Whenever the host hands in a changed mapping (an edit applied, templates expanded, another step
+    // changed it), the rule "a device identifier substitution must exist" is checked again.
+    effect(() => {
+      const mapping = this.mapping();
+      this.isBeforeSubstitutionStep();
+      if (!mapping) return;
+      untracked(() => this.refreshSubstitutionValidity(mapping));
+    });
+  }
+
   ngOnInit(): void {
     this.isSubstitutionValid$ = this.stepperService.isSubstitutionValid$;
     this.sourceCustomMessage$ = this.stepperService.sourceCustomMessage$;
@@ -229,7 +240,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionFormlyFieldsSource = [
       {
         key: 'pathSource',
-        type: 'd11r-input',
+        type: 'd11r-jsonata-input',
         wrappers: ['c8y-form-field'],
 
         props: {
@@ -238,6 +249,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
           disabled: this.stepperConfiguration().readOnly ||
             !this.stepperConfiguration().allowDefiningSubstitutions,
           placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
+          // Offers the property names of the source template as completion.
+          templateProvider: () => this.editorSourceStepSubstitution()?.get(),
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
           customMessage: this.sourceCustomMessage$
@@ -256,13 +269,15 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionFormlyFieldsTarget = [
       {
         key: 'pathTarget',
-        type: 'd11r-input',
+        type: 'd11r-jsonata-input',
         wrappers: ['c8y-form-field'],
         props: {
           label: gettext('Target Expression'),
           class: 'input-sm',
           disabled: this.stepperConfiguration().readOnly ||
             !this.stepperConfiguration().allowDefiningSubstitutions,
+          placeholder: 'c8y_Temperature.T.value',
+          templateProvider: () => this.editorTargetStepSubstitution()?.get(),
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
           customMessage: this.targetCustomMessage$
@@ -481,7 +496,10 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     const { substitutions, notice } = Array.isArray(update) ? { substitutions: update, notice: undefined } : update;
     this.substitutionsChange.emit(substitutions);
     if (notice) this.alertService.info(notice);
-    this.refreshSubstitutionValidity();
+    // Against the new list: the `mapping` input still holds the old one until the host's change has
+    // been rendered, so checking it here would miss the edit that was just made (a deleted device
+    // identifier would still count).
+    this.refreshSubstitutionValidity({ ...this.mapping(), substitutions });
   }
 
   /**
@@ -524,9 +542,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.syncSplitSelection();
   }
 
-  private readonly refreshSubstitutionValidity = (): void => {
+  private readonly refreshSubstitutionValidity = (mapping: Mapping = this.mapping()): void => {
     this.stepperService.refreshSubstitutionValidity(
-      this.mapping(),
+      mapping,
       this.stepperConfiguration(),
       this.isBeforeSubstitutionStep()
     );

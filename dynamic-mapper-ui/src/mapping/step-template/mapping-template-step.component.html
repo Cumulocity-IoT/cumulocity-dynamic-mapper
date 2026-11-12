@@ -149,11 +149,12 @@
             </button>
           </div>
           <formly-form [form]="filterFormly()" [fields]="filterFormlyFields()" [model]="filterModel"></formly-form>
-          <div class="form-group m-l-0 m-b-4">
-            <label class="p-l-8" [textContent]="'Filter Result [{{resultType}}]' | translate: { resultType: filterModel.filterExpression?.resultType }"></label>
-            <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize
-              data-cy="dm-mapping-template-filter-result"
-              [readonly]="true">{{ filterModel.filterExpression?.result }}</textarea>
+          <!-- Same preview as the substitution step: the result in monospace, its type as a tag beside it. -->
+          <div class="d11r-filter-preview" data-cy="dm-mapping-template-filter-result">
+            <code [textContent]="filterModel.filterExpression?.result ?? ''"></code>
+            <span class="label" [class.label-danger]="filterModel.filterExpression?.valid === false"
+              [class.label-default]="filterModel.filterExpression?.valid !== false"
+              [textContent]="filterModel.filterExpression?.resultType || 'empty'"></span>
           </div>
         </div>
       </div>

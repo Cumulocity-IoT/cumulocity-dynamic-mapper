@@ -32,7 +32,7 @@ import {
   getDraftViaApi,
 } from '../../support/dm-api';
 import { buildOutboundEventMapping } from '../../support/dm-fixtures';
-import { formField, leaveApp, openEditorTab } from '../../support/dm-ui';
+import { formField, jsonataFieldText, leaveApp, openEditorTab, typeJsonataField } from '../../support/dm-ui';
 
 /**
  * Journey: the execution filter of an outbound mapping is edited in the General Settings tab and
@@ -111,9 +111,9 @@ describe('Mapping — execution filter across the General Settings and Templates
     formField('executionFilterValue').clear();
     formField('executionFilterValue').type(FROM_PROPERTIES);
     openEditorTab('Templates');
-    formField('filterMapping').should('have.value', `type = '${FROM_PROPERTIES}'`);
+    jsonataFieldText('filterMapping').should('eq', `type = '${FROM_PROPERTIES}'`);
     // The filter is evaluated against the source template (type c8y_TestEvent) and its result is shown.
-    cy.getByData('dm-mapping-template-filter-result').should('have.value', 'false');
+    cy.getByData('dm-mapping-template-filter-result').should('contain.text', 'false');
 
     // The metadata keys of the source template can be hidden and shown again.
     cy.getByData('dm-mapping-template-toggle-source-metadata')
@@ -126,8 +126,7 @@ describe('Mapping — execution filter across the General Settings and Templates
       });
 
     // Edit the expression here; General Settings follows it, even when the tab is left right away.
-    formField('filterMapping').clear();
-    formField('filterMapping').type(FROM_TEMPLATES, { parseSpecialCharSequences: false });
+    typeJsonataField('filterMapping', FROM_TEMPLATES);
     // Leave the tab at once, inside the filter's 500 ms debounce: the editor destroys the step, which has to
     // hand the pending edit to the mapping rather than drop it.
     openEditorTab('General Settings');

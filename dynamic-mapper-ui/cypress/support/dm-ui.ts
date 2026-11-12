@@ -186,3 +186,23 @@ export const openEditorTab = (label: 'Connector' | 'General Settings' | 'Subscri
       }
     });
 };
+
+/**
+ * The expression of a JSONata field (`d11r-jsonata-input`, a Monaco editor). Monaco renders spaces as
+ * non-breaking spaces and has no input value, so the text is read from the rendered lines.
+ */
+export const jsonataFieldText = (key: string): Cypress.Chainable<string> =>
+  cy
+    .getByData(`dm-field-${key}`)
+    .find('.view-lines')
+    .invoke('text')
+    .then((text) => text.replace(/\u00a0/g, ' '));
+
+/** Replaces the expression of a JSONata field. Types through Monaco's hidden textarea. */
+export const typeJsonataField = (key: string, expression: string): void => {
+  cy.getByData(`dm-field-${key}`).find('.monaco-editor').click();
+  cy.getByData(`dm-field-${key}`).find('textarea.inputarea').type('{selectall}{backspace}', { force: true });
+  cy.getByData(`dm-field-${key}`)
+    .find('textarea.inputarea')
+    .type(expression, { force: true, parseSpecialCharSequences: false });
+};

@@ -93,6 +93,13 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(step.selectedSubstitution).toBe(0); // a row above the selected one was removed
   });
 
+  it('revalidates against the list that was just announced, not the input the host has not replaced yet', () => {
+    step.onDeleteSubstitution(0);
+
+    const checked = refresh.calls.mostRecent().args[0];
+    expect(checked.substitutions.map((s: Substitution) => s.pathSource)).toEqual(['$.b']);
+  });
+
   it('delete of an index outside the list announces nothing', () => {
     step.onDeleteSubstitution(7);
 

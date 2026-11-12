@@ -86,13 +86,22 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
       position: absolute; top: -36px; right: 0; z-index: 1; width: auto; padding: 0;
     }
     .d11r-props-compact .expert-mode-corner .form-group { margin: 0; }
-    /* Same box as .form-control, so the text starts where the neighboring input's text starts. */
+    /* Same preview as the substitution step: the result in monospace with its type tag beside it. The top
+       margin lines it up with the input in the neighboring column, which has a label above it. */
     .d11r-props-compact .filter-result {
-      padding: 5px 8px;
-      border: 1px solid transparent;
-      line-height: 20px;
-      min-height: 32px;
-      box-sizing: border-box;
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 30px;
+      min-height: 20px;
+      font-size: 12px;
+    }
+    .d11r-props-compact .filter-result code {
+      min-width: 0;
+      max-width: 100%;
+      max-height: 6em;
+      overflow: auto;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
@@ -200,6 +209,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       refreshFilterInventoryWarning: path => self.refreshFilterInventoryWarning(path),
       onTargetAPIChanged: targetAPI => self.onTargetAPIChanged(targetAPI),
       onExecutionFilterChanged: () => self.onExecutionFilterChanged(),
+      onCustomFilterEdited: expression => self.onCustomFilterEdited(expression),
       commitModel: () => self.commitModel(),
       notifyMappingPropertyChanged: mapping => self.stepperService.notifyMappingPropertyChanged(mapping),
       describeQos: qos => self.describeQos(qos as Qos)
@@ -215,14 +225,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private renderFilterInventoryResult(): string {
-    const { resultType, result } = this.filterInventoryModel.filterExpression;
+    const { resultType, result, valid } = this.filterInventoryModel.filterExpression;
     const text = this.escapeHtml(String(result ?? ''));
+    const type = this.escapeHtml(String(resultType ?? 'empty'));
     return (
-      `<div class="form-group"><label>${this.escapeHtml(
-        this.translateService.instant(gettext('Filter Inventory Result [{{resultType}}]'), { resultType: String(resultType) })
-      )}</label>` +
-      `<div class="filter-result font-smaller" ` +
-      `data-cy="dm-mapping-properties-filter-inventory-result">${text}</div></div>`
+      `<div class="filter-result" data-cy="dm-mapping-properties-filter-inventory-result">` +
+      `<code>${text}</code>` +
+      `<span class="label ${valid === false ? 'label-danger' : 'label-default'}">${type}</span></div>`
     );
   }
 
@@ -455,6 +464,20 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     if (expression !== this.mapping().filterMapping) {
       this.propertiesChange.emit({ filterMapping: expression });
     }
+    this.commitModel();
+  }
+
+  /**
+   * The user typed the custom expression. It is the filter as it is, so it is written unchanged. Ignored
+   * outside the custom option: there the field is hidden and its value is only a view of the other two.
+   */
+  onCustomFilterEdited(expression: string | undefined): void {
+    if (this.model.executionFilterMode !== 'custom') return;
+    const value = expression ?? '';
+    if (value === (this.mapping().filterMapping ?? '')) return;
+    this.model.filterMapping = value;
+    this.knownFilterMapping = value;
+    this.propertiesChange.emit({ filterMapping: value });
     this.commitModel();
   }
 

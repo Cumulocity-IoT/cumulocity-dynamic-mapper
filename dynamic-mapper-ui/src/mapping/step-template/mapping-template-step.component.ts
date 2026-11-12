@@ -62,6 +62,14 @@ const NO_TEMPLATE_ISSUES: TemplateIssues = { protectedFieldsChanged: false, arra
   templateUrl: './mapping-template-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   styles: [`
+    .d11r-filter-preview {
+      display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px;
+      margin: 6px 0 4px 8px; min-height: 20px; font-size: 12px;
+    }
+    .d11r-filter-preview code {
+      min-width: 0; max-width: 100%; max-height: 6em; overflow: auto;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+    }
     /* Both columns stretch to the taller one, so an empty panel fills the height of the editor
        next to it, and shrinks to a compact block when neither side has an editor. */
     .tpl-col { display: flex; flex-direction: column; min-width: 0; }
@@ -158,7 +166,6 @@ export class MappingTemplateStepComponent implements OnDestroy {
 
   readonly editorTargetStepTemplate = viewChild<JsonEditorComponent>('editorTargetStepTemplate');
 
-  readonly filterModelFilterExpression = viewChild<ElementRef<HTMLTextAreaElement>>('filterModelFilterExpression');
 
   // ─── Services ──────────────────────────────────────────────────────────────
   private readonly stepperService = inject(MappingStepperService);
@@ -209,6 +216,15 @@ export class MappingTemplateStepComponent implements OnDestroy {
           this.subscribeToFilterFormly(filterFormly);
         }
       });
+    });
+
+    // The execution filter field offers the property names of the source template as completion. The
+    // provider reads the live editor content on every request, so it follows the template as it is edited.
+    effect(() => {
+      const props = this.filterFormlyFields()?.[0]?.fieldGroup?.[0]?.props;
+      if (props) {
+        props['templateProvider'] = () => this.getSourceTemplate() ?? this.sourceTemplate();
+      }
     });
 
     effect(() => {
@@ -413,15 +429,6 @@ export class MappingTemplateStepComponent implements OnDestroy {
     // The user may have left the tab while the evaluation ran; a destroyed step has no view left to refresh.
     if (this.destroyed) return;
     this.cdr.markForCheck();
-    afterNextRenderInZone(this.injector, () => this.manualResize());
-  }
-
-  private manualResize(): void {
-    const el = this.filterModelFilterExpression()?.nativeElement;
-    if (el) {
-      el.style.height = '32px';
-      el.style.height = el.scrollHeight + 'px';
-    }
   }
 
   // ─── Template content changes ───────────────────────────────────────────────

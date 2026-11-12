@@ -822,6 +822,9 @@ msgstr ""
 msgid "Enter it in the Templates step"
 msgstr "In „Templates“ eingeben"
 
+msgid "Edit this expression in the Templates step"
+msgstr "Diesen Ausdruck in „Templates“ bearbeiten"
+
 msgid "Error handling and logging"
 msgstr ""
 

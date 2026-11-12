@@ -59,7 +59,7 @@ export function buildFilterFormlyFields(
             fieldGroup: [
                 {
                     key: 'filterMapping',
-                    type: 'd11r-input',
+                    type: 'd11r-jsonata-input',
                     wrappers: ['c8y-form-field'],
                     props: {
                         label: gettext('Filter execution mapping'),

@@ -53,6 +53,7 @@ export interface PropertyFieldsHost {
   refreshFilterInventoryWarning(path: string): Promise<void> | void;
   onTargetAPIChanged(targetAPI: string): void;
   onExecutionFilterChanged(): void;
+  onCustomFilterEdited(expression: string | undefined): void;
   commitModel(): void;
   notifyMappingPropertyChanged(mapping: Mapping): void;
   describeQos(qos: unknown): string;
@@ -224,7 +225,7 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
         {
           className: 'col-lg-6',
           key: 'filterInventory',
-          type: 'input',
+          type: 'd11r-jsonata-input',
           // The project wrapper, not the stock c8y one: it can show the "not in the inventory
           // cache" warning under the input (props.warning).
           wrappers: ['d11r-wrapper-form-field'],
@@ -233,7 +234,9 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
             placeholder: 'type = "lora_device_type"',
             disabled: host.isFieldDisabled,
             description: host.filterInventoryDescription,
-            required: false
+            required: false,
+            // The filter is evaluated against the managed object of the device: offer its standard properties.
+            templateProvider: () => ({ id: '', name: '', type: '', owner: '', c8y_IsDevice: {}, c8y_SupportedOperations: [] })
           },
           // Hidden outside Expert Mode; the stored expression must survive that (formly would
           // otherwise reset the value on hide).
@@ -354,20 +357,29 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
               )
           }
         },
-        // Custom filter: the expression as it is, read-only. It is edited in the Templates step.
+        // Custom filter: the expression as it is. The Templates step edits the same expression.
         {
           className: 'col-lg-4',
           key: 'filterMapping',
-          type: 'input',
+          type: 'd11r-jsonata-input',
           wrappers: ['c8y-form-field'],
           props: {
             label: gettext('Filter expression'),
-            placeholder: gettext('Enter it in the Templates step'),
-            readonly: true,
+            placeholder: "type = 'c8y_Event' and $exists(c8y_Temperature)",
+            disabled: host.isFieldDisabled,
             required: false
           },
           expressions: {
             hide: () => !isOutbound || host.model.executionFilterMode !== 'custom'
+          },
+          hooks: {
+            onInit: (field: FormlyFieldConfig) => {
+              field.formControl.valueChanges.pipe(
+                debounceTime(500),
+                distinctUntilChanged(),
+                takeUntil(host.destroy$)
+              ).subscribe(expression => host.onCustomFilterEdited(expression));
+            }
           }
         },
         {
