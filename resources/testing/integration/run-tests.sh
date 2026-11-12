@@ -220,7 +220,7 @@ Usage:
     --cleanup-only [-y]              Delete kept test data (mappings test-*, devices
                                      test-*/dmtest-*, certs dmtest*, test connectors
                                      test-*/testc8ymqttservice*/testrestpolling*/
-                                     testwebhook*) and exit; -y skips the confirmation.
+                                     testwebhook*/testoutage*) and exit; -y skips the confirmation.
                                      Device groups: remove by hand.
 
   SUITE — which tests to run:
@@ -656,7 +656,7 @@ _interactive() {
 # Removes what tests leave behind under --keep / DM_KEEP=true, matched by name:
 #   mappings  test-*            devices  test-* | dmtest-*
 #   trusted certificates dmtest*
-#   connectors (by identifier) test-*, testc8ymqttservice*, testrestpolling*, testwebhook*
+#   connectors (by identifier) test-*, testc8ymqttservice*, testrestpolling*, testwebhook*/testoutage*
 #     — exactly the identifiers the tests create; a connector you configured yourself
 #       is never matched unless its identifier starts with one of these.
 # Device groups are NOT swept (names too generic) — remove by hand.
@@ -677,13 +677,13 @@ _cleanup_only() {   # [assume_yes]
     _conns=$(c8y api --method GET --url "${_svc}/configuration/connector/instance" --output json </dev/null 2>/dev/null \
         | jq -rs '[ .[] | if type == "array" then .[] else . end ] | map(select(type == "object")) | .[]
                   | (.identifier // "") as $i
-                  | select($i | test("^(test-|testc8ymqttservice|testrestpolling|testwebhook)"))
+                  | select($i | test("^(test-|testc8ymqttservice|testrestpolling|testwebhook|testoutage)"))
                   | "\($i)\t\(.name // "")"' 2>/dev/null)
 
     printf "${C_BOLD}Mappings (test-*):${C_RESET}\n%s\n" "${_maps:-  (none)}"
     printf "${C_BOLD}Devices (test-*, dmtest-*):${C_RESET}\n%s\n" "${_devs:-  (none)}"
     printf "${C_BOLD}Trusted certificates (dmtest*):${C_RESET}\n%s\n" "${_certs:-  (none)}"
-    printf "${C_BOLD}Connectors (test-*, testc8ymqttservice*, testrestpolling*, testwebhook*):${C_RESET}\n%s\n" "${_conns:-  (none)}"
+    printf "${C_BOLD}Connectors (test-*, testc8ymqttservice*, testrestpolling*, testwebhook*/testoutage*):${C_RESET}\n%s\n" "${_conns:-  (none)}"
     if [ -z "$_maps$_devs$_certs$_conns" ]; then echo "Nothing to clean up."; return 0; fi
 
     if [ "$_yes" != "true" ]; then
