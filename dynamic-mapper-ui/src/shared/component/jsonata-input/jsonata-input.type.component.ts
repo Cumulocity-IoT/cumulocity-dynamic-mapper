@@ -25,6 +25,7 @@ import type * as Monaco from 'monaco-editor';
 import {
   JSONATA_LANGUAGE_ID,
   JSONATA_MARKER_OWNER,
+  enableMapperFunctions,
   findParseError,
   registerJsonataLanguage,
   registerPathCompletion,
@@ -169,6 +170,11 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
       return;
     }
     monaco.editor.setModelLanguage(model, JSONATA_LANGUAGE_ID);
+    // `props.mapperFunctions` marks the one field where the backend provides the Dynamic Mapper's own functions
+    // (the inbound execution filter). Everywhere else they would fail at runtime, so they are not offered.
+    if (this.props['mapperFunctions']) {
+      enableMapperFunctions(model);
+    }
 
     // The form control and the editor are synchronized here, not through the editor's own value accessor:
     // that one calls `setValue` on every write, also with the text the editor already shows, and each

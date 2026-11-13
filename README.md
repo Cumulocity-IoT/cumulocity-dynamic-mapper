@@ -97,7 +97,7 @@ npm test
 Import and export mappings from the **Inbound Mappings** / **Outbound Mappings** table in the UI, individually
 or all at once — there is no longer a standalone import script. Ready-made sets to start from:
 
-- [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json) — 17 mappings, `IN-01` … `IN-17`
+- [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json) — 19 mappings, `IN-01` … `IN-19`
 - [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json) — 16 mappings, `OUT-01` … `OUT-16`
 
 Each mapping name states the aspect it demonstrates. All samples are imported **inactive** — activate only the ones

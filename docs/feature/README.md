@@ -38,6 +38,7 @@ decided against rather than forgotten.
 | [deployment-map.md](deployment-map.md) | Which mappings run on which connector: defined vs. effective deployment, live reconcile, reset |
 | [mapping-tree.md](mapping-tree.md) | The topic tree that resolves inbound topics to mappings, and the Hierarchy mapping page |
 | [reliability.md](reliability.md) | QoS, processing timeouts, failure handling, status counters |
+| [message-deduplication.md](message-deduplication.md) | Dropping repeated inbound messages: `$isDuplicate`, `context.isDuplicate`, release on failure, memory limits |
 
 ### Transformations
 

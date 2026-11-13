@@ -477,19 +477,39 @@ export class MappingService {
 
   // ===== UTILITY METHODS =====
 
-  async evaluateExpression(json: Template | undefined, path: string): Promise<JsonValue> {
+  /**
+   * Compiles an expression for the editor's live evaluation. The backend provides `$isDuplicate(key, windowSeconds)`
+   * in the execution filter only. It needs the message history, which the browser does not have, so with
+   * `allowDeduplication` the editor reports "no duplicate". Without it the editor would mark every filter that uses it
+   * as invalid and block saving. Every other expression (inventory filter, substitutions) does not get the stub, so
+   * the editor rejects `$isDuplicate` there as the backend does at runtime.
+   */
+  private compileExpression(path: string, allowDeduplication: boolean) {
+    const expression = this.JSONATA(path);
+    if (allowDeduplication) {
+      expression.registerFunction('isDuplicate', () => false);
+    }
+    return expression;
+  }
+
+  /** @param allowDeduplication true only for the execution filter, the one expression where `$isDuplicate` works */
+  async evaluateExpression(
+    json: Template | undefined,
+    path: string,
+    allowDeduplication = false
+  ): Promise<JsonValue> {
     let result: JsonValue = '';
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
+      const expression = this.compileExpression(path, allowDeduplication);
       result = expression.evaluate(json) as JsonValue;
     }
     return result;
   }
 
-  async validateExpression(json: JSON, path: string): Promise<boolean> {
+  async validateExpression(json: JSON, path: string, allowDeduplication = false): Promise<boolean> {
     let result = true;
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
+      const expression = this.compileExpression(path, allowDeduplication);
       try {
         expression.evaluate(json) as JSON;
       } catch (error) {

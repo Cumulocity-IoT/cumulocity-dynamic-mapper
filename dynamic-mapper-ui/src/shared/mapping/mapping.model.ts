@@ -428,6 +428,8 @@ export interface MappingStatus {
   messagesProcessed?: number;
   /** Dropped on purpose (filter did not match / mapping chose to ignore); not an error. */
   messagesFiltered?: number;
+  /** Subset of `messagesFiltered`: dropped as repeats by the `$isDuplicate` filter function. Absent on older backends. */
+  messagesDuplicate?: number;
   /** Epoch millis of the last message this mapping finished processing; 0 or absent if none. */
   lastMessageAt?: number;
   /** Epoch millis of the last error; 0 or absent if none. */

@@ -104,6 +104,35 @@ export const JSONATA_FUNCTIONS: readonly JsonataFunction[] = [
   { name: 'toMillis', signature: '$toMillis(timestamp, picture?)', doc: 'Converts an ISO 8601 string to epoch milliseconds.' }
 ];
 
+/**
+ * Functions the Dynamic Mapper adds to JSONata. They are not part of the standard library, so they are listed
+ * apart and checked apart. The backend registers them only where the doc says; in any other expression they fail.
+ */
+export const DYNAMIC_MAPPER_FUNCTIONS: readonly JsonataFunction[] = [
+  {
+    name: 'isDuplicate',
+    signature: '$isDuplicate(key, windowSeconds)',
+    doc:
+      'Inbound execution filter only. True if the same key was seen for this mapping less than `windowSeconds` ago ' +
+      '(1 to 3600), so a filter drops repeats with `$not($isDuplicate(deviceId & "|" & time, 60))`. ' +
+      'The editor always evaluates it as false, because it has no message history.'
+  }
+];
+
+/** Editors that opted into the Dynamic Mapper's own functions. Completion and hover are registered once per
+ * language, so they look the model up here to decide what to offer. */
+const mapperFunctionModels = new WeakSet<object>();
+
+/** Makes the editor of this model offer {@link DYNAMIC_MAPPER_FUNCTIONS}. Only the field where they work calls it. */
+export function enableMapperFunctions(model: Monaco.editor.ITextModel): void {
+  mapperFunctionModels.add(model);
+}
+
+/** The functions to offer in the editor of this model. */
+export function functionsFor(model: Monaco.editor.ITextModel): readonly JsonataFunction[] {
+  return mapperFunctionModels.has(model) ? [...JSONATA_FUNCTIONS, ...DYNAMIC_MAPPER_FUNCTIONS] : JSONATA_FUNCTIONS;
+}
+
 /** Keywords and the context variables `$`, `$$`, and `$~>` are not functions, so they are listed apart. */
 export const JSONATA_KEYWORDS: readonly string[] = ['and', 'or', 'in', 'function', 'true', 'false', 'null'];
 
@@ -273,7 +302,7 @@ export function registerJsonataLanguage(monaco: typeof Monaco): Promise<void> {
           startColumn: word.startColumn,
           endColumn: word.endColumn
         };
-        const functions = JSONATA_FUNCTIONS.map((fn) => ({
+        const functions = functionsFor(model).map((fn) => ({
           label: fn.signature,
           filterText: '$' + fn.name,
           kind: monaco.languages.CompletionItemKind.Function,
@@ -295,7 +324,7 @@ export function registerJsonataLanguage(monaco: typeof Monaco): Promise<void> {
     monaco.languages.registerHoverProvider(JSONATA_LANGUAGE_ID, {
       provideHover: (model, position) => {
         const word = model.getWordAtPosition(position);
-        const fn = word && JSONATA_FUNCTIONS.find((f) => '$' + f.name === word.word);
+        const fn = word && functionsFor(model).find((f) => '$' + f.name === word.word);
         return fn
           ? {
               range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),

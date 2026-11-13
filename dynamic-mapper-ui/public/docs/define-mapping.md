@@ -171,6 +171,20 @@ Payload and SparkPlug B mappings. To filter on **device inventory** properties i
 Filter](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter), which is available for outbound mappings only.
 
 
+##### Dropping repeated messages {#drop-repeated-messages}
+
+Brokers and gateways sometimes deliver a message twice. For **inbound** mappings, the function
+`$isDuplicate(key, windowSeconds)` in the execution filter drops the repeat. It returns `true` if the same key was seen
+for this mapping less than `windowSeconds` ago, so you negate it:
+
+```javascript
+$exists(deviceId) and $exists(time) and $not($isDuplicate(deviceId & "|" & time, 60))
+```
+
+For Smart Function mappings, use `context.isDuplicate` in the script instead. The key, the window from 1 to 3600
+seconds, the behavior for failed messages, and the memory limits are described in
+[Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
+
 ### Managing mappings {#managing-mappings}
 
 The **Inbound Mappings** / **Outbound Mappings** table is the entry point for working with existing mappings:

@@ -856,9 +856,6 @@ msgstr ""
 msgid "Enter agent name"
 msgstr ""
 
-msgid "Enter it in the Templates step"
-msgstr ""
-
 msgid "Error"
 msgstr ""
 
@@ -1184,12 +1181,6 @@ msgid "Feature changes in release 6.4.0"
 msgstr ""
 
 msgid "Fetch now"
-msgstr ""
-
-msgid "Filter Inventory Result [{{resultType}}]"
-msgstr ""
-
-msgid "Filter Result [{{resultType}}]"
 msgstr ""
 
 msgid "Filter by"
@@ -1762,6 +1753,9 @@ msgstr ""
 msgid "Message Explorer"
 msgstr ""
 
+msgid "Message de-duplication"
+msgstr ""
+
 msgid "Messages"
 msgstr ""
 
@@ -2049,6 +2043,9 @@ msgstr ""
 msgid "Optional YAML parameter passed to the extension."
 msgstr ""
 
+msgid "Optional. To drop repeated messages, use $not($isDuplicate(key, seconds)), for example $not($isDuplicate(deviceId & \"|\" & time, 60))."
+msgstr ""
+
 msgid "Or switch on Collected log to search the whole stored range."
 msgstr ""
 
@@ -2267,6 +2264,9 @@ msgid "Rename the template and edit its description"
 msgstr ""
 
 msgid "Repair strategy"
+msgstr ""
+
+msgid "Repeated"
 msgstr ""
 
 msgid "Replace code"

@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dynamic.mapper.processor.inbound.MessageDeduplicationService;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
@@ -56,6 +57,9 @@ public class ServiceRegistry implements TenantScoped {
     @Getter
     private final CacheManager cacheManager;
 
+    @Getter
+    private final MessageDeduplicationService messageDeduplicationService;
+
     @Value("${APP.mqttServiceUrl}")
     @Getter
     String mqttServiceUrl;
@@ -81,7 +85,8 @@ public class ServiceRegistry implements TenantScoped {
             ObjectMapper objectMapper,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
             C8YAgent c8yAgent,
-            CacheManager cacheManager) {
+            CacheManager cacheManager,
+            MessageDeduplicationService messageDeduplicationService) {
         this.tenantRegistry = tenantRegistry;
         this.deviceToClientRegistry = deviceToClientRegistry;
         this.graalVMContextService = graalVMContextService;
@@ -90,6 +95,7 @@ public class ServiceRegistry implements TenantScoped {
         this.virtualThreadPool = virtualThreadPool;
         this.c8yAgent = c8yAgent;
         this.cacheManager = cacheManager;
+        this.messageDeduplicationService = messageDeduplicationService;
     }
 
     public boolean isPulsarAvailable(String tenant) {

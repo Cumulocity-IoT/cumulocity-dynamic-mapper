@@ -1,6 +1,9 @@
 import {
+  DYNAMIC_MAPPER_FUNCTIONS,
   JSONATA_FUNCTIONS,
+  enableMapperFunctions,
   findParseError,
+  functionsFor,
   pathSuggestions,
   quoteKey,
   toMarker
@@ -78,5 +81,27 @@ describe('jsonata-language', () => {
       const value = await parse(`$${name}`).evaluate({});
       expect(value).withContext(`$${name}`).toBeDefined();
     }
+  });
+
+  it('offers the mapper-specific functions without clashing with a built-in', async () => {
+    const builtIn = new Set(JSONATA_FUNCTIONS.map((f) => f.name));
+    for (const fn of DYNAMIC_MAPPER_FUNCTIONS) {
+      expect(builtIn.has(fn.name)).withContext(fn.name).toBeFalse();
+      // Not part of the installed jsonata: it exists only because the backend and the editor register it.
+      expect(await parse(`$${fn.name}`).evaluate({})).withContext(fn.name).toBeUndefined();
+    }
+    expect(DYNAMIC_MAPPER_FUNCTIONS.map((f) => f.name)).toContain('isDuplicate');
+  });
+
+  it('offers the mapper-specific functions only in editors that opted in', () => {
+    const filterModel = {} as never;
+    const otherModel = {} as never;
+    enableMapperFunctions(filterModel);
+
+    const names = (model: never) => functionsFor(model).map((f) => f.name);
+    expect(names(filterModel)).toContain('isDuplicate');
+    expect(names(filterModel)).toContain('string');
+    expect(names(otherModel)).not.toContain('isDuplicate');
+    expect(names(otherModel)).toContain('string');
   });
 });

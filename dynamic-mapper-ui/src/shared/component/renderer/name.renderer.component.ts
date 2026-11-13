@@ -27,7 +27,8 @@ import { MAPPING_STATUS_UNSPECIFIED, MAPPING_STATUS_UNSPECIFIED_LABEL } from '..
     <span
       [attr.data-cy]="'dm-mapping-name-' + context.item.id"
       [class]="isUnmapped ? 'text-bold' : 'text-normal'"
-      [title]="isUnmapped ? unmappedHint : context.item.id"
+      [title]="isUnmapped ? unmappedHint : displayName"
+      style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden"
       >{{ displayName }}</span
     >
   `,

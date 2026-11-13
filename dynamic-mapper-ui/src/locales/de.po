@@ -819,12 +819,6 @@ msgstr ""
 msgid "Enter agent name"
 msgstr ""
 
-msgid "Enter it in the Templates step"
-msgstr "In „Templates“ eingeben"
-
-msgid "Edit this expression in the Templates step"
-msgstr "Diesen Ausdruck in „Templates“ bearbeiten"
-
 msgid "Error handling and logging"
 msgstr ""
 
@@ -1154,12 +1148,6 @@ msgstr ""
 
 msgid "Filter expression"
 msgstr "Filterausdruck"
-
-msgid "Filter Inventory Result [{{resultType}}]"
-msgstr ""
-
-msgid "Filter Result [{{resultType}}]"
-msgstr ""
 
 msgid "Filtered"
 msgstr ""
@@ -1677,6 +1665,9 @@ msgstr ""
 msgid "Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants."
 msgstr ""
 
+msgid "Message de-duplication"
+msgstr ""
+
 msgid "Message Explorer"
 msgstr ""
 
@@ -1967,6 +1958,9 @@ msgstr ""
 msgid "Optional YAML parameter passed to the extension."
 msgstr ""
 
+msgid "Optional. To drop repeated messages, use $not($isDuplicate(key, seconds)), for example $not($isDuplicate(deviceId & \"|\" & time, 60))."
+msgstr "Optional. Um wiederholte Nachrichten zu verwerfen, verwenden Sie $not($isDuplicate(key, seconds)), zum Beispiel $not($isDuplicate(deviceId & \"|\" & time, 60))."
+
 msgid "Or switch on Collected log to search the whole stored range."
 msgstr ""
 
@@ -2162,6 +2156,9 @@ msgstr ""
 
 msgid "Repair strategy"
 msgstr ""
+
+msgid "Repeated"
+msgstr "Wiederholt"
 
 msgid "Replace code"
 msgstr ""
