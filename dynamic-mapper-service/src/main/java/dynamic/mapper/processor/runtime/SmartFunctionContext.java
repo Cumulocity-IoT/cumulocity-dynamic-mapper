@@ -175,6 +175,7 @@ public class SmartFunctionContext implements DataPrepContext {
      * <p>Fails open: it returns false, and adds a warning, when the key has no value or the window is not a
      * number from 1 to 3600. It always returns false in a test run, which records nothing.</p>
      */
+    @Override
     public boolean isDuplicate(Value key, Value windowSeconds) {
         if (duplicateCheck == null) {
             return false;

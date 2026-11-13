@@ -196,4 +196,20 @@ public interface DataPrepContext {
     String getClientId();
 
     void clearState();
+
+    /**
+     * Reports whether the same key was already seen for this mapping within the window, and records it
+     * otherwise (issue #692). Smart Functions call it as {@code context.isDuplicate(key, windowSeconds)}.
+     *
+     * <p>It is declared here because scripts only reach the methods of this interface: the host-access policy
+     * does not expose {@code SmartFunctionContext} itself. A method added only to the implementation fails in
+     * the script with "Unknown identifier".</p>
+     *
+     * @param key           any value that identifies the message, for example {@code externalId + '|' + time}
+     * @param windowSeconds a whole number of seconds from 1 to 3600
+     * @return true for a repeat; false otherwise, and always false where no check is available
+     */
+    default boolean isDuplicate(Value key, Value windowSeconds) {
+        return false;
+    }
 }

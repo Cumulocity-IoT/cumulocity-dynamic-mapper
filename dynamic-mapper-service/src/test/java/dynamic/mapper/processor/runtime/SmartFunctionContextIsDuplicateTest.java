@@ -114,4 +114,22 @@ class SmartFunctionContextIsDuplicateTest {
         assertFalse(store.isDuplicate("t", "m1", MessageDeduplicationService.fingerprint("d1|t1"), 60));
         assertTrue(invocation(false).isDuplicate(v("d1|t1"), v(60)));
     }
+
+    /**
+     * A script reaches only the methods of {@link DataPrepContext} under the production host-access policy. The
+     * tests above call the Java method directly and cannot see a method that scripts are not allowed to call.
+     */
+    @Test
+    void scriptCanCallIsDuplicateUnderTheProductionHostAccessPolicy() {
+        try (Context scripted = Context.newBuilder("js")
+                .allowHostAccess(new dynamic.mapper.core.GraalVMContextService().getHostAccess())
+                .build()) {
+            var ctx = new SmartFunctionContext(scripted, "t", null, false, new FlowStateStore(), "m1", null,
+                    (fp, window) -> store.isDuplicate("t", "m1", fp, window));
+            scripted.getBindings("js").putMember("context", ctx);
+            assertFalse(scripted.eval("js", "context.isDuplicate('dev|t1', 60)").asBoolean());
+            assertTrue(scripted.eval("js", "context.isDuplicate('dev|t1', 60)").asBoolean());
+            assertFalse(scripted.eval("js", "context.isDuplicate({a: 1}, 60)").asBoolean());
+        }
+    }
 }
