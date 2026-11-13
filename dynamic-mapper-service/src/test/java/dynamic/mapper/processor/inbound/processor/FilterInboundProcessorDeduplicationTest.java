@@ -81,14 +81,14 @@ class FilterInboundProcessorDeduplicationTest {
         assertTrue(dropped(m, Map.of("k", 5)), "5.0 and 5 are the same key");
 
         Mapping o = mapping("$not($isDuplicate(k, 60))");
-        var ab = new java.util.LinkedHashMap<String, Object>();
-        ab.put("a", 1);
-        ab.put("b", 2);
-        var ba = new java.util.LinkedHashMap<String, Object>();
-        ba.put("b", 2);
-        ba.put("a", 1);
-        dropped(o, Map.of("k", ab));
-        assertTrue(dropped(o, Map.of("k", ba)), "member order does not matter");
+        var aThenB = new java.util.LinkedHashMap<String, Object>();
+        aThenB.put("a", 1);
+        aThenB.put("b", 2);
+        var bThenA = new java.util.LinkedHashMap<String, Object>();
+        bThenA.put("b", 2);
+        bThenA.put("a", 1);
+        dropped(o, Map.of("k", aThenB));
+        assertTrue(dropped(o, Map.of("k", bThenA)), "member order does not matter");
     }
 
     @Test
