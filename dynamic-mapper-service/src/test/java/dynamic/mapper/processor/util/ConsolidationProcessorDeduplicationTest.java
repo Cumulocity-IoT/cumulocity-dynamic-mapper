@@ -93,4 +93,47 @@ class ConsolidationProcessorDeduplicationTest {
         var valid = filtered(m, Map.of("id", "d1", "value", 20));
         assertFalse(valid.isIgnoreFurtherProcessing(), "the rejected message left no key, so the order does not matter");
     }
+
+    @Test
+    void aFilterWithTwoKeysGivesBackTheNewKeyWhenTheSecondOneIsARepeat() throws Exception {
+        Mapping m = mapping("$not($isDuplicate(a, 60)) and $not($isDuplicate(b, 60))");
+        consolidation.process(filtered(m, Map.of("a", "a1", "b", "b1")));
+
+        // records a2, then rejects the message because b1 is a repeat: nothing was delivered
+        var rejected = filtered(m, Map.of("a", "a2", "b", "b1"));
+        assertTrue(rejected.isDroppedAsDuplicate());
+        consolidation.process(rejected);
+
+        var later = filtered(m, Map.of("a", "a2", "b", "b2"));
+        assertFalse(later.isIgnoreFurtherProcessing(), "a2 was given back, so a later message with it is processed");
+        // the original message keeps its recording: a repeat of it is still dropped
+        assertTrue(filtered(m, Map.of("a", "a1", "b", "b1")).isIgnoreFurtherProcessing());
+    }
+
+    @Test
+    void aCancelledMessageGivesItsKeyBackEvenWithoutAnError() throws Exception {
+        Mapping m = mapping(FILTER);
+        var first = filtered(m, Map.of("id", "d1"));
+        var wrapper = dynamic.mapper.processor.runtime.ProcessingResultWrapper.<Object>builder().build();
+        wrapper.getCancellationRequested().set(true); // a timeout asked the send to stop; it returned without an error
+        first.setProcessingResultWrapper(wrapper);
+        assertFalse(first.hasError());
+        consolidation.process(first);
+
+        assertFalse(filtered(m, Map.of("id", "d1")).isIgnoreFurtherProcessing(),
+                "the broker's redelivery of a message that was never sent is processed");
+    }
+
+    @Test
+    void anInterruptedMessageGivesItsKeyBackEvenWithoutAnError() throws Exception {
+        Mapping m = mapping(FILTER);
+        var first = filtered(m, Map.of("id", "d1"));
+        Thread.currentThread().interrupt();
+        try {
+            consolidation.process(first);
+        } finally {
+            Thread.interrupted(); // clear the flag, so it does not reach other tests
+        }
+        assertFalse(filtered(m, Map.of("id", "d1")).isIgnoreFurtherProcessing());
+    }
 }

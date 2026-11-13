@@ -320,6 +320,29 @@ class MessageDeduplicationServiceTest {
     }
 
     @Test
+    void aLateReleaseDoesNotUndoARecordingMadeInTheSameMillisecond() {
+        var old = service.check("t", "m", "fp", 60).claim();
+        service.clearMapping("t", "m");
+        // the clock does not move: the new recording has the same expiry as the old one
+        assertFalse(service.isDuplicate("t", "m", "fp", 60));
+        old.release();
+        assertTrue(service.isDuplicate("t", "m", "fp", 60), "only the recording of the old claim could be removed");
+    }
+
+    @Test
+    void anEquivalentNumberIsOneKeyWhateverItsJavaType() {
+        String plain = "1000000000000000";
+        assertEquals(plain, MessageDeduplicationService.keyText(1000000000000000L));
+        assertEquals(plain, MessageDeduplicationService.keyText(1.0E15));
+        assertEquals(plain, MessageDeduplicationService.keyText(new java.math.BigDecimal("1E+15")));
+        assertEquals("12345678901234567000", MessageDeduplicationService.keyText(1.2345678901234567E19));
+        assertEquals("0.1", MessageDeduplicationService.keyText(0.1));
+        assertEquals("-2.5", MessageDeduplicationService.keyText(-2.5));
+        assertEquals("0", MessageDeduplicationService.keyText(-0.0));
+        assertEquals("NaN", MessageDeduplicationService.keyText(Double.NaN));
+    }
+
+    @Test
     void clearAndRemoveTenantDropEverything() {
         service.isDuplicate("t", "m", "fp", 60);
         service.isDuplicate("t", "m", "fp", 60);

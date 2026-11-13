@@ -84,7 +84,8 @@ concurrency, expiry, memory, and counter gaps for Smart Function mappings.
 The key is a JSONata expression evaluated against the payload.
 
 - Strings are used as they are. `MessageDeduplicationService.keyText` turns every other value into text, and both
-  the filter function and `context.isDuplicate` call it. A whole number has no decimal point (`5.0` is `5`), and an
+  the filter function and `context.isDuplicate` call it. Every number is written as a plain decimal, never with an exponent: `5.0` is `5`, and the
+  Double `1.0E15` and the Long `1000000000000000` are one key, whatever type a runtime hands over. An
   object is written as JSON with its members sorted by name, so a copy that lists members in another order still
   matches. Objects and arrays can therefore be used as a key in both places.
 - The text is hashed with SHA-256 and the first 128 bits are kept, as 32 hex characters. Long keys use no extra
@@ -116,10 +117,14 @@ The key is a JSONata expression evaluated against the payload.
 - If the cleanup job removes the mapping's map, or a mapping save clears it, while a message is being checked, the
   check looks the map up again and writes into the current one.
 - `check` returns a `Claim` for a message that was not a repeat. `ProcessingContext` keeps the claims, and
-  `ConsolidationProcessor`, the last step of every leg, calls `releaseDeduplicationClaims()` when the message has an
-  error, has a failed request, or was ignored for a reason other than being a repeat (another filter condition, the
-  inventory filter, an empty Smart Function result). `release` removes the fingerprint only if it still holds that
-  claim's expiry, so it cannot undo a newer recording. This closes the claim-then-fail gap without a second phase:
+  `ConsolidationProcessor`, the last step of every leg, calls `releaseDeduplicationClaims()` when the message did
+  not deliver: it has an error or a failed request, a timeout cancelled it or its thread was interrupted (a send can
+  return without an error then), or it was ignored for any reason (another filter condition, the inventory filter, an
+  empty Smart Function result, or a repeat). A repeat holds no claim of its own, so this never removes the original's
+  recording, but a filter with two keys can record the first and reject the message on a repeated second key, and
+  that first key is given back. Every recording carries a unique token, and `release` removes the fingerprint only if
+  it still holds that token, so it cannot undo a newer recording, not even one made in the same millisecond with the
+  same expiry. This closes the claim-then-fail gap without a second phase:
   the atomic claim at check time stays, which keeps concurrent copies from both passing. A copy that arrived while the
   first was still in flight has already been dropped and is not brought back.
 - A scheduled job in `CacheRetentionService` removes expired entries and empty mapping maps every minute. Tenant

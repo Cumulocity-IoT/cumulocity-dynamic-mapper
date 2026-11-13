@@ -155,7 +155,8 @@ export class MappingStepperService {
             return { resultType: '', result: '', valid: true };
         }
 
-        const resultExpression: JsonValue = await this.mappingService.evaluateExpression(sourceTemplate, path);
+        // The execution filter is the one expression where $isDuplicate works.
+        const resultExpression: JsonValue = await this.mappingService.evaluateExpression(sourceTemplate, path, true);
         const resultType = getTypeOf(resultExpression);
         const result = JSON.stringify(resultExpression, null, 4);
 

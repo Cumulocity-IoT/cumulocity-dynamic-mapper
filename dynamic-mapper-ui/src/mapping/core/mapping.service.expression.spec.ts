@@ -19,15 +19,23 @@ describe('MappingService expression evaluation', () => {
   it('evaluates a filter that uses $isDuplicate as "not a duplicate"', async () => {
     const result = await service.evaluateExpression(
       { id: 'd1', time: 't1' } as never,
-      '$not($isDuplicate(id & "|" & time, 60))'
+      '$not($isDuplicate(id & "|" & time, 60))',
+      true
     );
     expect(result as unknown).toBe(true);
+  });
+
+  it('rejects $isDuplicate outside the execution filter, as the backend does', async () => {
+    await expectAsync(
+      service.evaluateExpression({ id: 'd1', time: 't1' } as never, '$not($isDuplicate(id, 60))')
+    ).toBeRejected();
   });
 
   it('validates a filter that combines $isDuplicate with another condition', async () => {
     const valid = await service.validateExpression(
       { id: 'd1', value: 20 } as never,
-      'value > 10 and $not($isDuplicate(id, 60))'
+      'value > 10 and $not($isDuplicate(id, 60))',
+      true
     );
     expect(valid).toBe(true);
   });

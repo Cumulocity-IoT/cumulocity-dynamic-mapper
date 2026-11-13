@@ -57,9 +57,19 @@ public class MessageDeduplicationService {
     /** A full mapping logs its warning at most this often, so a flood does not flood the log. */
     static final long FULL_STORE_WARNING_INTERVAL_MILLIS = 60_000;
 
-    /** The fingerprints of one mapping: fingerprint to expiry in epoch millis. */
+    /**
+     * One recording: its expiry in epoch millis and a token no other recording has. The token lets
+     * {@link Claim#release()} remove exactly its own recording, also when a newer recording of the same key has the
+     * same expiry, which happens when a mapping is cleared and the key is recorded again in the same millisecond.
+     */
+    private record Entry(long expiry, long token) {
+    }
+
+    private final java.util.concurrent.atomic.AtomicLong tokens = new java.util.concurrent.atomic.AtomicLong();
+
+    /** The fingerprints of one mapping: fingerprint to its recording. */
     private static final class Entries {
-        final ConcurrentHashMap<String, Long> map = new ConcurrentHashMap<>();
+        final ConcurrentHashMap<String, Entry> map = new ConcurrentHashMap<>();
         volatile long lastFullEvictionMillis = Long.MIN_VALUE;
         volatile long lastFullWarningMillis = Long.MIN_VALUE;
         /** Messages passed unchecked because the mapping was full, since the last warning. */
@@ -111,21 +121,21 @@ public class MessageDeduplicationService {
         private final String tenant;
         private final String mappingIdentifier;
         private final String fingerprint;
-        private final long expiry;
+        private final Entry entry;
 
-        private Claim(String tenant, String mappingIdentifier, String fingerprint, long expiry) {
+        private Claim(String tenant, String mappingIdentifier, String fingerprint, Entry entry) {
             this.tenant = tenant;
             this.mappingIdentifier = mappingIdentifier;
             this.fingerprint = fingerprint;
-            this.expiry = expiry;
+            this.entry = entry;
         }
 
-        /** Removes the fingerprint, unless it was already replaced by a newer recording. */
+        /** Removes the fingerprint, unless a newer recording replaced it. */
         public void release() {
             var perTenant = store.get(tenant);
             var holder = perTenant == null ? null : perTenant.get(mappingIdentifier);
             if (holder != null) {
-                holder.map.remove(fingerprint, expiry);
+                holder.map.remove(fingerprint, entry);
             }
         }
     }
@@ -169,7 +179,7 @@ public class MessageDeduplicationService {
 
     private Result check(String tenant, String mappingIdentifier, Entries holder, String fingerprint, int window,
             long now) {
-        ConcurrentHashMap<String, Long> entries = holder.map;
+        ConcurrentHashMap<String, Entry> entries = holder.map;
         if (entries.size() >= MAX_ENTRIES_PER_MAPPING) {
             if (holder.lastFullEvictionMillis == Long.MIN_VALUE
                     || now - holder.lastFullEvictionMillis >= FULL_STORE_EVICTION_INTERVAL_MILLIS) {
@@ -191,19 +201,21 @@ public class MessageDeduplicationService {
         boolean[] duplicate = { false };
         boolean[] added = { false };
         long newExpiry = now + window * 1000L;
-        entries.compute(fingerprint, (key, expiry) -> {
-            if (expiry != null && expiry > now) {
+        Entry[] recorded = { null };
+        entries.compute(fingerprint, (key, existing) -> {
+            if (existing != null && existing.expiry() > now) {
                 duplicate[0] = true;
-                return expiry; // keep the original expiry, the window does not slide
+                return existing; // keep the original expiry, the window does not slide
             }
-            added[0] = expiry == null;
-            return newExpiry;
+            added[0] = existing == null;
+            recorded[0] = new Entry(newExpiry, tokens.incrementAndGet());
+            return recorded[0];
         });
         if (added[0]) {
             approximateTotal.incrementAndGet();
         }
         return duplicate[0] ? new Result(true, null)
-                : new Result(false, new Claim(tenant, mappingIdentifier, fingerprint, newExpiry));
+                : new Result(false, new Claim(tenant, mappingIdentifier, fingerprint, recorded[0]));
     }
 
     /** True if all mappings together hold the limit. Recounts first, at most once per interval. */
@@ -272,8 +284,8 @@ public class MessageDeduplicationService {
         }
     }
 
-    private static void evictExpired(ConcurrentHashMap<String, Long> entries, long now) {
-        entries.values().removeIf(expiry -> expiry <= now);
+    private static void evictExpired(ConcurrentHashMap<String, Entry> entries, long now) {
+        entries.values().removeIf(entry -> entry.expiry() <= now);
     }
 
     public void clearMapping(String tenant, String mappingIdentifier) {
@@ -375,10 +387,11 @@ public class MessageDeduplicationService {
     private static String numberText(Number n) {
         if (n instanceof Double || n instanceof Float) {
             double d = n.doubleValue();
-            if (!Double.isNaN(d) && !Double.isInfinite(d) && d == Math.rint(d) && Math.abs(d) < 1e15) {
-                return Long.toString((long) d);
+            if (Double.isNaN(d) || Double.isInfinite(d)) {
+                return Double.toString(d);
             }
-            return Double.toString(d);
+            // The same plain decimal as an integer or BigDecimal key: 1.0E15 and 1000000000000000L are one key.
+            return java.math.BigDecimal.valueOf(d).stripTrailingZeros().toPlainString();
         }
         if (n instanceof java.math.BigDecimal bd) {
             return bd.stripTrailingZeros().toPlainString();

@@ -73,12 +73,28 @@ public class ConsolidationProcessor extends CommonProcessor {
     }
 
     /**
+     * A message that did not deliver gives its de-duplication keys back, so the broker's retry is processed instead of
+     * dropped as a repeat: it failed, a request failed, a timeout or an interrupt stopped it, or it was ignored.
+     * A repeat holds no key of its own, so releasing for it never removes the recording of the original message. But
+     * a filter that checks two keys can record the first and then reject the message on a repeated second key, and
+     * that first key must be given back too.
+     */
+    private void releaseDeduplicationClaimsIfNothingWasDelivered(ProcessingContext<?> context) {
+        boolean failedRequest = context.getRequests().stream().anyMatch(DynamicMapperRequest::hasError);
+        if (context.hasError() || failedRequest || context.isIgnoreFurtherProcessing()
+                || context.wasCancelledOrInterrupted()) {
+            context.releaseDeduplicationClaims();
+        }
+    }
+
+    /**
      * Books the leg's outcome on the mapping's status, so the statistics can tell "processed"
      * from "filtered" from "failed" instead of only counting what arrived. An error wins over
      * the ignore flag: a leg that fails and then stops is a failure, not a filtered message.
      * Test runs are skipped — they must never change a mapping's runtime status.
      */
     private void recordOutcome(ProcessingContext<?> context) {
+        releaseDeduplicationClaimsIfNothingWasDelivered(context);
         if (!context.affectsMappingStatus() || context.getMapping() == null || context.getTenant() == null) {
             return;
         }
@@ -87,12 +103,6 @@ public class ConsolidationProcessor extends CommonProcessor {
         long durationMs = (System.nanoTime() - context.getStartedAtNanos()) / 1_000_000L;
         List<DynamicMapperRequest> requests = context.getRequests();
         int failedRequests = (int) requests.stream().filter(DynamicMapperRequest::hasError).count();
-        // A message that failed, or ended without delivering anything for a reason other than being a repeat,
-        // gives its keys back, so the broker's retry is processed instead of dropped as a repeat.
-        if (context.hasError() || failedRequests > 0
-                || (context.isIgnoreFurtherProcessing() && !context.isDroppedAsDuplicate())) {
-            context.releaseDeduplicationClaims();
-        }
         status.recordWork(durationMs, requests.size(), failedRequests, context.getWarnings().size());
         if (context.hasError()) {
             List<Exception> errors = context.getErrors();

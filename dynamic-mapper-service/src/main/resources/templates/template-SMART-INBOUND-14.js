@@ -17,6 +17,11 @@
  * Send the sample payload twice within 60 seconds: the first message creates a measurement, the second
  * returns no output and is counted as Repeated.
  *
+ * A repeat is only detected when the payload carries its own "time". The receive time differs on every
+ * message, so it cannot identify a repeat. A message without externalId or time has no safe key, so it is
+ * processed without a check. A message that fails after the check does not block its retry: the key is
+ * given back, so the retry is processed.
+ *
  * Keys live in memory only. They are lost on restart and are not shared between service instances. Dry Run
  * and Live Test never record a key, so testing does not change what production drops.
  *
@@ -32,10 +37,12 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
     var externalId = context.getClientId() || payload["externalId"];
-    var time = payload["time"] || msg.time;
+    var time = payload["time"];
 
     // The key says what makes two messages the same. A separator keeps "a" + "bc" apart from "ab" + "c".
-    if (context.isDuplicate(externalId + "|" + time, 60)) {
+    // Without both fields there is no safe key, so the message is processed without a check.
+    var key = externalId && time ? externalId + "|" + time : null;
+    if (key && context.isDuplicate(key, 60)) {
         console.log("Dropping repeated message from " + externalId + " at " + time);
         return [];
     }
@@ -44,7 +51,7 @@ function onMessage(msg, context) {
         cumulocityType: "measurement",
         action: "create",
         payload: {
-            "time": time,
+            "time": time || msg.time,
             "type": "c8y_TemperatureMeasurement",
             "c8y_Temperature": {
                 "T": {

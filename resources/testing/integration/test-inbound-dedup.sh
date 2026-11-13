@@ -224,7 +224,8 @@ JSCODE
 )
 SF_CODE=${SF_CODE//__WINDOW__/$WINDOW}
 SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
-SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
+# GNU base64 wraps its output at 76 characters; the backend's strict decoder rejects the line breaks
+SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64 | tr -d '\n')
 
 dm_step 9 "Creating the Smart Function mapping that calls context.isDuplicate ..."
 dm_create_mapping "$(jq -cn \
