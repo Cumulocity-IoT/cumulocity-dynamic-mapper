@@ -37,6 +37,15 @@ describe('execution filter translation', () => {
     expect(toFilterMapping({ mode: 'fragment', value: 'my-fragment' })).toBe('$exists(`my-fragment`)');
   });
 
+  it('backtick-quotes fragment names that JSONata reads as literals or operators', () => {
+    for (const name of ['true', 'false', 'null', 'and', 'or', 'in']) {
+      const expression = toFilterMapping({ mode: 'fragment', value: name });
+      expect(expression).toBe('$exists(`' + name + '`)');
+      expect(fromFilterMapping(expression)).toEqual({ mode: 'fragment', value: name });
+      expect(fromFilterMapping('$exists(' + name + ')')).toEqual({ mode: 'custom' });
+    }
+  });
+
   it('gives an empty expression for custom and for an empty value', () => {
     expect(toFilterMapping({ mode: 'custom' })).toBe('');
     expect(toFilterMapping({ mode: 'type', value: '  ' })).toBe('');

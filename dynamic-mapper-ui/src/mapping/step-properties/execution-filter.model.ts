@@ -31,8 +31,11 @@ export interface ExecutionFilterChoice {
   value?: string;
 }
 
-// A fragment name that is a plain JSONata identifier needs no quoting.
+// A fragment name that is a plain JSONata identifier needs no quoting, unless JSONata reads it as a
+// literal (`true`, `false`, `null`) or an operator (`and`, `or`, `in`). `$exists(true)` is always true.
 const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const RESERVED_NAMES = new Set(['true', 'false', 'null', 'and', 'or', 'in']);
+const isPlainName = (name: string): boolean => PLAIN_NAME.test(name) && !RESERVED_NAMES.has(name);
 const TYPE_EXPRESSION = /^type\s*=\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")$/;
 const EXISTS_EXPRESSION = /^\$exists\(\s*(?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_]*))\s*\)$/;
 
@@ -43,7 +46,7 @@ export function toFilterMapping(choice: ExecutionFilterChoice): string {
   if (choice.mode === 'type') {
     return `type = '${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
   }
-  return `$exists(${PLAIN_NAME.test(value) ? value : '`' + value.replace(/`/g, '') + '`'})`;
+  return `$exists(${isPlainName(value) ? value : '`' + value.replace(/`/g, '') + '`'})`;
 }
 
 /**
@@ -59,6 +62,11 @@ export function fromFilterMapping(expression: string | undefined | null): Execut
     return { mode: 'type', value: raw.replace(/\\(.)/g, '$1') };
   }
   const fragment = EXISTS_EXPRESSION.exec(expr);
-  if (fragment) return { mode: 'fragment', value: fragment[1] ?? fragment[2] };
+  if (fragment) {
+    const name = fragment[1] ?? fragment[2];
+    // An unquoted reserved word is a literal, not a field name, so it stays a custom expression.
+    if (fragment[2] !== undefined && RESERVED_NAMES.has(name)) return { mode: 'custom' };
+    return { mode: 'fragment', value: name };
+  }
   return { mode: 'custom' };
 }
