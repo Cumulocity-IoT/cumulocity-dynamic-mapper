@@ -48,7 +48,7 @@ const MARKDOWN_PAGES = [
   'how-to-pulsar-kafka-mqtt', 'define-mapping',
   'define-subscription-for-outbound', 'transformation-types',
   'jsonata', 'smartfunction', 'javaextension', 'custom-routing',
-  'message-explorer', 'monitoring', 'troubleshooting',
+  'message-explorer', 'message-deduplication', 'monitoring', 'troubleshooting',
   // Reference
   'payload-types', 'sparkplugb', 'flow-state', 'metadata',
   'reliability-settings', 'versioning', 'service-configuration',

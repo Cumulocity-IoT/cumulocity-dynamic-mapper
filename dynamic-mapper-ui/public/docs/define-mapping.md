@@ -173,58 +173,17 @@ Filter](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#in
 
 ##### Dropping repeated messages {#drop-repeated-messages}
 
-Brokers and gateways sometimes deliver a message twice, for example after a reconnect or an MQTT QoS 1 retry. For
-**inbound** mappings, the function `$isDuplicate(key, windowSeconds)` in the execution filter drops the repeat.
-It returns `true` if the same key was seen for this mapping less than `windowSeconds` ago, so you negate it. Use this
-function for JSONata and Java extension mappings. For Smart Function mappings, use
-[`context.isDuplicate`](/c8y-pkg-dynamic-mapper/introduction/smartfunction) in the script instead, so the rule stays
-next to the logic:
+Brokers and gateways sometimes deliver a message twice. For **inbound** mappings, the function
+`$isDuplicate(key, windowSeconds)` in the execution filter drops the repeat. It returns `true` if the same key was seen
+for this mapping less than `windowSeconds` ago, so you negate it:
 
 ```javascript
-// Drop a second message from the same device with the same timestamp, for 60 seconds
 $exists(deviceId) and $exists(time) and $not($isDuplicate(deviceId & "|" & time, 60))
-
-// Combine it with another condition
-telemetry.telemetryReadings[0].value > 10.00 and $not($isDuplicate(deviceId & "|" & time, 60))
-
-// Drop exact repeats of the whole payload
-$not($isDuplicate($string($), 60))
 ```
 
-- **Key:** any JSONata expression. Text is used as it is. A whole number has no decimal point, so `5.0` and `5` are
-  the same key. An object is converted to JSON text with its members sorted by name, so two messages that list the
-  members in another order still match. Join several fields with a separator such as `"|"`, so that `a` and `bc` differ from `ab`
-  and `c`. The key is kept per mapping, so you do not add the mapping or the tenant.
-- **Missing fields:** the `&` operator turns a missing field into empty text, so without `time` the key above is
-  `d1|`, and every message of that device without `time` counts as a repeat of the first one. Check the fields with
-  `$exists(...)` before the call, as in the first example.
-- **Order of conditions:** a key is recorded when `$isDuplicate` runs. If another condition then rejects the message,
-  the service gives the key back, so the order of the conditions does not change what is dropped. Putting
-  `$isDuplicate` last, as in `value > 10 and $not($isDuplicate(...))`, still saves the lookup for rejected messages.
-- **Window:** a whole number of seconds from 1 to 3600. Other values, such as 7200 or 0.5, are not shortened: the
-  message is processed without a check and the service logs a warning. The window starts at the first message and does not restart when a
-  repeat arrives.
-- **Topic:** the topic is not part of the key. For mappings that are not Smart Functions and have a JSON object
-  payload, the key can use `_TOPIC_LEVEL_`, for example `_TOPIC_LEVEL_[2] & "|" & time`.
-- **Memory only:** the service keeps keys in memory. They are lost on restart and are not shared between service
-  instances. A mapping keeps at most 100,000 keys. When that limit is reached, new messages are processed without a
-  check.
-- **Missing key or invalid window:** the message is processed and the service logs a warning.
-- **Editing a mapping:** changing the execution filter, the Smart Function code, or the transformation type removes
-  the mapping's recorded keys, because the keys then have a new meaning. A repeat that arrives right after such a save
-  is processed. Other saves, such as a new name or activating the mapping, keep the keys. Deleting the mapping removes
-  them too.
-- **Failed messages:** a key is recorded when the filter runs. If the message then fails, for example because
-  Cumulocity rejects a request, or ends without creating anything, the service gives the key back, so the broker's
-  retry is processed. A copy that arrived while the first was still being processed is already dropped and is not
-  processed again.
-- **Tests:** Dry Run and Live Test do not record keys.
-- **Outbound mappings:** the function is ignored with a warning and always returns `false`.
-- **Editor:** the **Filter Result** field always shows `false` for `$isDuplicate`, because the editor has no message
-  history.
-
-The function detects exact repeats within a short window of up to 60 minutes. It does not detect near duplicates,
-such as the same timestamp with a changed value.
+For Smart Function mappings, use `context.isDuplicate` in the script instead. The key, the window from 1 to 3600
+seconds, the behavior for failed messages, and the memory limits are described in
+[Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
 
 ### Managing mappings {#managing-mappings}
 

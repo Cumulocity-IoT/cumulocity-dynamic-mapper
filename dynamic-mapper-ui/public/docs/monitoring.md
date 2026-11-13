@@ -24,7 +24,7 @@ This view shows one row per mapping in a data grid, plus a catch-all row **Unmap
 | **Received** | Messages that reached this mapping. Counted per mapping: one message matching three mappings counts three times. |
 | **Processed** | Messages that completed without an error and were not dropped. |
 | **Filtered** | Messages that matched the topic but were dropped on purpose. The mapping filter or the inventory filter did not match, or a Smart Function or extension chose to ignore the message. This is not an error. |
-| **Repeated** | Messages the mapping dropped because the `$isDuplicate` filter function reported a repeat. They are a part of **Filtered**, not an addition to it, so the sum below is unchanged. See [Dropping repeated messages](/c8y-pkg-dynamic-mapper/introduction/define-mapping#drop-repeated-messages). |
+| **Repeated** | Messages the mapping dropped because `$isDuplicate` or `context.isDuplicate` reported a repeat. They are a part of **Filtered**, not an addition to it, so the sum below is unchanged. See [Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication). |
 | **Errors** | Messages that failed during transformation or submission. A non-zero value means at least one message was lost. See **Last error** and the [Service logs](#service-logs). |
 | **Last message** | When the mapping last finished processing a message (any outcome). Empty if none yet. |
 | **Last error** | Time and text of the most recent error, so you can triage without opening the service events. Empty if there was none. A long text shows on one line; select **More** to read all of it and **Less** to fold it again. |
