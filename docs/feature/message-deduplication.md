@@ -137,6 +137,26 @@ The key is a JSONata expression evaluated against the payload.
   as changed.
 - This is a separate store from `FlowStateStore`, for the atomicity reason in the comparison above.
 
+### Metrics
+
+The store registers four Micrometer meters per tenant the first time that tenant records a fingerprint, so a tenant
+that does not use de-duplication exports nothing. `removeTenant` removes them. The Grafana dashboards in
+`resources/grafana` show them in a "De-duplication" row.
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `dynmapper_deduplication_mappings` | Gauge | Mappings that hold fingerprints now |
+| `dynmapper_deduplication_entries` | Gauge | Fingerprints held, including expired ones the minute job has not removed yet |
+| `dynmapper_deduplication_memory_bytes` | Gauge | `entries x 150` bytes, the same estimate as the 150 MB sizing above |
+| `dynmapper_deduplication_dropped_total` | Counter | Messages dropped as repeats |
+
+- A mapping uses de-duplication when its filter calls `$isDuplicate` or its code calls `context.isDuplicate`. Nothing in
+  the mapping model records that, so the service counts mappings that hold fingerprints. A mapping with no traffic for
+  one window drops out, because the minute job removes its empty map.
+- The memory value is an estimate from the entry count, not a heap measurement.
+- Each service instance reports its own store. In Grafana, take the `max` over instances for the gauges and the `sum`
+  for the counter.
+
 ### Where the filter is evaluated
 
 | Place | Behavior |

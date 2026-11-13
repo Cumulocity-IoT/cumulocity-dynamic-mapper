@@ -137,6 +137,8 @@ after the rename pass, regardless of its exact suffix. A correctly renamed colum
 - **Activity by Tenant** — horizontal bar gauges of inbound/outbound msgs/sec per tenant; the
   same numbers as the table's two rate columns, shown as a quick visual comparison across
   tenants.
+- **De-duplication** — bar gauges per tenant: mappings using de-duplication, estimated memory,
+  and repeats dropped/sec. See "De-duplication metrics" below.
 
 `dynmapper_build_info`, added specifically to answer "what version is running", is the standard
 Prometheus "info" pattern: a gauge always `1`, with the real value in the `version` tag, since
@@ -164,6 +166,10 @@ anything.**
 | `dynmapper_connector_status` | Gauge | tenant, connectorName, connectorType | `ConnectionStateManager` |
 | `dynmapper_build_info` | Gauge (always 1) | version | `App` |
 | `dynmapper_mapping_count` | Gauge | tenant, direction, transformationType | `MappingCacheManager` |
+| `dynmapper_deduplication_mappings` | Gauge | tenant | `MessageDeduplicationService` |
+| `dynmapper_deduplication_entries` | Gauge | tenant | `MessageDeduplicationService` |
+| `dynmapper_deduplication_memory_bytes` | Gauge | tenant | `MessageDeduplicationService` |
+| `dynmapper_deduplication_dropped_total` | Counter | tenant | `MessageDeduplicationService` |
 
 `dynmapper_inbound_processing_errors_total` / `dynmapper_outbound_processing_errors_total` and
 `dynmapper_connector_status` were added to close the gap in detecting errors: previously a failed
@@ -178,3 +184,21 @@ Grafana could alert on.
   FAILED=7, RETRYING=8`), since Micrometer gauges are numeric. The dashboard's "Connector Status
   Over Time" panel maps these back to names/colors via Grafana value mappings. Treat the ordinal
   itself as an opaque code, not a severity scale (e.g. 7 > 4 does not mean "worse").
+
+## De-duplication metrics
+
+Both dashboards have a **De-duplication** row (the main dashboard filters it by the Tenant
+selector). The meters exist only for tenants whose mappings call `$isDuplicate` or
+`context.isDuplicate`, and only after the first message was checked, so a tenant without the
+feature shows `0` or no series.
+
+- **Mappings using de-duplication** counts mappings that hold fingerprints now. The mapping model
+  has no de-duplication flag, so a mapping with no traffic for one window drops out of the count.
+- **Memory** is `fingerprints x 150 bytes`, an estimate and not a heap measurement. The service
+  caps all tenants together at 1,000,000 fingerprints (about 150 MB), so the sum over tenants
+  stays below that.
+- Every replica holds its own store, so the gauges use `max by (tenant)` and the drop counter
+  uses `sum`. Summing the memory gauge over replicas would also be valid for total cluster
+  memory; the dashboards show the largest replica because that is the one nearest an
+  out-of-memory error.
+- **Needs a redeploy** before the series appear.

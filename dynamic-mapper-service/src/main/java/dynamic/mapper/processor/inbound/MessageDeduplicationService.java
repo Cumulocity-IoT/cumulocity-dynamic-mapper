@@ -25,8 +25,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Metrics;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -91,6 +95,78 @@ public class MessageDeduplicationService {
     private final int maxEntriesTotal;
 
     private final Clock clock;
+
+    /**
+     * Estimated heap per fingerprint: the 32-character key string (about 72 bytes), the {@link Entry} (32), the map
+     * node (32), and the share of the table (about 11). It matches the "about 150 MB for
+     * {@link #MAX_ENTRIES_TOTAL}" sizing above. An estimate, not a measurement.
+     */
+    public static final int ESTIMATED_BYTES_PER_ENTRY = 150;
+
+    // <tenant, meters of that tenant>; removed with the tenant so a removed tenant leaves no meter behind
+    private final ConcurrentHashMap<String, List<io.micrometer.core.instrument.Meter>> meters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Counter> droppedCounters = new ConcurrentHashMap<>();
+
+    /**
+     * Registers the per-tenant meters when the tenant first uses de-duplication, so a tenant without it exports
+     * nothing. {@code this} is a Spring singleton and is the gauges' state object.
+     * <ul>
+     * <li>{@code dynmapper_deduplication_mappings}: mappings that hold fingerprints now (a mapping with no traffic for
+     * one window drops out, because the cleanup job removes its empty store)</li>
+     * <li>{@code dynmapper_deduplication_entries}: fingerprints held, including expired ones not yet removed</li>
+     * <li>{@code dynmapper_deduplication_memory_bytes}: entries times {@link #ESTIMATED_BYTES_PER_ENTRY}</li>
+     * <li>{@code dynmapper_deduplication_dropped_total}: messages dropped as repeats</li>
+     * </ul>
+     */
+    private void registerMeters(String tenant) {
+        meters.computeIfAbsent(tenant, t -> {
+            Counter dropped = Counter.builder("dynmapper_deduplication_dropped_total")
+                    .tag("tenant", t)
+                    .description("Messages dropped as repeats by de-duplication")
+                    .register(Metrics.globalRegistry);
+            droppedCounters.put(t, dropped);
+            return List.of(
+                    Gauge.builder("dynmapper_deduplication_mappings", this, s -> s.mappingCount(t))
+                            .tag("tenant", t)
+                            .description("Mappings currently holding de-duplication fingerprints")
+                            .register(Metrics.globalRegistry),
+                    Gauge.builder("dynmapper_deduplication_entries", this, s -> s.entryCount(t))
+                            .tag("tenant", t)
+                            .description("Fingerprints currently held for de-duplication")
+                            .register(Metrics.globalRegistry),
+                    Gauge.builder("dynmapper_deduplication_memory_bytes", this,
+                            s -> (double) s.entryCount(t) * ESTIMATED_BYTES_PER_ENTRY)
+                            .tag("tenant", t)
+                            .baseUnit("bytes")
+                            .description("Estimated heap used by the de-duplication state of the tenant")
+                            .register(Metrics.globalRegistry),
+                    dropped);
+        });
+    }
+
+    private void removeMeters(String tenant) {
+        droppedCounters.remove(tenant);
+        var removed = meters.remove(tenant);
+        if (removed != null) {
+            removed.forEach(Metrics.globalRegistry::remove);
+        }
+    }
+
+    private int mappingCount(String tenant) {
+        var perTenant = store.get(tenant);
+        return perTenant == null ? 0 : perTenant.size();
+    }
+
+    private long entryCount(String tenant) {
+        var perTenant = store.get(tenant);
+        long total = 0;
+        if (perTenant != null) {
+            for (Entries holder : perTenant.values()) {
+                total += holder.map.size();
+            }
+        }
+        return total;
+    }
 
     public MessageDeduplicationService() {
         this(Clock.systemUTC(), MAX_ENTRIES_TOTAL);
@@ -165,7 +241,10 @@ public class MessageDeduplicationService {
         int window = windowSeconds;
         long now = clock.millis();
         while (true) {
-            var perTenant = store.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+            var perTenant = store.computeIfAbsent(tenant, k -> {
+                registerMeters(tenant);
+                return new ConcurrentHashMap<>();
+            });
             Entries holder = perTenant.computeIfAbsent(mappingIdentifier, k -> new Entries());
             Result result = check(tenant, mappingIdentifier, holder, fingerprint, window, now);
             // The cleanup job can remove an empty mapping map, and a mapping save or delete clears it, between
@@ -213,6 +292,12 @@ public class MessageDeduplicationService {
         });
         if (added[0]) {
             approximateTotal.incrementAndGet();
+        }
+        if (duplicate[0]) {
+            Counter dropped = droppedCounters.get(tenant);
+            if (dropped != null) {
+                dropped.increment();
+            }
         }
         return duplicate[0] ? new Result(true, null)
                 : new Result(false, new Claim(tenant, mappingIdentifier, fingerprint, recorded[0]));
@@ -299,6 +384,7 @@ public class MessageDeduplicationService {
     }
 
     public void removeTenant(String tenant) {
+        removeMeters(tenant);
         var removed = store.remove(tenant);
         if (removed != null) {
             long size = 0;

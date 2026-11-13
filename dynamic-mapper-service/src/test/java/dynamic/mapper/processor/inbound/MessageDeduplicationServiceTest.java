@@ -15,7 +15,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class MessageDeduplicationServiceTest {
 
@@ -45,6 +50,19 @@ class MessageDeduplicationServiceTest {
 
     private final MovingClock clock = new MovingClock();
     private final MessageDeduplicationService service = new MessageDeduplicationService(clock);
+
+    // the global registry has no backend in a unit test, so its meters would be no-ops
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+
+    @BeforeEach
+    void addRegistry() {
+        Metrics.addRegistry(registry);
+    }
+
+    @AfterEach
+    void removeRegistry() {
+        Metrics.removeRegistry(registry);
+    }
 
     @Test
     void secondCopyInsideTheWindowIsADuplicate() {
@@ -351,5 +369,47 @@ class MessageDeduplicationServiceTest {
         service.isDuplicate("t", "m", "fp", 60);
         service.removeTenant("t");
         assertEquals(0, service.size("t", "m"));
+    }
+
+    private static double metric(String name, String tenant) {
+        var meter = Metrics.globalRegistry.find(name).tag("tenant", tenant).meter();
+        if (meter == null) {
+            return Double.NaN;
+        }
+        return meter instanceof io.micrometer.core.instrument.Counter c ? c.count()
+                : ((io.micrometer.core.instrument.Gauge) meter).value();
+    }
+
+    @Test
+    void metricsReportMappingsEntriesMemoryAndDropsPerTenant() {
+        String tenant = "metricsTenant";
+        service.isDuplicate(tenant, "m1", "a", 60);
+        service.isDuplicate(tenant, "m1", "b", 60);
+        service.isDuplicate(tenant, "m2", "a", 60);
+        service.isDuplicate(tenant, "m2", "a", 60); // repeat
+        service.isDuplicate("otherTenant", "m1", "a", 60);
+
+        assertEquals(2, metric("dynmapper_deduplication_mappings", tenant));
+        assertEquals(3, metric("dynmapper_deduplication_entries", tenant));
+        assertEquals(3.0 * MessageDeduplicationService.ESTIMATED_BYTES_PER_ENTRY,
+                metric("dynmapper_deduplication_memory_bytes", tenant));
+        assertEquals(1, metric("dynmapper_deduplication_dropped_total", tenant));
+        assertEquals(1, metric("dynmapper_deduplication_mappings", "otherTenant"));
+
+        service.removeTenant(tenant);
+        service.removeTenant("otherTenant");
+    }
+
+    @Test
+    void metricsDropOutWhenAMappingGoesIdleAndWhenTheTenantIsRemoved() {
+        String tenant = "metricsIdleTenant";
+        service.isDuplicate(tenant, "m", "a", 10);
+        clock.advance(Duration.ofSeconds(11));
+        service.evictExpired(tenant);
+        assertEquals(0, metric("dynmapper_deduplication_mappings", tenant));
+        assertEquals(0, metric("dynmapper_deduplication_entries", tenant));
+
+        service.removeTenant(tenant);
+        assertTrue(Double.isNaN(metric("dynmapper_deduplication_entries", tenant)), "no meter for a removed tenant");
     }
 }
