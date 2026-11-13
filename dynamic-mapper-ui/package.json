@@ -78,7 +78,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "cumulocity-cypress": "^1.4.1",
-    "cypress": "14.5.4",
+    "cypress": "16.2.1",
     "dotenv": "^18.0.4",
     "eslint-plugin-cypress": "^6.4.1",
     "jasmine-core": "~6.3.0",
