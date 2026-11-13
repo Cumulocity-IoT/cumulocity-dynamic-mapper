@@ -109,6 +109,10 @@ The key is a JSONata expression evaluated against the payload.
   second per mapping, so a flood does not cost a scan per message. If it is still full, the message is processed and
   not recorded (fail open). A full mapping logs one warning per minute with the number of messages that passed
   unchecked since the previous warning.
+- All mappings of all tenants together hold at most 1,000,000 fingerprints (about 150 MB), so many de-duplicating
+  mappings cannot add up to an out-of-memory error. The total is approximate: it counts new keys and is recounted
+  from the real sizes at most once per second, which also drops expired keys. Past the limit a new key is processed
+  without a check and one warning per minute names the number of unchecked messages. Keys already stored still match.
 - If the cleanup job removes the mapping's map, or a mapping save clears it, while a message is being checked, the
   check looks the map up again and writes into the current one.
 - `check` returns a `Claim` for a message that was not a repeat. `ProcessingContext` keeps the claims, and

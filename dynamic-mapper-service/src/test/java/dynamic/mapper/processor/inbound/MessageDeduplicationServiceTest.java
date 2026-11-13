@@ -153,6 +153,55 @@ class MessageDeduplicationServiceTest {
     }
 
     @Test
+    void allMappingsTogetherStayUnderTheGlobalLimit() {
+        var limited = new MessageDeduplicationService(clock, 10);
+        for (int i = 0; i < 4; i++) {
+            limited.isDuplicate("t1", "m1", "a" + i, 60);
+            limited.isDuplicate("t1", "m2", "b" + i, 60);
+            limited.isDuplicate("t2", "m1", "c" + i, 60);
+        }
+        int held = limited.size("t1", "m1") + limited.size("t1", "m2") + limited.size("t2", "m1");
+        assertEquals(10, held, "12 keys sent, the limit holds 10");
+        assertFalse(limited.isDuplicate("t2", "m1", "c3", 60), "a refused key is processed, and is not recorded");
+        assertFalse(limited.isDuplicate("t2", "m1", "c3", 60));
+        assertTrue(limited.isDuplicate("t1", "m1", "a0", 60), "a recorded key still matches when the limit is reached");
+    }
+
+    @Test
+    void globalLimitFreesRoomWhenKeysExpireOrAMappingIsCleared() {
+        var limited = new MessageDeduplicationService(clock, 5);
+        for (int i = 0; i < 5; i++) {
+            limited.isDuplicate("t", "m1", "k" + i, 10);
+        }
+        assertFalse(limited.isDuplicate("t", "m2", "new", 60));
+        assertEquals(0, limited.size("t", "m2"), "full: not recorded");
+        clock.advance(Duration.ofSeconds(11)); // all expired; the recount runs at most once per second
+        assertFalse(limited.isDuplicate("t", "m2", "new", 60));
+        assertTrue(limited.isDuplicate("t", "m2", "new", 60), "room again, so it is recorded");
+        limited.clearMapping("t", "m2");
+        assertFalse(limited.isDuplicate("t", "m2", "again", 60));
+        assertTrue(limited.isDuplicate("t", "m2", "again", 60));
+    }
+
+    @Test
+    void globalLimitWarnsOncePerInterval() {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(MessageDeduplicationService.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            var limited = new MessageDeduplicationService(clock, 3);
+            for (int i = 0; i < 40; i++) {
+                limited.isDuplicate("t", "m" + (i % 4), "k" + i, 3600);
+            }
+            assertEquals(1, appender.list.size(), "one warning for the flood");
+            assertTrue(appender.list.get(0).getFormattedMessage().contains("all mappings together"));
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
     void concurrentCopiesOfOneMessageLetExactlyOnePass() throws Exception {
         int threads = 32;
         ExecutorService pool = Executors.newFixedThreadPool(threads);

@@ -48,6 +48,8 @@ public class MessageDeduplicationService {
     public static final int MIN_WINDOW_SECONDS = 1;
     public static final int MAX_WINDOW_SECONDS = 3600;
     public static final int MAX_ENTRIES_PER_MAPPING = 100_000;
+    /** All mappings of all tenants together, about 150 MB at most. Many mappings cannot add up to an OOM. */
+    public static final int MAX_ENTRIES_TOTAL = 1_000_000;
 
     /** A full mapping scans for expired keys at most this often, so a flood does not cost a scan per message. */
     static final long FULL_STORE_EVICTION_INTERVAL_MILLIS = 1_000;
@@ -67,15 +69,32 @@ public class MessageDeduplicationService {
     // <tenant, <mappingIdentifier, entries>>
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, Entries>> store = new ConcurrentHashMap<>();
 
+    /**
+     * Fingerprints in all mappings, approximately: counted up when a key is recorded and set to the real sum at
+     * most once per {@link #FULL_STORE_EVICTION_INTERVAL_MILLIS}. Removals (eviction, release, clear) are not
+     * counted one by one, so the recount corrects the drift.
+     */
+    private final java.util.concurrent.atomic.AtomicLong approximateTotal = new java.util.concurrent.atomic.AtomicLong();
+    private volatile long lastRecountMillis = Long.MIN_VALUE;
+    private volatile long lastTotalWarningMillis = Long.MIN_VALUE;
+    private final java.util.concurrent.atomic.LongAdder uncheckedSinceTotalWarning = new java.util.concurrent.atomic.LongAdder();
+    private final int maxEntriesTotal;
+
     private final Clock clock;
 
     public MessageDeduplicationService() {
-        this(Clock.systemUTC());
+        this(Clock.systemUTC(), MAX_ENTRIES_TOTAL);
     }
 
     // for tests, which need to move time
     MessageDeduplicationService(Clock clock) {
+        this(clock, MAX_ENTRIES_TOTAL);
+    }
+
+    // for tests, which need a small global limit
+    MessageDeduplicationService(Clock clock, int maxEntriesTotal) {
         this.clock = clock;
+        this.maxEntriesTotal = maxEntriesTotal;
     }
 
     /** True for a whole number of seconds from {@link #MIN_WINDOW_SECONDS} to {@link #MAX_WINDOW_SECONDS}. */
@@ -163,17 +182,57 @@ public class MessageDeduplicationService {
             }
         }
 
+        if (approximateTotal.get() >= maxEntriesTotal && !entries.containsKey(fingerprint)
+                && totalIsFull(now)) {
+            warnTotalFull(tenant, mappingIdentifier, now);
+            return Result.NOT_CHECKED;
+        }
+
         boolean[] duplicate = { false };
+        boolean[] added = { false };
         long newExpiry = now + window * 1000L;
         entries.compute(fingerprint, (key, expiry) -> {
             if (expiry != null && expiry > now) {
                 duplicate[0] = true;
                 return expiry; // keep the original expiry, the window does not slide
             }
+            added[0] = expiry == null;
             return newExpiry;
         });
+        if (added[0]) {
+            approximateTotal.incrementAndGet();
+        }
         return duplicate[0] ? new Result(true, null)
                 : new Result(false, new Claim(tenant, mappingIdentifier, fingerprint, newExpiry));
+    }
+
+    /** True if all mappings together hold the limit. Recounts first, at most once per interval. */
+    private boolean totalIsFull(long now) {
+        long last = lastRecountMillis;
+        if (last == Long.MIN_VALUE || now - last >= FULL_STORE_EVICTION_INTERVAL_MILLIS) {
+            lastRecountMillis = now;
+            long total = 0;
+            for (var perTenant : store.values()) {
+                for (Entries holder : perTenant.values()) {
+                    evictExpired(holder.map, now); // expired keys must not count against the limit
+                    total += holder.map.size();
+                }
+            }
+            approximateTotal.set(total);
+        }
+        return approximateTotal.get() >= maxEntriesTotal;
+    }
+
+    private void warnTotalFull(String tenant, String mappingIdentifier, long now) {
+        uncheckedSinceTotalWarning.increment();
+        long last = lastTotalWarningMillis;
+        if (last == Long.MIN_VALUE || now - last >= FULL_STORE_WARNING_INTERVAL_MILLIS) {
+            lastTotalWarningMillis = now;
+            log.warn("{} - Mapping {}: the de-duplication stores of all mappings together hold {} fingerprints, the limit. "
+                    + "{} message(s) were processed without a duplicate check since the last warning. "
+                    + "Use shorter windows or keys with fewer values.",
+                    tenant, mappingIdentifier, maxEntriesTotal, uncheckedSinceTotalWarning.sumThenReset());
+        }
     }
 
     private void warnStoreFull(String tenant, String mappingIdentifier, Entries holder, long now) {
@@ -220,12 +279,22 @@ public class MessageDeduplicationService {
     public void clearMapping(String tenant, String mappingIdentifier) {
         var perTenant = store.get(tenant);
         if (perTenant != null) {
-            perTenant.remove(mappingIdentifier);
+            var removed = perTenant.remove(mappingIdentifier);
+            if (removed != null) {
+                approximateTotal.addAndGet(-removed.map.size());
+            }
         }
     }
 
     public void removeTenant(String tenant) {
-        store.remove(tenant);
+        var removed = store.remove(tenant);
+        if (removed != null) {
+            long size = 0;
+            for (Entries holder : removed.values()) {
+                size += holder.map.size();
+            }
+            approximateTotal.addAndGet(-size);
+        }
     }
 
     /**
