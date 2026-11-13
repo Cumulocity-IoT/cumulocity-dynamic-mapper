@@ -123,5 +123,15 @@
     "file": "src/mapping/prompt/ai-prompt.component.ts",
     "kind": "newMessage",
     "reason": "Message sent to the AI agent, not shown as UI text"
+  },
+  {
+    "file": "src/mapping/step-properties/property-form-fields.ts",
+    "text": "type = 'c8y_Event' and $exists(c8y_Temperature)",
+    "reason": "Example JSONata expression, not prose."
+  },
+  {
+    "file": "src/mapping/step-transformation/mapping-substitution-step.component.ts",
+    "text": "c8y_Temperature.T.value",
+    "reason": "Example JSONata path, not prose."
   }
 ]
