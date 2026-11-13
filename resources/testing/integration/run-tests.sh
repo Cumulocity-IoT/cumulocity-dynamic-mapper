@@ -80,6 +80,7 @@ declare -a TESTS=(
     "inbound|test-inbound-mapping-versioning|Mapping versioning (draft, publish, activate, rollback)"
     "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
     "inbound|test-inbound-filter|filterMapping / filterInventory — inbound"
+    "inbound|test-inbound-dedup|Repeated message dropped (\$isDuplicate filter and context.isDuplicate); window, edit, counter"
     "inbound|test-inbound-malformed-payload|Malformed / wrong-shape payload dropped; mapping keeps processing"    "inbound|test-inbound-source-c8y-id|useExternalId=false: device addressed by internal id (_IDENTITY_.c8ySourceId)"
     "inbound|test-inbound-event-attachment|_CONTEXT_DATA_ attachment + deviceName/deviceType on inbound EVENT"
 

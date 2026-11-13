@@ -430,6 +430,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
 | `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
 | `test-inbound-filter` | `filterMapping` (payload) and `filterInventory` (target device) drop non-matching messages — checked via `messagesFiltered`, device creation and measurements |
+| `test-inbound-dedup` | A repeated message is dropped by `$isDuplicate` in the filter and by `context.isDuplicate` in a Smart Function — checked via the measurements in the tenant and `messagesDuplicate`; also the window end and what a rename and a filter change do to the recorded keys (takes about three minutes) |
 | `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
 | `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
 | `test-inbound-hex` | HEX → EVENT |

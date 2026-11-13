@@ -168,7 +168,12 @@ The key is a JSONata expression evaluated against the payload.
    longer changes what is dropped. The user guide recommends the filter for JSONata and Java mappings and
    `context.isDuplicate` for Smart Functions. The TypeScript mock uses the same key text as the runtime.
 
-## Open points
+Tests: unit tests per class, and `MessageDeduplicationIntegrationTest`, which runs the real `InboundMessageRouter`
+(deserialization, enrichment, filter, JSONata extraction, substitution, consolidation) with a real store and real
+mapping statuses. Only the send step is replaced, to count sends and to fail one. It covers a repeat, a different
+key, the `$exists` guard, the retry after a failed send, two mappings on one topic, test runs, and 32 concurrent
+copies.
+
 
 - The **Repeated** counter is not in the monitoring chart, which splits Processed, Filtered, and Errors.
 - Outbound support is out of scope (decided). The issue only describes inbound brokers.
