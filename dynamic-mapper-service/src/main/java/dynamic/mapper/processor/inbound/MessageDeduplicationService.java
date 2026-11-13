@@ -52,10 +52,16 @@ public class MessageDeduplicationService {
     /** A full mapping scans for expired keys at most this often, so a flood does not cost a scan per message. */
     static final long FULL_STORE_EVICTION_INTERVAL_MILLIS = 1_000;
 
+    /** A full mapping logs its warning at most this often, so a flood does not flood the log. */
+    static final long FULL_STORE_WARNING_INTERVAL_MILLIS = 60_000;
+
     /** The fingerprints of one mapping: fingerprint to expiry in epoch millis. */
     private static final class Entries {
         final ConcurrentHashMap<String, Long> map = new ConcurrentHashMap<>();
         volatile long lastFullEvictionMillis = Long.MIN_VALUE;
+        volatile long lastFullWarningMillis = Long.MIN_VALUE;
+        /** Messages passed unchecked because the mapping was full, since the last warning. */
+        final java.util.concurrent.atomic.LongAdder uncheckedSinceWarning = new java.util.concurrent.atomic.LongAdder();
     }
 
     // <tenant, <mappingIdentifier, entries>>
@@ -152,8 +158,7 @@ public class MessageDeduplicationService {
                 evictExpired(entries, now);
             }
             if (entries.size() >= MAX_ENTRIES_PER_MAPPING && !entries.containsKey(fingerprint)) {
-                log.warn("{} - Mapping {}: de-duplication store is full ({} fingerprints), message is processed without a check",
-                        tenant, mappingIdentifier, entries.size());
+                warnStoreFull(tenant, mappingIdentifier, holder, now);
                 return Result.NOT_CHECKED;
             }
         }
@@ -169,6 +174,17 @@ public class MessageDeduplicationService {
         });
         return duplicate[0] ? new Result(true, null)
                 : new Result(false, new Claim(tenant, mappingIdentifier, fingerprint, newExpiry));
+    }
+
+    private void warnStoreFull(String tenant, String mappingIdentifier, Entries holder, long now) {
+        holder.uncheckedSinceWarning.increment();
+        long last = holder.lastFullWarningMillis;
+        if (last == Long.MIN_VALUE || now - last >= FULL_STORE_WARNING_INTERVAL_MILLIS) {
+            holder.lastFullWarningMillis = now; // a rare double log from two racing threads is harmless
+            log.warn("{} - Mapping {}: de-duplication store is full ({} fingerprints). {} message(s) were processed "
+                    + "without a duplicate check since the last warning. Use a shorter window or a key with fewer values.",
+                    tenant, mappingIdentifier, holder.map.size(), holder.uncheckedSinceWarning.sumThenReset());
+        }
     }
 
     /** Number of fingerprints currently held for the mapping, including expired ones not yet removed. */

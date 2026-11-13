@@ -107,7 +107,8 @@ The key is a JSONata expression evaluated against the payload.
 - The window starts at the first copy and does not slide. A third copy after the window expires is processed.
 - Each mapping holds at most 100,000 fingerprints. When full, expired entries are removed first, at most once per
   second per mapping, so a flood does not cost a scan per message. If it is still full, the message is processed and
-  not recorded (fail open).
+  not recorded (fail open). A full mapping logs one warning per minute with the number of messages that passed
+  unchecked since the previous warning.
 - If the cleanup job removes the mapping's map, or a mapping save clears it, while a message is being checked, the
   check looks the map up again and writes into the current one.
 - `check` returns a `Claim` for a message that was not a repeat. `ProcessingContext` keeps the claims, and

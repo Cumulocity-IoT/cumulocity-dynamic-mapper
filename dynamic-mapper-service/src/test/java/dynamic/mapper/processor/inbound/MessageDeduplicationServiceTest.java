@@ -127,6 +127,32 @@ class MessageDeduplicationServiceTest {
     }
 
     @Test
+    void fullStoreWarnsOncePerIntervalAndCountsTheUncheckedMessages() {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(MessageDeduplicationService.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            for (int i = 0; i < MessageDeduplicationService.MAX_ENTRIES_PER_MAPPING; i++) {
+                service.isDuplicate("t", "m", "fp" + i, 3600);
+            }
+            for (int i = 0; i < 50; i++) {
+                service.isDuplicate("t", "m", "over" + i, 3600);
+            }
+            assertEquals(1, appender.list.size(), "one warning for the whole flood");
+            clock.advance(Duration.ofSeconds(61));
+            service.isDuplicate("t", "m", "over-later", 3600);
+            service.isDuplicate("t", "m", "over-later2", 3600);
+            assertEquals(2, appender.list.size(), "a new warning after the interval");
+            // 49 messages after the first warning, plus the one that triggered the second
+            assertTrue(appender.list.get(1).getFormattedMessage().contains("50 message(s)"),
+                    appender.list.get(1).getFormattedMessage());
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
     void concurrentCopiesOfOneMessageLetExactlyOnePass() throws Exception {
         int threads = 32;
         ExecutorService pool = Executors.newFixedThreadPool(threads);
