@@ -106,6 +106,9 @@ public class MessageDeduplicationService {
     // <tenant, meters of that tenant>; removed with the tenant so a removed tenant leaves no meter behind
     private final ConcurrentHashMap<String, List<io.micrometer.core.instrument.Meter>> meters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Counter> droppedCounters = new ConcurrentHashMap<>();
+    // messages that skipped the duplicate check because a store was full, by tenant and limit ("mapping" or "total")
+    private final ConcurrentHashMap<String, Counter> uncheckedMappingCounters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Counter> uncheckedTotalCounters = new ConcurrentHashMap<>();
 
     /**
      * Registers the per-tenant meters when the tenant first uses de-duplication, so a tenant without it exports
@@ -116,6 +119,8 @@ public class MessageDeduplicationService {
      * <li>{@code dynmapper_deduplication_entries}: fingerprints held, including expired ones not yet removed</li>
      * <li>{@code dynmapper_deduplication_memory_bytes}: entries times {@link #ESTIMATED_BYTES_PER_ENTRY}</li>
      * <li>{@code dynmapper_deduplication_dropped_total}: messages dropped as repeats</li>
+     * <li>{@code dynmapper_deduplication_unchecked_total}: messages processed without a duplicate check because a
+     * store was full; tag {@code limit} is {@code mapping} (100,000 per mapping) or {@code total} (all mappings)</li>
      * </ul>
      */
     private void registerMeters(String tenant) {
@@ -125,6 +130,10 @@ public class MessageDeduplicationService {
                     .description("Messages dropped as repeats by de-duplication")
                     .register(Metrics.globalRegistry);
             droppedCounters.put(t, dropped);
+            Counter uncheckedMapping = uncheckedCounter(t, "mapping");
+            Counter uncheckedTotal = uncheckedCounter(t, "total");
+            uncheckedMappingCounters.put(t, uncheckedMapping);
+            uncheckedTotalCounters.put(t, uncheckedTotal);
             return List.of(
                     Gauge.builder("dynmapper_deduplication_mappings", this, s -> s.mappingCount(t))
                             .tag("tenant", t)
@@ -140,12 +149,22 @@ public class MessageDeduplicationService {
                             .baseUnit("bytes")
                             .description("Estimated heap used by the de-duplication state of the tenant")
                             .register(Metrics.globalRegistry),
-                    dropped);
+                    dropped, uncheckedMapping, uncheckedTotal);
         });
+    }
+
+    private static Counter uncheckedCounter(String tenant, String limit) {
+        return Counter.builder("dynmapper_deduplication_unchecked_total")
+                .tag("tenant", tenant)
+                .tag("limit", limit)
+                .description("Messages processed without a duplicate check because a de-duplication store was full")
+                .register(Metrics.globalRegistry);
     }
 
     private void removeMeters(String tenant) {
         droppedCounters.remove(tenant);
+        uncheckedMappingCounters.remove(tenant);
+        uncheckedTotalCounters.remove(tenant);
         var removed = meters.remove(tenant);
         if (removed != null) {
             removed.forEach(Metrics.globalRegistry::remove);
@@ -322,6 +341,10 @@ public class MessageDeduplicationService {
 
     private void warnTotalFull(String tenant, String mappingIdentifier, long now) {
         uncheckedSinceTotalWarning.increment();
+        Counter unchecked = uncheckedTotalCounters.get(tenant);
+        if (unchecked != null) {
+            unchecked.increment();
+        }
         long last = lastTotalWarningMillis;
         if (last == Long.MIN_VALUE || now - last >= FULL_STORE_WARNING_INTERVAL_MILLIS) {
             lastTotalWarningMillis = now;
@@ -334,6 +357,10 @@ public class MessageDeduplicationService {
 
     private void warnStoreFull(String tenant, String mappingIdentifier, Entries holder, long now) {
         holder.uncheckedSinceWarning.increment();
+        Counter unchecked = uncheckedMappingCounters.get(tenant);
+        if (unchecked != null) {
+            unchecked.increment();
+        }
         long last = holder.lastFullWarningMillis;
         if (last == Long.MIN_VALUE || now - last >= FULL_STORE_WARNING_INTERVAL_MILLIS) {
             holder.lastFullWarningMillis = now; // a rare double log from two racing threads is harmless

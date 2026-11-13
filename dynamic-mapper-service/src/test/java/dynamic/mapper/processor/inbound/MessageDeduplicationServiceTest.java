@@ -412,4 +412,39 @@ class MessageDeduplicationServiceTest {
         service.removeTenant(tenant);
         assertTrue(Double.isNaN(metric("dynmapper_deduplication_entries", tenant)), "no meter for a removed tenant");
     }
+
+    private static double unchecked(String tenant, String limit) {
+        var c = Metrics.globalRegistry.find("dynmapper_deduplication_unchecked_total")
+                .tag("tenant", tenant).tag("limit", limit).counter();
+        return c == null ? Double.NaN : c.count();
+    }
+
+    @Test
+    void uncheckedCounterCountsMessagesSkippedBecauseTheTotalLimitIsFull() {
+        String tenant = "metricsFullTenant";
+        var limited = new MessageDeduplicationService(clock, 2);
+        limited.isDuplicate(tenant, "m", "a", 60);
+        limited.isDuplicate(tenant, "m", "b", 60);
+        assertEquals(0, unchecked(tenant, "total"));
+
+        limited.isDuplicate(tenant, "m", "c", 60);
+        limited.isDuplicate(tenant, "m", "d", 60);
+        assertEquals(2, unchecked(tenant, "total"));
+        assertEquals(0, unchecked(tenant, "mapping"));
+
+        limited.removeTenant(tenant);
+        assertTrue(Double.isNaN(unchecked(tenant, "total")), "no meter for a removed tenant");
+    }
+
+    @Test
+    void uncheckedCounterCountsMessagesSkippedBecauseTheMappingStoreIsFull() {
+        String tenant = "metricsFullMappingTenant";
+        for (int i = 0; i < MessageDeduplicationService.MAX_ENTRIES_PER_MAPPING; i++) {
+            service.isDuplicate(tenant, "m", "k" + i, 3600);
+        }
+        service.isDuplicate(tenant, "m", "overflow", 3600);
+        assertEquals(1, unchecked(tenant, "mapping"));
+        assertEquals(0, unchecked(tenant, "total"));
+        service.removeTenant(tenant);
+    }
 }

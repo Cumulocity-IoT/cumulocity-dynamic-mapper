@@ -138,7 +138,7 @@ after the rename pass, regardless of its exact suffix. A correctly renamed colum
   same numbers as the table's two rate columns, shown as a quick visual comparison across
   tenants.
 - **De-duplication** — bar gauges per tenant: mappings using de-duplication, estimated memory,
-  and repeats dropped/sec. See "De-duplication metrics" below.
+  repeats dropped/sec, and checks skipped when a store is full. See "De-duplication metrics" below.
 
 `dynmapper_build_info`, added specifically to answer "what version is running", is the standard
 Prometheus "info" pattern: a gauge always `1`, with the real value in the `version` tag, since
@@ -170,6 +170,7 @@ anything.**
 | `dynmapper_deduplication_entries` | Gauge | tenant | `MessageDeduplicationService` |
 | `dynmapper_deduplication_memory_bytes` | Gauge | tenant | `MessageDeduplicationService` |
 | `dynmapper_deduplication_dropped_total` | Counter | tenant | `MessageDeduplicationService` |
+| `dynmapper_deduplication_unchecked_total` | Counter | tenant, limit | `MessageDeduplicationService` |
 
 `dynmapper_inbound_processing_errors_total` / `dynmapper_outbound_processing_errors_total` and
 `dynmapper_connector_status` were added to close the gap in detecting errors: previously a failed
@@ -201,4 +202,7 @@ feature shows `0` or no series.
   uses `sum`. Summing the memory gauge over replicas would also be valid for total cluster
   memory; the dashboards show the largest replica because that is the one nearest an
   out-of-memory error.
+- **Checks skipped (store full)** counts messages processed without a duplicate check because a
+  store reached its limit (tag `limit`: `mapping` or `total`). It should stay at 0; any value
+  above 0 turns the panel red, because repeats pass through while it is above 0.
 - **Needs a redeploy** before the series appear.

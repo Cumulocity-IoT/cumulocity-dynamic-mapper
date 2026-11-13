@@ -139,7 +139,7 @@ The key is a JSONata expression evaluated against the payload.
 
 ### Metrics
 
-The store registers four Micrometer meters per tenant the first time that tenant records a fingerprint, so a tenant
+The store registers five Micrometer meters per tenant the first time that tenant records a fingerprint, so a tenant
 that does not use de-duplication exports nothing. `removeTenant` removes them. The Grafana dashboards in
 `resources/grafana` show them in a "De-duplication" row.
 
@@ -149,10 +149,12 @@ that does not use de-duplication exports nothing. `removeTenant` removes them. T
 | `dynmapper_deduplication_entries` | Gauge | Fingerprints held, including expired ones the minute job has not removed yet |
 | `dynmapper_deduplication_memory_bytes` | Gauge | `entries x 150` bytes, the same estimate as the 150 MB sizing above |
 | `dynmapper_deduplication_dropped_total` | Counter | Messages dropped as repeats |
+| `dynmapper_deduplication_unchecked_total` | Counter | Messages processed without a duplicate check because a store was full. Tag `limit` is `mapping` (100,000 per mapping) or `total` (all mappings) |
 
 - A mapping uses de-duplication when its filter calls `$isDuplicate` or its code calls `context.isDuplicate`. Nothing in
   the mapping model records that, so the service counts mappings that hold fingerprints. A mapping with no traffic for
   one window drops out, because the minute job removes its empty map.
+- Alert on `rate(dynmapper_deduplication_unchecked_total[5m]) > 0`: those messages are not de-duplicated, so repeats pass through.
 - The memory value is an estimate from the entry count, not a heap measurement.
 - Each service instance reports its own store. In Grafana, take the `max` over instances for the gauges and the `sum`
   for the counter.
