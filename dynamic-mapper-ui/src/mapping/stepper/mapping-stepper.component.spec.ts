@@ -313,8 +313,8 @@ describe('MappingStepperComponent', () => {
       expect(component.templateForm).toBe(session.templateForm);
       expect(component.targetSystem).toBe('X-target');
       expect(component.sourceSystem).toBe('Y-source');
-      expect(component.schemaSource).toEqual({ a: 1 });
-      expect(component.schemaTarget).toEqual({ b: 2 });
+      expect(component.schemaSource as unknown).toEqual({ a: 1 });
+      expect(component.schemaTarget as unknown).toEqual({ b: 2 });
       expect(component.codeEditorHelp).toBe('H');
       expect(component.codeEditorLabel).toBe('L');
       expect(component.feature).toBe(session.feature);
@@ -445,7 +445,7 @@ describe('MappingStepperComponent', () => {
       expect(mockStepperService.applyTargetAPIChange).toHaveBeenCalledWith(
         component.mapping, component.stepperConfiguration.direction, 'EVENT'
       );
-      expect(component.schemaTarget).toEqual({ fromService: true });
+      expect(component.schemaTarget as unknown).toEqual({ fromService: true });
     });
 
     it('applies the source schema returned by the service for OUTBOUND', async () => {
@@ -453,7 +453,7 @@ describe('MappingStepperComponent', () => {
 
       await component.onTargetAPIChanged('EVENT');
 
-      expect(component.schemaSource).toEqual({ fromService: true });
+      expect(component.schemaSource as unknown).toEqual({ fromService: true });
     });
   });
 
@@ -470,6 +470,40 @@ describe('MappingStepperComponent', () => {
         component.stepperConfiguration,
         true // STEP_SELECT_TEMPLATES < STEP_DEFINE_SUBSTITUTIONS
       );
+    });
+
+    describe('outbound mappings (extra Subscription step)', () => {
+      beforeEach(() => {
+        component.stepperConfiguration = { ...component.stepperConfiguration, direction: Direction.OUTBOUND };
+      });
+
+      it('numbers the steps with the Subscription step before the templates', () => {
+        expect(component.layout.subscription).toBe(2);
+        expect(component.layout.templates).toBe(3);
+        expect(component.STEP_DEFINE_SUBSTITUTIONS).toBe(4);
+      });
+
+      it('expands templates when entering the templates step, which is now step 3', async () => {
+        component.stepperForward = true;
+        await component.onStepChange({ selectedIndex: 3 });
+        expect(mockStepperService.expandTemplates).toHaveBeenCalled();
+      });
+
+      it('does nothing on entering the Subscription step: it needs no templates yet', async () => {
+        await component.onStepChange({ selectedIndex: 2 });
+        expect(component.currentStepIndex).toBe(2);
+        expect(mockStepperService.expandTemplates).not.toHaveBeenCalled();
+      });
+
+      it('hands the step selection over with the editor state', (done) => {
+        const selection = { ...component.subscriptionSelection, mode: 'dynamic' as const, types: ['c8y_X'] };
+        component.onSubscriptionSelectionChange(selection);
+        component.commit.subscribe((state: CommitEditorState) => {
+          expect(state.subscriptionSelection).toBe(selection);
+          done();
+        });
+        component.onCommitButton();
+      });
     });
 
     it('loads extensions when entering the general-settings step', async () => {
@@ -533,12 +567,16 @@ describe('MappingStepperComponent', () => {
       component.mappingCode = 'code';
 
       component.commit.subscribe((state: CommitEditorState) => {
-        expect(state).toEqual({
+        // Compared as unknown: matching the recursive JsonValue templates exceeds the compiler's depth limit.
+        expect(state as unknown).toEqual({
           mapping: component.mapping,
           stepperConfiguration: component.stepperConfiguration,
           sourceTemplate: { a: 1 },
           targetTemplate: { b: 2 },
-          mappingCode: 'code'
+          mappingCode: 'code',
+          // The step's selection travels with the state; untouched, it says "write nothing".
+          subscriptionSelection: component.subscriptionSelection,
+          deploymentMapEntry: component.deploymentMapEntry
         });
         done();
       });
@@ -551,7 +589,8 @@ describe('MappingStepperComponent', () => {
 
       component.onCommitButton();
 
-      expect(mockCommitService.encodeMappingForCommit).not.toHaveBeenCalled();
+      // Typed as a plain spy: matching the recursive JsonValue parameters exceeds the compiler's depth limit.
+      expect(mockCommitService.encodeMappingForCommit as unknown as jasmine.Spy).not.toHaveBeenCalled();
       expect(mockCommitService.commitMapping).not.toHaveBeenCalled();
     });
   });

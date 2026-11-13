@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, OnInit, ViewChild, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ActionControl,
@@ -30,6 +30,7 @@ import {
   DisplayOptions,
   LoadMoreMode,
   Pagination,
+  ServerSideDataCallback,
   ServerSideDataResult
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../testing-device.service';
@@ -44,6 +45,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-mapping-testing-grid',
   templateUrl: 'testing.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('test-device')],
   imports: [CoreModule]
@@ -56,7 +58,7 @@ export class TestingComponent implements OnInit {
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
     // refreshData$ lives on a root service: without this, every grid ever created keeps reloading.
     this.service.refreshData$.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.deviceGrid?.reload();
+      this.deviceGrid()?.reload();
     });
     this.columns = this.getColumns();
     this.pagination = this.service.getPagination();
@@ -116,9 +118,10 @@ export class TestingComponent implements OnInit {
       this.bulkActionControls = this.service.getBulkActionControls();
     }
   }
-  @ViewChild(DataGridComponent, { static: false })
-  deviceGrid: DataGridComponent;
-  feature: Feature;
+  readonly deviceGrid = viewChild(DataGridComponent);
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
 
   loadMoreItemsLabel: string = 'Load more managed objects';
   loadingItemsLabel: string = 'Loading managed objects…';
@@ -134,12 +137,16 @@ export class TestingComponent implements OnInit {
   columns: Column[];
   pagination: Pagination;
   infiniteScroll: LoadMoreMode = 'auto';
-  serverSideDataCallback: any;
+  serverSideDataCallback!: ServerSideDataCallback;
   selectable: boolean = true;
-  actionControls: ActionControl[] = [];
-  bulkActionControls: BulkActionControl[];
+  private readonly actionControlsState = signal<ActionControl[]>([]);
+  get actionControls(): ActionControl[] { return this.actionControlsState(); }
+  set actionControls(value: ActionControl[]) { this.actionControlsState.set(value); }
+  private readonly bulkActionControlsState = signal<BulkActionControl[]>([]);
+  get bulkActionControls(): BulkActionControl[] { return this.bulkActionControlsState(); }
+  set bulkActionControls(value: BulkActionControl[]) { this.bulkActionControlsState.set(value); }
 
-  refresh: EventEmitter<any> = new EventEmitter<any>();
+  refresh = new EventEmitter<void>();
 
 
   /**

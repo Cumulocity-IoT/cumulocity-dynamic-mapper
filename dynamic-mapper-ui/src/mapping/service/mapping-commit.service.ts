@@ -18,12 +18,14 @@
  * @authors Christof Strack
  */
 import { TranslateService } from '@ngx-translate/core';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSubstitutionsAsCode, Mapping, StepperConfiguration } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSubstitutionsAsCode, JsonValue, Mapping, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionSelectionService } from '../core/subscription-selection.service';
+import { hasPendingSubscriptionChanges, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
 import { MappingPersistence } from '../../shared/mapping/stepper.model';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { isConnectorSelectionEmpty, stringToBase64, hasMappingContentChanged, MappingContentSnapshot, reduceSourceTemplate, stripTemplateMetadataTags } from '../../shared/mapping/util';
@@ -39,6 +41,8 @@ export class MappingCommitService {
     private readonly mappingService = inject(MappingService);
     private readonly alertService = inject(AlertService);
     private readonly translateService = inject(TranslateService);
+    // Resolved on use: most saves carry no subscription change and need none of its dependencies.
+    private readonly injector = inject(Injector);
 
     /**
      * The single commit path for both editors.
@@ -168,7 +172,21 @@ export class MappingCommitService {
 
         this.mappingService.refreshMappings(stepperConfiguration.direction);
 
-        return { status: 'saved', contentChanged, deploymentChanged, deploymentFailed, persisted };
+        // After the mapping and its deployment, so a rejected mapping never leaves a subscription
+        // behind. Subscriptions are tenant-wide: a failure here does not undo the saved mapping.
+        let subscriptionFailed = false;
+        const selection = request.subscriptionSelection;
+        if (mappingPersisted && deploymentFailed && stepperConfiguration.direction === Direction.OUTBOUND
+            && selection && hasPendingSubscriptionChanges(selection)) {
+            this.alertService.warning(gettext('The subscriptions were not updated because the mapping could not be deployed. Save again to retry.'));
+        }
+        if (mappingPersisted && !deploymentFailed && stepperConfiguration.direction === Direction.OUTBOUND
+            && selection && hasPendingSubscriptionChanges(selection)) {
+            const outcome = await this.injector.get(SubscriptionSelectionService).apply(selection);
+            subscriptionFailed = outcome.failed;
+        }
+
+        return { status: 'saved', contentChanged, deploymentChanged, deploymentFailed, ...(subscriptionFailed ? { subscriptionFailed } : {}), persisted };
     }
 
     /**
@@ -184,8 +202,8 @@ export class MappingCommitService {
 
     encodeMappingForCommit(
         mapping: Mapping,
-        sourceTemplate: any,
-        targetTemplate: any,
+        sourceTemplate: JsonValue,
+        targetTemplate: JsonValue,
         mappingCode: string | undefined,
         initialContentSnapshot: MappingContentSnapshot | undefined,
         allowTemplateExpansion: boolean,
@@ -198,8 +216,8 @@ export class MappingCommitService {
             : true; // CREATE / COPY always persist
 
         if (allowTemplateExpansion) {
-            mapping.sourceTemplate = reduceSourceTemplate(sourceTemplate, false);
-            mapping.targetTemplate = reduceSourceTemplate(targetTemplate, false);
+            mapping.sourceTemplate = reduceSourceTemplate(sourceTemplate as object, false);
+            mapping.targetTemplate = reduceSourceTemplate(targetTemplate as object, false);
         } else {
             mapping.sourceTemplate = JSON.stringify(sourceTemplate);
             mapping.targetTemplate = JSON.stringify(targetTemplate);
@@ -247,6 +265,9 @@ export type CommitResult =
         /** The connector assignment PUT failed (already alerted): the editor must not treat the
          *  selection as persisted, or the next Save would skip the retry. */
         deploymentFailed?: boolean;
+        /** The mapping is saved but writing the Subscription step's selection failed (already
+         *  alerted): an editor that stays open keeps the selection so Save can retry it. */
+        subscriptionFailed?: boolean;
         persisted: Mapping;
     };
 
@@ -256,10 +277,12 @@ export interface CommitMappingRequest {
     /** {@link snapshotConnectors} taken when the editor opened, to detect connector-only changes. */
     initialDeploymentConnectors: string;
     stepperConfiguration: StepperConfiguration;
-    sourceTemplate: any;
-    targetTemplate: any;
+    sourceTemplate: JsonValue;
+    targetTemplate: JsonValue;
     mappingCode: string | undefined;
     initialContentSnapshot?: MappingContentSnapshot;
+    /** Outbound only: what the Subscription step collected. Written after the mapping is saved. */
+    subscriptionSelection?: OutboundSubscriptionSelection;
     /**
      * The forms whose validity gates a commit. Omitted by the stepper, whose cdk-stepper already
      * enforces linear completion — passing none means those blockers cannot fire.
@@ -281,7 +304,7 @@ export interface CommitMappingRequest {
  */
 export type CommitEditorState = Pick<
     CommitMappingRequest,
-    'mapping' | 'stepperConfiguration' | 'sourceTemplate' | 'targetTemplate' | 'mappingCode'
+    'mapping' | 'stepperConfiguration' | 'sourceTemplate' | 'targetTemplate' | 'mappingCode' | 'subscriptionSelection' | 'deploymentMapEntry'
 >;
 
 /** The comparable form of a deployment's connector selection, so both editors detect a

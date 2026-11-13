@@ -52,7 +52,7 @@ export class NativeServiceLogsService implements ServiceLogsSource {
       let chosen: { appId: string; instances: string[] } | undefined;
       for (const app of apps.filter((a) => a.name === SERVICE_NAME)) {
         const mos: IManagedObject[] = (
-          await this.inventoryService.list({ type: `c8y_Application_${app.id}`, nocache: Date.now() } as any)
+          await this.inventoryService.list({ type: `c8y_Application_${app.id}`, nocache: Date.now() } as Record<string, unknown>)
         ).data;
         const instances = Object.keys(mos[0]?.['c8y_Status']?.instances ?? {});
         if (instances.length) {
@@ -103,7 +103,7 @@ export class NativeServiceLogsService implements ServiceLogsSource {
     if (request.dateFrom) params['dateFrom'] = request.dateFrom;
     if (request.dateTo) params['dateTo'] = request.dateTo;
     try {
-      const { data } = await this.applicationService.getInstanceLog(this.appId, instance, params as any);
+      const { data } = await this.applicationService.getInstanceLog(this.appId, instance, params);
       const body = data as unknown as { dateFrom: string; dateTo: string; logs: string; truncated: boolean };
       return {
         dateFrom: body.dateFrom ?? null,
@@ -117,7 +117,8 @@ export class NativeServiceLogsService implements ServiceLogsSource {
         omitted: 0
       };
     } catch (e) {
-      const status = (e as any)?.res?.status ?? (e as any)?.status;
+      const err = e as { res?: { status?: number }; status?: number } | undefined;
+      const status = err?.res?.status ?? err?.status;
       if (status === 403 || status === 404) {
         throw new LogsUnavailableError('The platform does not serve this tenant the log of the microservice', status);
       }

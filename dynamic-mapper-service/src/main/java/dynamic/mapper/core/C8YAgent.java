@@ -294,14 +294,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     measurementRepresentation.setDateTime(dateTime);
                     log.debug("{} - Creating Measurement {}", tenant, measurementRepresentation);
                     MeasurementRepresentation mrn = null;
+                    boolean acquired = false;
                     try {
                         c8ySemaphore.acquire();
+                        acquired = true;
                         mrn = measurementApi.create(measurementRepresentation);
                         measurementRepresentation.setId(mrn.getId());
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                         log.error("{} - Failed to acquire semaphore for creating Measurement", tenant, e);
                     } finally {
-                        c8ySemaphore.release();
+                        if (acquired) {
+                            c8ySemaphore.release();
+                        }
                     }
                 } catch (SDKException e) {
                     log.error("{} - Error creating Measurement", tenant, e);
@@ -323,13 +328,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 ar.setDateTime(alarmTime);
                 ar.setStatus("ACTIVE");
                 ar.setType(type);
+                boolean acquired = false;
                 try {
                     c8ySemaphore.acquire();
+                    acquired = true;
                     ar = this.alarmApi.create(ar);
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
                 } finally {
-                    c8ySemaphore.release();
+                    if (acquired) {
+                        c8ySemaphore.release();
+                    }
                 }
                 return ar;
             });
@@ -381,8 +391,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 );
                 er.setProperty("d11r_metadata", metadata);
 
+                boolean acquired = false;
                 try {
                     c8ySemaphore.acquire();
+                    acquired = true;
                     Future result = this.eventApi.createAsync(er);
                     // Non-blocking check so a failed event-creation call is at least logged
                     // instead of silently disappearing (the SDK's Future has no callback API).
@@ -398,9 +410,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         }
                     });
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
                 } finally {
-                    c8ySemaphore.release();
+                    if (acquired) {
+                        c8ySemaphore.release();
+                    }
                 }
             });
         });
@@ -671,19 +686,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 mor.setType(MAPPING_TEST_DEVICE_TYPE);
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
                 ExternalIdConflictException conflict;
+                boolean acquired = false;
                 try {
                     c8ySemaphore.acquire();
+                    acquired = true;
                     mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
                     return new TestDevice(mor.getId().getValue(), true);
                 } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
                     Thread.currentThread().interrupt();
+                    log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
                     return null;
                 } catch (ExternalIdConflictException e) {
                     conflict = e;
                 } finally {
-                    c8ySemaphore.release();
+                    if (acquired) {
+                        c8ySemaphore.release();
+                    }
                 }
                 // Semaphore released: the lookup acquires it again.
                 return new TestDevice(resolveExistingDevice(tenant, id, conflict).getId().getValue(), false);
@@ -733,8 +752,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             mor.setId(new GId(context.getSourceId()));
                         }
                         ExternalIdConflictException conflict = null;
+                        boolean acquired = false;
                         try {
                             c8ySemaphore.acquire();
+                            acquired = true;
                             mor = createWithExternalIdBinding(mor, identity, testing,
                                     Boolean.TRUE.equals(serviceConfiguration.getExternalIdBinding()));
                             // TODO Add/Update new managed object to IdentityCache
@@ -743,11 +764,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
                         } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
                         } catch (ExternalIdConflictException e) {
                             conflict = e;
                         } finally {
-                            c8ySemaphore.release();
+                            if (acquired) {
+                                c8ySemaphore.release();
+                            }
                         }
                         if (conflict != null) {
                             // Semaphore released: the lookup acquires it again.
@@ -756,13 +780,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     } else {
                         // Device exists - update needed
                         mor.setId(new GId(currentRequest.getSourceId()));
+                        boolean acquired = false;
                         try {
                             c8ySemaphore.acquire();
+                            acquired = true;
                             mor = inventoryApi.update(mor, testing);
                         } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                             log.error("{} - Failed to acquire semaphore for updating Device", tenant, e);
                         } finally {
-                            c8ySemaphore.release();
+                            if (acquired) {
+                                c8ySemaphore.release();
+                            }
                         }
                         if (serviceConfiguration.getLogPayload())
                             log.info("{} - Device updated: {}", tenant, mor);
@@ -822,19 +851,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
                 mor.setId(new GId(deviceId));
                 mor.set(fragmentValue, fragmentKey);
+                boolean acquired = false;
                 try {
                     c8ySemaphore.acquire();
+                    acquired = true;
                     inventoryApi.update(mor, false);
                     log.info("{} - Stored fragment '{}' on device {}", tenant, fragmentKey, deviceId);
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     log.error("{} - Failed to acquire semaphore for storing fragment '{}' on device {}",
                             tenant, fragmentKey, deviceId, e);
-                    Thread.currentThread().interrupt();
                 } catch (SDKException e) {
                     log.warn("{} - Failed to store fragment '{}' on device {}: {}",
                             tenant, fragmentKey, deviceId, e.getMessage());
                 } finally {
-                    c8ySemaphore.release();
+                    if (acquired) {
+                        c8ySemaphore.release();
+                    }
                 }
             });
         });

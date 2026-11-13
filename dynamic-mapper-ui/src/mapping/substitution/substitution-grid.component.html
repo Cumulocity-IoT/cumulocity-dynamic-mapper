@@ -19,119 +19,53 @@
 ~
 -->
 
-<div class="p-t-4">
-  <ng-template #columnsHelp>
-    <div [innerHtml]="columnsHelpText"></div>
-  </ng-template>
-  <!-- Reserves the same scrollbar-width gutter as .substitution-grid-body below, so this table's
-       columns (which never scroll) line up with the scrollable body table's columns regardless
-       of the browser/OS scrollbar width. -->
-  <div class="substitution-grid-head-scroll-spacer">
-    <table class="table table-condensed m-b-0">
-      <colgroup>
-        <col style="width: 2%">
-        <col style="width: 2%">
-        <col style="width: 31%">
-        <col style="width: 31%">
-        <col style="width: 12%">
-        <col style="width: 13%">
-        <col style="width: 9%">
-      </colgroup>
-      <thead class="substitution-grid-thead">
-        <tr>
-          <th class="bg-level-1"></th>
-          <th class="bg-level-1">#</th>
-          <th class="bg-level-1" translate>Source</th>
-          <th class="bg-level-1" translate>Target</th>
-          <th class="bg-level-1" translate>Expand as array</th>
-          <th class="bg-level-1" translate>Repair strategy</th>
-          <th class="bg-level-1 text-right">
-            <button type="button" class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate"
-              [popover]="columnsHelp" placement="top" triggers="focus" container="body"></button>
-          </th>
-        </tr>
-      </thead>
-    </table>
+<div class="d11r-sub-list p-t-4" role="listbox" [attr.aria-label]="'Substitutions' | translate">
+  @if (!mapping().substitutions?.length) {
+  <div class="d11r-sub-empty text-muted" data-cy="dm-substitution-empty">
+    <strong class="d-block" translate>No substitutions yet</strong>
+    <span translate>Select a node in the source template and a node in the target template, then add the substitution.</span>
   </div>
-
-  <div class="substitution-grid-body">
-    <table class="table table-condensed m-b-0">
-      <colgroup>
-        <col style="width: 2%">
-        <col style="width: 2%">
-        <col style="width: 31%">
-        <col style="width: 31%">
-        <col style="width: 12%">
-        <col style="width: 13%">
-        <col style="width: 9%">
-      </colgroup>
-      <tbody>
-        <!-- Track by index: a substitution has no id, and an edit replaces the row's object, so
-             tracking by object would rebuild the row (and drop focus) on every change. -->
-        @for (sub of mapping.substitutions; track $index; let i = $index) {
-          <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
-            [class.active]="settings.selectedSubstitutionIndex === i">
-            <td>
-              <label class="c8y-radio" [title]="'Checkbox' | translate">
-                <input type="radio" (click)="onSubstitutionSelect(i)"
-                  [attr.data-cy]="'dm-substitution-select-' + i"
-                  [checked]="settings.selectedSubstitutionIndex == i" />
-                <span></span>
-              </label>
-            </td>
-            <td>
-              {{ i + 1 }}
-            </td>
-            @if (!sub['registeredType']) {
-            <td class="text-12 substitution-path-cell" [title]="sub.pathSource">
-              {{ (definesDeviceIdentifier(mapping, sub) ? '* ' : '') + sub.pathSource }}
-            </td>
-            <td class="text-12 substitution-path-cell" [title]="sub.pathTarget">
-              {{ sub.pathTarget }}
-            </td>
-            } @else {
-            <td></td>
-            <td></td>
-            }
-            <td>
-              <label class="c8y-checkbox" title="{{ 'Expand as array' | translate }}">
-                <input type="checkbox" [attr.data-cy]="'dm-substitution-expand-array-' + i"
-                  [ngModel]="sub.expandArray" [disabled]="isExpandArrayDisabled()"
-                  (ngModelChange)="onExpandArrayChange(i, sub, $event)" />
-                <span></span>
-              </label>
-            </td>
-            <td>
-              <div class="c8y-select-wrapper substitution-repair-strategy-select">
-                <select class="form-control" [attr.data-cy]="'dm-substitution-repair-strategy-' + i"
-                  [title]="repairStrategyDescriptionFor(sub)"
-                  [disabled]="isRepairStrategyDisabled()" [ngModel]="sub.repairStrategy"
-                  (ngModelChange)="onRepairStrategyChange(i, $event)">
-                  @for (opt of repairStrategyOptionsFor(sub); track opt.value) {
-                  <option [value]="opt.value" [disabled]="opt.disabled" [title]="opt.description">{{ opt.label |
-                    formatStringAsWords }}</option>
-                  }
-                </select>
-              </div>
-            </td>
-            <td class="d-flex a-i-center j-c-end">
-              @if (settings.selectedSubstitutionIndex === i) {
-              <button title="{{ 'Cancel editing / new substitution' | translate }}" class="btn btn-icon btn-clean"
-                [attr.data-cy]="'dm-substitution-cancel-edit-' + i" (click)="cancelEdit.emit()">
-                <i c8yIcon="close"></i>
-                <span class="sr-only" translate>Cancel editing / new substitution</span>
-              </button>
-              }
-              <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
-                [attr.data-cy]="'dm-substitution-delete-' + i"
-                (click)="onSubstitutionDelete(i)" [disabled]="settings.readOnly">
-                <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
-                <span class="sr-only" translate>Remove</span>
-              </button>
-            </td>
-          </tr>
+  }
+  <!-- Track by index: a substitution has no id, and an edit replaces the row's object, so
+       tracking by object would rebuild the row (and drop focus) on every change. -->
+  @for (sub of mapping().substitutions; track $index; let i = $index) {
+  <div class="d11r-sub-row" role="option" tabindex="0" id="{{ 'sub-' + id + '-' + i }}"
+    [attr.aria-label]="rowLabel(sub, i, definesDeviceIdentifier(mapping(), sub))"
+    [attr.data-cy]="'dm-substitution-row-' + i" [attr.aria-selected]="settings().selectedSubstitutionIndex === i"
+    [class.active]="settings().selectedSubstitutionIndex === i" (click)="onSubstitutionSelect(i)"
+    (keydown.enter)="onRowEnter($event, i)" (keydown.arrowdown)="focusSibling($event, 1)"
+    (keydown.arrowup)="focusSibling($event, -1)">
+    <span class="d11r-sub-index text-muted text-12">{{ i + 1 }}</span>
+    <div class="d11r-sub-body">
+      @if (!sub['registeredType']) {
+      <div class="d11r-sub-source text-12" [title]="sub.pathSource">{{ sub.pathSource }}</div>
+      <div class="d11r-sub-target text-12 text-muted" [title]="sub.pathTarget">{{ sub.pathTarget }}</div>
+      }
+      <div class="d11r-sub-chips">
+        @if (definesDeviceIdentifier(mapping(), sub)) {
+        <span class="d11r-chip" [title]="substitutionTemplateHelp | translate" translate>Device identifier</span>
         }
-      </tbody>
-    </table>
+        @if (isExpression(sub.pathSource)) {
+        <span class="d11r-chip d11r-chip--expression" translate>JSONata expression</span>
+        }
+        @if (sub.expandArray) {
+        <span class="d11r-chip d11r-chip--info" [title]="expandArrayHelp | translate" translate>Expand as array</span>
+        }
+        @if (hasCustomRepairStrategy(sub)) {
+        <span class="d11r-chip" [title]="repairStrategyDescriptionFor(sub)">{{ repairStrategyLabel(sub) }}</span>
+        }
+      </div>
+    </div>
+    <div class="d-flex a-i-start">
+      <c8y-popover-confirm #poDelete containerClass="d-inline-block" placement="left" [outsideClick]="true" container="body">
+        <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean substitution-grid-delete-btn"
+          [attr.data-cy]="'dm-substitution-delete-' + i"
+          (click)="onDeleteClick($event, i, poDelete)" [disabled]="settings().readOnly">
+          <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
+          <span class="sr-only" translate>Remove</span>
+        </button>
+      </c8y-popover-confirm>
+    </div>
   </div>
+  }
 </div>

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, ChangeDetectionStrategy, signal, input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -31,16 +31,19 @@ import { gettext } from '@c8y/ngx-components/gettext';
 @Component({
   selector: 'd11r-mapping-extension-card',
   templateUrl: './extension-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, PopoverModule, BsDropdownModule]
 })
 export class ExtensionCardComponent implements OnInit {
-  @Input() app: IManagedObject;
+  readonly app = input<IManagedObject>();
   @Output() appDeleted: EventEmitter<void> = new EventEmitter();
 
   ExtensionStatus = ExtensionStatus;
   external = true;
-  feature: Feature;
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
 
   constructor(
     private extensionService: ExtensionService,
@@ -52,12 +55,12 @@ export class ExtensionCardComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    this.external = this.app?.['external'];
+    this.external = this.app()?.['external'];
     this.feature = await this.sharedService.getFeatures();
   }
 
   detail(): void {
-    this.router.navigate(['properties/', this.app.id], {
+    this.router.navigate(['properties/', this.app().id], {
       relativeTo: this.activatedRoute
     });
   }
@@ -72,7 +75,7 @@ export class ExtensionCardComponent implements OnInit {
     if (!confirmed) return;
 
     try {
-      await this.extensionService.deleteProcessorExtension(this.app);
+      await this.extensionService.deleteProcessorExtension(this.app());
       this.appDeleted.emit();
     } catch (error) {
       this.alertService.warning(gettext('Failed to delete Java Extension'), error?.message);

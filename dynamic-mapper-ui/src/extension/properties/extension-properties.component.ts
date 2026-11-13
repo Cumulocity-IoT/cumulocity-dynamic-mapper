@@ -17,13 +17,13 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import * as jsYaml from 'js-yaml';
 
 import { CoreModule, PropertiesListItem } from '@c8y/ngx-components';
-import { NODE3, SharedModule } from '../../shared';
+import { ROUTE_EXTENSIONS, SharedModule } from '../../shared';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 interface ExtensionEntry {
@@ -35,7 +35,7 @@ interface ExtensionEntry {
   extensionType: string;
   direction: string;
   loaded: boolean;
-  parameter?: Record<string, any>;
+  parameter?: Record<string, unknown>;
 }
 
 interface ExtensionWithEntries extends IManagedObject {
@@ -50,13 +50,14 @@ interface ExtensionWithEntries extends IManagedObject {
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, SharedModule]
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extension: ExtensionWithEntries;
   directionFilter: 'ANY' | 'INBOUND' | 'OUTBOUND' = 'ANY';
-  readonly LINK = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
+  readonly LINK = ROUTE_EXTENSIONS;
 
   constructor(private route: ActivatedRoute) {}
 
@@ -104,7 +105,7 @@ export class ExtensionPropertiesComponent implements OnInit {
     return properties;
   }
 
-  configurationToYaml(configuration: Record<string, any> | undefined): string {
+  configurationToYaml(configuration: Record<string, unknown> | undefined): string {
     if (!configuration) {
       return '';
     }

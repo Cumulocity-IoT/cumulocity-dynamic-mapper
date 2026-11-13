@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { CoreModule, BottomDrawerService } from '@c8y/ngx-components';
@@ -43,6 +43,7 @@ import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/cod
   selector: 'd11r-doc-code-templates',
   templateUrl: './doc-code-templates.component.html',
   styleUrls: ['./doc-shared.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule],
   // See DocPageComponent: rendered markdown injected via [innerHTML] never receives the
@@ -51,11 +52,17 @@ import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/cod
 })
 export class DocCodeTemplatesComponent implements OnInit {
   private readonly injector = inject(Injector);
-  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+  readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
-  title = 'Code templates';
-  html: SafeHtml = '';
-  codeTemplates: CodeTemplate[] = [];
+  private readonly titleState = signal<string>('Code templates');
+  get title(): string { return this.titleState(); }
+  set title(value: string) { this.titleState.set(value); }
+  private readonly htmlState = signal<SafeHtml>('');
+  get html(): SafeHtml { return this.htmlState(); }
+  set html(value: SafeHtml) { this.htmlState.set(value); }
+  private readonly codeTemplatesState = signal<CodeTemplate[]>([]);
+  get codeTemplates(): CodeTemplate[] { return this.codeTemplatesState(); }
+  set codeTemplates(value: CodeTemplate[]) { this.codeTemplatesState.set(value); }
 
   constructor(
     private router: Router,
@@ -72,7 +79,7 @@ export class DocCodeTemplatesComponent implements OnInit {
       this.title = rendered.title;
       this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
       afterNextRenderInZone(this.injector, () => {
-        const body = this.docBodyRef?.nativeElement;
+        const body = this.docBodyRef()?.nativeElement;
         if (!body) return; // navigated away before the render happened
         this.markdownService.highlightCodeBlocks(body);
         this.markdownService.renderMermaidDiagrams(body);

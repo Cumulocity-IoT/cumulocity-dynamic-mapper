@@ -37,7 +37,7 @@ export class SubscriptionError extends Error {
   constructor(
     message: string,
     public readonly statusCode?: number,
-    public readonly originalError?: any
+    public readonly originalError?: unknown
   ) {
     super(message);
     this.name = 'SubscriptionError';
@@ -542,7 +542,7 @@ export class SubscriptionService {
   /**
    * Handles subscription-related errors (updated for FetchClient)
    */
-  private handleSubscriptionError(error: any, operationName: string): SubscriptionError {
+  private handleSubscriptionError(error: { message?: string }, operationName: string): SubscriptionError {
     let message = `Failed to ${operationName}`;
     let statusCode: number | undefined;
 

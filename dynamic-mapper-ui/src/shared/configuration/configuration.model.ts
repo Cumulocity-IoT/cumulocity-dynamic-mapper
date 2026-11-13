@@ -39,7 +39,7 @@ export interface ServiceConfiguration {
   flowStateRetention: number;
   mappingVersionRetention?: number;
   inventoryFragmentsToCache?: string[];
-  codeTemplates?: any;
+  codeTemplates?: CodeTemplateMap;
   maxCPUTimeMS: number;
   pipelineTimeoutMS?: number;
   maxProcessingAttempts?: number;

@@ -18,13 +18,7 @@
  * @authors Christof Strack
  */
 import { TranslateService } from '@ngx-translate/core';
-import {
-  Component,
-  inject,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, inject, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -72,11 +66,14 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
 
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
+type SubscribedDevice = Device & { groupNames?: string; subscriptionSource?: string };
+
 @Component({
   selector: 'd11r-mapping-subscription-grid',
   templateUrl: 'mapping-subscription.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent, TypeResyncComponent],
   providers: [
@@ -85,7 +82,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
 })
 export class MappingSubscriptionComponent implements OnInit {
-  @ViewChild('subscriptionGrid') subscriptionGrid!: DataGridComponent;
+  readonly subscriptionGrid = viewChild<DataGridComponent>('subscriptionGrid');
 
   constructor() {
     // The grid pulls each page through this callback (server-side load-more).
@@ -101,17 +98,37 @@ export class MappingSubscriptionComponent implements OnInit {
   private readonly translateService = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
 
-  showConfigSubscription1 = false;
-  showConfigSubscription2 = false;
-  showConfigSubscription3 = false;
-  showConfigSubscription4 = false;
-  showConfigSubscriptionResync = false;
+  private readonly showConfigSubscription1State = signal<boolean>(false);
+  get showConfigSubscription1(): boolean { return this.showConfigSubscription1State(); }
+  set showConfigSubscription1(value: boolean) { this.showConfigSubscription1State.set(value); }
+  private readonly showConfigSubscription2State = signal<boolean>(false);
+  get showConfigSubscription2(): boolean { return this.showConfigSubscription2State(); }
+  set showConfigSubscription2(value: boolean) { this.showConfigSubscription2State.set(value); }
+  private readonly showConfigSubscription3State = signal<boolean>(false);
+  get showConfigSubscription3(): boolean { return this.showConfigSubscription3State(); }
+  set showConfigSubscription3(value: boolean) { this.showConfigSubscription3State.set(value); }
+  private readonly showConfigSubscription4State = signal<boolean>(false);
+  get showConfigSubscription4(): boolean { return this.showConfigSubscription4State(); }
+  set showConfigSubscription4(value: boolean) { this.showConfigSubscription4State.set(value); }
+  private readonly showConfigSubscriptionResyncState = signal<boolean>(false);
+  get showConfigSubscriptionResync(): boolean { return this.showConfigSubscriptionResyncState(); }
+  set showConfigSubscriptionResync(value: boolean) { this.showConfigSubscriptionResyncState.set(value); }
 
-  subscriptionDevices?: NotificationSubscriptionResponse;
-  subscriptionDeviceGroups?: NotificationSubscriptionResponse;
-  subscribedDevices: (Device & { groupNames?: string; subscriptionSource?: string })[] = [];
-  subscribedDeviceGroups: Device[] = [];
-  subscribedDeviceTypes: string[] = [];
+  private readonly subscriptionDevicesState = signal<NotificationSubscriptionResponse | undefined>(undefined);
+  get subscriptionDevices(): NotificationSubscriptionResponse | undefined { return this.subscriptionDevicesState(); }
+  set subscriptionDevices(value: NotificationSubscriptionResponse | undefined) { this.subscriptionDevicesState.set(value); }
+  private readonly subscriptionDeviceGroupsState = signal<NotificationSubscriptionResponse | undefined>(undefined);
+  get subscriptionDeviceGroups(): NotificationSubscriptionResponse | undefined { return this.subscriptionDeviceGroupsState(); }
+  set subscriptionDeviceGroups(value: NotificationSubscriptionResponse | undefined) { this.subscriptionDeviceGroupsState.set(value); }
+  private readonly subscribedDevicesState = signal<SubscribedDevice[]>([]);
+  get subscribedDevices(): SubscribedDevice[] { return this.subscribedDevicesState(); }
+  set subscribedDevices(value: SubscribedDevice[]) { this.subscribedDevicesState.set(value); }
+  private readonly subscribedDeviceGroupsState = signal<Device[]>([]);
+  get subscribedDeviceGroups(): Device[] { return this.subscribedDeviceGroupsState(); }
+  set subscribedDeviceGroups(value: Device[]) { this.subscribedDeviceGroupsState.set(value); }
+  private readonly subscribedDeviceTypesState = signal<string[]>([]);
+  get subscribedDeviceTypes(): string[] { return this.subscribedDeviceTypesState(); }
+  set subscribedDeviceTypes(value: string[]) { this.subscribedDeviceTypesState.set(value); }
   Direction = Direction;
 
   path: 'static' | 'dynamic' | 'deviceToClientMap' | null = null;
@@ -175,9 +192,15 @@ export class MappingSubscriptionComponent implements OnInit {
     currentPage: 1
   };
 
-  actionControlSubscription: ActionControl[] = [];
-  bulkActionControlSubscription: BulkActionControl[] = [];
-  feature!: Feature;
+  private readonly actionControlSubscriptionState = signal<ActionControl[]>([]);
+  get actionControlSubscription(): ActionControl[] { return this.actionControlSubscriptionState(); }
+  set actionControlSubscription(value: ActionControl[]) { this.actionControlSubscriptionState.set(value); }
+  private readonly bulkActionControlSubscriptionState = signal<BulkActionControl[]>([]);
+  get bulkActionControlSubscription(): BulkActionControl[] { return this.bulkActionControlSubscriptionState(); }
+  set bulkActionControlSubscription(value: BulkActionControl[]) { this.bulkActionControlSubscriptionState.set(value); }
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
 
   // Server-side load-more wiring: the grid requests one page at a time via this callback.
   serverSideDataCallback: (modifier: DataSourceModifier) => Promise<ServerSideDataResult>;
@@ -205,14 +228,14 @@ export class MappingSubscriptionComponent implements OnInit {
     // Setup action controls based on user permissions
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
-      this.bulkActionControlSubscription.push({
+      this.bulkActionControlSubscription = [{
         type: BuiltInActionType.Delete,
         callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
-      });
-      this.actionControlSubscription.push({
+      }];
+      this.actionControlSubscription = [{
         type: BuiltInActionType.Delete,
         callback: this.deleteSubscriptionWithConfirmation.bind(this)
-      });
+      }];
     }
   }
 
@@ -291,7 +314,7 @@ export class MappingSubscriptionComponent implements OnInit {
    */
   private enrichDevices(
     devices: Device[]
-  ): (Device & { groupNames?: string; subscriptionSource?: string })[] {
+  ): SubscribedDevice[] {
     const subscribedGroupNames = new Set(
       (this.subscribedDeviceGroups ?? []).map(g => g.name).filter(Boolean)
     );
@@ -362,7 +385,7 @@ export class MappingSubscriptionComponent implements OnInit {
   }
 
   onRefresh(): void {
-    this.subscriptionGrid?.reload();
+    this.subscriptionGrid()?.reload();
   }
 
   async deleteSubscription(device: IIdentified, options?: { reload?: boolean }): Promise<void> {
@@ -375,7 +398,7 @@ export class MappingSubscriptionComponent implements OnInit {
         gettext('Subscription for this device deleted successfully')
       );
       if (reload) {
-        this.subscriptionGrid?.reload();
+        this.subscriptionGrid()?.reload();
       }
     } catch (error) {
       this.alertService.danger(
@@ -405,8 +428,8 @@ export class MappingSubscriptionComponent implements OnInit {
       }
     }
     this.mappingService.refreshMappings(Direction.OUTBOUND);
-    this.subscriptionGrid?.setAllItemsSelected(false);
-    this.subscriptionGrid?.reload();
+    this.subscriptionGrid()?.setAllItemsSelected(false);
+    this.subscriptionGrid()?.reload();
   }
 
   private async deleteSubscriptionWithConfirmation(
@@ -427,7 +450,7 @@ export class MappingSubscriptionComponent implements OnInit {
       result = true;
     }
 
-    this.subscriptionGrid?.setAllItemsSelected(false);
+    this.subscriptionGrid()?.setAllItemsSelected(false);
     return result;
   }
 
@@ -466,7 +489,7 @@ export class MappingSubscriptionComponent implements OnInit {
       const response = await this.subscriptionService.updateSubscriptionDevice(
         subscriptionDevices
       );
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
@@ -487,7 +510,7 @@ export class MappingSubscriptionComponent implements OnInit {
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceGroup();
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
@@ -507,7 +530,7 @@ export class MappingSubscriptionComponent implements OnInit {
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceType();
-      this.subscriptionGrid?.reload();
+      this.subscriptionGrid()?.reload();
       this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       this.alertService.danger(

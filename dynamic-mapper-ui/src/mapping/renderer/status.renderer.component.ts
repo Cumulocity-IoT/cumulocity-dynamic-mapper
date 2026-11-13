@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { NODE2 } from '../../shared';
@@ -146,6 +146,7 @@ import { MAPPING_IDENTIFIER } from '../../monitoring/logs/mapping-log-filter';
       filter: brightness(0.92);
     }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, RouterLink]
 })

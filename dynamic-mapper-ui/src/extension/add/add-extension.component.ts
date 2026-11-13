@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -26,25 +26,37 @@ import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ErrorType } from '../share/extension.model';
 import { ExtensionService } from '../extension.service';
 
+/** Upload rejections: a plain string (transport failure) or `{ data }` with the backend's error body. */
+type UploadError = string | { data?: { message?: string; error?: string } } | null | undefined;
+
 @Component({
   selector: 'd11r-mapping-add-extension',
   templateUrl: './add-extension.component.html',
   styleUrls: ['./add-extension.component.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
 export class AddExtensionComponent implements OnDestroy {
-  @ViewChild(DropAreaComponent) dropAreaComponent;
+  readonly dropAreaComponent = viewChild(DropAreaComponent);
 
   /** No existing upload-size convention elsewhere in the codebase — 50 MB is a generous default for a processor-extension *.jar. */
   readonly maxFileSizeInMegaBytes = 50;
 
-  isLoading = false;
-  isAppCreated = false;
-  app: Partial<IManagedObject>;
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly isAppCreatedState = signal<boolean>(false);
+  get isAppCreated(): boolean { return this.isAppCreatedState(); }
+  set isAppCreated(value: boolean) { this.isAppCreatedState.set(value); }
+  private readonly appState = signal<Partial<IManagedObject> | null>(null);
+  get app(): Partial<IManagedObject> | null { return this.appState(); }
+  set app(value: Partial<IManagedObject> | null) { this.appState.set(value); }
   progress$: Subject<number> = new Subject<number>();
-  errorMessage: string;
+  private readonly errorMessageState = signal<string | null>(null);
+  get errorMessage(): string | null { return this.errorMessageState(); }
+  set errorMessage(value: string | null) { this.errorMessageState.set(value); }
   successText = gettext('Processor extension uploaded successfully.');
 
   private uploadCanceled = false;
@@ -65,7 +77,7 @@ export class AddExtensionComponent implements OnDestroy {
   }
 
 
-  onFileDroppedEvent(event: any[]): void {
+  onFileDroppedEvent(event: { file?: File }[]): void {
     if (event?.[0]?.file) {
       this.onFile(event[0].file);
     }
@@ -112,12 +124,12 @@ export class AddExtensionComponent implements OnDestroy {
     };
   }
 
-  private handleUploadError(error: any): void {
+  private handleUploadError(error: UploadError): void {
     this.isLoading = false;
     this.progress$.next(0);
     this.extensionService.cancelProcessorExtensionCreation(this.app);
     this.app = null;
-    this.dropAreaComponent?.onDelete();
+    this.dropAreaComponent()?.onDelete();
 
     this.errorMessage = this.extractErrorMessage(error);
     if (!this.errorMessage && !this.uploadCanceled) {
@@ -132,7 +144,7 @@ export class AddExtensionComponent implements OnDestroy {
    * the former (a known, reachable case) and the backend's own message for the latter; anything
    * else is truly unrecognized and falls back to the generic server-failure alert.
    */
-  private extractErrorMessage(error: any): string | undefined {
+  private extractErrorMessage(error: UploadError): string | undefined {
     if (typeof error === 'string') {
       return ERROR_MESSAGES[ErrorType.UPLOAD_FAILED];
     }

@@ -216,7 +216,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                                 processedResults, tenant, topic, log, timeoutOverride);
                         if (outcome == AckOutcome.ACK) {
                             failureTracker.clear(messageId);
-                            log.warn("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                            log.debug("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                     tenant, topic, extractQos(mqttMessage), connectorIdentifier);
                             acknowledgeMessage(mqttMessage);
                         } else {
@@ -302,8 +302,10 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                         if (delayMs > 0) {
                             Thread.sleep(delayMs); //NOSONAR intentional back-off delay
                         }
+                        boolean acquired = false;
                         try {
                             reconnectExecutionSemaphore.acquire();
+                            acquired = true;
                             log.debug(
                                     "{} - Reconnect attempt {} executing reconnect trigger, connector: {}",
                                     tenant, attempt, connectorIdentifier);
@@ -313,9 +315,11 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                             log.warn("{} - Reconnect thread interrupted waiting for semaphore, connector: {}",
                                     tenant, connectorIdentifier);
                         } finally {
-                            reconnectExecutionSemaphore.release();
-                            log.debug("{} - Reconnect attempt {} released semaphore, connector: {}",
-                                    tenant, attempt, connectorIdentifier);
+                            if (acquired) {
+                                reconnectExecutionSemaphore.release();
+                                log.debug("{} - Reconnect attempt {} released semaphore, connector: {}",
+                                        tenant, attempt, connectorIdentifier);
+                            }
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();

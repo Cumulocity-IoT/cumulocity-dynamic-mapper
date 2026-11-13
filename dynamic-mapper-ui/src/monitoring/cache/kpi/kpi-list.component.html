@@ -30,7 +30,7 @@
       <div class="d-col gap-8 a-i-start">
         <span class="h4">{{ getDomainDisplayName(domain) }}</span>
         @if (isClearable(domain)) {
-        <button type="button" class="btn btn-default btn-sm" [disabled]="!canClear"
+        <button type="button" class="btn btn-default btn-sm" [disabled]="!canClear()"
           title="{{ 'Clear cache' | translate }}" (click)="clear.emit(domain)">
           <i c8yIcon="clear"></i>
           {{ 'Clear cache' | translate }}

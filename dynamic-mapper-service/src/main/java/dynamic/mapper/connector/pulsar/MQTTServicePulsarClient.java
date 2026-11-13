@@ -25,7 +25,12 @@ import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.*;
+import dynamic.mapper.connector.core.ConnectorProperty;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
+import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -42,13 +47,21 @@ import dynamic.mapper.util.TenantLogContext;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pulsar.client.api.*;
+import org.apache.pulsar.client.api.AuthenticationFactory;
+import org.apache.pulsar.client.api.ClientBuilder;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.ConsumerEventListener;
+import org.apache.pulsar.client.api.Producer;
+import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.SubscriptionType;
 import org.apache.pulsar.client.api.PulsarClientException.UnsupportedAuthenticationException;
 import org.apache.pulsar.client.impl.MultiplierRedeliveryBackoff;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -81,6 +94,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /** Set when housekeeping saw the platform consumer disconnected; cleared (and logged) when it is connected again. */
     private volatile boolean platformConsumerLost;
     private Producer<byte[]> deviceProducer;
+    /** Housekeeping cycles in a row in which {@link #deviceProducer} was not connected. Housekeeping thread only. */
+    private int deviceProducerDownCycles;
+    private static final int DEVICE_PRODUCER_RECREATE_AFTER_CYCLES = 3;
     // Guards all check-then-recreate sequences on platformConsumer/deviceProducer: without it,
     // concurrent callers (e.g. two publishMEAO() calls racing to recreate a disconnected
     // deviceProducer, or a housekeeping-triggered resubscribe racing a connect-triggered one)
@@ -314,6 +330,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 try {
                     Thread.sleep(delay);  // Intentional sleep for retry backoff
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                 }
             }
@@ -715,6 +732,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (pulsarClient == null || pulsarClient.isClosed()) {
             log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
             reconnect();
+            // Retry the message instead of acknowledging it unpublished
+            failPublishUnavailable(context, context.getCurrentRequest(),
+                    new IllegalStateException("Pulsar client is closed"));
             return;
         }
 
@@ -762,8 +782,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         } catch (Exception e) {
             log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
-            context.addError(new dynamic.mapper.processor.ProcessingException(
-                    "Failed to publish message", e));
+            if (isBrokerUnavailable(e)) {
+                // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                failPublishUnavailable(context, request, e);
+            } else {
+                context.addError(new dynamic.mapper.processor.ProcessingException(
+                        "Failed to publish message", e));
+            }
         }
     }
 
@@ -825,9 +850,45 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             }
         }
 
+        // Outbound notifications are held while this connector is disconnected (see
+        // holdsOutboundWhileDisconnected()), so nothing publishes and the lazy recreate in publishMEAO() would
+        // never run. The Pulsar client reconnects a producer that merely lost its connection by itself, so
+        // only a producer that stays disconnected for several cycles is replaced.
         if (deviceProducer != null && !deviceProducer.isConnected()) {
-            log.warn("{} - Device producer disconnected, will reconnect on next publish", tenant);
+            deviceProducerDownCycles++;
+            if (deviceProducerDownCycles >= DEVICE_PRODUCER_RECREATE_AFTER_CYCLES
+                    && pulsarClient != null && !pulsarClient.isClosed() && shouldConnect()) {
+                log.warn("{} - Device producer disconnected for {} housekeeping cycles, recreating", tenant,
+                        deviceProducerDownCycles);
+                pulsarChannelLock.lock();
+                try {
+                    if (deviceProducer == null || !deviceProducer.isConnected()) {
+                        createTowardsDeviceProducer();
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Failed to recreate device producer, will retry next housekeeping cycle: {}",
+                            tenant, e.getMessage());
+                } finally {
+                    pulsarChannelLock.unlock();
+                }
+            } else {
+                log.warn("{} - Device producer disconnected, will reconnect on next publish", tenant);
+            }
+        } else {
+            deviceProducerDownCycles = 0;
         }
+
+        // isConnected() only calls isPhysicallyConnected() while the state is connected, so once the state is
+        // disconnected nothing marks it connected again. Let it sync the state when consumer and producer are
+        // back, otherwise the held outbound notifications are never released.
+        if (shouldConnect() && !connectionStateManager.isConnected()) {
+            isPhysicallyConnected();
+        }
+    }
+
+    @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
     }
 
     /**

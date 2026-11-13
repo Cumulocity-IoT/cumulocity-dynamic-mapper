@@ -62,6 +62,8 @@ import {
   LoggingEventTypeMap,
   LoggingEventType,
   DEPLOYMENT_MAP_FRAGMENT,
+  JsonValue,
+  Template,
 } from '../../shared';
 
 import {
@@ -116,14 +118,14 @@ export class MappingService {
 
   // ===== MAPPING OPERATIONS =====
 
-  async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
+  async changeActivationMapping(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.ACTIVATE_MAPPING,
       parameter
     });
   }
 
-  async addSampleMappings(parameter: any): Promise<IFetchResponse> {
+  async addSampleMappings(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.ADD_SAMPLE_MAPPINGS,
       parameter
@@ -138,7 +140,7 @@ export class MappingService {
     this.updateMappingEnriched$.next(mapping);
   }
 
-  async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
+  async changeDebuggingMapping(parameter: Record<string, string | boolean>): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.DEBUG_MAPPING,
       parameter
@@ -475,19 +477,39 @@ export class MappingService {
 
   // ===== UTILITY METHODS =====
 
-  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
-    let result: any = '';
+  /**
+   * Compiles an expression for the editor's live evaluation. The backend provides `$isDuplicate(key, windowSeconds)`
+   * in the execution filter only. It needs the message history, which the browser does not have, so with
+   * `allowDeduplication` the editor reports "no duplicate". Without it the editor would mark every filter that uses it
+   * as invalid and block saving. Every other expression (inventory filter, substitutions) does not get the stub, so
+   * the editor rejects `$isDuplicate` there as the backend does at runtime.
+   */
+  private compileExpression(path: string, allowDeduplication: boolean) {
+    const expression = this.JSONATA(path);
+    if (allowDeduplication) {
+      expression.registerFunction('isDuplicate', () => false);
+    }
+    return expression;
+  }
+
+  /** @param allowDeduplication true only for the execution filter, the one expression where `$isDuplicate` works */
+  async evaluateExpression(
+    json: Template | undefined,
+    path: string,
+    allowDeduplication = false
+  ): Promise<JsonValue> {
+    let result: JsonValue = '';
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
-      result = expression.evaluate(json) as JSON;
+      const expression = this.compileExpression(path, allowDeduplication);
+      result = expression.evaluate(json) as JsonValue;
     }
     return result;
   }
 
-  async validateExpression(json: JSON, path: string): Promise<boolean> {
+  async validateExpression(json: JSON, path: string, allowDeduplication = false): Promise<boolean> {
     let result = true;
     if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path);
+      const expression = this.compileExpression(path, allowDeduplication);
       try {
         expression.evaluate(json) as JSON;
       } catch (error) {

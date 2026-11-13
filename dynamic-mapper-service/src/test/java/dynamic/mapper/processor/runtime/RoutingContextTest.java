@@ -25,8 +25,10 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Qos;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * Tests for RoutingContext focusing on immutability and builder pattern.
  */

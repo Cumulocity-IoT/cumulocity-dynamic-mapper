@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, ViewChild, Injector, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, Injector, inject, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { afterNextRenderInZone } from '../../misc/after-render';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FieldType, FormlyModule } from '@ngx-formly/core';
@@ -79,7 +80,8 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
 })
 export class TextareaTypeComponent extends FieldType implements AfterViewInit {
   private readonly injector = inject(Injector);
-  @ViewChild('textareaRef') textareaRef: ElementRef<HTMLTextAreaElement>;
+  private readonly destroyRef = inject(DestroyRef);
+  readonly textareaRef = viewChild<ElementRef<HTMLTextAreaElement>>('textareaRef');
   showSensitive = false;
 
   get isServerMasked(): boolean {
@@ -100,13 +102,13 @@ export class TextareaTypeComponent extends FieldType implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.formControl.valueChanges.subscribe(() => {
+    this.formControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       afterNextRenderInZone(this.injector, () => this.resize());
     });
   }
 
   private resize(): void {
-    const el = this.textareaRef?.nativeElement;
+    const el = this.textareaRef()?.nativeElement;
     if (el) {
       el.style.height = 'auto';
       el.style.height = `${el.scrollHeight}px`;

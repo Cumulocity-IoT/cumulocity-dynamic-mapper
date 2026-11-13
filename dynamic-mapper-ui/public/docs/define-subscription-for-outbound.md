@@ -25,6 +25,65 @@ An outbound mapping is processed only if all of the following conditions apply:
 - If an inventory filter is defined for the mapping, e.g. `type = "pressure_sensor"`, it evaluates to `true`
 - If an execution filter for the mapping is defined, e.g. `temperature > 95`, it evaluates to `true`
 
+#### In the mapping editor {#in-the-mapping-editor}
+
+The **Subscription** step of the wizard, and the **Subscription** tab of the unified editor, let you define the
+subscription while you define the mapping. They appear for outbound mappings only, after **General settings**.
+
+| Option | What it does |
+|--------|--------------|
+| **Skip for now** | Changes no subscription. This is the default. Add one later on the **Subscription outbound** page. |
+| **Dynamic** | Subscribe by device type (**Manage subscriptions (by device type)**) or by device group (**Manage subscriptions (by device groups)**). |
+| **Static** | Subscribe specific devices (**Manage subscriptions (device selection)** or **Add subscriptions (device table)**). |
+
+Choosing **Dynamic** or **Static** opens its options as radio options. Only the selected option is expanded, and the
+first one is selected for you:
+
+- **Dynamic**: **Manage subscriptions (by device type)** shows the list of device types. **Manage subscriptions (by device groups)** shows the group selector.
+- **Static**: **Manage subscriptions (device selection)** shows the device tree. **Add subscriptions (device table)** opens the device table in a drawer, because the table needs more room than the page has. After you close the drawer, the option stays selected and **Open device table** opens it again.
+
+Each option shows how many entries are selected and a **not saved yet** label while you have unsaved changes. The
+lists show the subscriptions of the whole tenant, not only those of this mapping.
+
+![Subscription step with Dynamic selected](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Subscription_Dynamic.png "The Subscription tab of an outbound mapping with Dynamic and Manage subscriptions (by device type) selected.")
+
+```mermaid
+flowchart LR
+    choose["Choose Skip, Dynamic, or Static<br/>in the Subscription step"]
+    save["Save the mapping"]
+    saved["Mapping is saved"]
+    write["Subscriptions are written<br/>types, groups, or devices"]
+    async["Processed asynchronously<br/>verify on the Subscription outbound page"]
+    warn["Warning is shown<br/>the mapping stays saved"]
+
+    choose --> save
+    save --> saved
+    saved --> write
+    write -- "succeeds" --> async
+    write -- "fails" --> warn
+
+    classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
+    class choose outbound;
+```
+
+The selection is written when you save the mapping, after the mapping itself was saved. Cancel the editor and
+nothing changes. The lists start from the current subscriptions, so you can also remove a type, group, or device. The
+removal is applied on save. If the saving of the subscription fails, the mapping stays saved, a warning explains
+the failure, and the unified editor stays open so you can save again.
+
+With **Dynamic**, the type list has a second column, **Also subscribe existing devices**. It is off by default and
+shows a checkbox in the row of each new type. A device type rule only subscribes devices that are created afterward.
+Tick the box of a type to also subscribe the devices of that type that already exist. This rescans the inventory in
+the background and can take a while on large inventories. Types that are already subscribed show "subscribed already".
+
+When you create a mapping from the [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer), the
+step offers only the device of the selected message: **Skip for now**, **By device type**, **By device group**, and
+**This device only**. A type rule subscribes devices created afterward, so the message's own device is not subscribed by
+it. Tick **Also subscribe existing devices** under **By device type** to subscribe the existing devices of that type
+as well.
+
+#### On the Subscription outbound page
+
 **Mapping → Subscription outbound** has two tabs for defining subscriptions. Subscriptions are processed
 asynchronously, so refresh the list or check **Service Events** to see the result.
 
@@ -73,10 +132,10 @@ Evaluated for each change against the device's cached inventory fragments. If th
 fails, the mapping is skipped for that message. The expression is a JSONata expression. It is not affected by which
 fields the change contains, because it reads the device's inventory and not the notification.
 
-This filter is the **Filter Inventory** field on the **General settings** step of the wizard and is available for
-**outbound mappings only**.
+This filter is the **Inventory filter** field on the **General settings** step of the wizard. It is shown when **Expert Mode** is on
+(on by default when the mapping already has a filter) and is available for **outbound mappings only**.
 
-![Inventory filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Filter Inventory field.")
+![Inventory filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Inventory filter field.")
 
 ```javascript
 // Only process pressure sensors

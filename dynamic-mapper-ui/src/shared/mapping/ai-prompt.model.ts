@@ -20,6 +20,7 @@
 
 import { AnthropicProviderSettings } from '@ai-sdk/anthropic';
 import { OpenAIProviderSettings } from '@ai-sdk/openai';
+import type { Mapping, StepperConfiguration } from './mapping.model';
 import {
   CoreMessage,
   generateObject,
@@ -88,7 +89,7 @@ The language model to use.
   /**
 The schema of the object that the model should generate.
    */
-  schema: any;
+  schema: unknown;
   /**
 Optional name of the output that should be generated.
 Used by some providers for additional LLM guidance, e.g.
@@ -129,13 +130,13 @@ Additional provider-specific options. They are passed through
 to the provider from the AI SDK and enable provider-specific
 functionality that can be fully encapsulated in the provider.
 */
-  providerOptions?: any;
+  providerOptions?: unknown;
   /**
 @deprecated Use `providerOptions` instead.
 */
   experimental_providerMetadata?: ProviderMetadata;
 
-  variables?: { [key: string]: any };
+  variables?: { [key: string]: unknown };
 };
 export type ObjectCompletionResponse = ReturnType<typeof generateObject>;
 
@@ -227,3 +228,11 @@ export interface C8yContext {
 }
 
 // export type AgentConfigArray = AgentConfig[];
+
+/**
+ * The copy of a mapping handed to the AI drawer: the mapping, plus what is known about the captured message.
+ * The extra fields live on the stepper configuration only and are attached to this copy; they are never
+ * persisted on the mapping itself.
+ */
+export type MappingForAiDrawer = Mapping &
+  Pick<StepperConfiguration, 'sampleTransportFields' | 'sampleMessageInfo' | 'additionalSamples'>;

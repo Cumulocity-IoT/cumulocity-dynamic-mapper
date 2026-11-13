@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
@@ -30,6 +30,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       <span class="text-muted">—</span>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })

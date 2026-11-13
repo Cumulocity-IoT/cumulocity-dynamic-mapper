@@ -477,7 +477,7 @@ public class GraalVMContextService implements TenantScoped {
         } catch (Exception e) {
             log.error("{} - Failed to create pooled GraalVM context for mapping {}: {}",
                     tenant, mappingLabel, e.getMessage(), e);
-            throw new RuntimeException("Failed to create pooled GraalVM context for mapping " + mappingLabel, e);
+            throw new IllegalStateException("Failed to create pooled GraalVM context for mapping " + mappingLabel, e);
         }
     }
 

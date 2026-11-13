@@ -19,24 +19,7 @@
  *
  */
 
-import {
-    AfterContentInit,
-    AfterViewInit,
-    Component,
-    ContentChild,
-    ContentChildren,
-    ElementRef,
-    EventEmitter,
-    Input,
-    OnChanges,
-    OnDestroy,
-    Output,
-    QueryList,
-    SimpleChanges,
-    ViewChild,
-    ViewChildren,
-    forwardRef
-} from '@angular/core';
+import { AfterContentInit, AfterViewInit, Component, ContentChild, ContentChildren, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, QueryList, SimpleChanges, ViewChild, ViewChildren, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import {
     AbstractControl,
     ControlValueAccessor,
@@ -46,7 +29,7 @@ import {
     Validator
 } from '@angular/forms';
 import { BsDropdownDirective, BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { isEqual } from 'lodash-es';
@@ -69,6 +52,7 @@ import { C8yTranslatePipe, IconDirective, ListGroupComponent, ListItemBodyCompon
         },
         SelectKeyboardService
     ],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: true,
     imports: [
     BsDropdownModule,
@@ -281,6 +265,7 @@ export class CustomSelectComponent
     private _items: SelectableItemTemplate[] = [];
 
     private destroy$ = new Subject<void>();
+    private readonly cdr = inject(ChangeDetectorRef);
     private onChange: (items: SelectableItem | SelectableItem[]) => void;
     private onTouched: () => void;
 
@@ -322,12 +307,14 @@ export class CustomSelectComponent
     ngAfterViewInit(): void {
         this.selectKeyboardService
             .register$(this.searchControl.nativeElement, this.list, this.dropdown)
+            .pipe(takeUntil(this.destroy$))
             .subscribe(selectedIndex => {
                 if (selectedIndex > -1) {
                     this._preselectedItem = this._items[selectedIndex];
                 } else {
                     this._preselectedItem = null;
                 }
+                this.cdr.markForCheck();
             });
     }
 
@@ -366,12 +353,14 @@ export class CustomSelectComponent
                 return;
             }
             this._selected.push(item);
+            this.cdr.markForCheck();
             this.emitChangeEvent();
             this.onSelect.emit(item);
             return;
         }
         this._selected = [item];
         this._preselectedItem = item;
+        this.cdr.markForCheck();
         this.emitChangeEvent();
         this.onSelect.emit(item);
     }
@@ -387,6 +376,7 @@ export class CustomSelectComponent
         }
         if (index > -1) {
             this._selected.splice(index, 1);
+            this.cdr.markForCheck();
             this.emitChangeEvent();
             this.onDeselect.emit(item);
             this._preselectedItem = null;
@@ -401,6 +391,7 @@ export class CustomSelectComponent
             this.onDeselect.emit();
             this._selected = [];
             this._preselectedItem = null;
+            this.cdr.markForCheck();
             this.searchControl.nativeElement.value = '';
             this.close();
             this.emitChangeEvent();
@@ -428,6 +419,7 @@ export class CustomSelectComponent
     writeValue(value: SelectableItem | SelectableItem[]) {
         if (value) {
             this.selected = value;
+            this.cdr.markForCheck();
         }
     }
 
@@ -453,6 +445,7 @@ export class CustomSelectComponent
      */
     setDisabledState(isDisabled: boolean): void {
         this.disabled = isDisabled;
+        this.cdr.markForCheck();
     }
 
     /**
@@ -472,6 +465,7 @@ export class CustomSelectComponent
         this.open();
         queueMicrotask(() => {
             this.searchHasFocus = true;
+            this.cdr.markForCheck();
         });
     }
 
@@ -500,6 +494,7 @@ export class CustomSelectComponent
     onHidden(): void {
         this.searchControl.nativeElement.value = '';
         this._preselectedItem = null;
+        this.cdr.markForCheck();
     }
 
     private emitChangeEvent(): void {

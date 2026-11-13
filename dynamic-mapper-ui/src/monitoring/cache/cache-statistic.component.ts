@@ -19,7 +19,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import {
   AlertService,
   CommonModule,
@@ -47,6 +47,7 @@ const CACHE_IDS_BY_DOMAIN: Record<string, string> = {
   templateUrl: 'cache-statistic.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, KpiListComponent]
 })
@@ -61,8 +62,12 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   feature: Feature;
-  kpis: KpiDetails[];
-  loading = true;
+  private readonly kpisState = signal<KpiDetails[]>(undefined as unknown as KpiDetails[]);
+  get kpis(): KpiDetails[] { return this.kpisState(); }
+  set kpis(value: KpiDetails[]) { this.kpisState.set(value); }
+  private readonly loadingState = signal<boolean>(true);
+  get loading(): boolean { return this.loadingState(); }
+  set loading(value: boolean) { this.loadingState.set(value); }
   readonly clearableDomains = Object.keys(CACHE_IDS_BY_DOMAIN);
 
   async ngOnInit(): Promise<void> {

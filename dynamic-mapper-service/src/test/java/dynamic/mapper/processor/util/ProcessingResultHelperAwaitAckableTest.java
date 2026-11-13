@@ -154,4 +154,21 @@ class ProcessingResultHelperAwaitAckableTest {
         assertEquals(AckOutcome.ACK,
                 ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, true));
     }
+
+    @Test
+    void aNotConnectedConnectorIsRetriedWithoutCountingAsAMessageFailure() {
+        ProcessingResultWrapper<Object> result = withRequestError(
+                new dynamic.mapper.processor.ConnectorNotConnectedException("mqtt"));
+
+        assertEquals(AckOutcome.RETRY_CONNECTOR_UNAVAILABLE,
+                ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, true));
+    }
+
+    @Test
+    void aPlainServerErrorStillCountsAsAMessageFailure() {
+        ProcessingResultWrapper<Object> result = withRequestError(new ProcessingException("webhook failed", 503));
+
+        assertEquals(AckOutcome.RETRY,
+                ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, true));
+    }
 }

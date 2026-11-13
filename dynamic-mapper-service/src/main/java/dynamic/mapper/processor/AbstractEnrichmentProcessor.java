@@ -47,6 +47,7 @@ import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.inbound.MessageDeduplicationService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -155,10 +156,24 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 Map<String, Object> initialState = isolateState
                         ? new HashMap<String, Object>()
                         : flowStateStore.loadState(tenant, mapping.getIdentifier());
+                // Same store as the $isDuplicate filter function. A test run gets no check, so it records nothing.
+                MessageDeduplicationService deduplication = serviceRegistry.getMessageDeduplicationService();
+                java.util.function.BiPredicate<String, Integer> duplicateCheck = isolateState || deduplication == null
+                        ? null
+                        : (fingerprint, window) -> {
+                            var checked = deduplication.check(tenant, mapping.getIdentifier(),
+                                    fingerprint, window);
+                            boolean duplicate = checked.duplicate();
+                            context.addDeduplicationClaim(checked.claim());
+                            if (duplicate) {
+                                context.setDroppedAsDuplicate(true);
+                            }
+                            return duplicate;
+                        };
                 context.setFlowContext(new SmartFunctionContext(pooledCtx.getGraalContext(), tenant,
                         (InventoryEnrichmentClient) serviceRegistry.getC8yAgent(),
                         context.isTesting(), isolateState ? null : flowStateStore, mapping.getIdentifier(),
-                        initialState));
+                        initialState, duplicateCheck));
 
                 // engineReleaseAction returns the borrowed context to the pool (or closes it if
                 // killed) AND decrements the engine's in-flight counter.

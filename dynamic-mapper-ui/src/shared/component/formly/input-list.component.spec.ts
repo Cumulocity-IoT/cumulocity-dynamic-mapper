@@ -33,7 +33,7 @@ describe('InputListComponent', () => {
   beforeEach(async () => {
     TestBed.resetTestingModule();
     TestBed.overrideComponent(InputListComponent, {
-      set: { imports: [], schemas: [NO_ERRORS_SCHEMA] }
+      set: { imports: [], schemas: [NO_ERRORS_SCHEMA], template: '', templateUrl: undefined }
     });
     await TestBed.configureTestingModule({
       imports: [InputListComponent]
@@ -44,12 +44,14 @@ describe('InputListComponent', () => {
   });
 
   it('starts with one blank row when the incoming data is empty', () => {
-    component.data = {};
+    fixture.componentRef.setInput('data', {});
+    fixture.detectChanges();
     expect(component.dataInternal).toEqual([{ key: '', value: '' }]);
   });
 
   it('loads existing entries from an object map', () => {
-    component.data = { 'X-Api-Key': 'secret' };
+    fixture.componentRef.setInput('data', { 'X-Api-Key': 'secret' });
+    fixture.detectChanges();
     expect(component.dataInternal).toEqual([{ key: 'X-Api-Key', value: 'secret' }]);
   });
 
@@ -61,22 +63,26 @@ describe('InputListComponent', () => {
     // would, without going through the full formly component.
 
     it('keeps a newly added blank row when the list started empty', () => {
-      component.data = {}; // initial load: one blank row
+      fixture.componentRef.setInput('data', {});
+    fixture.detectChanges(); // initial load: one blank row
       component.add(); // user clicks "+": now two blank rows
 
       // Next change-detection tick: parent re-binds the same (unchanged) persisted value.
-      component.data = {};
+      fixture.componentRef.setInput('data', {});
+    fixture.detectChanges();
 
       expect(component.dataInternal.length).toBe(2);
     });
 
     it('keeps a newly added blank row alongside an already-completed header', () => {
-      component.data = { Accept: 'text/plain' };
+      fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
       component.add();
 
       // Next change-detection tick re-delivers the same persisted object (the blank row has no
       // key yet, so the formly wrapper wouldn't have written it back into the form control).
-      component.data = { Accept: 'text/plain' };
+      fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
 
       expect(component.dataInternal).toEqual([
         { key: 'Accept', value: 'text/plain' },
@@ -85,10 +91,12 @@ describe('InputListComponent', () => {
     });
 
     it('still picks up a genuine external change (e.g. a different connector loaded into the same drawer)', () => {
-      component.data = { Accept: 'text/plain' };
+      fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
       component.add();
 
-      component.data = { 'X-Other': 'value' };
+      fixture.componentRef.setInput('data', { 'X-Other': 'value' });
+    fixture.detectChanges();
 
       expect(component.dataInternal).toEqual([{ key: 'X-Other', value: 'value' }]);
     });
@@ -102,14 +110,16 @@ describe('InputListComponent', () => {
       // it and overwrites it anyway. Comparing against what we ourselves last emitted fixes it —
       // this incoming value is recognized as an echo of a state we've already superseded, not as
       // new information, regardless of how far dataInternal has since moved on.
-      component.data = { Accept: 'text/plain' };
+      fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
       component.add(); // emits [Accept/text-plain] as lastEmittedMeaningful (blank row filtered)
 
       // User types a key into the new row before the add() emission's round trip returns.
       component.dataInternal[1].key = 'X-Custom';
 
       // The stale echo of add()'s emission arrives now.
-      component.data = { Accept: 'text/plain' };
+      fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
 
       expect(component.dataInternal).toEqual([
         { key: 'Accept', value: 'text/plain' },
@@ -119,7 +129,8 @@ describe('InputListComponent', () => {
   });
 
   it('removing the only row leaves one blank row behind', () => {
-    component.data = { Accept: 'text/plain' };
+    fixture.componentRef.setInput('data', { Accept: 'text/plain' });
+    fixture.detectChanges();
     component.remove(0);
     expect(component.dataInternal).toEqual([{ key: '', value: '' }]);
   });

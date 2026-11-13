@@ -44,7 +44,7 @@ export function serializeMappingsForExport(mappings: Mapping[]): string {
 
 export function stringToBase64(code2Encode) {
   const bytes = new TextEncoder().encode(code2Encode);
-  const binString = Array.from(bytes, (byte: any) =>
+  const binString = Array.from(bytes, (byte: number) =>
     String.fromCodePoint(byte),
   ).join("");
   return btoa(binString);
@@ -56,7 +56,7 @@ export function base64ToBytes(base64) {
 }
 
 export function bytesToBase64(bytes) {
-  const binString = Array.from(bytes, (byte: any) =>
+  const binString = Array.from(bytes, (byte: number) =>
     String.fromCodePoint(byte),
   ).join("");
   return btoa(binString);

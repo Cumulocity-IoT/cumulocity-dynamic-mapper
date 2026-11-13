@@ -22,8 +22,8 @@
   <div class="d-flex">
     <div class="col-lg-6 col-lg-offset-3">
       <h4 class="text-medium text-center">
-        General settings for {{ MappingTypeLabels[mapping.mappingType] }}
-        @if (stepperConfiguration.readOnly) {
+        General settings for {{ MappingTypeLabels[mapping().mappingType] }}
+        @if (stepperConfiguration().readOnly) {
           <span class="label label-primary">{{ 'Read
             Only'
           }}</span>
@@ -32,7 +32,7 @@
           <ng-template #popupReadOnlyHelp>
             <div [innerHtml]="readOnlyHelp"></div>
           </ng-template>
-          @if (stepperConfiguration.readOnly) {
+          @if (stepperConfiguration().readOnly) {
             <button type="button" placement="right"
             [popover]="popupReadOnlyHelp" triggers="focus" class="btn-help" aria-label="Help content"></button>
           }
@@ -43,8 +43,8 @@
 </div> -->
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0 d11r-props-compact">
-    <div [formGroup]="propertyFormly">
-      <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="model"
+    <div [formGroup]="propertyFormly()">
+      <formly-form [form]="propertyFormly()" [fields]="propertyFormlyFields" [model]="model"
         (modelChange)="commitModel()"></formly-form>
     </div>
   </div>

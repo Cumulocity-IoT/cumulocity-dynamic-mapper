@@ -503,7 +503,9 @@ public class MappingVersionService {
             try {
                 int n = Integer.parseInt(raw.trim());
                 if (n > 0) return n + ".0.0";
-            } catch (NumberFormatException ignored) { }
+            } catch (NumberFormatException ignored) {
+                // not a plain integer version: fall through to the initial version
+            }
         }
         return SemVer.INITIAL.toString();
     }

@@ -349,6 +349,17 @@ object:
   to identify the device in an **outbound** function, an operation carries the device under `deviceId`, not
   `source`, so reading `payload["source"]["id"]` is unreliable and throws when absent. Requires **Use external
   id** and an **External Id type** on the mapping.
+- `context.isDuplicate(key, windowSeconds)` - Returns `true` if the same key was seen for this mapping less than
+  `windowSeconds` ago (1 to 3600), and records it otherwise. Use it to drop a message that a broker or gateway
+  delivered twice: `if (context.isDuplicate(deviceId + "|" + time, 60)) { return []; }`. Unlike `getState` and
+  `setState`, the check is atomic, so of two copies running at the same time exactly one gets `false`. Keys expire
+  with the window, and a mapping holds at most 100,000, and all mappings together at most 1,000,000. The window starts at the first message and does not restart
+  when a repeat arrives. The check returns `false` and adds a warning when the key has no value or the window is not a
+  whole number from 1 to 3600 (larger values are not shortened). A key built with `+` from a missing field contains
+  the text `undefined`, so check the fields before you build it. Changing the code or the execution filter, or deleting the mapping, removes its keys. It always returns `false` in Dry Run and Live Test and records nothing. Keys are kept in
+  memory, are lost on a service restart, and are not shared between service instances. A dropped inbound message
+  counts under **Repeated** in the monitoring table. It shares its store with the `$isDuplicate` function of the
+  execution filter. See [Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
 - `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not

@@ -35,8 +35,8 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.*;
-
+import dynamic.mapper.core.ConnectorLifecycleService;
+import dynamic.mapper.core.ServiceRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

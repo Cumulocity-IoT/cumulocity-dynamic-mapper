@@ -31,7 +31,7 @@ Work through the following causes in order. Each one stops a mapping without an 
   deployed mapping claims them. If neither increases, the messages do not reach the connector.
 - **Filters.** If **Filtered** increases, a filter rejects the messages. Check the **Execution Filter** (**Filter
   execution mapping** on the *Select templates* step). If set, it must evaluate to `true` for the incoming payload,
-  otherwise the message is skipped without an error. For outbound mappings, also check **Filter Inventory**.
+  otherwise the message is skipped without an error. For outbound mappings, also check **Inventory filter**.
 - **Errors.** If **Errors** increases, read **Last error** in the same view, and the
   [Service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs) for the mapping.
 - **Missing role.** Saving, activating, and deploying mappings needs `ROLE_DYNAMIC_MAPPER_CREATE`, and connector
@@ -85,8 +85,8 @@ record connector, subscription, and mapping state changes, for example a mapping
 - Verify that a **subscription** exists for the device (**Mapping → Subscription outbound**). Without a
   subscription, no outbound messages are processed regardless of mapping state.
 - Notifications can be partial updates. The **Execution Filter** runs against the changed fields of a notification, not
-  the full object. Put checks that need the complete managed object into **Filter Inventory**.
-- Check the **Filter Inventory**. If set, it must evaluate to `true` for the device's managed object.
+  the full object. Put checks that need the complete managed object into **Inventory filter**.
+- Check the **Inventory filter**. If set, it must evaluate to `true` for the device's managed object.
 - Check the **Execution Filter**. If set, it must evaluate to `true` for the triggering payload.
 - Confirm the mapping's **connector** is enabled and `CONNECTED` under
   [**Configuration → Connectors**](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration).
@@ -115,6 +115,20 @@ record connector, subscription, and mapping state changes, for example a mapping
   an hour to take effect, because the mapper writes the relations to Cumulocity MQTT Service about once an hour.
 - The setting needs an unsubscribe and subscribe of the microservice to take effect. See
   [Service configuration](/c8y-pkg-dynamic-mapper/introduction/service-configuration).
+
+#### Outbound messages arrive late after a broker outage
+
+- While the connector has no broker connection, the Dynamic Mapper leaves outbound messages in Cumulocity. They are
+  published after the connector is connected again. Check the connector status under
+  **Configuration → Connectors**.
+- Search the microservice log for `paused its device WebSockets` and `resuming its device WebSockets` to see when a
+  connector was held and released. See [Reading the microservice log](#microservice-log).
+- If the messages never arrive after the connector is connected again, the outage was probably longer than
+  Cumulocity keeps waiting Notification 2.0 messages. The messages are lost, and the Dynamic Mapper cannot recover
+  them.
+- Messages can arrive more than once after an outage. Make the receiving system tolerate duplicates.
+- For the background and the list of connectors, see
+  [Reliability settings](/c8y-pkg-dynamic-mapper/introduction/reliability-settings#broker-outage).
 
 #### Connector disconnects repeatedly
 

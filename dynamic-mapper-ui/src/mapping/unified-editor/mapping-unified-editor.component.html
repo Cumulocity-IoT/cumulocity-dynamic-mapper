@@ -20,6 +20,10 @@
 -->
 
 <c8y-title translate>{{mapping.name}}</c8y-title>
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item [icon]="stepperConfiguration.direction === Direction.INBOUND ? 'swipe-right' : 'swipe-left'" [label]="listLabel | translate" [path]="listRoute"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="mapping.name"></c8y-breadcrumb-item>
+</c8y-breadcrumb>
 
 <div class="card card--fullpage content-fullpage d-col">
 
@@ -36,6 +40,10 @@
   @if (isTabVisible(TAB_GENERAL_SETTINGS)) {
   <c8y-tab [icon]="'settings'" [label]="generalSettingsTabLabel() | translate" [priority]="40" [tabsOutlet]="'unified-editor'"
     [isActive]="currentStepIndex === TAB_GENERAL_SETTINGS" (onSelect)="onTabSelected(TAB_GENERAL_SETTINGS)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
+  }
+  @if (layout.hasSubscription && isTabVisible(TAB_SUBSCRIPTION)) {
+  <c8y-tab [icon]="'subscription'" [label]="'Subscription' | translate" [priority]="35" [tabsOutlet]="'unified-editor'"
+    [isActive]="currentStepIndex === TAB_SUBSCRIPTION" (onSelect)="onTabSelected(TAB_SUBSCRIPTION)" data-cy="dm-unified-editor-tab-subscription"></c8y-tab>
   }
   @if (isTabVisible(TAB_SELECT_TEMPLATES)) {
   <c8y-tab [icon]="'document-body'" [label]="'Templates' | translate" [priority]="30" [tabsOutlet]="'unified-editor'"
@@ -77,7 +85,14 @@
     </d11r-mapping-properties>
     }
 
-    <!-- Tab 2: Templates -->
+    <!-- Tab 2: Subscription (outbound only) -->
+    @if (layout.hasSubscription && currentStepIndex === TAB_SUBSCRIPTION && isTabVisible(TAB_SUBSCRIPTION)) {
+    <d11r-mapping-step-subscription dataCyPrefix="dm-unified-editor" [selection]="subscriptionSelection"
+      [suggestions]="stepperConfiguration.subscriptionSuggestions" [feature]="feature"
+      (selectionChange)="onSubscriptionSelectionChange($event)"></d11r-mapping-step-subscription>
+    }
+
+    <!-- Tab 3: Templates -->
     @if (currentStepIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
     @if (stepperViewModel) {
     <d11r-mapping-template-step #templateStep
@@ -130,7 +145,7 @@
       <ng-container codeEditor>
         <d11r-mapping-code-editor-section dataCyPrefix="dm-unified-editor" [label]="codeEditorLabel" [help]="codeEditorHelp"
             [code]="mappingCode" (codeChange)="onValueCodeChange($event)" [editorOptions]="editorOptions"
-            [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event; onSelectCodeTemplate()"
+            [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event" (replaceCode)="onSelectCodeTemplate()"
             (createTemplate)="onCreateCodeTemplate()" [aiButtonLabel]="aiButtonLabel" [aiGenerationDisabled]="aiGenerationDisabled"
             [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" (generate)="openGenerateSubstitutionDrawer()"
             [showEditor]="templatesInitialized" [showInternalNote]="stepperViewModel?.showInternalExtensionNote" (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>

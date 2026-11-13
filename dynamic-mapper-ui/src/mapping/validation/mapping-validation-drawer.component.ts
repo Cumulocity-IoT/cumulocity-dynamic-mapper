@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, Input, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { ValidationIssue } from '../../shared/mapping/mapping-validation-error';
 import { TranslateService } from '@ngx-translate/core';
@@ -51,6 +51,7 @@ interface DisplayedIssue {
   selector: 'd11r-mapping-validation-drawer',
   templateUrl: 'mapping-validation-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule],
   host: { class: 'd-contents' }

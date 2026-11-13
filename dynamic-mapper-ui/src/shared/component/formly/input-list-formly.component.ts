@@ -20,7 +20,7 @@
  */
 
 // input-list-formly.component.ts
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
 import { InputListComponent } from './input-list.component';
 
@@ -33,6 +33,7 @@ import { InputListComponent } from './input-list.component';
       [disabled]="props.disabled">
     </d11r-input-list>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [InputListComponent]
 })

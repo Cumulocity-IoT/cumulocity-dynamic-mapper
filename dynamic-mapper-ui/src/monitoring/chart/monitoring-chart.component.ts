@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ECharts, EChartsOption } from 'echarts';
 import { NgxEchartsModule, provideEchartsCore } from 'ngx-echarts';
@@ -41,16 +41,23 @@ const MAX_SLOWEST_MAPPINGS = 10;
   selector: 'd11r-monitoring-chart',
   templateUrl: './monitoring-chart.component.html',
   styleUrls: ['./monitoring-chart.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, NgxEchartsModule],
   providers: [provideEchartsCore({ echarts: () => import('echarts') })]
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {
   outcomeOptions: EChartsOption;
-  outcomeUpdateOptions: EChartsOption;
+  private readonly outcomeUpdateOptionsState = signal<EChartsOption>({});
+  get outcomeUpdateOptions(): EChartsOption { return this.outcomeUpdateOptionsState(); }
+  set outcomeUpdateOptions(value: EChartsOption) { this.outcomeUpdateOptionsState.set(value); }
   latencyOptions: EChartsOption;
-  latencyUpdateOptions: EChartsOption;
-  hasLatencyData = false;
+  private readonly latencyUpdateOptionsState = signal<EChartsOption>({});
+  get latencyUpdateOptions(): EChartsOption { return this.latencyUpdateOptionsState(); }
+  set latencyUpdateOptions(value: EChartsOption) { this.latencyUpdateOptionsState.set(value); }
+  private readonly hasLatencyDataState = signal<boolean>(false);
+  get hasLatencyData(): boolean { return this.hasLatencyDataState(); }
+  set hasLatencyData(value: boolean) { this.hasLatencyDataState.set(value); }
 
   private readonly destroy$ = new Subject<void>();
   private readonly outcomeCategories = ['Inbound', 'Outbound', 'No mapping matched / failed early'];

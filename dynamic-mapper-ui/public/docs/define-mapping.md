@@ -51,8 +51,32 @@ The wizard has five steps:
 2. **General settings**: topic, target API, and the options described below.
 3. **Select templates**: enter or select the source payload template. For a Smart Function it is the sample input
    for the test. For JSONata it is the source of the substitution paths.
-4. **Transformation**: the Smart Function editor (or the JSONata substitutions, in Expert Mode), applied at runtime.
+4. **Transformation**: the Smart Function editor (or, for JSONata, the substitution editor), applied at runtime.
 5. **Test mapping**: run a Dry Run or Live Test, then save the mapping.
+
+**Outbound** mappings have one more step, **Subscription**, between **General settings** and **Select templates**
+(so six steps, and the unified editor has a **Subscription** tab at the same place). It decides which devices
+trigger the mapping. See [Defining a subscription for outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#in-the-mapping-editor).
+
+```mermaid
+flowchart LR
+    conn["Connector"]
+    gen["General settings"]
+    sub["Subscription<br/>outbound only"]
+    tpl["Select templates"]
+    trans["Transformation"]
+    test["Test mapping"]
+
+    conn --> gen
+    gen -- "inbound" --> tpl
+    gen -- "outbound" --> sub
+    sub --> tpl
+    tpl --> trans
+    trans --> test
+
+    classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
+    class sub outbound;
+```
 
 For **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because the
 payload is binary. To see a real binary message, use the
@@ -78,7 +102,8 @@ The remaining fields of the **General settings** step depend on the direction an
 | **Auto acknowledge** | Outbound, Operation API | Sets the operation to `EXECUTING` before sending, then to `SUCCESSFUL`, or `FAILED` when the transformation fails. |
 | **Event contains attachment** | Inbound, Event API | Handles an event with a binary attachment that is stored separately. |
 | **Use external id** and **External Id type** | Both | Addresses the device by external ID (default type `c8y_Serial`) instead of the Cumulocity ID. Live Test and `context.getExternalId()` need it. |
-| **Filter Inventory** | Outbound | JSONata filter on the device. See [Outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter). |
+| **Execution filter** | Outbound | Writes the **Filter execution mapping** of the Templates step: **Filter by type** (`type = '<value>'`), **Filter by fragment** (`$exists(<value>)`), or **Custom filter** (empty, enter the expression in the Templates step). The choice is required: a new mapping has none selected, and **Filter by type** and **Filter by fragment** also need a value. When you create a mapping from the Message Explorer, the type of the selected message is prefilled. An existing mapping opens with the option that matches its expression. |
+| **Inventory filter** | Outbound | Shown when **Expert Mode** is on (on by default when a filter is set). JSONata filter on the device. See [Outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter). |
 | **QoS** | Both | Delivery guarantee. Outbound offers at most once and at least once. See [Reliability settings](/c8y-pkg-dynamic-mapper/introduction/reliability-settings). |
 | **Max failure count** | Both | Consecutive failures after which the mapping is deactivated automatically. `0` (the default) means no limit. The counter resets after one message is processed without error, and when you reactivate the mapping. |
 
@@ -145,6 +170,20 @@ the changed fragments. If the expression fails, the message is skipped. Executio
 Payload and SparkPlug B mappings. To filter on **device inventory** properties instead, use the [Inventory
 Filter](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter), which is available for outbound mappings only.
 
+
+##### Dropping repeated messages {#drop-repeated-messages}
+
+Brokers and gateways sometimes deliver a message twice. For **inbound** mappings, the function
+`$isDuplicate(key, windowSeconds)` in the execution filter drops the repeat. It returns `true` if the same key was seen
+for this mapping less than `windowSeconds` ago, so you negate it:
+
+```javascript
+$exists(deviceId) and $exists(time) and $not($isDuplicate(deviceId & "|" & time, 60))
+```
+
+For Smart Function mappings, use `context.isDuplicate` in the script instead. The key, the window from 1 to 3600
+seconds, the behavior for failed messages, and the memory limits are described in
+[Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
 
 ### Managing mappings {#managing-mappings}
 

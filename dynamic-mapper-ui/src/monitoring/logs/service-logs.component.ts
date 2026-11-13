@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AlertService, CoreModule, SelectableItem } from '@c8y/ngx-components';
@@ -48,15 +48,26 @@ const EPOCH = '1970-01-01T00:00:00.000Z';
 @Component({
   selector: 'd11r-service-logs',
   templateUrl: 'service-logs.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, FormsModule, EditorComponent, PopoverModule]
 })
 export class ServiceLogsComponent implements OnInit, OnDestroy {
-  instances: string[] = [];
-  selectedInstance: string;
-  logsText = '';
-  dateFromInput = '';
-  darkTheme = true;
+  private readonly instancesState = signal<string[]>([]);
+  get instances(): string[] { return this.instancesState(); }
+  set instances(value: string[]) { this.instancesState.set(value); }
+  private readonly selectedInstanceState = signal<string>(undefined as unknown as string);
+  get selectedInstance(): string { return this.selectedInstanceState(); }
+  set selectedInstance(value: string) { this.selectedInstanceState.set(value); }
+  private readonly logsTextState = signal<string>('');
+  get logsText(): string { return this.logsTextState(); }
+  set logsText(value: string) { this.logsTextState.set(value); }
+  private readonly dateFromInputState = signal<string>('');
+  get dateFromInput(): string { return this.dateFromInputState(); }
+  set dateFromInput(value: string) { this.dateFromInputState.set(value); }
+  private readonly darkThemeState = signal<boolean>(true);
+  get darkTheme(): boolean { return this.darkThemeState(); }
+  set darkTheme(value: boolean) { this.darkThemeState.set(value); }
   editorOptions: EditorComponent['editorOptions'] = {
     language: 'java',
     readOnly: true,
@@ -65,28 +76,52 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     fontSize: 14,
     scrollBeyondLastLine: false
   };
-  window: LogWindow;
-  source: ServiceLogsSource;
-  isLoading = false;
-  autoRefresh = false;
-  error: string;
-  errorHint: string;
+  private readonly windowState = signal<LogWindow>(undefined as unknown as LogWindow);
+  get window(): LogWindow { return this.windowState(); }
+  set window(value: LogWindow) { this.windowState.set(value); }
+  private readonly sourceState = signal<ServiceLogsSource>(undefined as unknown as ServiceLogsSource);
+  get source(): ServiceLogsSource { return this.sourceState(); }
+  set source(value: ServiceLogsSource) { this.sourceState.set(value); }
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly autoRefreshState = signal<boolean>(false);
+  get autoRefresh(): boolean { return this.autoRefreshState(); }
+  set autoRefresh(value: boolean) { this.autoRefreshState.set(value); }
+  private readonly errorState = signal<string>(undefined as unknown as string);
+  get error(): string { return this.errorState(); }
+  set error(value: string) { this.errorState.set(value); }
+  private readonly errorHintState = signal<string>(undefined as unknown as string);
+  get errorHint(): string { return this.errorHintState(); }
+  set errorHint(value: string) { this.errorHintState.set(value); }
   /** The collected log exists but nothing has been collected for this tenant yet. */
-  nothingCollected = false;
+  private readonly nothingCollectedState = signal<boolean>(false);
+  get nothingCollected(): boolean { return this.nothingCollectedState(); }
+  set nothingCollected(value: boolean) { this.nothingCollectedState.set(value); }
   /** Mappings the log can be restricted to: the label is shown, the identifier is what the log lines carry. */
-  mappings: { identifier: string; label: string; direction: MappingDirectionFilter }[] = [];
+  private readonly mappingsState = signal<{ identifier: string; label: string; direction: MappingDirectionFilter }[]>([]);
+  get mappings(): { identifier: string; label: string; direction: MappingDirectionFilter }[] { return this.mappingsState(); }
+  set mappings(value: { identifier: string; label: string; direction: MappingDirectionFilter }[]) { this.mappingsState.set(value); }
   /** Narrows the mapping list; it does not filter the log by itself. */
-  directionFilter: 'ALL' | MappingDirectionFilter = 'ALL';
+  private readonly directionFilterState = signal<'ALL' | MappingDirectionFilter>('ALL');
+  get directionFilter(): 'ALL' | MappingDirectionFilter { return this.directionFilterState(); }
+  set directionFilter(value: 'ALL' | MappingDirectionFilter) { this.directionFilterState.set(value); }
   /** Identifier of the mapping the log is restricted to; empty: all lines. */
-  selectedMapping = '';
+  private readonly selectedMappingState = signal<string>('');
+  get selectedMapping(): string { return this.selectedMappingState(); }
+  set selectedMapping(value: string) { this.selectedMappingState.set(value); }
   /**
    * What the mapping select offers: all mappings, or only the inbound / outbound ones. Kept as one array that is only
    * replaced when the list really changes — the select rebuilds its state each time its `items` input is set.
    */
-  mappingItems: SelectableItem[] = [];
+  private readonly mappingItemsState = signal<SelectableItem[]>([]);
+  get mappingItems(): SelectableItem[] { return this.mappingItemsState(); }
+  set mappingItems(value: SelectableItem[]) { this.mappingItemsState.set(value); }
 
   /** Both sources can serve this tenant (the owner tenant with collection on), so the page offers the choice. */
-  canChooseSource = false;
+  private readonly canChooseSourceState = signal<boolean>(false);
+  get canChooseSource(): boolean { return this.canChooseSourceState(); }
+  set canChooseSource(value: boolean) { this.canChooseSourceState.set(value); }
   /** The source that was active before selecting a mapping switched to the collected log; restored on clearing it. */
   private sourceBeforeMapping: ServiceLogsSource | undefined;
   /** Whether the collected log holds anything for this tenant; probed once on opening. */

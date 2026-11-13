@@ -19,13 +19,14 @@
  *
  */
 
-import { Component, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import { C8yTranslateModule, IconDirective } from '@c8y/ngx-components';
 import { CommonModule } from '@angular/common';
 import { KpiDetails } from '../../shared/monitoring.service';
 
 @Component({
   selector: 'd11r-kpi-item-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [IconDirective, C8yTranslateModule, CommonModule,],
   templateUrl: './kpi-item-card.component.html',
@@ -35,5 +36,5 @@ export class KpiItemCardComponent {
   /**
    * The label of the service (already translated).
    */
-  @Input() kpi: KpiDetails;
+  readonly kpi = input<KpiDetails>();
 }

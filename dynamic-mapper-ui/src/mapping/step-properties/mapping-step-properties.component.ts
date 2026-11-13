@@ -19,15 +19,17 @@
  */
 
 import {
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
+  effect,
   inject,
-  Input,
   OnDestroy,
   OnInit,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  untracked,
+  ViewEncapsulation, input } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -48,6 +50,7 @@ import {
   MappingTypeLabels,
   Qos,
   qosLabel,
+  JsonValue,
   QOS_OPTIONS,
   SharedService,
   StepperConfiguration
@@ -55,6 +58,8 @@ import {
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
+import { buildPropertyFields, PropertyFormModel } from './property-form-fields';
+import { ExecutionFilterMode, fromFilterMapping, toFilterMapping } from './execution-filter.model';
 import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../../shared/mapping/util';
 
 interface FilterExpressionModel {
@@ -75,30 +80,46 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   styles: [`
     .d11r-props-compact .legend.form-block { margin: 12px 0 4px; }
     .d11r-props-compact .form-group { margin-bottom: 8px; }
-    /* Same box as .form-control, so the text starts where the neighboring input's text starts. */
+    /* Expert Mode: out of the layout flow, above the right end of the first section heading line. */
+    .d11r-props-compact .expert-mode-row { position: relative; height: 0; margin: 0; }
+    .d11r-props-compact .expert-mode-corner {
+      position: absolute; top: -36px; right: 0; z-index: 1; width: auto; padding: 0;
+    }
+    .d11r-props-compact .expert-mode-corner .form-group { margin: 0; }
+    /* Same preview as the substitution step: the result in monospace with its type tag beside it. The top
+       margin lines it up with the input in the neighboring column, which has a label above it. */
     .d11r-props-compact .filter-result {
-      padding: 5px 8px;
-      border: 1px solid transparent;
-      line-height: 20px;
-      min-height: 32px;
-      box-sizing: border-box;
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 30px;
+      min-height: 20px;
+      font-size: 12px;
+    }
+    .d11r-props-compact .filter-result code {
+      min-width: 0;
+      max-width: 100%;
+      max-height: 6em;
+      overflow: auto;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
   `],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, PopoverModule]
 })
 export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
-  @Input() mapping: Mapping;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() propertyFormly: FormGroup;
+  readonly mapping = input<Mapping>();
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly propertyFormly = input<FormGroup>();
   /**
    * The connectors this mapping is deployed to. Used to tell the user when the QoS they picked
    * cannot be honoured by one of those connectors — the backend clamps it silently otherwise.
    */
-  @Input() deploymentMapEntry: DeploymentMapEntry;
+  readonly deploymentMapEntry = input<DeploymentMapEntry>();
   @Output() targetAPIChanged = new EventEmitter<string>();
   /**
    * Changed properties, as a patch. The step edits a working copy (`model`), never the host's
@@ -114,8 +135,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     'maxFailureCount'
   ];
 
-  /** Formly's model: a working copy of the properties in PROPERTY_KEYS. */
-  model: Partial<Mapping> = {};
+  /**
+   * Formly's model: a working copy of the properties in PROPERTY_KEYS, plus the two helper keys of
+   * the execution-filter control (outbound). Those are a view over `filterMapping` and are never
+   * committed.
+   */
+  model: PropertyFormModel = {};
 
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
@@ -145,6 +170,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   private readonly alertService = inject(AlertService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly translateService = inject(TranslateService);
   private readonly sharedService = inject(SharedService);
   private readonly mappingService = inject(MappingService);
@@ -162,381 +188,35 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.initializeFilterModels();
     this.initializeModel();
 
-    const isInbound = this.stepperConfiguration.direction === Direction.INBOUND;
-    const isOutbound = this.stepperConfiguration.direction === Direction.OUTBOUND;
-    // Switches share this shape; hideLabel puts the label next to the toggle.
-    const switchProps = (label: string, description: string) => ({
-      label,
-      description,
-      disabled: this.isFieldDisabled,
-      required: false,
-      switchMode: true,
-      indeterminate: false,
-      hideLabel: true,
-      // The switch already offers the description as a help popover; no second copy below it.
-      hideInlineDescription: true
+    // The host object below exposes live members through getters, so it needs the component under another name.
+    const self = this;
+    this.propertyFormlyFields = buildPropertyFields({
+      direction: this.stepperConfiguration().direction,
+      isFieldDisabled: this.isFieldDisabled,
+      filterInventoryDescription: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
+      get mapping() { return self.mapping(); },
+      get model() { return self.model; },
+      get form() { return self.propertyFormly(); },
+      destroy$: this.destroy$,
+      get filterInventoryField() { return self.filterInventoryField; },
+      set filterInventoryField(field) { self.filterInventoryField = field; },
+      get filterResultField() { return self.filterResultField; },
+      set filterResultField(field) { self.filterResultField = field; },
+      translate: (key, params) => self.translateService.instant(key, params),
+      formatKey: key => self.formatStringPipe.transform(key),
+      syncFilterInventoryResultField: () => self.syncFilterInventoryResultField(),
+      updateFilterInventoryExpressionResult: path => self.updateFilterInventoryExpressionResult(path),
+      refreshFilterInventoryWarning: path => self.refreshFilterInventoryWarning(path),
+      onTargetAPIChanged: targetAPI => self.onTargetAPIChanged(targetAPI),
+      onExecutionFilterChanged: () => self.onExecutionFilterChanged(),
+      onCustomFilterEdited: expression => self.onCustomFilterEdited(expression),
+      commitModel: () => self.commitModel(),
+      notifyMappingPropertyChanged: mapping => self.stepperService.notifyMappingPropertyChanged(mapping),
+      describeQos: qos => self.describeQos(qos as Qos)
     });
-
-    this.propertyFormlyFields = [
-      {
-        type: 'template',
-        expressions: {
-          template: () =>
-            `<div class="legend form-block">${this.translateService.instant(gettext('General, topic, and filter'))}</div>`
-        }
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'name',
-            id: 'mappingName',
-            wrappers: ['c8y-form-field'],
-            type: 'input',
-            props: {
-              label: gettext('Mapping name'),
-              disabled: this.isFieldDisabled,
-              required: true
-            }
-          },
-          {
-            // Mapping and transformation type cannot be edited here, so they are shown as a
-            // summary instead of two disabled inputs.
-            className: 'col-lg-6',
-            type: 'template',
-            expressions: {
-              template: (field: FormlyFieldConfig) =>
-                `<div class="form-group"><label>${this.translateService.instant(gettext('Mapping and transformation type'))}</label>` +
-                `<div class="m-t-4"><span class="label label-default m-r-8" data-cy="dm-mapping-properties-mapping-type">${this.mapping.mappingType ?? ''}</span>` +
-                `<span class="label label-default" data-cy="dm-mapping-properties-transformation-type">${this.mapping.transformationType ?? ''}</span></div></div>`
-            }
-          }
-        ]
-      },
-      {
-        validators: {
-          validation: [isInbound ? 'checkTopicsInboundAreValid' : 'checkTopicsOutboundAreValid']
-        },
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'mappingTopic',
-            id: 'mappingTopic',
-            wrappers: ['c8y-form-field'],
-            type: 'input',
-            props: {
-              label: gettext('Mapping topic'),
-              placeholder: 'plant1/+/+',
-              disabled: this.isFieldDisabled,
-              description:
-                gettext('The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally.'),
-              change: () => {
-                const newTopic = this.propertyFormly.get('mappingTopic').value;
-                const sampleControl = this.propertyFormly.get('mappingTopicSample');
-                if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
-                  return;
-                }
-                sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
-              },
-              required: true
-            },
-            hide: isOutbound
-          },
-          {
-            className: 'col-lg-6',
-            key: 'publishTopic',
-            wrappers: ['c8y-form-field'],
-            type: 'input',
-            props: {
-              label: gettext('Publish topic'),
-              placeholder: 'measurements/+',
-              disabled: this.isFieldDisabled,
-              change: () => {
-                const newTopic = this.propertyFormly.get('publishTopic').value;
-                const sampleControl = this.propertyFormly.get('publishTopicSample');
-                if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
-                  return;
-                }
-                sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
-              },
-              required: true
-            },
-            hide: isInbound
-          },
-          {
-            className: 'col-lg-6',
-            key: 'mappingTopicSample',
-            id: 'mappingTopicSample',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            props: {
-              label: gettext('Mapping topic sample'),
-              placeholder: 'e.g. device/110',
-              disabled: this.isFieldDisabled,
-              description: gettext(
-                'The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
-              ),
-              required: true
-            },
-            hide: isOutbound
-          },
-          {
-            className: 'col-lg-6',
-            key: 'publishTopicSample',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            props: {
-              label: gettext('Publish topic sample'),
-              placeholder: 'e.g. device/110',
-              disabled: this.isFieldDisabled,
-              description: gettext(
-                'The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
-              ),
-              required: true
-            },
-            hide: !isOutbound
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'filterInventory',
-            type: 'input',
-            // The project wrapper, not the stock c8y one: it can show the "not in the inventory
-            // cache" warning under the input (props.warning).
-            wrappers: ['d11r-wrapper-form-field'],
-            props: {
-              label: gettext('Filter inventory'),
-              placeholder: 'type = "lora_device_type"',
-              disabled: this.isFieldDisabled,
-              description: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
-              required: false
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                this.filterInventoryField = field;
-                // An existing mapping opens with its filter already set: evaluate it right away
-                // (result and cache warning) instead of only after the first edit.
-                if (this.model.filterInventory) {
-                  void this.updateFilterInventoryExpressionResult(this.model.filterInventory);
-                } else {
-                  void this.refreshFilterInventoryWarning(this.model.filterInventory);
-                }
-                field.formControl.valueChanges.pipe(
-                  debounceTime(1500),
-                  distinctUntilChanged(),
-                  takeUntil(this.destroy$)
-                ).subscribe(path => {
-                  this.updateFilterInventoryExpressionResult(path);
-                });
-              }
-            }
-          },
-          // Result of evaluating the filter against the sample device, shown beside the
-          // expression. A template field shares the row's grid; syncFilterInventoryResultField()
-          // updates it, because formly re-evaluates expressions on model changes only and the
-          // result arrives asynchronously.
-          (this.filterResultField = {
-            className: 'col-lg-6',
-            type: 'template',
-            hide: true,
-            // Must be non-empty: formly only resolves a template field's type from a truthy
-            // template, and un-hiding an empty one fails with 'type "template" could not be found'.
-            template: '<div></div>'
-          })
-        ]
-      },
-      {
-        type: 'template',
-        expressions: {
-          template: () =>
-            `<div class="legend form-block">${this.translateService.instant(
-              isInbound ? gettext('Target and device') : gettext('Source and device')
-            )}</div>`
-        }
-      },
-      {
-        // The API select takes the left half; the option that applies to the chosen API sits in
-        // the right half. Hidden options are removed from the DOM, so no spacer is needed.
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'targetAPI',
-            type: 'select',
-            wrappers: ['c8y-form-field'],
-            props: {
-              label: isInbound ? gettext('Target API') : gettext('Source API'),
-              description: isOutbound
-                ? gettext('Used as a filter to select which mappings apply when a notification arrives.')
-                : undefined,
-              options: Object.keys(API)
-                .filter((key) => key !== API.ALL.name)
-                .map((key) => {
-                  return { label: this.translateService.instant(this.formatStringPipe.transform(key)), value: key };
-                }),
-              disabled: this.isFieldDisabled,
-              change: () => {
-                this.onTargetAPIChanged(
-                  this.propertyFormly.get('targetAPI').value
-                );
-              },
-              required: true
-            }
-          },
-          {
-            className: 'col-lg-3',
-            key: 'createNonExistingDevice',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            props: switchProps(
-              gettext('Create device'),
-              gettext(
-                'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
-              )
-            ),
-            expressions: { hide: () => isOutbound || this.model.targetAPI === API.INVENTORY.name }
-          },
-          {
-            className: 'col-lg-3',
-            key: 'updateExistingDevice',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            props: switchProps(
-              gettext('Update existing device'),
-              gettext('Update the managed object of the device if it already exists.')
-            ),
-            expressions: { hide: () => isOutbound || this.model.targetAPI !== API.INVENTORY.name }
-          },
-          {
-            className: 'col-lg-3',
-            key: 'eventWithAttachment',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            props: switchProps(
-              gettext('Event contains attachment'),
-              gettext('Event contains attachment, e.g. image, ... that is stored separately.')
-            ),
-            expressions: { hide: () => isOutbound || this.model.targetAPI !== API.EVENT.name }
-          },
-          {
-            className: 'col-lg-3',
-            key: 'autoAckOperation',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            props: switchProps(
-              gettext('Auto acknowledge'),
-              gettext('Auto acknowledge outbound operation.')
-            ),
-            expressions: { hide: () => isInbound || this.model.targetAPI !== API.OPERATION.name }
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'useExternalId',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            props: {
-              ...switchProps(
-                gettext('Use external id'),
-                gettext(
-                  'If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type.'
-                )
-              ),
-              change: () => {
-                this.model.useExternalId = !!this.propertyFormly.get('useExternalId').value;
-                this.commitModel();
-                this.stepperService.notifyMappingPropertyChanged(this.mapping);
-              }
-            }
-          },
-          {
-            className: 'col-lg-6',
-            key: 'externalIdType',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            defaultValue: 'c8y_Serial',
-            props: {
-              label: gettext('External id type'),
-              disabled: this.isFieldDisabled
-            },
-            expressions: { hide: (field) => !field.model.useExternalId }
-          }
-        ]
-      },
-      {
-        type: 'template',
-        expressions: {
-          template: () => `<div class="legend form-block">${this.translateService.instant(gettext('Delivery'))}</div>`
-        }
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'qos',
-            type: 'select',
-            wrappers: ['c8y-form-field'],
-            props: {
-              label: gettext('QoS'),
-              // Labels and the per-level explanation come from the shared QoS metadata, so the
-              // grid renderer and this picker can never describe a level differently.
-              options: QOS_OPTIONS
-                // Outbound publishing is offered at at-most-once / at-least-once only.
-                .filter(
-                  (option) =>
-                    !isOutbound ||
-                    option.value !== Qos.EXACTLY_ONCE
-                )
-                .map((option) => ({ label: this.translateService.instant(option.label), value: option.value })),
-              disabled: this.isFieldDisabled,
-              required: true
-            },
-            expressions: {
-              // Recomputed on every change so the user sees immediately when the level they
-              // picked will be clamped by one of the connectors this mapping is deployed to.
-              'props.description': (field) => this.describeQos(field.model?.qos)
-            }
-          },
-          {
-            className: 'col-lg-6',
-            key: 'maxFailureCount',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            props: {
-              label: gettext('Max failure count'),
-              type: 'number',
-              min: 0,
-              disabled: this.isFieldDisabled,
-              description:
-                gettext(
-                  'Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated.'
-                )
-            },
-            validators: {
-              // A negative threshold would silently behave like 0 (check disabled) instead of
-              // being rejected, so catch it in the form.
-              nonNegative: {
-                expression: (control) =>
-                  control.value === null || control.value === undefined || control.value === '' ||
-                  Number(control.value) >= 0,
-                message: () => this.translateService.instant(gettext('The max failure count must not be negative.'))
-              }
-            }
-          }
-        ]
-      }
-    ];
+    // OnPush: the form fields and models above are built after awaits (features, QoS capabilities), so no
+    // event of this view announces them.
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy() {
@@ -545,14 +225,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private renderFilterInventoryResult(): string {
-    const { resultType, result } = this.filterInventoryModel.filterExpression;
+    const { resultType, result, valid } = this.filterInventoryModel.filterExpression;
     const text = this.escapeHtml(String(result ?? ''));
+    const type = this.escapeHtml(String(resultType ?? 'empty'));
     return (
-      `<div class="form-group"><label>${this.escapeHtml(
-        this.translateService.instant(gettext('Filter Inventory Result [{{resultType}}]'), { resultType: String(resultType) })
-      )}</label>` +
-      `<div class="filter-result font-smaller" ` +
-      `data-cy="dm-mapping-properties-filter-inventory-result">${text}</div></div>`
+      `<div class="filter-result" data-cy="dm-mapping-properties-filter-inventory-result">` +
+      `<code>${text}</code>` +
+      `<span class="label ${valid === false ? 'label-danger' : 'label-default'}">${type}</span></div>`
     );
   }
 
@@ -569,7 +248,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     // The cache note is part of the field's help text, and a missing attribute is reported right
     // under the field (see refreshFilterInventoryWarning) — not as a toast that disappears.
     try {
-      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+      const resultExpression: JsonValue = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
         path
       );
@@ -586,13 +265,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       await this.refreshFilterInventoryWarning(path);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
-      this.propertyFormly
+      this.propertyFormly()
         .get('filterInventory')
         .setErrors({ validationError: { message: error.message } });
-      this.propertyFormly.get('filterInventory').markAsTouched();
+      this.propertyFormly().get('filterInventory').markAsTouched();
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
     this.syncFilterInventoryResultField();
+    // OnPush: the result arrives after an await (debounced input), outside any event of this view.
+    this.cdr.markForCheck();
   }
 
   private syncFilterInventoryResultField(): void {
@@ -600,7 +281,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       return;
     }
     this.filterResultField.template = this.renderFilterInventoryResult();
-    this.filterResultField.hide = this.filterInventoryModel.filterExpression.resultType === 'empty';
+    this.filterResultField.hide =
+      !this.model.expertMode || this.filterInventoryModel.filterExpression.resultType === 'empty';
   }
 
   /**
@@ -629,6 +311,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       field.props['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
       field.options?.detectChanges?.(field);
     }
+    this.cdr.markForCheck();
   }
 
   private uncachedWarningText(attributes: string[]): string {
@@ -658,7 +341,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
    * non-fatal: without the capability the QoS hint simply omits the connector-specific part.
    */
   private async loadQosCapabilities(): Promise<void> {
-    const identifiers = this.deploymentMapEntry?.connectors ?? [];
+    const identifiers = this.deploymentMapEntry()?.connectors ?? [];
     if (!identifiers.length) {
       return;
     }
@@ -713,7 +396,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   private initializeDirection(): void {
     // A mapping without a direction is treated as inbound; the host's mapping is not modified.
-    const direction = this.mapping.direction ?? Direction.INBOUND;
+    const direction = this.mapping().direction ?? Direction.INBOUND;
     this.targetSystem = direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
   }
@@ -721,11 +404,80 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   private initializeModel(): void {
     const model: Record<string, unknown> = {};
     for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
-      model[key] = this.mapping[key];
+      model[key] = this.mapping()[key];
     }
     // The field's own defaultValue would only reach this copy, so apply it here and commit it.
     model['externalIdType'] ??= 'c8y_Serial';
+    // Show the stored filter expression as one of the three options (an unknown expression is "custom").
+    // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
+    // An existing inventory filter must not be hidden from the user.
+    model['expertMode'] = !!this.mapping().filterInventory?.trim();
     this.model = model as Partial<Mapping>;
+    this.deriveExecutionFilter();
+    this.commitModel();
+  }
+
+  /** The last `filterMapping` this control wrote or read; a different value in the host came from elsewhere. */
+  private knownFilterMapping: string | undefined;
+
+  /** Shows the host's `filterMapping` as one of the three options (an unknown expression is "custom"). */
+  private deriveExecutionFilter(): void {
+    const expression = this.mapping().filterMapping;
+    const choice = fromFilterMapping(expression);
+    // No expression yet (new mapping): nothing is chosen, the user has to pick an option.
+    this.model.executionFilterMode = expression?.trim() ? choice.mode : undefined;
+    this.model.executionFilterValue = choice.value ?? '';
+    this.model.filterMapping = expression;
+    this.knownFilterMapping = expression;
+  }
+
+  /**
+   * The Templates step edits `filterMapping` too, and this component outlives it in the stepper.
+   * The host replaces its mapping object on every edit, so a new `mapping` input is the signal to
+   * follow such a change and keep the control from showing (or writing back) a stale expression.
+   */
+  constructor() {
+    effect(() => {
+      this.mapping();
+      untracked(() => this.onMappingReplaced());
+    });
+  }
+
+  /** Re-derives the execution filter when the host bound a mapping whose `filterMapping` this step does not know. */
+  onMappingReplaced(): void {
+    const mapping = this.mapping();
+    if (this.model && mapping && mapping.filterMapping !== this.knownFilterMapping) {
+      this.deriveExecutionFilter();
+    }
+  }
+
+  /** Writes the execution-filter control to `filterMapping`. Only runs on user input, never on load. */
+  onExecutionFilterChanged(): void {
+    const mode = (this.propertyFormly().get('executionFilterMode')?.value ?? this.model.executionFilterMode) as ExecutionFilterMode;
+    const value = this.propertyFormly().get('executionFilterValue')?.value ?? this.model.executionFilterValue;
+    this.model.executionFilterMode = mode;
+    this.model.executionFilterValue = value;
+    const expression = toFilterMapping({ mode, value });
+    this.model.filterMapping = expression;
+    this.knownFilterMapping = expression;
+    // Not part of commitModel: the Templates step also owns this property.
+    if (expression !== this.mapping().filterMapping) {
+      this.propertiesChange.emit({ filterMapping: expression });
+    }
+    this.commitModel();
+  }
+
+  /**
+   * The user typed the custom expression. It is the filter as it is, so it is written unchanged. Ignored
+   * outside the custom option: there the field is hidden and its value is only a view of the other two.
+   */
+  onCustomFilterEdited(expression: string | undefined): void {
+    if (this.model.executionFilterMode !== 'custom') return;
+    const value = expression ?? '';
+    if (value === (this.mapping().filterMapping ?? '')) return;
+    this.model.filterMapping = value;
+    this.knownFilterMapping = value;
+    this.propertiesChange.emit({ filterMapping: value });
     this.commitModel();
   }
 
@@ -733,7 +485,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   commitModel(): void {
     const patch: Record<string, unknown> = {};
     for (const key of MappingStepPropertiesComponent.PROPERTY_KEYS) {
-      if (this.model[key] !== this.mapping[key]) {
+      if (this.model[key] !== this.mapping()[key]) {
         patch[key] = this.model[key];
       }
     }
@@ -749,7 +501,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private get isReadOnly(): boolean {
-    return !!this.stepperConfiguration.readOnly;
+    return !!this.stepperConfiguration().readOnly;
   }
 
   private get canEdit(): boolean {

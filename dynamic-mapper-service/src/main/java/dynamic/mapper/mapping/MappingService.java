@@ -33,7 +33,10 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
-import dynamic.mapper.model.*;
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingRepresentation;
+import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.validation.ResolveException;
@@ -54,7 +57,13 @@ import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.*;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.annotation.Order;
@@ -255,12 +264,13 @@ public class MappingService implements TenantScoped {
         // if this update changes it. Every path that can persist a new mapping.code
         // (generic PUT, version switch on activation, setCodeMapping) routes through
         // here, so this is the single place that needs to catch code changes.
+        Mapping existing = getMapping(tenant, mapping.getId());
         String previousCode = null;
         if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
-            Mapping existing = getMapping(tenant, mapping.getId());
             previousCode = existing == null ? null : existing.getCode();
         }
         final String previousCodeFinal = previousCode;
+        final boolean deduplicationKeysStale = changesDeduplicationKeys(existing, mapping);
 
         // Update with proper tenant scope
         return subscriptionsService.callForTenant(tenant, () -> {
@@ -282,6 +292,12 @@ public class MappingService implements TenantScoped {
                         .invalidateMappingPool(tenant, mapping.getIdentifier());
             }
 
+            // A changed filter or script gives the keys a new meaning, so keys recorded under the old
+            // definition must not drop messages of the new one. Any other save keeps them.
+            if (deduplicationKeysStale) {
+                clearDeduplication(tenant, mapping.getIdentifier());
+            }
+
             if (logEvent) {
                 serviceRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
@@ -295,6 +311,25 @@ public class MappingService implements TenantScoped {
                     () -> log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId()));
             return mapping;
         });
+    }
+
+    /**
+     * True if the update can change what a de-duplication key means: the filter holds {@code $isDuplicate}, the
+     * script holds {@code context.isDuplicate}, and the transformation type decides which of them runs. A mapping
+     * that cannot be compared is treated as changed.
+     */
+    static boolean changesDeduplicationKeys(Mapping existing, Mapping updated) {
+        return existing == null
+                || !Objects.equals(existing.getFilterMapping(), updated.getFilterMapping())
+                || !Objects.equals(existing.getCode(), updated.getCode())
+                || !Objects.equals(existing.getTransformationType(), updated.getTransformationType());
+    }
+
+    private void clearDeduplication(String tenant, String mappingIdentifier) {
+        var deduplication = serviceRegistry.getMessageDeduplicationService();
+        if (deduplication != null) {
+            deduplication.clearMapping(tenant, mappingIdentifier);
+        }
     }
 
     /**
@@ -455,6 +490,7 @@ public class MappingService implements TenantScoped {
             statusService.removeStatus(tenant, mapping.getIdentifier());
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
             flowStateStore.clearMappingState(tenant, mapping.getIdentifier());
+            clearDeduplication(tenant, mapping.getIdentifier());
 
             serviceRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),

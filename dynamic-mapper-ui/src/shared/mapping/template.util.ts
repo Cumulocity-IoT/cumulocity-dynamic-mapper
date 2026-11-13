@@ -19,13 +19,14 @@
  */
 import * as _ from 'lodash';
 import { API, Direction, Mapping, TransformationType } from './mapping.model';
+import type { JsonObject, Template } from './json.model';
 import { MappingTokens } from './processor/processor.constants';
 import { randomIdAsString } from './random-id';
 import { CONTEXT_DATA_KEY_NAME, CONTEXT_DATA_METHOD_NAME, CONTEXT_DATA_PUBLISH_TOPIC, CONTEXT_DATA_RETAIN } from './util-constants';
 
 // ─── TransformationType predicates ───────────────────────────────────────────
 
-export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+export function checkTransformationType(transformationType: TransformationType, template: unknown): boolean {
   // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
 
   if (isJSONArray(template)) {
@@ -35,7 +36,7 @@ export function checkTransformationType(transformationType: TransformationType, 
   return true;
 }
 
-function isJSONArray(value: any): boolean {
+function isJSONArray(value: unknown): boolean {
   // Check if already a parsed array
   if (Array.isArray(value)) {
     return true;
@@ -68,17 +69,18 @@ export function isCodeOrExtensionTransformation(transformationType: Transformati
 // ─── Template expansion ───────────────────────────────────────────────────────
 
 export function expandExternalTemplate(
-  template: object,
+  template: Template | undefined,
   mapping: Mapping,
   levels: string[]
-): object {
+): Template | undefined {
   if (Array.isArray(template) || isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   } else {
     // Define the context data with specific values. A key already present in the template (e.g.
     // seeded from a real message captured in the Message Explorer) is preferred over the generic
     // placeholder, so the sample mirrors what the mapping actually receives at runtime.
-    const existingKey = template?.[MappingTokens.CONTEXT_DATA]?.[CONTEXT_DATA_KEY_NAME];
+    const source = template as JsonObject | undefined;
+    const existingKey = (source?.[MappingTokens.CONTEXT_DATA] as JsonObject | undefined)?.[CONTEXT_DATA_KEY_NAME];
     let contextData;
     if (mapping.direction == Direction.INBOUND) {
       contextData = {
@@ -95,22 +97,22 @@ export function expandExternalTemplate(
       }
     };
     return {
-      ...template,
+      ...source,
       _TOPIC_LEVEL_: levels,
       _CONTEXT_DATA_: contextData
-    };
+    } as JsonObject;
 
   }
 }
 
-export function expandC8YTemplate(template: object, mapping: Mapping): object {
+export function expandC8YTemplate(template: Template | undefined, mapping: Mapping): Template | undefined {
   if (isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   }
   let result;
   if (mapping.useExternalId) {
     result = {
-      ...template,
+      ...(template as JsonObject | undefined),
       _IDENTITY_: {
         // externalIdType: mapping.externalIdType,
         externalId: 'any_SerialNumber',
@@ -119,7 +121,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     };
   } else {
     result = {
-      ...template,
+      ...(template as JsonObject | undefined),
       [MappingTokens.IDENTITY]: {
         c8ySourceId: '909090'
       }

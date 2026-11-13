@@ -19,6 +19,10 @@
 ~
 -->
 <c8y-title>{{ configuration?.name }}</c8y-title>
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item [icon]="'c8y-device-management'" [label]="'Connectors' | translate" [path]="ROUTE_CONNECTORS"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="configuration?.name"></c8y-breadcrumb-item>
+</c8y-breadcrumb>
 @if (serviceConfiguration && !serviceConfiguration.sendConnectorLifecycle) {
 <c8y-action-bar-item [placement]="'left'">
   <span class="text-warning d-flex a-i-center" title="{{ 'Enable \'Send connector lifecycle\' in Service configuration to record connector status logs.' | translate }}">

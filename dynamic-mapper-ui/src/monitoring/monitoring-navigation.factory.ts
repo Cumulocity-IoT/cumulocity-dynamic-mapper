@@ -95,9 +95,9 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
-      const feature: any = await this.sharedService.getFeatures();
+      const feature = await this.sharedService.getFeatures();
       const copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
       // The service log describes the tenant's devices and connectors: only mapper admins get the entry
       // (the service enforces the same role on the collected log, so hiding it is a convenience, not the control).

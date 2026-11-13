@@ -26,7 +26,7 @@ import { ToolCallPart } from '@c8y/ngx-components/ai';
 import { TranslateService } from '@ngx-translate/core';
 import { Direction, Mapping, SharedService, TransformationType } from '../../shared';
 import { AiAgentService } from '../core/ai-agent.service';
-import { AiChatHistoryService, generationInputsKey } from '../core/ai-chat-history.service';
+import { AiChatHistoryService, generationInputsKey, StoredAiSession } from '../core/ai-chat-history.service';
 import { MappingService } from '../core/mapping.service';
 import { AiPromptComponent } from './ai-prompt.component';
 
@@ -171,7 +171,7 @@ describe('AiPromptComponent — result hand-over', () => {
       create(TransformationType.SMART_FUNCTION);
       history = TestBed.inject(AiChatHistoryService);
       agentChat = { saveChatHistory: jasmine.createSpy('saveChatHistory').and.returnValue({ snapshot: 1 }) };
-      (component as any).agentChat = agentChat;
+      (component as any).agentChat = () => agentChat;
       (component as any).inputsKey = generationInputsKey((component as any).mappingForAI);
     });
 
@@ -208,6 +208,63 @@ describe('AiPromptComponent — result hand-over', () => {
       agentChat.saveChatHistory.calls.reset();
       TestBed.resetTestingModule(); // destroys the component
       expect(agentChat.saveChatHistory).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('opening the drawer', () => {
+    let history: AiChatHistoryService;
+    let aiAgentService: { getAISettings: jasmine.Spy };
+    let sharedService: { getServiceConfiguration: jasmine.Spy };
+
+    beforeEach(() => {
+      aiAgentService = { getAISettings: jasmine.createSpy('getAISettings').and.resolveTo({ killSwitch: false, telemetryOptOut: false }) };
+      sharedService = { getServiceConfiguration: jasmine.createSpy('getServiceConfiguration').and.resolveTo({}) };
+      TestBed.overrideProvider(AiAgentService, { useValue: aiAgentService });
+      TestBed.overrideProvider(SharedService, { useValue: sharedService });
+      create(TransformationType.SMART_FUNCTION);
+      history = TestBed.inject(AiChatHistoryService);
+      component.aiAgent = null as any;
+      component.mapping = { ...component.mapping, sourceTemplate: '{"a":1}', targetTemplate: '{}' } as Mapping;
+    });
+
+    it('offers the two suggestion chips for an existing mapping that has no stored conversation', async () => {
+      component.existingMapping = true;
+
+      await component.ngOnInit();
+
+      expect(component.suggestions?.length).toBe(2);
+      expect(component.initialChatHistory).toBeUndefined();
+    });
+
+    it('resumes a stored conversation: hands its history to the chat and offers no new chips', async () => {
+      component.existingMapping = true;
+      const stored: StoredAiSession = {
+        inputsKey: 'k', targetKeyAtOpen: '', extractedKey: '', history: { snapshot: 'earlier turns' } as any,
+        generatedCode: '', substitutions: [], validationIssues: [], valid: false
+      };
+      history.set('m1', stored);
+
+      await component.ngOnInit();
+
+      expect(component.initialChatHistory as unknown).toBe(stored.history as unknown);
+      expect(component.suggestions).toBeUndefined(); // the chat shows the suggestions it restored from the history
+    });
+
+    it('keeps a conversation stored by a first run for the next run on the same mapping', async () => {
+      component.existingMapping = true;
+      await component.ngOnInit();
+      (component as any).agentChat = () => ({ saveChatHistory: () => ({ snapshot: 'first run' }) });
+      component.onMessagesChange([{ role: 'user', content: 'hi' } as any]);
+      component.cancel();
+
+      const second = TestBed.createComponent(AiPromptComponent).componentInstance;
+      second.mapping = component.mapping;
+      second.aiAgent = null as any;
+      second.existingMapping = true;
+      await second.ngOnInit();
+
+      expect((second.initialChatHistory as any)?.snapshot).toBe('first run');
+      expect(second.suggestions).toBeUndefined();
     });
   });
 });

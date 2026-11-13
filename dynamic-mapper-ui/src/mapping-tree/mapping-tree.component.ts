@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { JsonEditorComponent } from '../shared';
@@ -30,6 +30,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: 'mapping-tree.component.html',
   styleUrls: ['./tree.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, JsonEditorComponent]
 })
@@ -39,9 +40,9 @@ export class MappingTreeComponent implements OnInit {
     private route: ActivatedRoute,
   ) { }
 
-  @ViewChild('editorTree', { static: false }) editorTree: JsonEditorComponent;
-  mappingTree$: BehaviorSubject<any> = new BehaviorSubject([]);
-  editorOptionsTree: any = {
+  readonly editorTree = viewChild<JsonEditorComponent>('editorTree');
+  mappingTree$ = new BehaviorSubject<unknown>([]);
+  readonly editorOptionsTree = {
     mode: 'tree',
     removeModes: ['text', 'table'],
     mainMenuBar: true,

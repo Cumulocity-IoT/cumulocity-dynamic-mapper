@@ -92,13 +92,32 @@ describe('buildNewMapping', () => {
       expect(mapping.sourceTemplate).toBe('{"temp":4}');
     });
 
-    it('OUTBOUND: puts the captured payload on the source and sets the filter', () => {
+    it('OUTBOUND: prefills the execution filter with the payload type', () => {
+      const { mapping } = buildNewMapping(
+        request({ direction: Direction.OUTBOUND, preFill: preFill({ payload: '{"id":"1","type":"c8y_Temp"}' }) })
+      );
+      expect(mapping.filterMapping).toBe("type = 'c8y_Temp'");
+    });
+
+    it('OUTBOUND: leaves the execution filter empty (the user must choose) when the payload has no usable type', () => {
+      for (const payload of ['{"type":""}', '{"type":5}', 'not json', '[]']) {
+        const { mapping } = buildNewMapping(request({ direction: Direction.OUTBOUND, preFill: preFill({ payload }) }));
+        expect(mapping.filterMapping).withContext(payload).toBe('');
+      }
+    });
+
+    it('INBOUND: does not prefill an execution filter from the payload type', () => {
+      const { mapping } = buildNewMapping(request({ preFill: preFill({ payload: '{"type":"x"}' }) }));
+      expect(mapping.filterMapping).not.toBe("type = 'x'");
+    });
+
+    it('OUTBOUND: puts the captured payload on the source', () => {
       const { mapping } = buildNewMapping(
         request({ direction: Direction.OUTBOUND, preFill: preFill({ payload: '{"id":"1"}' }) })
       );
 
       expect(mapping.sourceTemplate).toBe('{"id":"1"}');
-      expect(mapping.filterMapping).toBe('true');
+      expect(mapping.filterMapping).toBe('');
       expect('mappingTopic' in mapping).toBeFalse();
     });
 

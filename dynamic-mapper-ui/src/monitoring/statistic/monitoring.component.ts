@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -25,11 +25,12 @@ import {
   ColumnDataType,
   CommonModule,
   CoreModule,
-  Pagination
+  Pagination,
+  PopoverConfirmComponent
 } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
 import {
-  ConfirmationModalComponent,
   Direction,
   Feature,
   MAPPING_STATUS_UNSPECIFIED,
@@ -40,8 +41,8 @@ import {
 } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../../shared/component/renderer/number.renderer.component';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { NameRendererComponent } from '../../shared/component/renderer/name.renderer.component';
+import { ExpandableTextRendererComponent } from '../../shared/component/renderer/expandable-text.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
 
@@ -58,8 +59,9 @@ import { TranslateService } from '@ngx-translate/core';
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  providers: [...provideGridPersistence('monitoring-statistic')],
+  providers: [...provideGridPersistence('monitoring-statistic-v2')],
   imports: [CoreModule, CommonModule]
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
@@ -68,7 +70,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private readonly translateService = inject(TranslateService);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
-  private readonly bsModalService = inject(BsModalService);
   private readonly sharedService = inject(SharedService);
   private readonly route = inject(ActivatedRoute);
 
@@ -95,6 +96,12 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
+  /**
+   * Left to right: what the row is (name, topic), whether it is healthy (status), what happened to the messages
+   * (received, then the four outcomes), and when (last message, last error). The widths fit the headers in full
+   * and leave the free space to the name and the topic. The last error is kept to one line with a "More" button,
+   * so a long error text does not stretch its row.
+   */
   private readonly baseColumns: Column[] = [
     {
       name: 'name',
@@ -109,7 +116,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
       visible: true,
-      gridTrackSize: 'minmax(150px, 1.2fr)'
+      gridTrackSize: 'minmax(200px, 1.6fr)'
     },
     {
       name: 'mappingTopic',
@@ -130,6 +137,15 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
+      header: gettext('Status'),
+      name: 'healthDisplay',
+      path: 'healthDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '170px'
+    },
+    {
       header: gettext('Received'),
       name: 'messagesReceived',
       path: 'messagesReceived',
@@ -137,7 +153,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '100px'
+      gridTrackSize: '110px'
     },
     {
       header: gettext('Processed'),
@@ -147,7 +163,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '100px'
+      gridTrackSize: '115px'
     },
     {
       header: gettext('Filtered'),
@@ -157,7 +173,17 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '90px'
+      gridTrackSize: '105px'
+    },
+    {
+      header: gettext('Repeated'),
+      name: 'messagesDuplicate',
+      path: 'messagesDuplicate',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '110px'
     },
     {
       header: gettext('Errors'),
@@ -167,7 +193,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '80px'
+      gridTrackSize: '95px'
     },
     {
       header: gettext('Error rate'),
@@ -176,17 +202,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '100px',
+      gridTrackSize: '110px',
       visible: false
-    },
-    {
-      header: gettext('Status'),
-      name: 'healthDisplay',
-      path: 'healthDisplay',
-      filterable: false,
-      sortable: false,
-      dataType: ColumnDataType.TextShort,
-      gridTrackSize: '170px'
     },
     {
       header: gettext('Requests (failed)'),
@@ -215,7 +232,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '180px'
+      gridTrackSize: '200px'
     },
     {
       header: gettext('Last error'),
@@ -224,7 +241,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: 'minmax(160px, 1.5fr)'
+      cellRendererComponent: ExpandableTextRendererComponent,
+      gridTrackSize: 'minmax(220px, 2fr)'
     }
   ] as const;
 
@@ -281,17 +299,15 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     }
   }
 
-  async resetStatisticsMapping(): Promise<void> {
-    const modalRef = this.showConfirmationModal();
-
-    modalRef.content.closeSubject
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(async (confirmed: boolean) => {
-        if (confirmed) {
-          await this.performReset();
-        }
-        modalRef.hide();
-      });
+  async resetStatisticsMapping(popover: PopoverConfirmComponent): Promise<void> {
+    const confirmed = await confirmWithPopover(popover, {
+      title: gettext('Reset mapping statistic'),
+      message: gettext('You are about to delete the mapping statistic. Do you want to proceed?'),
+      okLabel: gettext('Delete')
+    });
+    if (confirmed) {
+      await this.performReset();
+    }
   }
 
   /**
@@ -395,22 +411,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         });
       });
   }
-  private showConfirmationModal(): BsModalRef {
-    const initialState = {
-      title: gettext('Reset mapping statistic'),
-      message: gettext('You are about to delete the mapping statistic. Do you want to proceed?'),
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-
-    return this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-  }
-
   private async performReset(): Promise<void> {
     try {
       this.updateState({ isLoading: true });

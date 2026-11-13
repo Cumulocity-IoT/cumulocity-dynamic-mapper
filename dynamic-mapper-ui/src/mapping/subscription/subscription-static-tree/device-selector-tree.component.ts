@@ -18,12 +18,12 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, input, model } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { CoreModule } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
@@ -35,16 +35,27 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports:[CoreModule, AssetSelectorModule]
 })
 export class DeviceSelectorTreeComponent {
-  @Input() deviceList: IIdentified[];
+  /** Two-way: the selector replaces it with the user's edit. */
+  readonly deviceList = model<IIdentified[]>();
 
-  @Output() cancel = new EventEmitter<any>();
+  /** Embedded in a page instead of a drawer: no header or buttons; every edit is emitted as `selectionChange`. */
+  readonly inline = input(false);
+
+  @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<IIdentified[]>();
+  @Output() selectionChange = new EventEmitter<IIdentified[]>();
+
+  onSelectionChange(list: IIdentified[]) {
+    this.deviceList.set(list);
+    if (this.inline()) this.selectionChange.emit(list);
+  }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.deviceList);
+    this.commit.emit(this.deviceList());
   }
 
   clickedCancel() {

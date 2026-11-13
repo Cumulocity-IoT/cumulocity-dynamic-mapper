@@ -101,9 +101,15 @@ export class SubstitutionManagementService {
 
     const existing = current[selectedSubstitution];
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
+    // The editor owns expandArray and repairStrategy, so they are taken from it. A model that holds
+    // none keeps the stored value. The paths only change when both expressions are valid.
+    const options: Partial<Substitution> = {
+      expandArray: substitutionModel.expandArray ?? existing.expandArray,
+      repairStrategy: substitutionModel.repairStrategy ?? existing.repairStrategy
+    };
     const updated: Substitution = (sourceExpression.valid && targetExpression.valid)
-      ? { ...existing, pathSource, pathTarget }
-      : { ...existing };
+      ? { ...existing, ...options, pathSource, pathTarget }
+      : { ...existing, ...options };
 
     const duplicateIndex = current.findIndex(
       (sub, index) => index !== selectedSubstitution && sub.pathTarget === updated.pathTarget
@@ -129,14 +135,5 @@ export class SubstitutionManagementService {
   deleteSubstitution(selected: number, current: readonly Substitution[]): Substitution[] | undefined {
     if (selected < 0 || selected >= current.length) return undefined;
     return current.filter((_, index) => index !== selected);
-  }
-
-  /** In-grid edit of a single substitution (expandArray / repairStrategy). */
-  patchSubstitution(
-    current: readonly Substitution[],
-    index: number,
-    patch: Partial<Substitution>
-  ): Substitution[] {
-    return current.map((sub, i) => (i === index ? { ...sub, ...patch } : sub));
   }
 }

@@ -56,22 +56,22 @@ describe('MappingConnectorComponent', () => {
   });
 
   it('is read-only in READ_ONLY editor mode', async () => {
-    component.stepperConfiguration = { persistence: 'draft', readOnly: true };
+    fixture.componentRef.setInput('stepperConfiguration', { persistence: 'draft', readOnly: true });
     await component.ngOnInit();
     expect(component.readOnly).toBe(true);
   });
 
   it('is editable in CREATE editor mode', async () => {
-    component.stepperConfiguration = { persistence: 'create' };
+    fixture.componentRef.setInput('stepperConfiguration', { persistence: 'create' });
     await component.ngOnInit();
     expect(component.readOnly).toBe(false);
   });
 
   it('stores and re-emits deployment-map-entry changes', (done) => {
     const entry: DeploymentMapEntry = { identifier: 'm', connectors: ['c1'] };
-    component.deploymentMapEntryChange.subscribe((value) => {
+    component.deploymentMapEntry.subscribe((value) => {
       expect(value).toBe(entry);
-      expect(component.deploymentMapEntry).toBe(entry);
+      expect(component.deploymentMapEntry()).toBe(entry);
       done();
     });
     component.onDeploymentMapEntryChanged(entry);

@@ -34,17 +34,14 @@
     <!-- Native widget: live mapping/connector counts — needs real app state, so it stays as an
          actual Angular template rather than markdown (content set via [innerHTML] is never
          evaluated by Angular, so bindings/pipes here would otherwise just print as literal text). -->
+    <!-- &ngsp; keeps a space between inline elements: Angular drops whitespace-only text nodes between them,
+         which would print "20inbound and27outbound". -->
     <ul class="text-16">
       <li>
-        <b>{{ countMappingInbound$ | async }}</b>
-        <a [routerLink]="ROUTE_INBOUND"> <span translate>inbound</span></a> <span translate>and</span>
-        <b>{{ countMappingOutbound$ | async }}</b>
-        <a [routerLink]="ROUTE_OUTBOUND"> <span translate>outbound</span></a>
-        <span translate>mappings are currently defined.</span>
+        <b>{{ countMappingInbound$ | async }}</b>&ngsp;<a [routerLink]="ROUTE_INBOUND"><span translate>inbound</span></a>&ngsp;<span translate>and</span>&ngsp;<b>{{ countMappingOutbound$ | async }}</b>&ngsp;<a [routerLink]="ROUTE_OUTBOUND"><span translate>outbound</span></a>&ngsp;<span translate>mappings are currently defined.</span>
       </li>
       <li>
-        <b>{{ countConnector$ | async }}</b>
-        <a [routerLink]="ROUTE_CONNECTORS"> <span translate>connectors</span></a> <span translate>are currently defined.</span>
+        <b>{{ countConnector$ | async }}</b>&ngsp;<a [routerLink]="ROUTE_CONNECTORS"><span translate>connectors</span></a>&ngsp;<span translate>are currently defined.</span>
       </li>
     </ul>
 

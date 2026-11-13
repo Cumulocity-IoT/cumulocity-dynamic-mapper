@@ -26,17 +26,8 @@ At runtime, this substitution copies the value at `_TOPIC_LEVEL_[1]` to `source.
 ![Substitution annotation](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot showing step 4 / tab Transformation for defining substitutions using JSONata.")
 
 For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2),
-expressions in JSONata can be used.
-To use this option you have to toggle the button **Expert Mode**.
-
-#### Expert Mode Examples
-
-- String manipulation: `$split(deviceName, "-")[2]` extracts "device100" from "40404-psid-device100-w2w2"
-- Conditional logic: `temperature > 50 ? "hot" : "normal"`
-- Date formatting: `$now()` for current timestamp
-- Array operations: `sensors[type="temperature"].value`
-
-![Defining Substitutions in ExpertMode](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
+expressions in JSONata can be used. Type the expression into the source or target field of the substitution
+editor. The label next to the preview shows whether the text is read as a **Path** or as a **JSONata expression**.
 
 ### Repair strategy {#jsonata-repair-strategy}
 

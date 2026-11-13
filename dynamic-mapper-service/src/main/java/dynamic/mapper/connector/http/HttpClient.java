@@ -42,8 +42,9 @@ import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
-
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 /**
  * HTTP Connector Client.
  * Receives messages via HTTP POST requests to a REST endpoint.

@@ -24,13 +24,10 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  Input,
   OnDestroy,
   Output,
-  ViewChild,
   ViewEncapsulation,
-  AfterViewInit
-} from '@angular/core';
+  AfterViewInit, effect, input, untracked, viewChild } from '@angular/core';
 import {
   JsonEditor,
   createJSONEditor,
@@ -43,8 +40,12 @@ import {
   isMultiSelection,
   createMultiSelection,
   isValueSelection,
-  ContextMenuItem
+  ContextMenuItem,
+  JSONSchema
 } from 'vanilla-jsoneditor';
+
+/** Editor props, plus `removeModes`: mode buttons to hide from the menu. */
+export type JsonEditorInputOptions = Record<string, unknown> & { removeModes?: readonly string[] };
 
 import type { JSONPath } from 'immutable-json-patch';
 import { parseJSONPathCustom, stringifyJSONPathCustom } from './util';
@@ -85,7 +86,7 @@ export function withoutButton(items: ContextMenuItem[], text: string): ContextMe
  */
 @Component({
   selector: 'd11r-mapping-json-editor',
-  template: '<div [class]="class" #jsonEditorContainer></div>',
+  template: '<div [class]="class()" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./json-editor.style.css'],
@@ -94,52 +95,58 @@ export function withoutButton(items: ContextMenuItem[], text: string): ContextMe
 })
 export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   /** Editor props, plus `removeModes`: mode buttons (e.g. 'text', 'table') to hide from the menu. */
-  @Input()
-  set options(value: any) {
-    const changed = JSON.stringify(value) !== JSON.stringify(this._options);
-    this._options = value;
-    if (changed) {
-      this.editor?.updateProps(this.libraryProps());
-    }
-  }
-  get options(): any {
-    return this._options;
-  }
-
-  @Input()
-  set data(value: unknown) {
-    if (value && Object.keys(value).length !== 0) {
-      this.set(value);
-    }
-  }
-
-  @Input()
-  set schema(value: any) {
-    if (value) {
-      this.setSchema(value);
-    }
-  }
-
-  @Input()
-  class: string;
+  readonly options = input<JsonEditorInputOptions>();
+  /** Replaces the content; empty values are ignored. */
+  readonly data = input<unknown>();
+  readonly schema = input<JSONSchema | null>();
+  readonly class = input<string>();
 
   @Output()
   contentChanged: EventEmitter<ContentChanges> = new EventEmitter<ContentChanges>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
 
-  @ViewChild('jsonEditorContainer', { static: true })
-  jsonEditorContainer: ElementRef<HTMLElement>;
+  readonly jsonEditorContainer = viewChild<ElementRef<HTMLElement>>('jsonEditorContainer');
 
-  private _options: any;
+  /** The options last applied, to skip an update when only the object identity changed. */
+  private appliedOptions: JsonEditorInputOptions | undefined;
   private editor: JsonEditor | undefined;
   /** Content/schema received before the editor exists; applied on creation. */
   private content: Content = { json: {} };
-  private pendingSchema: any;
+  private pendingSchema: JSONSchema | undefined;
+
+  constructor() {
+    effect(() => {
+      const value = this.options();
+      untracked(() => {
+        const changed = JSON.stringify(value) !== JSON.stringify(this.appliedOptions);
+        this.appliedOptions = value;
+        if (changed) {
+          this.editor?.updateProps(this.libraryProps());
+        }
+      });
+    });
+    effect(() => {
+      const value = this.data();
+      untracked(() => {
+        if (value && Object.keys(value).length !== 0) {
+          this.set(value);
+        }
+      });
+    });
+    effect(() => {
+      const value = this.schema();
+      untracked(() => {
+        if (value) {
+          this.setSchema(value);
+        }
+      });
+    });
+  }
 
   ngAfterViewInit() {
     this.editor = createJSONEditor({
-      target: this.jsonEditorContainer.nativeElement,
+      target: this.jsonEditorContainer().nativeElement,
       props: {
         ...this.libraryProps(),
         content: this.content,
@@ -166,7 +173,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
 
   /** Editor props without the wrapper-only `removeModes`. */
   private libraryProps() {
-    const { removeModes, ...props } = this._options ?? {};
+    const { removeModes, ...props } = this.options() ?? {};
     return props;
   }
 
@@ -183,7 +190,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private onRenderMenu(items: MenuItem[]): MenuItem[] {
-    const removeModes: string[] = this._options?.removeModes ?? [];
+    const removeModes: readonly string[] = this.options()?.removeModes ?? [];
     return items.filter(
       (i) => i['className'] !== 'jse-transform' && !removeModes.includes(i['text'])
     );
@@ -198,7 +205,7 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  setSchema(schema: any) {
+  setSchema(schema: JSONSchema) {
     if (this.editor) {
       this.editor.updateProps({ validator: createAjvValidator({ schema }) });
     } else {
@@ -241,13 +248,13 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   /** Current content as JSON, parsing the text if the editor is in text mode. */
-  get(): any {
+  get<T = unknown>(): T {
     const content = this.editor.get();
-    return isJSONContent(content) ? content.json : JSON.parse(content.text);
+    return (isJSONContent(content) ? content.json : JSON.parse(content.text)) as T;
   }
 
   /** Replaces the content. Does not emit `contentChanged`. */
-  set(json: any) {
+  set(json: unknown) {
     this.content = { json };
     this.editor?.set(this.content);
   }

@@ -200,7 +200,7 @@ public class ServiceLogCollector {
                 }
             }
             if (stored > 0) {
-                log.info("Service log collector stored {} chunk(s) for tenant(s) {}", stored, written);
+                log.debug("Service log collector stored {} chunk(s) for tenant(s) {}", stored, written);
             }
             if (!failed) {
                 lastFailure = null;

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { CellRendererContext } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../../testing-device.service';
@@ -42,6 +42,7 @@ import { TestingDeviceService } from '../../testing-device.service';
       >
     </span>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: []
 })

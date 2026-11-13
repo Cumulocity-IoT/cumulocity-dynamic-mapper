@@ -9,6 +9,7 @@ configured per mapping, plus the transport-level retry that sits underneath them
 | Failure threshold | `Mapping.maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
 | Poison-pill guard | `maxProcessingAttempts` (default 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
 | Processing budgets | `maxCPUTimeMS`, `pipelineTimeoutMS` (service configuration) | How long may one message occupy CPU and a worker thread before it is killed? | [Processing timeouts](#processing-timeouts) |
+| Broker outage (outbound) | None, automatic | What happens to outbound messages while the broker connection is down? | [Outbound during a broker outage](#outbound-during-a-broker-outage) |
 | Runtime counters | — (reported, not configured) | What is actually happening per mapping, and to messages that match none? | [Status and counters](#status-and-counters) |
 
 They compose: `qos > 0` is what causes a failed message to be redelivered at all;
@@ -35,6 +36,9 @@ decision configurable per mapping rather than fixed by the product.
   of consecutive failures after which the mapping is deactivated; zero disables the check. Recovery
   resets the count — the threshold is for a broken mapping, not for a healthy one with occasional
   errors.
+- **An outbound message must not be lost because the broker is down.** While a connector has no broker
+  connection, Cumulocity keeps the unacknowledged notifications and delivers them after the connector reconnects.
+  The mapper buffers nothing itself.
 - **No message may occupy a worker indefinitely**, and a runaway transformation must be stoppable
   even when it ignores interruption.
 - **What happened must be visible per mapping**: how many messages it processed, how many failed,
@@ -433,7 +437,9 @@ memory (the oldest 10,000 are forgotten). `CustomWebSocketClient` (outbound noti
 polled page that keeps failing, which it skips after the limit (server errors do not count there) (its own limit of 5 only drives the connector status,
 `RETRYING` to `FAILED`, for failed fetches); AMQP 1.0 has no limit because an unacknowledged message is not redelivered
 until the session restarts. Errors that a retry would only repeat (client errors, mapping errors
-without an HTTP status) are acknowledged at once and never counted.
+without an HTTP status) are acknowledged at once and never counted. An outbound publish that fails
+because the broker connection is down is not counted either: it says nothing about the message (see
+[Outbound during a broker outage](#outbound-during-a-broker-outage)).
 
 For MQTT the redelivery is achieved by *reconnecting* (with back-off), so the broker retransmits
 whatever it has not seen acknowledged. The connector property `reconnectOnProcessingError` gates the
@@ -466,6 +472,75 @@ Note the two counters are per different things: the poison-pill counter is **per
   in the UI are the only signals, so alert on that event if a mapping is business-critical.
 
 ---
+
+### Outbound during a broker outage
+
+An outbound message arrives as a Notification 2.0 message on a WebSocket. The mapper acknowledges it on that
+WebSocket after the pipeline finished (see [the poison-pill guard](#the-poison-pill-guard)). If the broker
+connection is down, the connector cannot publish. Without special handling the notification would be acknowledged
+and the message lost. Three parts prevent this. None of them buffers a message in the mapper: Cumulocity keeps what
+the mapper does not acknowledge.
+
+| Part | What it does | Where |
+|---|---|---|
+| Retry, do not acknowledge | A publish that fails because the broker is unavailable records a `ConnectorNotConnectedException` (HTTP 503) on the requests. The shared ack rule treats a 5xx as "do not acknowledge", so Cumulocity redelivers the notification. | [`AConnectorClient.failPublishIfNotConnected`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java), [`failPublishUnavailable`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java), [`ConnectorNotConnectedException`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/ConnectorNotConnectedException.java) |
+| Do not count the attempt | `ProcessingResultHelper.awaitOutcome` returns `RETRY_CONNECTOR_UNAVAILABLE` when the cause is the connector. `CustomWebSocketClient.retransmitLater` skips the poison-pill counter, waits 5 seconds, and reconnects the WebSocket once, however many messages failed together. | [`ProcessingResultHelper`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ProcessingResultHelper.java), [`CustomWebSocketClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/websocket/CustomWebSocketClient.java) |
+| Pause the consumer | While the connector is disconnected, its device WebSockets are closed, without unsubscribing. The notifications stay queued in Cumulocity. When the connector is connected again, the WebSockets are opened again and the backlog arrives in order. | [`NotificationConnectionManager.syncConnectorAvailability`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/service/NotificationConnectionManager.java) |
+
+##### How the pause works
+
+`NotificationConnectionManager` runs `syncConnectorAvailability` every
+`Utils.CONNECTOR_AVAILABILITY_CHECK_SECONDS` (10) seconds for each tenant, on the existing reconnect scheduler. For
+each outbound connector that opts in:
+
+- **Connector disconnected:** the static and dynamic device WebSocket of that connector are closed and the connector
+  is added to `pausedConnectors`.
+- **Connector connected again:** it is removed from `pausedConnectors` and the WebSockets are opened again.
+- `initializeStaticDeviceConnections` and `initializeDynamicDeviceConnections` skip a disconnected connector and
+  mark it as paused, so a reconnect of the notification subscriber does not open a WebSocket that would consume
+  messages.
+
+The WebSockets are per connector, so an outage of one broker does not affect the other connectors of the tenant.
+Closing a WebSocket keeps the Notification 2.0 subscription. Unsubscribing would delete the queued messages, so the
+pause never does that.
+
+A message that arrives in the window between the broker dropping and the next check takes the retry path. It is not
+acknowledged and does not count toward `maxProcessingAttempts`.
+
+##### Which connectors take part
+
+A connector opts in by overriding `AConnectorClient.holdsOutboundWhileDisconnected()` to return `true`. It must
+also report its connection state correctly, because the pause follows `isConnected()`.
+
+| Connector | Retry and do not count | Pause | Notes |
+|---|---|---|---|
+| MQTT 3 and 5 | yes | yes | Disconnected state comes from the client listener. |
+| AMQP 0-9-1 and 1.0 | yes | yes | |
+| Kafka | yes | yes | `isConnected()` probes the broker, so `isReadyToPublish()` uses the stored state to avoid a round trip per message. Housekeeping probes again and marks the connector connected when the broker answers, because nothing else did. A producer timeout or any `RetriableException` counts as "broker unavailable". |
+| Cumulocity MQTT Service (Pulsar) | yes | yes | Housekeeping recreates a device producer that stays disconnected for 3 cycles, because the lazy recreate in `publishMEAO` never runs while the connector is paused. It also syncs the connected state when consumer and producer are back. |
+| Pulsar (generic) | yes | no | The Pulsar client reconnects by itself and never marks the connector disconnected, so there is no reliable signal to pause on. Messages are redelivered every 5 seconds until the broker is back. |
+| HTTP, Webhook, REST Polling, Google Pub/Sub | unchanged | no | Not part of this change. |
+
+A failure caused by the message, for example a message that is too large, is not retried. It stays a normal error and
+is acknowledged, as before.
+
+##### Limits
+
+- Cumulocity keeps unacknowledged Notification 2.0 messages only within its own retention and size limits. An outage
+  longer than that can still lose messages. Check the Notification 2.0 documentation of your Cumulocity version.
+- The pause follows the connector state with a delay of up to one check interval, plus one housekeeping cycle for
+  Kafka and the Cumulocity MQTT Service connector.
+- Messages are delivered after the reconnect in the order Cumulocity redelivers them. Duplicates are possible, as for
+  every at-least-once path.
+
+##### Adding a connector
+
+1. Call `failPublishIfNotConnected(context)` first in `publishMEAO` and return if it answers `true`. Override
+   `isReadyToPublish()` if `isConnected()` is expensive.
+2. In the `catch` of the send, call `failPublishUnavailable(context, request, e)` when the exception means the
+   broker could not be reached, and keep the normal error for everything else.
+3. Override `holdsOutboundWhileDisconnected()` to return `true` only if `isConnected()` follows the broker connection
+   and the connector recovers its state by itself. Otherwise the WebSockets stay closed after the broker is back.
 
 ### Status and counters
 
@@ -607,3 +682,8 @@ loaded; the next housekeeping cycle restores them.
 | [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |
 | [`MappingStatusTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/model/MappingStatusTest.java) | Counter semantics: per-tenant catch-all status, `reset()` clearing the streak, lifetime errors surviving a recovery, snapshot isolation, and no lost updates under 8 concurrent writers. |
 | [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/status/MappingStatusPersistenceCompatibilityTest.java) | A status fragment written by an older release still loads with its counters and is still pushed back to the inventory. |
+| [`ProcessingResultHelperAwaitAckableTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/util/ProcessingResultHelperAwaitAckableTest.java) | A `ConnectorNotConnectedException` returns `RETRY_CONNECTOR_UNAVAILABLE`, a plain 503 still returns `RETRY`. |
+| [`NotificationConnectionManagerTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/notification/service/NotificationConnectionManagerTest.java) | A disconnected connector has its device WebSockets closed without unsubscribing, a connector that does not opt in is left alone, a connected connector is resumed. |
+| [`KafkaClientV2BrokerOutageTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/kafka/KafkaClientV2BrokerOutageTest.java) | A disconnected Kafka connector fails the requests with a 503, a send timeout is retried, a message problem is not. |
+| [`PulsarConnectorClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/pulsar/PulsarConnectorClientTest.java), [`MQTTServicePulsarClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/pulsar/MQTTServicePulsarClientTest.java) | A Pulsar send timeout is retried, a message problem is not. Housekeeping recreates a producer that stays disconnected for 3 cycles and syncs the connected state. |
+| [`test-outbound-broker-outage.sh`](../../resources/testing/integration/test-outbound-broker-outage.sh) | System test: the connector endpoint is made unreachable, 3 events are created, the endpoint is restored, and all 3 events reach the broker. Run it with `bash run-tests.sh outbound`. |

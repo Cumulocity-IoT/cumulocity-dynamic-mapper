@@ -71,7 +71,7 @@ describe('createCompletionProviderFlowFunction', () => {
 
   beforeEach(() => {
     disposed = 0;
-    createCompletionProviderFlowFunction(monacoStub, Direction.INBOUND);
+    createCompletionProviderFlowFunction(monacoStub as unknown as Parameters<typeof createCompletionProviderFlowFunction>[0], Direction.INBOUND);
   });
 
   it('completes members of a known variable, not just of a class name', () => {
@@ -119,7 +119,7 @@ describe('createCompletionProviderFlowFunction', () => {
   });
 
   it('disposes both providers', () => {
-    const d = createCompletionProviderFlowFunction(monacoStub, Direction.INBOUND);
+    const d = createCompletionProviderFlowFunction(monacoStub as unknown as Parameters<typeof createCompletionProviderFlowFunction>[0], Direction.INBOUND);
     disposed = 0;
     d.dispose();
     expect(disposed).toBe(2);

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
   CellRendererContext,
@@ -53,6 +53,7 @@ import { TranslatePipe } from '@ngx-translate/core';
       </label>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule
@@ -78,7 +79,7 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
   async ngOnInit() {
     try {
       this.feature = await this.featurePromise;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error loading features in component', error);
     }
@@ -93,12 +94,12 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
 
   async onConfigurationToggle() {
     this.isLoading = true;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
     try {
       await toggleConnectorConnection(this.sharedService, this.alertService, this.context.item);
     } finally {
       this.isLoading = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
     this.reloadData();
     this.sharedService.refreshMappings(Direction.INBOUND);

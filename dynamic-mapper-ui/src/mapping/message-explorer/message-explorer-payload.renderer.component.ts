@@ -19,13 +19,14 @@
  */
 
 import { gettext } from '@c8y/ngx-components/gettext';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '../../shared/component/json-editor/json-editor.component';
 
 @Component({
   selector: 'd11r-msg-explorer-date-renderer',
   template: `<span class="text-nowrap" [title]="context.value | c8yDate: 'medium'">{{ context.value | c8yDate: 'MMM d, HH:mm:ss.SSS' }}</span>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
@@ -36,6 +37,7 @@ export class MessageExplorerDateRendererComponent {
 @Component({
   selector: 'd11r-msg-explorer-truncate-renderer',
   template: `<span class="d-block text-truncate" [title]="context.value ?? ''">{{ context.value }}</span>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
@@ -100,6 +102,7 @@ export class MessageExplorerTruncateRendererComponent {
       </div>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, JsonEditorComponent]
 })
@@ -111,7 +114,7 @@ export class MessageExplorerPayloadRendererComponent {
     { id: 'hex' as const, label: gettext('Hex') },
     { id: 'base64' as const, label: gettext('Base64') }
   ];
-  parsedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
+  parsedPayload: { isJson: boolean; parsed: unknown; raw: string } | null = null;
 
   private bytesCache: Uint8Array | null | undefined;
   private textCache: string | undefined;

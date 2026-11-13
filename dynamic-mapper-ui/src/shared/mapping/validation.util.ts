@@ -20,6 +20,7 @@
 import { AbstractControl } from '@angular/forms';
 import * as _ from 'lodash';
 import { Mapping } from './mapping.model';
+import { BackendErrorBody } from './mapping-validation-error';
 import { ValidationFormlyError } from './validation-errors';
 import { PROTECTED_TOKENS } from './processor/processor.constants';
 import { splitTopicExcludingSeparator } from './topic.util';
@@ -75,7 +76,7 @@ export function translateValidationErrorCode(code: string, translate: (text: str
  * message, or to `fallback` if the body has neither.
  */
 export function buildBackendErrorMessage(
-  body: any,
+  body: BackendErrorBody | null | undefined,
   fallback: string,
   translate: (text: string) => string = (text) => text
 ): string {
@@ -347,7 +348,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-export function validateProtectedFields(original: any, updated: any): boolean {
+export function validateProtectedFields(original: unknown, updated: unknown): boolean {
   for (const field of PROTECTED_TOKENS) {
     const originalValue = findFieldInObject(original, field);
     const updatedValue = findFieldInObject(updated, field);
@@ -360,17 +361,18 @@ export function validateProtectedFields(original: any, updated: any): boolean {
   return true;
 }
 
-function findFieldInObject(obj: any, fieldName: string): any {
-  if (!obj || typeof obj !== 'object') {
+function findFieldInObject(value: unknown, fieldName: string): unknown {
+  if (!value || typeof value !== 'object') {
     return undefined;
   }
+  const obj = value as Record<string, unknown>;
 
-  if (obj.hasOwnProperty(fieldName)) {
+  if (Object.prototype.hasOwnProperty.call(obj, fieldName)) {
     return obj[fieldName];
   }
 
   for (const key in obj) {
-    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && typeof obj[key] === 'object') {
       const result = findFieldInObject(obj[key], fieldName);
       if (result !== undefined) {
         return result;

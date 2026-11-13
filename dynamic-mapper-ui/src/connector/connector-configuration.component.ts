@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, ChangeDetectionStrategy, viewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import {
   ConnectorConfiguration,
@@ -36,11 +36,12 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
   selector: 'd11r-mapping-broker-connector',
   styleUrls: ['./connector-configuration.component.style.css'],
   templateUrl: 'connector-configuration.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, PopoverModule, ConnectorGridComponent]
 })
 export class ConnectorConfigurationComponent {
-  @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;
+  readonly connectorGridComponent = viewChild(ConnectorGridComponent);
   feature: Feature;
 
   constructor(
@@ -55,7 +56,7 @@ export class ConnectorConfigurationComponent {
   }
 
   refresh() {
-    this.connectorGridComponent.refresh();
+    this.connectorGridComponent().refresh();
   }
 
   async clickedReconnect2NotificationEndpoint() {
@@ -77,14 +78,14 @@ export class ConnectorConfigurationComponent {
   }
 
   async onConfigurationAddOrUpdate(config: ConnectorConfiguration) {
-    this.connectorGridComponent.onConfigurationAddOrUpdate(config);
+    this.connectorGridComponent().onConfigurationAddOrUpdate(config);
   }
 
   async onExportAll() {
-    this.connectorGridComponent.onExportAll();
+    this.connectorGridComponent().onExportAll();
   }
 
   async onImport() {
-    this.connectorGridComponent.onImport();
+    this.connectorGridComponent().onImport();
   }
 }

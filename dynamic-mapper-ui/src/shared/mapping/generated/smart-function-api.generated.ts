@@ -322,6 +322,15 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
         "documentation": "Indicates whether this invocation is running inside a test cycle (i.e., triggered from the mapping test UI rather than a live message). Use this to skip side effects (alarms, external API calls) during tests."
       },
       {
+        "name": "isDuplicate",
+        "parameters": [
+          "key",
+          "windowSeconds"
+        ],
+        "returnType": "boolean",
+        "documentation": "Reports whether the same key was seen for this mapping less than `windowSeconds` ago, and records it if not. Use it to drop a message that a broker or gateway delivered twice. Unlike `getState`/`setState`, the check is atomic: of two copies of a message that run at the same time, exactly one gets `false`. Keys expire after the window, and a mapping holds at most 100,000 of them. The store is the one behind the `$isDuplicate` function of the mapping filter, so a key used in both places counts once. Keys live in memory only: they are lost on restart and are not shared between service instances. The window starts at the first message and does not restart when a repeat arrives. The check fails open: it returns `false`, and adds a warning, if the key has no value or the window is not a number of seconds from 1 to 3600. In a test run it always returns `false` and records nothing. Join several fields with a separator, such as `\"|\"`, so that `a` and `bc` differ from `ab` and `c`. Prefer a string key."
+      },
+      {
         "name": "getState",
         "parameters": [
           "key",

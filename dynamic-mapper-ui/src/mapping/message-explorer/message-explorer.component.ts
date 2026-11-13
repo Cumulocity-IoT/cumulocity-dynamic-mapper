@@ -20,7 +20,7 @@
 
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector } from '@angular/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, Injector, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -30,7 +30,6 @@ import {
   AlertService,
   BottomDrawerService,
   Column,
-  ColumnDataType,
   CoreModule,
   CountdownIntervalComponent,
   Pagination
@@ -39,7 +38,9 @@ import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
-import { InventoryService, IdentityService } from '@c8y/client';
+import { ExplorerMappingContextService } from './explorer-mapping-context.service';
+import { EXPLORER_COLUMNS, OPTIONAL_EXPLORER_COLUMNS } from './message-explorer.columns';
+import { clearStoredExplorerSession, readStoredExplorerSession, writeStoredExplorerSession } from './explorer-session-store';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, isRawPayload, MAX_EXPLORER_SAMPLES, MessageExplorerService, samplePayloadKind, SessionExpiredError } from './message-explorer.service';
@@ -51,14 +52,8 @@ import {
   MessageExplorerDrawerComponent
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
-import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
 import { ExplorerMappingHandoffService, ExplorerSampleMessage } from '../core/explorer-mapping-handoff.service';
 import { ALERT_INFO_TIMEOUT, Direction, MappingType } from '../../shared';
-import {
-  MessageExplorerDateRendererComponent,
-  MessageExplorerTruncateRendererComponent,
-  MessageExplorerPayloadRendererComponent
-} from './message-explorer-payload.renderer.component';
 
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
@@ -67,6 +62,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: './message-explorer.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('message-explorer')],
   imports: [CoreModule, CommonModule, ReactiveFormsModule]
@@ -75,94 +71,49 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly injector = inject(Injector);
 
   // ---- state ----------------------------------------------------------------
-  sessionId: string | null = null;
-  connectorName: string = '';
+  private readonly sessionIdState = signal<string | null>(null);
+  get sessionId(): string | null { return this.sessionIdState(); }
+  set sessionId(value: string | null) { this.sessionIdState.set(value); }
+  private readonly connectorNameState = signal<string>('');
+  get connectorName(): string { return this.connectorNameState(); }
+  set connectorName(value: string) { this.connectorNameState.set(value); }
   sessionConnectorIdentifier: string = '';
-  sessionTopic: string = '';
-  sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  private readonly sessionTopicState = signal<string>('');
+  get sessionTopic(): string { return this.sessionTopicState(); }
+  set sessionTopic(value: string) { this.sessionTopicState.set(value); }
+  private readonly sessionDirectionState = signal<'INBOUND' | 'OUTBOUND'>('INBOUND');
+  get sessionDirection(): 'INBOUND' | 'OUTBOUND' { return this.sessionDirectionState(); }
+  set sessionDirection(value: 'INBOUND' | 'OUTBOUND') { this.sessionDirectionState.set(value); }
   sessionMaxMessages: number = 50;
   sessionTTLMinutes: number = 10;
   sessionDeviceType: string | null = null;
-  sessionSourceId: string | null = null;
-  sessionDeviceName: string | null = null;
-  sessionDeviceTypeFilter: string | null = null;
-  sessionSubscriptionWarning: string | null = null;
-  messages: IndexedMessage[] = [];
-  paused: boolean = false;
+  private readonly sessionSourceIdState = signal<string | null>(null);
+  get sessionSourceId(): string | null { return this.sessionSourceIdState(); }
+  set sessionSourceId(value: string | null) { this.sessionSourceIdState.set(value); }
+  private readonly sessionDeviceNameState = signal<string | null>(null);
+  get sessionDeviceName(): string | null { return this.sessionDeviceNameState(); }
+  set sessionDeviceName(value: string | null) { this.sessionDeviceNameState.set(value); }
+  private readonly sessionDeviceTypeFilterState = signal<string | null>(null);
+  get sessionDeviceTypeFilter(): string | null { return this.sessionDeviceTypeFilterState(); }
+  set sessionDeviceTypeFilter(value: string | null) { this.sessionDeviceTypeFilterState.set(value); }
+  private readonly sessionSubscriptionWarningState = signal<string | null>(null);
+  get sessionSubscriptionWarning(): string | null { return this.sessionSubscriptionWarningState(); }
+  set sessionSubscriptionWarning(value: string | null) { this.sessionSubscriptionWarningState.set(value); }
+  private readonly messagesState = signal<IndexedMessage[]>([]);
+  get messages(): IndexedMessage[] { return this.messagesState(); }
+  set messages(value: IndexedMessage[]) { this.messagesState.set(value); }
+  private readonly pausedState = signal<boolean>(false);
+  get paused(): boolean { return this.pausedState(); }
+  set paused(value: boolean) { this.pausedState.set(value); }
   private nextSeqNo = 1;
 
-  private static readonly SESSION_STORAGE_KEY = 'd11r-explorer-session';
+  private readonly allColumns: Column[] = EXPLORER_COLUMNS;
 
-  // Columns only present for some broker protocols: clientId is set by the MQTT connectors,
-  // key by Kafka (inbound only - the outbound record key is applied further downstream, after
-  // the explorer has already captured the message). Rather than hardcoding a connector-type
-  // list, they are shown only once a captured message actually carries a value - see
-  // refreshColumns().
-  private static readonly OPTIONAL_COLUMNS: readonly string[] = ['clientId', 'key'];
-
-  private readonly allColumns: Column[] = [
-    {
-      name: 'seqNo',
-      header: '#',
-      path: 'seqNo',
-      dataType: ColumnDataType.TextShort,
-      sortable: false,
-      filterable: false,
-      gridTrackSize: '5%'
-    },
-    {
-      name: 'receivedAt',
-      header: gettext('Received at'),
-      path: 'receivedAt',
-      dataType: ColumnDataType.TextShort,
-      sortable: true,
-      filterable: false,
-      cellRendererComponent: MessageExplorerDateRendererComponent,
-      gridTrackSize: '12%'
-    },
-    {
-      name: 'clientId',
-      header: gettext('Client ID'),
-      path: 'clientId',
-      dataType: ColumnDataType.TextShort,
-      sortable: false,
-      filterable: false,
-      cellRendererComponent: MessageExplorerTruncateRendererComponent,
-      gridTrackSize: '12%'
-    },
-    {
-      name: 'key',
-      header: gettext('Key'),
-      path: 'key',
-      dataType: ColumnDataType.TextShort,
-      sortable: false,
-      filterable: false,
-      cellRendererComponent: MessageExplorerTruncateRendererComponent,
-      gridTrackSize: '14%'
-    },
-    {
-      name: 'topic',
-      header: gettext('Topic'),
-      path: 'topic',
-      dataType: ColumnDataType.TextShort,
-      sortable: false,
-      filterable: true,
-      gridTrackSize: '12%'
-    },
-    {
-      name: 'payload',
-      header: gettext('Payload'),
-      path: 'payload',
-      dataType: ColumnDataType.TextShort,
-      sortable: false,
-      filterable: false,
-      cellRendererComponent: MessageExplorerPayloadRendererComponent
-    }
-  ];
-
-  columns: Column[] = this.allColumns.filter(
-    c => !MessageExplorerComponent.OPTIONAL_COLUMNS.includes(c.name)
-  );
+  private readonly columnsState = signal<Column[]>(this.allColumns.filter(
+    c => !OPTIONAL_EXPLORER_COLUMNS.includes(c.name)
+  ));
+  get columns(): Column[] { return this.columnsState(); }
+  set columns(value: Column[]) { this.columnsState.set(value); }
 
   actionControls: ActionControl[] = [
     {
@@ -201,8 +152,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   currentPollingInterval: number;
   private shouldRefreshAutomatic = true;
 
-  @ViewChild(CountdownIntervalComponent)
-  countdownIntervalComponent!: CountdownIntervalComponent;
+  readonly countdownIntervalComponent = viewChild(CountdownIntervalComponent);
 
   private readonly destroy$ = new Subject<void>();
 
@@ -215,8 +165,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly inventoryService = inject(InventoryService);
-  private readonly identityService = inject(IdentityService);
+  private readonly mappingContext = inject(ExplorerMappingContextService);
   private readonly explorerMappingHandoff = inject(ExplorerMappingHandoffService);
 
   constructor() {
@@ -250,7 +199,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   private persistSession(): void {
-    const state = {
+    writeStoredExplorerSession({
       sessionId: this.sessionId,
       connectorName: this.connectorName,
       sessionConnectorIdentifier: this.sessionConnectorIdentifier,
@@ -262,41 +211,25 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sessionSourceId: this.sessionSourceId,
       sessionDeviceName: this.sessionDeviceName,
       sessionDeviceTypeFilter: this.sessionDeviceTypeFilter
-    };
-    localStorage.setItem(MessageExplorerComponent.SESSION_STORAGE_KEY, JSON.stringify(state));
-  }
-
-  private clearPersistedSession(): void {
-    localStorage.removeItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
+    });
   }
 
   private async tryResumeSession(): Promise<void> {
-    const raw = localStorage.getItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
-    if (!raw) return;
-    let state: any;
-    try {
-      state = JSON.parse(raw);
-    } catch {
-      this.clearPersistedSession();
-      return;
-    }
-    if (!state?.sessionId) {
-      this.clearPersistedSession();
-      return;
-    }
+    const state = readStoredExplorerSession();
+    if (!state) return;
     try {
       const msgs = await this.explorerService.getMessages(state.sessionId);
       this.sessionId = state.sessionId;
-      this.connectorName = state.connectorName ?? '';
-      this.sessionConnectorIdentifier = state.sessionConnectorIdentifier ?? '';
-      this.sessionTopic = state.sessionTopic ?? '';
-      this.sessionDirection = state.sessionDirection ?? 'INBOUND';
-      this.sessionMaxMessages = state.sessionMaxMessages ?? 50;
-      this.sessionTTLMinutes = state.sessionTTLMinutes ?? 10;
-      this.sessionDeviceType = state.sessionDeviceType ?? null;
-      this.sessionSourceId = state.sessionSourceId ?? null;
-      this.sessionDeviceName = state.sessionDeviceName ?? null;
-      this.sessionDeviceTypeFilter = state.sessionDeviceTypeFilter ?? null;
+      this.connectorName = state.connectorName;
+      this.sessionConnectorIdentifier = state.sessionConnectorIdentifier;
+      this.sessionTopic = state.sessionTopic;
+      this.sessionDirection = state.sessionDirection;
+      this.sessionMaxMessages = state.sessionMaxMessages;
+      this.sessionTTLMinutes = state.sessionTTLMinutes;
+      this.sessionDeviceType = state.sessionDeviceType;
+      this.sessionSourceId = state.sessionSourceId;
+      this.sessionDeviceName = state.sessionDeviceName;
+      this.sessionDeviceTypeFilter = state.sessionDeviceTypeFilter;
       const indexed: IndexedMessage[] = msgs.map(m => {
         const seqNo = this.nextSeqNo++;
         return { ...m, id: seqNo, seqNo };
@@ -306,12 +239,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       afterNextRenderInZone(this.injector, () => {
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
         if (this.shouldRefreshAutomatic) {
-          this.countdownIntervalComponent?.start();
+          this.countdownIntervalComponent()?.start();
         }
       });
       // this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (e) {
-      this.clearPersistedSession();
+      clearStoredExplorerSession();
       if (!(e instanceof SessionExpiredError)) {
         console.warn('Explorer session resume failed:', e);
       }
@@ -331,7 +264,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
    */
   private refreshColumns(): void {
     this.columns = this.allColumns.filter(column => {
-      if (!MessageExplorerComponent.OPTIONAL_COLUMNS.includes(column.name)) {
+      if (!OPTIONAL_EXPLORER_COLUMNS.includes(column.name)) {
         return true;
       }
       return this.messages.some(message => {
@@ -353,12 +286,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   startCountdown(): void {
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
     if (this.shouldRefreshAutomatic && this.sessionId) {
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
   resetCountdown(): void {
-    this.countdownIntervalComponent?.reset();
+    this.countdownIntervalComponent()?.reset();
   }
 
   async onCountdownEnded(): Promise<void> {
@@ -384,8 +317,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.sessionTopic = '';
         this.setMessages([]);
         this.paused = false;
-        this.countdownIntervalComponent?.stop();
-        this.clearPersistedSession();
+        this.countdownIntervalComponent()?.stop();
+        clearStoredExplorerSession();
         this.alertService.warning(gettext('Explorer session has expired. Start a new session.'));
       } else {
         // Transient network error — leave session alive, try again next tick
@@ -397,9 +330,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   trackUserClickOnIntervalToggle(event: Event): void {
     this.shouldRefreshAutomatic = (event.target as HTMLInputElement).checked;
     if (!this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent?.stop();
+      this.countdownIntervalComponent()?.stop();
     } else if (this.sessionId) {
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
@@ -411,56 +344,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     });
     const result: ExplorerStartResult | null = await drawer.instance.result;
     if (!result) return;
-
-    // Stop previous session if any
-    if (this.sessionId) {
-      await this.explorerService.stopSession(this.sessionId).catch(() => {});
-      this.sessionId = null;
-      this.setMessages([]);
-    }
-
-    try {
-      const started = await this.explorerService.startSession({
-        connectorIdentifier: result.connectorIdentifier,
-        topic: result.topic,
-        maxMessages: result.maxMessages,
-        sessionTTLMinutes: result.sessionTTLMinutes,
-        direction: result.direction,
-        sourceId: result.sourceId,
-        deviceType: result.deviceTypeFilter
-      });
-      this.sessionId = started.sessionId;
-      this.sessionSubscriptionWarning = started.subscriptionWarning ?? null;
-      this.connectorName = result.connectorName;
-      this.sessionConnectorIdentifier = result.connectorIdentifier;
-      this.sessionTopic = result.topic;
-      this.sessionDirection = result.direction;
-      this.sessionMaxMessages = result.maxMessages;
-      this.sessionTTLMinutes = result.sessionTTLMinutes;
-      this.sessionDeviceType = result.deviceType ?? null;
-      this.sessionSourceId = result.sourceId ?? null;
-      this.sessionDeviceName = result.deviceName ?? null;
-      this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
-      this.nextSeqNo = 1;
-      this.paused = false;
-      this.setMessages([]);
-      this.persistSession();
-
-      if (this.sessionSubscriptionWarning) {
-        this.alertService.warning(
-          this.translateService.instant(gettext('Explorer session started, but subscribing to the topic failed: {{warning}}'), { warning: this.sessionSubscriptionWarning })
-        );
-      }
-
-      this.nextTriggerCountdown$.next(this.currentPollingInterval);
-      if (this.shouldRefreshAutomatic) {
-        this.countdownIntervalComponent?.start();
-      }
-    } catch (e: any) {
-      this.alertService.danger(
-        this.translateService.instant(gettext('Failed to start explorer session: {{error}}'), { error: e.message })
-      );
-    }
+    await this.replaceSession(result, 'start');
   }
 
   async onEditSession(): Promise<void> {
@@ -480,10 +364,18 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     });
     const result: ExplorerStartResult | null = await drawer.instance.result;
     if (!result) return;
+    await this.replaceSession(result, 'update');
+  }
 
-    // Stop the current session before starting the updated one
-    await this.explorerService.stopSession(this.sessionId).catch(() => {});
-    this.sessionId = null;
+  /**
+   * Stops the running session, if any, and starts the one the drawer asked for. `start` and `update` differ only in
+   * the wording of the messages the user sees.
+   */
+  private async replaceSession(result: ExplorerStartResult, mode: 'start' | 'update'): Promise<void> {
+    if (this.sessionId) {
+      await this.explorerService.stopSession(this.sessionId).catch(() => {});
+      this.sessionId = null;
+    }
     this.setMessages([]);
 
     try {
@@ -513,31 +405,35 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.persistSession();
 
       if (this.sessionSubscriptionWarning) {
-        this.alertService.warning(
-          this.translateService.instant(gettext('Explorer session updated, but subscribing to the topic failed: {{warning}}'), { warning: this.sessionSubscriptionWarning })
-        );
-      } else {
+        const text =
+          mode === 'start'
+            ? gettext('Explorer session started, but subscribing to the topic failed: {{warning}}')
+            : gettext('Explorer session updated, but subscribing to the topic failed: {{warning}}');
+        this.alertService.warning(this.translateService.instant(text, { warning: this.sessionSubscriptionWarning }));
+      } else if (mode === 'update') {
         this.alertService.add({ text: gettext('Explorer session updated.'), type: 'success', timeout: ALERT_INFO_TIMEOUT });
       }
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
-        this.countdownIntervalComponent?.start();
+        this.countdownIntervalComponent()?.start();
       }
-    } catch (e: any) {
-      this.alertService.danger(
-        this.translateService.instant(gettext('Failed to update explorer session: {{error}}'), { error: e.message })
-      );
+    } catch (e) {
+      const text =
+        mode === 'start'
+          ? gettext('Failed to start explorer session: {{error}}')
+          : gettext('Failed to update explorer session: {{error}}');
+      this.alertService.danger(this.translateService.instant(text, { error: (e as Error).message }));
     }
   }
 
   onTogglePause(): void {
     this.paused = !this.paused;
     if (this.paused) {
-      this.countdownIntervalComponent?.stop();
+      this.countdownIntervalComponent()?.stop();
     } else if (this.shouldRefreshAutomatic) {
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
-      this.countdownIntervalComponent?.start();
+      this.countdownIntervalComponent()?.start();
     }
   }
 
@@ -557,8 +453,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionDeviceName = null;
     this.sessionDeviceTypeFilter = null;
     this.paused = false;
-    this.countdownIntervalComponent?.stop();
-    this.clearPersistedSession();
+    this.countdownIntervalComponent()?.stop();
+    clearStoredExplorerSession();
     this.alertService.add({ text: gettext('Explorer session stopped.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 
@@ -577,6 +473,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   private canCombine(msgs: IndexedMessage[]): boolean {
+    // Outbound mappings are built from one message: its type decides the filter, the subscription and the source API.
+    if (msgs.some(m => m.direction === 'OUTBOUND')) return false;
     return msgs.length >= 2
       && msgs.length <= MAX_EXPLORER_SAMPLES
       && msgs.every(m => samplePayloadKind(m) === samplePayloadKind(msgs[0]))
@@ -606,7 +504,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       // Binary, XML and plain-text payloads cannot be parsed as JSON, so preselect Any Payload.
       initialState: { direction, preferredMappingType: isRawPayload(msg) ? MappingType.ANY_PAYLOAD : undefined }
     });
-    let mappingResult: any;
+    let mappingResult: Awaited<typeof typeDrawer.instance.result>;
     try {
       mappingResult = await typeDrawer.instance.result;
     } catch {
@@ -614,48 +512,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     }
     if (!mappingResult || typeof mappingResult === 'string') return;
 
-    // Step 2 (OUTBOUND only): optionally create a subscription inline
-    if (direction === Direction.OUTBOUND) {
-      // Use msg.sourceId if available, otherwise fall back to the session's selected device
-      const effectiveDeviceId = msg.sourceId ?? this.sessionSourceId;
-      // Reuse the type already fetched when the session started only if the message actually
-      // originated from that exact source. When the session source is a device group, messages
-      // arrive from its member devices — sessionDeviceType would then be the group's own type
-      // (e.g. "c8y_DeviceGroup"), not the originating device's, so it must be refetched below.
-      let deviceType: string | null =
-        effectiveDeviceId && effectiveDeviceId === this.sessionSourceId ? this.sessionDeviceType : null;
-      let deviceGroups: { id: string; name: string }[] = [];
-      if (effectiveDeviceId) {
-        try {
-          const { data } = await this.inventoryService.detail(effectiveDeviceId, { withParents: true });
-          if (deviceType === null) {
-            deviceType = data['type'] ?? null;
-          }
-          const parentRefs: { id: string; self: string }[] = (data.assetParents?.references ?? [])
-            .map((ref: any) => ({ id: String(ref.managedObject.id), self: ref.managedObject.self }));
-          deviceGroups = (
-            await Promise.all(
-              parentRefs.map(async (ref) => {
-                try {
-                  const { data: groupData } = await this.inventoryService.detail(ref.id);
-                  return { id: ref.id, name: groupData['name'] ?? ref.id };
-                } catch {
-                  return { id: ref.id, name: ref.id };
-                }
-              })
-            )
-          );
-        } catch {
-          // non-fatal — drawer will show no device context
-        }
-      }
-      const subDrawer = this.bottomDrawerService.openDrawer(SubscriptionChoiceDrawerComponent, {
-        initialState: { deviceId: effectiveDeviceId ?? null, deviceType, deviceGroups }
-      });
-      const subResult = await subDrawer.instance.result;
-      if (subResult === null) return; // user cancelled
-      // subscription was either skipped or created inside the drawer — nothing more to do here
-    }
+    // Step 2 (OUTBOUND only): the source device's type and groups become one-click choices in the mapping's
+    // Subscription step. Nothing is subscribed here; the step writes on save.
+    const subscriptionSuggestions =
+      direction === Direction.OUTBOUND
+        ? await this.mappingContext.resolveSubscriptionSuggestions(msg.sourceId, this.sessionSourceId, this.sessionDeviceType)
+        : undefined;
 
     // Extra samples only help AI generation of a Smart Function; any other choice uses the primary alone.
     const useExtras = extraMsgs.length > 0 && !!mappingResult.generateSmartFunctionWithAI;
@@ -666,34 +528,13 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       ? extraMsgs.map(m => ({ topic: m.topic, payload: m.payload, binary: m.binary, key: m.key, metadata: m.metadata }))
       : undefined;
 
-    // Infer the C8Y API type from the outbound message topic (e.g. "EVENT/CREATE" → "EVENT")
-    const targetAPI = direction === Direction.OUTBOUND ? this.inferTargetAPIFromTopic(msg.topic) : undefined;
-
-    // Derive publishTopic / publishTopicSample from the API path (OUTBOUND only)
-    let publishTopic: string | undefined;
-    let publishTopicSample: string | undefined;
-    if (targetAPI) {
-      const apiPath = MessageExplorerComponent.API_C8Y_PATH[targetAPI];
-      if (apiPath) {
-        publishTopic = apiPath + '/#';
-        // Try to resolve the c8y_Serial external ID of the source device
-        // so the sample topic contains a real identifier instead of the literal "externalId".
-        const effectiveSourceId = msg.sourceId ?? this.sessionSourceId;
-        let externalIdLabel = 'externalId';
-        if (effectiveSourceId) {
-          try {
-            const { data: extIds } = await this.identityService.list(effectiveSourceId);
-            const serial = extIds.find((e: any) => e.type === 'c8y_Serial');
-            if (serial?.externalId) {
-              externalIdLabel = serial.externalId;
-            }
-          } catch {
-            // non-fatal — keep the default label
-          }
-        }
-        publishTopicSample = apiPath + '/' + externalIdLabel;
-      }
-    }
+    // Infer the C8Y API type from the outbound message topic (e.g. "EVENT/CREATE" -> "EVENT"), and derive the
+    // publish topic and a sample topic from its API path (OUTBOUND only).
+    const targetAPI = direction === Direction.OUTBOUND ? this.mappingContext.inferTargetAPIFromTopic(msg.topic) : undefined;
+    const { publishTopic, publishTopicSample } = await this.mappingContext.resolvePublishTopics(
+      targetAPI,
+      msg.sourceId ?? this.sessionSourceId
+    );
     // Hand the captured message + chosen mapping/transformation type off to the mapping grid,
     // which applies it once it loads (see ExplorerMappingHandoffService).
     this.explorerMappingHandoff.set({
@@ -715,7 +556,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       generateSmartFunctionWithAI: mappingResult.generateSmartFunctionWithAI,
       targetAPI,
       publishTopic,
-      publishTopicSample
+      publishTopicSample,
+      subscriptionSuggestions
     });
     const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
     this.router.navigate(targetRoute, { relativeTo: this.route });
@@ -725,28 +567,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
    * Maps a Cumulocity API name to its REST path, mirroring the Java API enum.
    * Used to derive publishTopic / publishTopicSample for outbound mappings.
    */
-  private static readonly API_C8Y_PATH: Record<string, string> = {
-    ALARM: '/alarm/alarms',
-    EVENT: '/event/events',
-    MEASUREMENT: '/measurement/measurements',
-    INVENTORY: '/inventory/managedObjects',
-    OPERATION: '/devicecontrol/operations'
-  };
-
   /**
    * Infer the Cumulocity targetAPI from an outbound topic.
    * Outbound topics have the form "<TYPE>/CREATE" or "<TYPE_WITH_CHILDREN>/CREATE",
    * where <TYPE> is one of EVENT, ALARM, MEASUREMENT, INVENTORY, OPERATION.
    */
-  private inferTargetAPIFromTopic(topic: string): string | undefined {
-    if (!topic) return undefined;
-    const segment = topic.split('/')[0].toUpperCase();
-    // EVENT_WITH_CHILDREN → EVENT
-    for (const api of ['ALARM', 'EVENT', 'MEASUREMENT', 'INVENTORY', 'OPERATION']) {
-      if (segment === api || segment.startsWith(api + '_')) {
-        return api;
-      }
-    }
-    return undefined;
-  }
 }

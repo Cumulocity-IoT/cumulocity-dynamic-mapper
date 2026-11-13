@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, Injector } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, OnDestroy, Output, Injector, viewChild, input, effect, untracked } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
@@ -28,9 +28,14 @@ import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   ContentChanges,
   Feature,
+  isJsonObject,
   JsonEditorComponent,
+  JsonEditorOptions,
+  JsonObject,
+  JsonSchema,
   Mapping,
-  StepperConfiguration
+  StepperConfiguration,
+  Template
 } from '../../shared';
 import {
   checkTransformationType,
@@ -57,6 +62,14 @@ const NO_TEMPLATE_ISSUES: TemplateIssues = { protectedFieldsChanged: false, arra
   templateUrl: './mapping-template-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   styles: [`
+    .d11r-filter-preview {
+      display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px;
+      margin: 6px 0 4px 8px; min-height: 20px; font-size: 12px;
+    }
+    .d11r-filter-preview code {
+      min-width: 0; max-width: 100%; max-height: 6em; overflow: auto;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+    }
     /* Both columns stretch to the taller one, so an empty panel fills the height of the editor
        next to it, and shrinks to a compact block when neither side has an editor. */
     .tpl-col { display: flex; flex-direction: column; min-width: 0; }
@@ -84,31 +97,32 @@ const NO_TEMPLATE_ISSUES: TemplateIssues = { protectedFieldsChanged: false, arra
     .tpl-transport-list dt { font-weight: normal; }
   `],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })
-export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
+export class MappingTemplateStepComponent implements OnDestroy {
   private readonly injector = inject(Injector);
   // ─── Inputs ───────────────────────────────────────────────────────────────
-  @Input() mapping: Mapping;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() feature: Feature;
-  @Input() sourceSystem: string;
-  @Input() targetSystem: string;
-  @Input() sourceTemplate: any;
-  @Input() targetTemplate: any;
-  @Input() editorOptionsSourceTemplate: any;
-  @Input() editorOptionsTargetTemplate: any;
-  @Input() stepperViewModel: StepperViewModel;
-  @Input() templateForm: FormGroup;
-  @Input() schemaSource: any;
-  @Input() schemaTarget: any;
+  readonly mapping = input<Mapping>();
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly feature = input<Feature>();
+  readonly sourceSystem = input<string>();
+  readonly targetSystem = input<string>();
+  readonly sourceTemplate = input<Template | undefined>();
+  readonly targetTemplate = input<Template | undefined>();
+  readonly editorOptionsSourceTemplate = input<JsonEditorOptions>();
+  readonly editorOptionsTargetTemplate = input<JsonEditorOptions>();
+  readonly stepperViewModel = input<StepperViewModel>();
+  readonly templateForm = input<FormGroup>();
+  readonly schemaSource = input<JsonSchema | undefined>();
+  readonly schemaTarget = input<JsonSchema | undefined>();
   /** filterFormly stays on the parent (CDK stepper uses it as [stepControl]) */
-  @Input() filterFormly: FormGroup;
-  @Input() filterFormlyFields: FormlyFieldConfig[];
+  readonly filterFormly = input<FormGroup>();
+  readonly filterFormlyFields = input<FormlyFieldConfig[]>();
 
   // ─── Outputs ──────────────────────────────────────────────────────────────
   /** Emits the new computed target template when "Reset to default" is clicked */
-  @Output() targetTemplateChange = new EventEmitter<any>();
+  @Output() targetTemplateChange = new EventEmitter<Template>();
   /** The filter expression the user set; the host owns the mapping and applies it. */
   @Output() filterMappingChange = new EventEmitter<string>();
 
@@ -132,8 +146,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     <code>_CONTEXT_DATA_</code>) identify the target device and carry topic/context information.
     They are not needed to author the templates here - use the Transformation step to build substitutions
     from them. Edits made while they are hidden are preserved.`;
-  displayedSourceTemplate: any;
-  displayedTargetTemplate: any;
+  displayedSourceTemplate: Template | undefined;
+  displayedTargetTemplate: Template | undefined;
   /**
    * Transport fields observed on the message this mapping was created from (e.g. a Kafka record
    * key), shown read-only below the source editor. Only populated for code/extension
@@ -141,18 +155,17 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * payload, so — unlike `_CONTEXT_DATA_` for JSONata — they never appear in the source template
    * and would otherwise be invisible to the author.
    */
+  private filterFormlySubscribed = false;
+  private pendingFilterMapping: string | undefined;
+  private destroyed = false;
   sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
-  @ViewChild('editorSourceStepTemplate', { static: false })
-  editorSourceStepTemplate!: JsonEditorComponent;
+  readonly editorSourceStepTemplate = viewChild<JsonEditorComponent>('editorSourceStepTemplate');
 
-  @ViewChild('editorTargetStepTemplate', { static: false })
-  editorTargetStepTemplate!: JsonEditorComponent;
+  readonly editorTargetStepTemplate = viewChild<JsonEditorComponent>('editorTargetStepTemplate');
 
-  @ViewChild('filterModelFilterExpression')
-  filterModelFilterExpression!: ElementRef<HTMLTextAreaElement>;
 
   // ─── Services ──────────────────────────────────────────────────────────────
   private readonly stepperService = inject(MappingStepperService);
@@ -163,8 +176,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   contentChangeValid = true;
 
   private computeSampleTransportFields(): { name: string; value: string; accessor: string }[] {
-    const fields = this.stepperConfiguration?.sampleTransportFields;
-    if (!fields || !isCodeOrExtensionTransformation(this.mapping?.transformationType)) {
+    const fields = this.stepperConfiguration()?.sampleTransportFields;
+    if (!fields || !isCodeOrExtensionTransformation(this.mapping()?.transformationType)) {
       return [];
     }
     return Object.entries(fields)
@@ -179,47 +192,101 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['stepperConfiguration'] || changes['mapping']) {
-      this.sampleTransportFields = this.computeSampleTransportFields();
-    }
-
-    // Subscribe to filterFormly once when it is first provided by the parent.
-    if (changes['filterFormly'] && this.filterFormly && !changes['filterFormly'].previousValue) {
-      // Pre-populate filterModel so Formly shows the existing expression on first render.
-      if (this.mapping?.filterMapping) {
-        this.filterModel = { ...this.filterModel, filterMapping: this.mapping.filterMapping };
-      }
-      // Subscribe at GROUP level: the filterMapping FormControl does not exist yet here
-      // (Formly creates it during template rendering, which runs after ngOnChanges).
-      // Using filterFormly.valueChanges (always available) and extracting filterMapping
-      // avoids the silent no-op that occurred with the optional-chained control access.
-      this.filterFormly.valueChanges.pipe(
-        map((v: any) => v?.filterMapping as string),
-        debounceTime(500),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      ).subscribe(path => {
-        if (path) this.updateFilterExpressionResult(path);
+  constructor() {
+    // These effects replace `ngOnChanges`: each runs when its input is bound to a new value, in the
+    // order the old method handled them, and before the step's template is checked.
+    effect(() => {
+      this.stepperConfiguration();
+      this.mapping();
+      untracked(() => {
+        this.sampleTransportFields = this.computeSampleTransportFields();
       });
-    }
+    });
 
-    // When the parent expands templates and propagates a non-null sourceTemplate, evaluate
-    // the filter expression immediately.  This covers the CDK-stepper lazy-render case where
-    // templateStepRef is null when handleSelectTemplatesStep fires, so the parent's direct
-    // call was a no-op and the debounced subscription hadn't fired yet.
-    if (changes['sourceTemplate'] && this.sourceTemplate && this.mapping?.filterMapping) {
-      this.updateFilterExpressionResult(this.mapping.filterMapping);
-    }
+    effect(() => {
+      const filterFormly = this.filterFormly();
+      untracked(() => {
+        if (!filterFormly) {
+          this.filterFormlySubscribed = false;
+          return;
+        }
+        // Subscribe once when the parent first provides it.
+        if (!this.filterFormlySubscribed) {
+          this.filterFormlySubscribed = true;
+          this.subscribeToFilterFormly(filterFormly);
+        }
+      });
+    });
 
-    if (changes['sourceTemplate']) {
-      this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
-      this.hasSourceMetadata = this.containsMetadata(this.sourceTemplate);
+    // The execution filter field offers the property names of the source template as completion. The
+    // provider reads the live editor content on every request, so it follows the template as it is edited.
+    effect(() => {
+      const props = this.filterFormlyFields()?.[0]?.fieldGroup?.[0]?.props;
+      if (props) {
+        props['templateProvider'] = () => this.getSourceTemplate() ?? this.sourceTemplate();
+      }
+    });
+
+    effect(() => {
+      const sourceTemplate = this.sourceTemplate();
+      untracked(() => {
+        // When the parent expands templates and propagates a non-null sourceTemplate, evaluate
+        // the filter expression immediately.  This covers the CDK-stepper lazy-render case where
+        // templateStepRef is null when handleSelectTemplatesStep fires, so the parent's direct
+        // call was a no-op and the debounced subscription hadn't fired yet.
+        const filterMapping = this.mapping()?.filterMapping;
+        if (sourceTemplate && filterMapping) {
+          // Pass the new input explicitly: the editor, if it exists already, still holds the previous
+          // content here, so reading it would evaluate against a stale (possibly empty) template.
+          this.updateFilterExpressionResult(filterMapping, sourceTemplate);
+        }
+        this.displayedSourceTemplate = this.computeDisplayedTemplate(sourceTemplate, this.showSourceMetadata);
+        this.hasSourceMetadata = this.containsMetadata(sourceTemplate);
+      });
+    });
+
+    effect(() => {
+      const targetTemplate = this.targetTemplate();
+      untracked(() => {
+        this.displayedTargetTemplate = this.computeDisplayedTemplate(targetTemplate, this.showTargetMetadata);
+        this.hasTargetMetadata = this.containsMetadata(targetTemplate);
+      });
+    });
+  }
+
+  private subscribeToFilterFormly(filterFormly: FormGroup): void {
+    // Pre-populate filterModel so Formly shows the existing expression on first render.
+    if (this.mapping()?.filterMapping) {
+      this.filterModel = { ...this.filterModel, filterMapping: this.mapping().filterMapping };
     }
-    if (changes['targetTemplate']) {
-      this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
-      this.hasTargetMetadata = this.containsMetadata(this.targetTemplate);
-    }
+    // Subscribe at GROUP level: the filterMapping FormControl does not exist yet here
+    // (Formly creates it during template rendering, which runs after this).
+    // Using filterFormly.valueChanges (always available) and extracting filterMapping
+    // avoids the silent no-op that occurred with the optional-chained control access.
+    const filterValues$ = filterFormly.valueChanges.pipe(
+      map((v: { filterMapping?: string } | null) => v?.filterMapping as string),
+      takeUntil(this.destroy$)
+    );
+    // The newest text the user typed that the debounced evaluation below has not handled yet. The editor
+    // destroys this step when the user leaves the tab, so ngOnDestroy hands it to the host instead of
+    // losing an edit made within the debounce window.
+    filterValues$.subscribe(path => (this.pendingFilterMapping = path));
+    filterValues$.pipe(
+      debounceTime(500),
+      distinctUntilChanged()
+    ).subscribe(path => {
+      this.pendingFilterMapping = undefined;
+      if (path) this.updateFilterExpressionResult(path);
+    });
+    // A filter that was set before this step opened (Message Explorer prefill, existing
+    // mapping) is not announced by valueChanges. If the evaluations above ran before the
+    // source template had content they left no result, so try once more after first render.
+    afterNextRenderInZone(this.injector, () => {
+      const prefilled = this.mapping()?.filterMapping;
+      if (prefilled && !this.filterModel.filterExpression?.resultType) {
+        void this.updateFilterExpressionResult(prefilled, this.sourceTemplate());
+      }
+    });
   }
 
   /**
@@ -228,27 +295,27 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * would drop `_IDENTITY_`/`_TOPIC_LEVEL_`/`_CONTEXT_DATA_` from whatever the host stores.
    * `undefined` while the editor does not exist (step not rendered, or still being created).
    */
-  getSourceTemplate(): any {
-    return this.currentTemplate(this.editorSourceStepTemplate, this.sourceTemplate, this.showSourceMetadata);
+  getSourceTemplate(): Template | undefined {
+    return this.currentTemplate(this.editorSourceStepTemplate(), this.sourceTemplate(), this.showSourceMetadata);
   }
 
   /** The target-side counterpart of {@link getSourceTemplate}. */
-  getTargetTemplate(): any {
-    return this.currentTemplate(this.editorTargetStepTemplate, this.targetTemplate, this.showTargetMetadata);
+  getTargetTemplate(): Template | undefined {
+    return this.currentTemplate(this.editorTargetStepTemplate(), this.targetTemplate(), this.showTargetMetadata);
   }
 
   /**
    * The editor itself is the single source of truth for what the user has typed: the library's
    * own change event does not fire for every edit path, so nothing mirrors it here.
    */
-  private currentTemplate(editor: JsonEditorComponent | undefined, full: any, showMetadata: boolean): any {
+  private currentTemplate(editor: JsonEditorComponent | undefined, full: Template | undefined, showMetadata: boolean): Template | undefined {
     const live = tryGetLiveEditorContent(editor);
     if (live === undefined) return undefined;
     return showMetadata ? live : this.restoreMetadataKeys(live, full);
   }
 
   /** True when the template carries at least one metadata token that the toggle could hide. */
-  private containsMetadata(template: any): boolean {
+  private containsMetadata(template: Template | undefined): boolean {
     if (!template || typeof template !== 'object' || Array.isArray(template)) {
       return false;
     }
@@ -256,6 +323,13 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Outputs are still connected while ngOnDestroy runs, so the host receives the edit.
+    const pending = this.pendingFilterMapping;
+    if (pending !== undefined && pending !== this.mapping()?.filterMapping) {
+      this.filterMappingChange.emit(pending);
+    }
+    this.pendingFilterMapping = undefined;
+    this.destroyed = true;
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -264,29 +338,29 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
   toggleSourceMetadataVisibility(): void {
     this.showSourceMetadata = !this.showSourceMetadata;
-    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
+    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate(), this.showSourceMetadata);
   }
 
   toggleTargetMetadataVisibility(): void {
     this.showTargetMetadata = !this.showTargetMetadata;
-    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
+    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate(), this.showTargetMetadata);
   }
 
-  private computeDisplayedTemplate(template: any, showMetadata: boolean): any {
+  private computeDisplayedTemplate(template: Template | undefined, showMetadata: boolean): Template | undefined {
     return showMetadata ? template : this.stripMetadataKeys(template);
   }
 
-  private stripMetadataKeys(template: any): any {
+  private stripMetadataKeys(template: Template | undefined): Template | undefined {
     if (!template || typeof template !== 'object' || Array.isArray(template)) {
       return template;
     }
-    const result: any = { ...template };
+    const result: JsonObject = { ...template };
     PROTECTED_TOKENS.forEach(token => delete result[token]);
     return result;
   }
 
   /** Restores top-level metadata keys stripped for display so they are never lost on save. */
-  private restoreMetadataKeys(updated: any, full: any): any {
+  private restoreMetadataKeys(updated: Template | undefined, full: Template | undefined): Template | undefined {
     if (!updated || typeof updated !== 'object' || Array.isArray(updated)) {
       return updated;
     }
@@ -313,14 +387,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
   }
 
-  async updateFilterExpressionResult(path: string, templateOverride?: any): Promise<void> {
+  async updateFilterExpressionResult(path: string, templateOverride?: Template): Promise<void> {
     this.clearAlerts();
     try {
       // Use an explicitly supplied template first (passed by the parent when it
       // has already expanded the templates but Angular hasn't yet propagated the
       // @Input change to this child). Fall back to the live editor content, then
       // to the @Input sourceTemplate as a last resort.
-      const template = templateOverride ?? this.getSourceTemplate() ?? this.sourceTemplate;
+      const template = templateOverride ?? this.getSourceTemplate() ?? this.sourceTemplate();
       const result = await this.stepperService.evaluateFilterExpression(
         template,
         path
@@ -330,35 +404,31 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       this.filterMappingChange.emit(path);
       // Patch the FormControl so the input field shows the value.
       // emitEvent: false prevents triggering the valueChanges subscription again.
-      this.filterFormly.get('filterMapping')?.setValue(path, { emitEvent: false });
+      this.filterFormly().get('filterMapping')?.setValue(path, { emitEvent: false });
       if (result.valid) {
         // Clear any error left by an earlier failed evaluation: setValue({emitEvent: false})
         // does not re-run validation, so without this the control stays invalid forever once
         // a single evaluation has failed (e.g. the first one, fired before the source template
         // was expanded), even though the current expression evaluates fine.
-        this.filterFormly.get('filterMapping')?.setErrors(null);
+        this.filterFormly().get('filterMapping')?.setErrors(null);
       } else {
         // A non-boolean result still populates filterModel.filterExpression above, so the
         // Filter Result box shows what the expression actually evaluated to alongside the error.
-        this.filterFormly.get('filterMapping')?.setErrors({ validationError: { message: result.message } });
-        this.filterFormly.get('filterMapping')?.markAsTouched();
+        this.filterFormly().get('filterMapping')?.setErrors({ validationError: { message: result.message } });
+        this.filterFormly().get('filterMapping')?.markAsTouched();
       }
     } catch (error) {
       this.filterModel.filterExpression ??= { result: '', resultType: '', valid: false };
       this.filterModel.filterExpression.valid = false;
-      this.filterFormly.get('filterMapping')?.setErrors({ validationError: { message: error.message } });
-      this.filterFormly.get('filterMapping')?.markAsTouched();
+      this.filterFormly().get('filterMapping')?.setErrors({ validationError: { message: error.message } });
+      this.filterFormly().get('filterMapping')?.markAsTouched();
     }
     this.filterModel = { ...this.filterModel };
-    afterNextRenderInZone(this.injector, () => this.manualResize());
-  }
-
-  private manualResize(): void {
-    const el = this.filterModelFilterExpression?.nativeElement;
-    if (el) {
-      el.style.height = '32px';
-      el.style.height = el.scrollHeight + 'px';
-    }
+    // OnPush: this runs after an await, from the debounced filter input, from the input effects, and when
+    // the host calls it directly, so no event of this view marks it for checking.
+    // The user may have left the tab while the evaluation ran; a destroyed step has no view left to refresh.
+    if (this.destroyed) return;
+    this.cdr.markForCheck();
   }
 
   // ─── Template content changes ───────────────────────────────────────────────
@@ -366,7 +436,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
     // Only validates; the host reads the content via getSourceTemplate() when it needs it
     // (leaving the step, saving), so nothing is emitted per keystroke.
-    this.sourceIssues = this.validateTemplateChange(contentChanges, this.sourceTemplate, this.showSourceMetadata);
+    this.sourceIssues = this.validateTemplateChange(contentChanges, this.sourceTemplate(), this.showSourceMetadata);
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
@@ -375,17 +445,17 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     // straight back down through the parent's [data]="targetTemplate" binding into
     // JsonEditorComponent's data setter, which calls editor.set() and resets the editor's
     // content/cursor, visibly interrupting typing. The host reads getTargetTemplate() instead.
-    this.validateTemplateChange(contentChanges, this.targetTemplate, this.showTargetMetadata);
+    this.validateTemplateChange(contentChanges, this.targetTemplate(), this.showTargetMetadata);
   }
 
   /** Validates an edit, records the verdict in contentChangeValid and returns what is wrong with it. */
   private validateTemplateChange(
     contentChanges: ContentChanges,
-    baseline: any,
+    baseline: Template | undefined,
     showMetadata: boolean
   ): TemplateIssues {
     const { previousContent, updatedContent } = contentChanges;
-    let updatedJson: any;
+    let updatedJson: Template | undefined;
 
     if ('text' in updatedContent && updatedContent['text']) {
       try { updatedJson = JSON.parse(updatedContent['text']); }
@@ -409,20 +479,21 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       if ('text' in previousContent && previousContent['text']) {
         try { baseline = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
       } else if ('json' in previousContent) {
-        baseline = previousContent['json'];
+        // The editor reports parsed JSON here; the library types it as unknown.
+        baseline = previousContent['json'] as Template;
       }
     }
 
     // Metadata keys can't be edited via the UI while hidden, so there is nothing to protect
     // against — skip the check to avoid false positives from their absence in the editor content.
     const hasProtectedChanges = showMetadata
-      && this.stepperConfiguration.allowTemplateExpansion
+      && this.stepperConfiguration().allowTemplateExpansion
       && !validateProtectedFields(baseline, updatedJson);
-    const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
+    const isTransformationTypeValid = checkTransformationType(this.mapping().transformationType, updatedJson);
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.contentChangeValid = isValid;
 
-    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
+    if (hasProtectedChanges && this.stepperConfiguration().allowTemplateExpansion) {
       this.raiseAlert({ type: 'warning', text: gettext('Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.') });
     }
     return { protectedFieldsChanged: hasProtectedChanges, arrayNeedsSmartFunction: !isTransformationTypeValid };
@@ -431,8 +502,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Sample target templates ────────────────────────────────────────────────
 
   onSampleTargetTemplatesButton(): void {
-    const newTarget = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
-    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
+    const newTarget = this.stepperService.computeSampleTargetTemplate(this.mapping(), this.stepperConfiguration());
+    this.editorTargetStepTemplate()?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
     this.targetTemplateChange.emit(newTarget);
   }
 

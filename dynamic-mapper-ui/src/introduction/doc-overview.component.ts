@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
@@ -36,6 +36,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-doc-overview',
   templateUrl: './doc-overview.component.html',
   styleUrls: ['./doc-shared.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, RouterLink],
   // Most of the body is rendered markdown injected via [innerHTML], which never receives the
@@ -45,18 +46,22 @@ import { gettext } from '@c8y/ngx-components/gettext';
 })
 export class DocOverviewComponent implements OnInit {
   private readonly injector = inject(Injector);
-  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+  readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
-  countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countConnector$: Subject<any> = new BehaviorSubject<any>(0);
+  countMappingInbound$ = new BehaviorSubject<number | string>(0);
+  countMappingOutbound$ = new BehaviorSubject<number | string>(0);
+  countConnector$ = new BehaviorSubject<number | string>(0);
   feature: Feature;
 
   // The overview page is now short: the intro prose, the live tenant counts, then the
   // "where to start" tier table. Everything that used to be concatenated onto this page
   // (getting started, connectors, mappings, SparkPlug B, monitoring, …) is its own route.
-  htmlIntro: SafeHtml = '';
-  htmlNextSteps: SafeHtml = '';
+  private readonly htmlIntroState = signal<SafeHtml>('');
+  get htmlIntro(): SafeHtml { return this.htmlIntroState(); }
+  set htmlIntro(value: SafeHtml) { this.htmlIntroState.set(value); }
+  private readonly htmlNextStepsState = signal<SafeHtml>('');
+  get htmlNextSteps(): SafeHtml { return this.htmlNextStepsState(); }
+  set htmlNextSteps(value: SafeHtml) { this.htmlNextStepsState.set(value); }
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
@@ -115,7 +120,7 @@ export class DocOverviewComponent implements OnInit {
     // After the render that commits the [innerHTML] bindings, docBodyRef.nativeElement contains
     // the <pre class="mermaid"> nodes mermaid.run() needs to find.
     afterNextRenderInZone(this.injector, () => {
-      const body = this.docBodyRef?.nativeElement;
+      const body = this.docBodyRef()?.nativeElement;
       if (!body) return; // navigated away before the render happened
       this.markdownService.highlightCodeBlocks(body);
       this.markdownService.renderMermaidDiagrams(body);

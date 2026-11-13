@@ -19,7 +19,7 @@
  */
 
 import { HttpStatusCode } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
@@ -52,6 +52,7 @@ import { SubscriptionService } from '../core/subscription.service';
       </label>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
@@ -82,7 +83,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   async ngOnInit() {
     try {
       this.feature = await this.sharedService.getFeatures();
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error loading features in component', error);
       this.alertService.danger(gettext('Failed to load features. Please refresh the page.'));
@@ -102,7 +103,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
       await this.activateMapping();
     } finally {
       this.isCheckingValidity = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 
@@ -133,7 +134,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     await this.refreshAllMappings();
   }
 
-  handleDeprecation(_mapping: any): void {
+  handleDeprecation(_mapping: unknown): void {
     // Deprecation notice disabled for 6.3.2 — no active deprecations to surface.
   }
 

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
@@ -46,6 +46,7 @@ import {
   templateUrl: 'mapping-service-event.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, BsDropdownModule, ReactiveFormsModule, ConnectorStatusHistoryComponent, RealtimeButtonComponent]
 })

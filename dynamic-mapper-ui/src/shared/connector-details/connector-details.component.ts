@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy, signal } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { firstValueFrom, Observable, Subject, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -31,9 +31,11 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
   SharedService,
-  ConnectorType
+  ConnectorType,
+  ROUTE_CONNECTORS
 } from '..';
 import { ServiceConfiguration } from '../configuration/configuration.model';
+import { ConnectorStatusEvent } from './connector-log.model';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
@@ -52,6 +54,7 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule,
@@ -60,12 +63,20 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
   ]
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
+  readonly ROUTE_CONNECTORS = ROUTE_CONNECTORS;
+
   version: string = packageJson.version;
   specifications$: Observable<ConnectorSpecification[]>;
-  statusLogs$: Observable<any[]>;
-  configuration: ConnectorConfiguration;
-  feature: Feature;
-  serviceConfiguration: ServiceConfiguration;
+  statusLogs$: Observable<ConnectorStatusEvent[]>;
+  private readonly configurationState = signal<ConnectorConfiguration>(undefined as unknown as ConnectorConfiguration);
+  get configuration(): ConnectorConfiguration { return this.configurationState(); }
+  set configuration(value: ConnectorConfiguration) { this.configurationState.set(value); }
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
+  private readonly serviceConfigurationState = signal<ServiceConfiguration>(undefined as unknown as ServiceConfiguration);
+  get serviceConfiguration(): ServiceConfiguration { return this.serviceConfigurationState(); }
+  set serviceConfiguration(value: ServiceConfiguration) { this.serviceConfigurationState.set(value); }
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.CONNECTOR_EVENT_TYPE,
@@ -73,8 +84,10 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
-  initialStateDrawer: any;
-  isTogglingConnection = false;
+  initialStateDrawer: (Partial<ConnectorConfigurationDrawerComponent> & { add?: boolean }) | undefined;
+  private readonly isTogglingConnectionState = signal<boolean>(false);
+  get isTogglingConnection(): boolean { return this.isTogglingConnectionState(); }
+  set isTogglingConnection(value: boolean) { this.isTogglingConnectionState.set(value); }
 
   private readonly destroy$ = new Subject<void>();
 
@@ -97,7 +110,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       tap(({ connector }) => {
         this.configuration = connector;
         this.currentIdentifier = connector.identifier;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       }))
       .subscribe(async data => {
         const { connector } = data;
@@ -128,7 +141,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       const match = configurations.find(config => config.identifier === this.currentIdentifier);
       if (match) {
         this.configuration = match;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       }
     });
   }
@@ -171,7 +184,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       this.configuration = resultOf as ConnectorConfiguration;
     }
 
-    if (this.initialStateDrawer.add) {
+    if (this.initialStateDrawer?.add) {
       await this.handleModalResponse(
         resultOf,
         'Added successfully.',
@@ -200,7 +213,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
         // Optimistic, for instant feedback — the live getConfigurationsWithStatus() subscription
         // in ngOnInit() will correct this afterward if the connect/reconnect attempt it queued
         // ultimately fails or is still backing off.
-        this.configuration.enabled = !this.configuration.enabled;
+        this.configuration = { ...this.configuration, enabled: !this.configuration.enabled };
       }
     } finally {
       this.isTogglingConnection = false;
@@ -214,7 +227,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
   ): Promise<void> {
     await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }

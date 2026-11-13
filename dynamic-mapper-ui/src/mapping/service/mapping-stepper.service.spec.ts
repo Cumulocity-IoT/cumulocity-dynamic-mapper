@@ -534,7 +534,7 @@ describe('MappingStepperService', () => {
     it('returns an empty object for code/extension transformations (INBOUND)', () => {
       const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
       const stepperConfiguration = { direction: Direction.INBOUND } as StepperConfiguration;
-      expect(service.computeSampleTargetTemplate(mapping, stepperConfiguration)).toEqual({});
+      expect(service.computeSampleTargetTemplate(mapping, stepperConfiguration) as unknown).toEqual({});
     });
 
     it('returns the sample C8Y template for INBOUND, non-code transformations', () => {
@@ -551,7 +551,7 @@ describe('MappingStepperService', () => {
 
   // Code templates only exist for Smart Functions: toTemplateType() has entries for
   // INBOUND/OUTBOUND + SMART_FUNCTION only and throws otherwise. The UI reflects that —
-  // "Create new code template" lives inside the code-editor section, which is rendered
+  // "Create code template" lives inside the code-editor section, which is rendered
   // only for code-based transformations. So DEFAULT is not a reachable input here.
   describe('createCodeTemplateAndRefresh', () => {
     it('creates the template, refetches the map, and shows a success alert on 2xx', async () => {

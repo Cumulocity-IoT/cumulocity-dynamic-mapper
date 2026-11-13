@@ -33,7 +33,7 @@ describe('TestingComponent', () => {
 
   it('reloads the grid when test devices were deleted', () => {
     const fixture = TestBed.createComponent(TestingComponent);
-    fixture.componentInstance.deviceGrid = { reload } as any;
+    Object.assign(fixture.componentInstance, { deviceGrid: () => ({ reload }) });
 
     refreshData.next(true);
 
@@ -42,7 +42,7 @@ describe('TestingComponent', () => {
 
   it('stops listening once destroyed, so a root-service signal does not reach a dead grid', () => {
     const fixture = TestBed.createComponent(TestingComponent);
-    fixture.componentInstance.deviceGrid = { reload } as any;
+    Object.assign(fixture.componentInstance, { deviceGrid: () => ({ reload }) });
 
     fixture.destroy();
     refreshData.next(true);

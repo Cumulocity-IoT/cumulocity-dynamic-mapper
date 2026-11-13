@@ -117,7 +117,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     subscriptionNode: new NavigatorNode({
       parent: gettext('Mapping'),
       label: gettext('Subscription outbound'),
-      icon: 'mail',
+      icon: 'subscription',
       path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
       priority: 380,
       preventDuplicates: true
@@ -184,9 +184,9 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
-      const feature: any = await this.sharedService.getFeatures();
+      const feature = await this.sharedService.getFeatures();
       let navs;
       let copyStaticNodesPlugin;
 

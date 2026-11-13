@@ -17,16 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild, effect, input, untracked } from '@angular/core';
 import {
   ActionControl,
   Column,
@@ -79,28 +70,36 @@ import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
   templateUrl: 'type-resync.component.html',
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('type-resync')],
   imports: [CoreModule]
 })
 export class TypeResyncComponent implements OnInit, OnDestroy {
-  @ViewChild('typeResyncGrid') typeResyncGrid!: DataGridComponent;
+  readonly typeResyncGrid = viewChild<DataGridComponent>('typeResyncGrid');
 
-  @Input() set typeList(list: string[]) {
-    this.typeListInternal = list ?? [];
-    this.rebuildRows();
-  }
+  readonly typeList = input<string[]>([]);
 
-  @Output() cancel = new EventEmitter<any>();
+  @Output() cancel = new EventEmitter<void>();
   @Output() resync = new EventEmitter<string>();
 
   constructor(
     private readonly eventService: EventService,
     private readonly sharedService: SharedService
-  ) {}
+  ) {
+    effect(() => {
+      const list = this.typeList();
+      untracked(() => {
+        this.typeListInternal = list ?? [];
+        this.rebuildRows();
+      });
+    });
+  }
 
   typeListInternal: string[] = [];
-  rows: DeviceTypeRow[] = [];
+  private readonly rowsState = signal<DeviceTypeRow[]>([]);
+  get rows(): DeviceTypeRow[] { return this.rowsState(); }
+  set rows(value: DeviceTypeRow[]) { this.rowsState.set(value); }
 
   // type -> state derived from its most recent backfill events
   private states: Record<string, ResyncState> = {};

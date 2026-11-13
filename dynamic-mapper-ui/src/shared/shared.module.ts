@@ -30,6 +30,7 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { InputTypeComponent } from './component/formly/input.type.component';
+import { JsonataInputTypeComponent } from './component/jsonata-input/jsonata-input.type.component';
 import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-field-wrapper.component';
 
 @NgModule({
@@ -40,6 +41,7 @@ import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-
     Base64DecodePipe,
     FilterJsonPipe,
     InputTypeComponent,
+    JsonataInputTypeComponent,
     TextareaTypeComponent,
     InputListFormlyComponent
   ],
@@ -50,6 +52,7 @@ import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-
     Base64DecodePipe,
     FilterJsonPipe,
     InputTypeComponent,
+    JsonataInputTypeComponent,
     TextareaTypeComponent,
     InputListFormlyComponent
   ],
@@ -74,6 +77,10 @@ import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-
           {
             name: 'd11r-input',
             component: InputTypeComponent
+          },
+          {
+            name: 'd11r-jsonata-input',
+            component: JsonataInputTypeComponent
           },
           { name: 'enum', extends: 'select' },
           { name: 'boolean', extends: 'checkbox' },

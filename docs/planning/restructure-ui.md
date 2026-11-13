@@ -187,7 +187,7 @@ Left alone: `this.mapping?.extension?.extensionName`, where the meaningful guard
 
 **`onCreateCodeTemplate` no longer throws out of an event handler.**
 It called `toTemplateType(...)`, which throws for every transformation type except Smart Function.
-That was unreachable only because the "Create new code template" button renders inside
+That was unreachable only because the "Create code template" button renders inside
 `showCodeEditorSection` — and that flag comes from `StepperConfiguration.showCodeEditor`, two hops
 from the transformation type. An incidental guarantee, not an enforced one.
 

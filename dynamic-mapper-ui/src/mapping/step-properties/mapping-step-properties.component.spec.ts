@@ -19,7 +19,7 @@
  */
 
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { FormGroup } from '@angular/forms';
@@ -43,18 +43,22 @@ function makeStepperConfiguration(): StepperConfiguration {
   return { direction: Direction.INBOUND, persistence: 'create' };
 }
 
+/** The fixture of each component the helpers built, to bind inputs the way a host does. */
+const fixtures = new WeakMap<MappingStepPropertiesComponent, ComponentFixture<MappingStepPropertiesComponent>>();
+
 async function createComponent(
   deployedConnectors?: string[]
 ): Promise<MappingStepPropertiesComponent> {
   const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
   const component = fixture.componentInstance;
-  component.mapping = makeMapping();
-  component.stepperConfiguration = makeStepperConfiguration();
-  component.propertyFormly = new FormGroup({});
+  fixtures.set(component, fixture);
+  fixture.componentRef.setInput('mapping', makeMapping());
+  fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+  fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
   // Act as the host: apply every patch to the mapping.
-  component.propertiesChange.subscribe(patch => Object.assign(component.mapping, patch));
+  component.propertiesChange.subscribe(patch => Object.assign(component.mapping(), patch));
   if (deployedConnectors) {
-    component.deploymentMapEntry = { identifier: 'mapping-1', connectors: deployedConnectors };
+    fixture.componentRef.setInput('deploymentMapEntry', { identifier: 'mapping-1', connectors: deployedConnectors });
   }
   await component.ngOnInit();
   return component;
@@ -63,6 +67,14 @@ async function createComponent(
 // ---------------------------------------------------------------------------
 // MappingStepPropertiesComponent
 // ---------------------------------------------------------------------------
+
+/** What the editor host does when another step edits the mapping: it binds a new mapping object. */
+function hostReplacesMapping(component: MappingStepPropertiesComponent, patch: Partial<Mapping>): void {
+  const previous = component.mapping();
+  fixtures.get(component)!.componentRef.setInput('mapping', { ...previous, ...patch });
+  // The component calls this from an effect; the spec drives it directly, as it never renders the template.
+  component.onMappingReplaced();
+}
 
 describe('MappingStepPropertiesComponent', () => {
   let mockSharedService: jasmine.SpyObj<SharedService>;
@@ -122,6 +134,153 @@ describe('MappingStepPropertiesComponent', () => {
     });
   });
 
+  describe('execution filter control (outbound)', () => {
+    async function outboundComponent(filterMapping?: string) {
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const component = fixture.componentInstance;
+      fixtures.set(component, fixture);
+      fixture.componentRef.setInput('mapping', { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterMapping } as unknown as Mapping);
+      fixture.componentRef.setInput('stepperConfiguration', { direction: Direction.OUTBOUND, persistence: 'create' });
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
+      component.propertiesChange.subscribe(patch => Object.assign(component.mapping(), patch));
+      await component.ngOnInit();
+      return component;
+    }
+
+    it('opens a new mapping with nothing chosen, and requires the choice and its value', async () => {
+      const component = await outboundComponent('');
+      expect(component.model.executionFilterMode).toBeUndefined();
+      const fields = (component.propertyFormlyFields as any[]).flatMap(f => f.fieldGroup ?? []);
+      const mode = fields.find(f => f.key === 'executionFilterMode');
+      const value = fields.find(f => f.key === 'executionFilterValue');
+      expect(mode.props.required).toBeTrue();
+      expect(value.props.required).toBeTrue();
+      // no value field until an option is chosen, and none for the custom option
+      expect(value.expressions.hide()).toBeTrue();
+      component.model.executionFilterMode = 'type';
+      expect(value.expressions.hide()).toBeFalse();
+      component.model.executionFilterMode = 'custom';
+      expect(value.expressions.hide()).toBeTrue();
+    });
+
+    it('opens a stored type expression as "type" with its value', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      expect(component.model.executionFilterMode).toBe('type');
+      expect(component.model.executionFilterValue).toBe('lora');
+    });
+
+    it('opens a stored $exists expression as "fragment"', async () => {
+      const component = await outboundComponent('$exists(c8y_Temperature)');
+      expect(component.model.executionFilterMode).toBe('fragment');
+      expect(component.model.executionFilterValue).toBe('c8y_Temperature');
+    });
+
+    it('opens any other expression as "custom" and leaves it untouched', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      expect(component.model.executionFilterMode).toBe('custom');
+      expect(component.mapping().filterMapping).toBe("type = 'a' and $exists(b)");
+    });
+
+    it('writes the expression to filterMapping when the user changes the control', async () => {
+      const component = await outboundComponent('true');
+      component.model.executionFilterMode = 'fragment';
+      component.model.executionFilterValue = 'c8y_Temperature';
+      component.onExecutionFilterChanged();
+      expect(component.mapping().filterMapping).toBe('$exists(c8y_Temperature)');
+
+      component.model.executionFilterMode = 'type';
+      component.model.executionFilterValue = 'lora';
+      component.onExecutionFilterChanged();
+      expect(component.mapping().filterMapping).toBe("type = 'lora'");
+    });
+
+    it('shows the custom expression in the value column', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      const field = (component.propertyFormlyFields as any[])
+        .flatMap(f => f.fieldGroup ?? [])
+        .find(f => f.key === 'filterMapping');
+      expect(field.props.readonly).toBeFalsy();
+      expect(field.expressions.hide()).toBeFalse();
+      expect(component.model.filterMapping).toBe("type = 'a' and $exists(b)");
+
+      component.model.executionFilterMode = 'type';
+      expect(field.expressions.hide()).toBeTrue();
+    });
+
+    it('follows a filterMapping edited in the Templates step, and never writes the stale one back', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      hostReplacesMapping(component, { filterMapping: '$exists(c8y_Temperature)' });
+      expect(component.model.executionFilterMode).toBe('fragment');
+      expect(component.model.executionFilterValue).toBe('c8y_Temperature');
+
+      hostReplacesMapping(component, { filterMapping: "type = 'a' and $exists(b)" });
+      component.model.name = 'renamed';
+      component.commitModel();
+      expect(component.mapping().filterMapping).toBe("type = 'a' and $exists(b)");
+    });
+
+    it('keeps a chosen option with an empty value while the user types', async () => {
+      const component = await outboundComponent('');
+      component.model.executionFilterMode = 'type';
+      component.onExecutionFilterChanged();
+      hostReplacesMapping(component, {});
+      expect(component.model.executionFilterMode).toBe('type');
+    });
+
+    it('writes an expression typed into the custom field', async () => {
+      const component = await outboundComponent("type = 'a' and $exists(b)");
+      const emitted: unknown[] = [];
+      component.propertiesChange.subscribe(p => emitted.push(p));
+      component.onCustomFilterEdited("type = 'b'");
+      expect(emitted).toContain(jasmine.objectContaining({ filterMapping: "type = 'b'" }));
+      expect(component.model.filterMapping).toBe("type = 'b'");
+    });
+
+    it('ignores the custom field outside the custom option', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      const emitted: unknown[] = [];
+      component.propertiesChange.subscribe(p => emitted.push(p));
+      component.onCustomFilterEdited('true');
+      expect(emitted).toEqual([]);
+    });
+
+    it('clears filterMapping for the custom option', async () => {
+      const component = await outboundComponent("type = 'lora'");
+      component.model.executionFilterMode = 'custom';
+      component.onExecutionFilterChanged();
+      expect(component.mapping().filterMapping).toBe('');
+    });
+  });
+
+  describe('inventory filter behind Expert Mode', () => {
+    async function component(filterInventory?: string) {
+      const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
+      const c = fixture.componentInstance;
+      fixture.componentRef.setInput('mapping', { direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT', filterInventory } as unknown as Mapping);
+      fixture.componentRef.setInput('stepperConfiguration', { direction: Direction.OUTBOUND, persistence: 'create' });
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
+      await c.ngOnInit();
+      return c;
+    }
+    const field = (c: MappingStepPropertiesComponent) =>
+      (c.propertyFormlyFields as any[]).flatMap(f => f.fieldGroup ?? []).find(f => f.key === 'filterInventory');
+
+    it('hides the field by default, keeps its value on hide, and labels it "Inventory filter"', async () => {
+      const c = await component('');
+      expect(c.model.expertMode).toBeFalse();
+      expect(field(c).expressions.hide()).toBeTrue();
+      expect(field(c).resetOnHide).toBeFalse();
+      expect(field(c).props.label).toBe('Inventory filter');
+      c.model.expertMode = true;
+      expect(field(c).expressions.hide()).toBeFalse();
+    });
+
+    it('opens with Expert Mode on when a filter is already stored', async () => {
+      const c = await component('type = "x"');
+      expect(c.model.expertMode).toBeTrue();
+    });
+  });
+
   describe('filter inventory: attributes missing from the inventory cache', () => {
     /** A stand-in for the formly field, which is not rendered in these template-less specs. */
     async function componentWithField() {
@@ -130,6 +289,17 @@ describe('MappingStepPropertiesComponent', () => {
       (component as any).filterInventoryField = field;
       return { component, field };
     }
+
+    // The step is OnPush. The inventory filter result arrives after an await, outside any event of its view.
+    it('marks itself for checking once an inventory filter has been evaluated', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component } = await componentWithField();
+      const markForCheck = spyOn(component['cdr'], 'markForCheck');
+
+      await component.updateFilterInventoryExpressionResult('type = "a"');
+
+      expect(markForCheck).toHaveBeenCalled();
+    });
 
     it('warns under the field about an attribute that is not cached', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);
@@ -209,7 +379,7 @@ describe('MappingStepPropertiesComponent', () => {
     it('does not warn for an expression that is not valid', async () => {
       mockMappingService.evaluateExpression.and.rejectWith(new Error('Unexpected end of expression'));
       const { component } = await componentWithField();
-      component.propertyFormly.addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
+      component.propertyFormly().addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
 
       await component.updateFilterInventoryExpressionResult('name = ');
 
@@ -241,22 +411,22 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.filterInventoryModel.filterExpression.resultType).toBe('Boolean');
       expect(component.model.filterInventory).toBe('type = "lora_device_type"');
       expect(emitted).toContain(jasmine.objectContaining({ filterInventory: 'type = "lora_device_type"' }));
-      expect(component.mapping.filterInventory).toBe('type = "lora_device_type"'); // applied by the host stand-in
+      expect(component.mapping().filterInventory).toBe('type = "lora_device_type"'); // applied by the host stand-in
     });
 
     it('rejects a non-boolean-valued expression and surfaces a form control error instead of updating mapping.filterInventory', async () => {
       mockMappingService.evaluateExpression.and.resolveTo('not-a-boolean' as any);
       const component = await createComponent();
-      component.propertyFormly.addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
+      component.propertyFormly().addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
 
       await component.updateFilterInventoryExpressionResult('type');
 
       expect(component.filterInventoryModel.filterExpression.valid).toBeFalse();
-      expect(component.propertyFormly.get('filterInventory')?.errors).toEqual(
+      expect(component.propertyFormly().get('filterInventory')?.errors).toEqual(
         jasmine.objectContaining({ validationError: jasmine.anything() })
       );
       expect(component.model.filterInventory).toBeUndefined();
-      expect(component.mapping.filterInventory).toBeUndefined();
+      expect(component.mapping().filterInventory).toBeUndefined();
     });
 
     it('does not raise the "fragments to cache" note as a toast: it is part of the field help text', async () => {
@@ -290,9 +460,9 @@ describe('MappingStepPropertiesComponent', () => {
       const before = JSON.stringify(mapping);
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const component = fixture.componentInstance;
-      component.mapping = mapping;
-      component.stepperConfiguration = makeStepperConfiguration();
-      component.propertyFormly = new FormGroup({});
+      fixture.componentRef.setInput('mapping', mapping);
+      fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
 
       await component.ngOnInit();
 
@@ -303,9 +473,9 @@ describe('MappingStepPropertiesComponent', () => {
     it('announces the default external id type once, as a patch', async () => {
       const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
       const component = fixture.componentInstance;
-      component.mapping = makeMapping();
-      component.stepperConfiguration = makeStepperConfiguration();
-      component.propertyFormly = new FormGroup({});
+      fixture.componentRef.setInput('mapping', makeMapping());
+      fixture.componentRef.setInput('stepperConfiguration', makeStepperConfiguration());
+      fixture.componentRef.setInput('propertyFormly', new FormGroup({}));
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
 
@@ -318,7 +488,7 @@ describe('MappingStepPropertiesComponent', () => {
       const component = await createComponent();
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
-      component.mapping.externalIdType = 'c8y_Serial';
+      component.mapping().externalIdType = 'c8y_Serial';
 
       component.commitModel();
       expect(patches).toEqual([]);
@@ -331,7 +501,7 @@ describe('MappingStepPropertiesComponent', () => {
 
     it('never carries mapping state outside its own properties, so the host can change it meanwhile', async () => {
       const component = await createComponent();
-      component.mapping.substitutions = [{ pathSource: 'a', pathTarget: 'b' } as any];
+      component.mapping().substitutions = [{ pathSource: 'a', pathTarget: 'b' } as any];
       const patches: Partial<Mapping>[] = [];
       component.propertiesChange.subscribe(patch => patches.push(patch));
 

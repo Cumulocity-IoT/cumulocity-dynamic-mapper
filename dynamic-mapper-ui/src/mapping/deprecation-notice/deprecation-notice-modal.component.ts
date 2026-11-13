@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, input, OnDestroy, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -48,25 +48,30 @@ function versionLessThan(a: string | null | undefined, b: string): boolean {
   selector: 'd11r-deprecation-notice-modal',
   templateUrl: './deprecation-notice-modal.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
 export class DeprecationNoticeModalComponent implements OnDestroy {
   /** Set via BsModalService initialState — the version stored in tenant config. */
-  @Input() acceptedVersion: string | null = null;
+  readonly acceptedVersion = input<string | null>(null);
 
   readonly closeSubject = new Subject<boolean>();
   readonly currentVersion = DEPRECATION_NOTICE_VERSION;
-  isPending = false;
-  isClosing = false;
+  private readonly isPendingState = signal<boolean>(false);
+  get isPending(): boolean { return this.isPendingState(); }
+  set isPending(value: boolean) { this.isPendingState.set(value); }
+  private readonly isClosingState = signal<boolean>(false);
+  get isClosing(): boolean { return this.isClosingState(); }
+  set isClosing(value: boolean) { this.isClosingState.set(value); }
 
   /** True when the user has never accepted the 6.3 SUBSTITUTION_AS_CODE removal notice,
    *  i.e. they need the action-required banner, not just the historical info note. */
   get needsSubstitutionMigration(): boolean {
-    return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
+    return versionLessThan(this.acceptedVersion(), SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
   }
 
-  @ViewChild('modal', { static: false }) private modal: any;
+  private readonly modal = viewChild<{ _dismiss(): void }>('modal');
 
   constructor(
     private sharedService: SharedService,
@@ -82,7 +87,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
     this.isClosing = true;
     this.closeSubject.next(false);
     this.closeSubject.complete();
-    this.modal?._dismiss();
+    this.modal()?._dismiss();
   }
 
   async onAccept(): Promise<void> {
@@ -95,7 +100,7 @@ export class DeprecationNoticeModalComponent implements OnDestroy {
       });
       this.closeSubject.next(true);
       this.closeSubject.complete();
-      this.modal?._dismiss();
+      this.modal()?._dismiss();
     } catch (error) {
       console.error('Failed to save deprecation notice acceptance:', error);
       this.alertService.warning(

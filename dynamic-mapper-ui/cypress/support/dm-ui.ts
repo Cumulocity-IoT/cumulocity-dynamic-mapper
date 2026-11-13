@@ -108,7 +108,9 @@ export const leaveApp = (): void => {
 export const driveSmartFunctionStepperToTestStep = (
   name: string,
   topic: string,
-  direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND'
+  direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND',
+  /** OUTBOUND only: runs while the Subscription step is showing; the default leaves it on Skip. */
+  onSubscriptionStep?: () => void
 ): void => {
   // 1. Open the Add-mapping type drawer.
   cy.getByData('dm-mapping-add').filter(':visible').first().click();
@@ -141,11 +143,24 @@ export const driveSmartFunctionStepperToTestStep = (
   formField(topicKey).type(topic);
   formField(`${topicKey}Sample`).clear();
   formField(`${topicKey}Sample`).type(topic);
+  if (direction === 'OUTBOUND') {
+    // The execution filter is required for outbound mappings and starts empty.
+    formField('executionFilterMode').select('Filter by type');
+    formField('executionFilterValue').clear();
+    formField('executionFilterValue').type('c8y_TestEvent');
+  }
   cy.getByData('dm-mapping-stepper-buttons-general')
     .find('button')
     .contains('Next')
     .should('not.be.disabled');
   stepperButton('dm-mapping-stepper-buttons-general', 'Next');
+
+  // Outbound mappings have a Subscription step between general settings and templates.
+  if (direction === 'OUTBOUND') {
+    cy.getByData('dm-mapping-stepper-buttons-subscription').should('be.visible');
+    onSubscriptionStep?.();
+    stepperButton('dm-mapping-stepper-buttons-subscription', 'Next');
+  }
 
   // 5. Templates and 6. transformation code: accept the defaults.
   stepperButton('dm-mapping-stepper-buttons-templates', 'Next');
@@ -162,7 +177,7 @@ export const driveSmartFunctionStepperToTestStep = (
  * pointer-events: none, and which tab the editor opens on depends on the mapping type, so a tab
  * that is already open is left alone.
  */
-export const openEditorTab = (label: 'Connector' | 'General Settings' | 'Templates' | 'Transformation' | 'Testing'): void => {
+export const openEditorTab = (label: 'Connector' | 'General Settings' | 'Subscription' | 'Templates' | 'Transformation' | 'Testing'): void => {
   cy.get('c8y-tabs-outlet')
     .contains('a', label)
     .then(($tab) => {
@@ -170,4 +185,24 @@ export const openEditorTab = (label: 'Connector' | 'General Settings' | 'Templat
         cy.wrap($tab).click();
       }
     });
+};
+
+/**
+ * The expression of a JSONata field (`d11r-jsonata-input`, a Monaco editor). Monaco renders spaces as
+ * non-breaking spaces and has no input value, so the text is read from the rendered lines.
+ */
+export const jsonataFieldText = (key: string): Cypress.Chainable<string> =>
+  cy
+    .getByData(`dm-field-${key}`)
+    .find('.view-lines')
+    .invoke('text')
+    .then((text) => text.replace(/\u00a0/g, ' '));
+
+/** Replaces the expression of a JSONata field. Types through Monaco's hidden textarea. */
+export const typeJsonataField = (key: string, expression: string): void => {
+  cy.getByData(`dm-field-${key}`).find('.monaco-editor').click();
+  cy.getByData(`dm-field-${key}`).find('textarea.inputarea').type('{selectall}{backspace}', { force: true });
+  cy.getByData(`dm-field-${key}`)
+    .find('textarea.inputarea')
+    .type(expression, { force: true, parseSpecialCharSequences: false });
 };

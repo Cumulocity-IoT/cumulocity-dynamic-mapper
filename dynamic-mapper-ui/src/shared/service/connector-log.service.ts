@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { inject, Injectable } from '@angular/core';
-import { EventService } from '@c8y/client';
+import { EventService, IEvent } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
   ConnectorStatusEvent,
@@ -139,7 +139,7 @@ export class ConnectorLogService {
     return this.agentId$.pipe(
       switchMap(agentId =>
         this.eventRealtimeService.onAll$(agentId).pipe(
-          map(response => response.data),
+          map(response => response.data as IEvent),
           filter(event => this.isValidConnectorEvent(event)),
           map(event => this.toConnectorStatusEvent(event)),
           filter((event): event is ConnectorStatusEvent => event !== null),
@@ -155,7 +155,7 @@ export class ConnectorLogService {
     );
   }
 
-  private processEvents(events: any[], filter: LogFilter): ConnectorStatusEvent[] {
+  private processEvents(events: IEvent[], filter: LogFilter): ConnectorStatusEvent[] {
     return events
       .filter(event => this.isValidConnectorEvent(event))
       .map(event => this.toConnectorStatusEvent(event))
@@ -163,11 +163,11 @@ export class ConnectorLogService {
       .filter(event => this.matchesFilter(event, filter));
   }
 
-  private isValidConnectorEvent(event: any): boolean {
+  private isValidConnectorEvent(event: IEvent): boolean {
     return event?.[CONNECTOR_FRAGMENT] && typeof event[CONNECTOR_FRAGMENT] === 'object';
   }
 
-  private toConnectorStatusEvent(event: any): ConnectorStatusEvent | null {
+  private toConnectorStatusEvent(event: IEvent): ConnectorStatusEvent | null {
     try {
       const fragment = event[CONNECTOR_FRAGMENT];
       const metadata = getEventMetadata(event);

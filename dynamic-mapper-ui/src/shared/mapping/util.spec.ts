@@ -722,7 +722,7 @@ describe('tryGetLiveEditorContent', () => {
 
   it('returns the editor\'s live content', () => {
     const editor = { get: () => ({ a: 1 }) } as any;
-    expect(tryGetLiveEditorContent(editor)).toEqual({ a: 1 });
+    expect(tryGetLiveEditorContent(editor) as unknown).toEqual({ a: 1 });
   });
 
   it('falls back to undefined instead of throwing when .get() errors', () => {
@@ -738,7 +738,7 @@ describe('updateTemplatesInEditors', () => {
       getTargetTemplate: () => ({ step: 'target' })
     };
     const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
-    expect(result).toEqual({ sourceTemplate: { step: 'source' }, targetTemplate: { step: 'target' } });
+    expect(result as unknown).toEqual({ sourceTemplate: { step: 'source' }, targetTemplate: { step: 'target' } });
   });
 
   it('falls back to the current value for a side the step cannot report', () => {
@@ -747,12 +747,12 @@ describe('updateTemplatesInEditors', () => {
       getTargetTemplate: () => ({ step: 'target' })
     };
     const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
-    expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { step: 'target' } });
+    expect(result as unknown).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { step: 'target' } });
   });
 
   it('falls back to the current value when the step is not rendered', () => {
     const result = updateTemplatesInEditors(undefined, { current: 'source' }, { current: 'target' });
-    expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
+    expect(result as unknown).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
   });
 });
 

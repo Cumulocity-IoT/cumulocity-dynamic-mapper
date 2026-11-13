@@ -93,7 +93,7 @@ export interface ConnectorProperty {
   order: number;
   readonly: boolean;
   hidden: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   type: ConnectorPropertyType;
   options?: { [key: string]: string };
   condition?: ConnectorPropertyCondition;
@@ -144,11 +144,11 @@ export interface ConnectorConfiguration {
   identifier: string;
   connectorType: ConnectorType;
   enabled: boolean;
-  status?: any;
-  status$?: any;
+  status?: unknown;
+  status$?: unknown;
   supportedDirections?: Direction[];
   name: string;
-  properties: { [name: string]: any };
+  properties: { [name: string]: unknown };
 }
 export interface ConnectorSpecification {
   name: string;

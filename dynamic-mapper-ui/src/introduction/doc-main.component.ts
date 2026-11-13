@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ElementRef, ViewChild, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -30,6 +30,7 @@ import { scrollToDocElement } from './doc-links';
   selector: 'd11r-landing',
   templateUrl: './doc-main.component.html',
   styleUrls: ['./doc-shared.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CoreModule,
@@ -38,11 +39,17 @@ import { scrollToDocElement } from './doc-links';
   ]
 })
 export class DocMainComponent implements OnInit, OnDestroy {
-  @ViewChild('docContent', { static: false }) docContentRef: ElementRef<HTMLElement>;
+  readonly docContentRef = viewChild<ElementRef<HTMLElement>>('docContent');
 
-  searchQuery: string = '';
-  searchMatchCount: number = 0;
-  searchCurrentIndex: number = -1;
+  private readonly searchQueryState = signal<string>('');
+  get searchQuery(): string { return this.searchQueryState(); }
+  set searchQuery(value: string) { this.searchQueryState.set(value); }
+  private readonly searchMatchCountState = signal<number>(0);
+  get searchMatchCount(): number { return this.searchMatchCountState(); }
+  set searchMatchCount(value: number) { this.searchMatchCountState.set(value); }
+  private readonly searchCurrentIndexState = signal<number>(-1);
+  get searchCurrentIndex(): number { return this.searchCurrentIndexState(); }
+  set searchCurrentIndex(value: number) { this.searchCurrentIndexState.set(value); }
   private searchMatches: HTMLElement[] = [];
 
   private fragmentSubscription: Subscription;
@@ -79,7 +86,7 @@ export class DocMainComponent implements OnInit, OnDestroy {
     this.searchCurrentIndex = -1;
     const query = this.searchQuery.trim();
     if (query.length < 2) { this.searchMatchCount = 0; return; }
-    const root = this.docContentRef?.nativeElement;
+    const root = this.docContentRef()?.nativeElement;
     if (!root) return;
     this.searchMatches = this.applyHighlights(root, query);
     this.searchMatchCount = this.searchMatches.length;
@@ -117,7 +124,7 @@ export class DocMainComponent implements OnInit, OnDestroy {
   }
 
   private clearHighlights(): void {
-    const root = this.docContentRef?.nativeElement;
+    const root = this.docContentRef()?.nativeElement;
     if (!root) return;
 
     root.querySelectorAll('mark.search-highlight').forEach(mark => {

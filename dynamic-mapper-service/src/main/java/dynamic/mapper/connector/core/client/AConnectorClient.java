@@ -44,6 +44,7 @@ import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -58,7 +59,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
@@ -170,6 +176,7 @@ public abstract class AConnectorClient {
     // by the subclass constructor body, which runs after field initializers.
     private ExplorerListenerRegistry explorerListeners;
     private ExplorerListenerRegistry outboundExplorerListeners;
+    private ExplorerSubscriptionHandler explorerSubscriptions;
 
     /** Register a listener that receives every raw inbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
     public void addExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
@@ -211,24 +218,7 @@ public abstract class AConnectorClient {
      *         so callers can surface it instead of it being silently swallowed.
      */
     public String subscribeExplorerTopic(String topic) {
-        try {
-            boolean alreadySubscribed = mappingSubscriptionManager != null
-                    && mappingSubscriptionManager.isTopicSubscribed(topic);
-            if (alreadySubscribed) {
-                log.debug("{} - Explorer topic [{}] already subscribed via mapping — skipping duplicate subscribe", tenant, topic);
-                return null;
-            }
-            subscribeExplorer(topic, Qos.AT_LEAST_ONCE);
-            log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
-            return null;
-        } catch (jakarta.ws.rs.NotSupportedException e) {
-            // Some connectors (HTTP, WebHook) don't support topic subscriptions at all — that's fine
-            log.debug("{} - Explorer topic subscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.warn("{} - Explorer topic subscription failed for connector {}: {}", tenant, connectorName, e.getMessage());
-            return e.getMessage();
-        }
+        return explorerSubscriptions.subscribe(topic);
     }
 
     /**
@@ -236,19 +226,7 @@ public abstract class AConnectorClient {
      * Only unsubscribes if there are no active mappings still using this topic.
      */
     public void unsubscribeExplorerTopic(String topic) {
-        try {
-            // Only unsubscribe if no active mapping covers this topic
-            boolean mappingStillActive = mappingSubscriptionManager != null
-                    && mappingSubscriptionManager.isTopicSubscribed(topic);
-            if (!mappingStillActive) {
-                unsubscribeExplorer(topic);
-                log.info("{} - Explorer unsubscribed from topic: [{}] on connector: {}", tenant, topic, connectorName);
-            } else {
-                log.debug("{} - Kept broker subscription for topic [{}] — still used by a mapping", tenant, topic);
-            }
-        } catch (Exception e) {
-            log.debug("{} - Explorer topic unsubscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
-        }
+        explorerSubscriptions.unsubscribe(topic);
     }
 
     // Managers
@@ -332,6 +310,73 @@ public abstract class AConnectorClient {
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
     public abstract void publishMEAO(ProcessingContext<?> context);
+
+    /**
+     * Whether outbound notifications must not be consumed while this connector is disconnected. When true, the
+     * Notification 2.0 device WebSockets of the connector are closed until the broker connection is up again
+     * (see {@code NotificationConnectionManager#syncConnectorAvailability}). Only for connectors whose
+     * {@link #publishMEAO} calls {@link #failPublishIfNotConnected} and whose {@link #isConnected()} follows
+     * the broker connection.
+     */
+    public boolean holdsOutboundWhileDisconnected() {
+        return false;
+    }
+
+    /**
+     * Whether {@link #publishMEAO} may try to publish now. Defaults to {@link #isConnected()}. A connector for
+     * which that call is expensive (for example a probe of the broker) overrides it with a cheap check.
+     */
+    protected boolean isReadyToPublish() {
+        return isConnected();
+    }
+
+    /**
+     * Call first in {@link #publishMEAO}: if the broker connection is down, records a retryable error on every
+     * request and on the context, and returns {@code true} so the caller stops.
+     *
+     * <p>Returning silently would let the outbound notification be acknowledged and the message lost. The error
+     * carries HTTP 503, so the notification is not acknowledged and Cumulocity redelivers it. Nothing is
+     * buffered here. With no requests there is nothing to lose, so the message is acknowledged as before.</p>
+     *
+     * @return {@code true} if the connector is not connected and the publish must be skipped
+     */
+    protected boolean failPublishIfNotConnected(ProcessingContext<?> context) {
+        if (isReadyToPublish()) {
+            return false;
+        }
+        log.warn("{} - Cannot publish: not connected, connector: {}", tenant, connectorName);
+        failAllRequestsUnavailable(context, new ConnectorNotConnectedException(connectorName));
+        return true;
+    }
+
+    /** Records the same retryable error on every request of the context and on the context. No requests: no-op. */
+    protected void failAllRequestsUnavailable(ProcessingContext<?> context, ConnectorNotConnectedException error) {
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+        requests.forEach(request -> {
+            if (request != null) {
+                request.setError(error);
+            }
+        });
+        context.addError(error);
+    }
+
+    /**
+     * For a publish that failed because the broker could not be reached (a timeout, a lost connection): records
+     * a retryable error, so the notification is redelivered and the attempt does not count as a message failure.
+     *
+     * @param request the request that failed, or {@code null} if the failure is not tied to one
+     */
+    protected void failPublishUnavailable(ProcessingContext<?> context,
+            dynamic.mapper.model.DynamicMapperRequest request, Throwable cause) {
+        ConnectorNotConnectedException error = new ConnectorNotConnectedException(connectorName, cause);
+        if (request != null) {
+            request.setError(error);
+        }
+        context.addError(error);
+    }
 
     /**
      * Returns whether this connector can publish requests of the given API type.
@@ -617,6 +662,9 @@ public abstract class AConnectorClient {
         this.explorerListeners = new ExplorerListenerRegistry(tenant, "inbound");
         this.outboundExplorerListeners = new ExplorerListenerRegistry(tenant, "outbound");
         this.sslSupport = new ConnectorSslSupport(tenant, connectorName, c8yAgent);
+        this.explorerSubscriptions = new ExplorerSubscriptionHandler(tenant, connectorName,
+                topic -> mappingSubscriptionManager != null && mappingSubscriptionManager.isTopicSubscribed(topic),
+                this::subscribeExplorer, this::unsubscribeExplorer);
 
         this.mappingSubscriptionManager = new MappingSubscriptionManager(
                 tenant,
@@ -1379,24 +1427,7 @@ public abstract class AConnectorClient {
      * @return true if all required properties are present and non-empty
      */
     protected boolean validateRequiredProperties(ConnectorConfiguration configuration, String... requiredProperties) {
-        if (requiredProperties == null || requiredProperties.length == 0) {
-            return true;
-        }
-
-        List<String> missingProperties = new ArrayList<>();
-        for (String propertyName : requiredProperties) {
-            Object value = configuration.getProperties().get(propertyName);
-            if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
-                missingProperties.add(propertyName);
-            }
-        }
-
-        if (!missingProperties.isEmpty()) {
-            log.warn("{} - Missing required configuration properties: {}", tenant, missingProperties);
-            return false;
-        }
-
-        return true;
+        return ConnectorPropertyValidator.validateRequiredProperties(tenant, configuration, requiredProperties);
     }
 
     /**

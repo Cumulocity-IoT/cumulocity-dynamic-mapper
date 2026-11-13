@@ -84,7 +84,7 @@ export class MappingTreeService {
     // remove properties that should not be displayed
     if (typeTree == 'Object') {
       if ('absolutePath' in tree) {
-        const absolutePath = tree['absolutePath'] as any;
+        const absolutePath = tree['absolutePath'] as unknown as string;
         _.unset(tree, 'absolutePath');
         tree[absolutePath] = tree['childNodes'];
       }
@@ -106,7 +106,7 @@ export class MappingTreeService {
         if (Object.prototype.hasOwnProperty.call(tree, key)) {
           const typeItem = getTypeOf(tree[key]);
           const tempItem = tree[key];
-          if (typeItem == 'Array' && (tempItem as any[]).length == 1) {
+          if (typeItem == 'Array' && (tempItem as unknown[]).length == 1) {
             _.unset(tree, key);
             tree[key] = tempItem[0];
             this.clean(tree[key], removeSet);

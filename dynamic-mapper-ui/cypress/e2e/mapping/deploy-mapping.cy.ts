@@ -152,7 +152,7 @@ describe('Mapping — deploy to a connector', () => {
     // Saving closes the editor and reports that the connector assignment was stored. The grid's
     // "For connectors" column shows the effective deployment, which only changes once the mapping
     // is published and activated, so the stored assignment is checked on the backend in teardown.
-    cy.get('c8y-alert-outlet').should('contain.text', 'connector assignments');
+    cy.get('c8y-alert-outlet').should('contain.text', 'Connector assignments for');
     cy.get('c8y-data-grid').should('exist');
   });
 });

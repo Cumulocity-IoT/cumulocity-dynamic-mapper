@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 /**
@@ -38,6 +38,11 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
  * per-row (same pattern as NoteEditCellRendererComponent's `onNoteChange`); its absence
  * disables the toggle (canManage=false, or this is already the active row).
  */
+/** Version rows may carry a callback the grid attaches. */
+interface ActivatableRow {
+  onActivate?: () => void;
+}
+
 @Component({
   selector: 'd11r-version-state-cell',
   template: `
@@ -72,6 +77,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       }
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule]
 })
@@ -79,7 +85,7 @@ export class VersionStateCellRendererComponent {
   constructor(public readonly context: CellRendererContext) { }
 
   get canActivate(): boolean {
-    return typeof (this.context.item as any)?.onActivate === 'function';
+    return typeof (this.context.item as ActivatableRow | undefined)?.onActivate === 'function';
   }
 
   onToggleClick(event: Event): void {
@@ -87,6 +93,6 @@ export class VersionStateCellRendererComponent {
     if (this.context.value === 'active' || !this.canActivate) {
       return;
     }
-    (this.context.item as any).onActivate();
+    (this.context.item as ActivatableRow).onActivate?.();
   }
 }

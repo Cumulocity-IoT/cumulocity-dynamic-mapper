@@ -25,7 +25,9 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import dynamic.mapper.core.facade.InventoryFacade;
-import dynamic.mapper.model.*;
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.Substitution;
 import dynamic.mapper.model.validation.ValidationError;
 import dynamic.mapper.model.validation.ValidationIssue;
 import dynamic.mapper.model.MappingType;
@@ -40,8 +42,10 @@ import org.json.JSONTokener;
 import org.springframework.stereotype.Component;
 
 import jakarta.validation.constraints.NotNull;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 /**
  * Validates mapping configurations against business rules
  * Consolidates all validation logic from the Mapping class

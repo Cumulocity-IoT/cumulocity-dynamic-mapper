@@ -430,6 +430,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
 | `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
 | `test-inbound-filter` | `filterMapping` (payload) and `filterInventory` (target device) drop non-matching messages — checked via `messagesFiltered`, device creation and measurements |
+| `test-inbound-dedup` | A repeated message is dropped by `$isDuplicate` in the filter and by `context.isDuplicate` in a Smart Function — checked via the measurements in the tenant and `messagesDuplicate`; also the window end and what a rename and a filter change do to the recorded keys (takes about three minutes) |
 | `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
 | `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
 | `test-inbound-hex` | HEX → EVENT |
@@ -481,6 +482,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-smartfunction-molookup` | Smart Function `getManagedObjectByExternalId` — a C8Y measurement notification is enriched with managed-object properties before publishing |
 | `test-outbound-webhook` | C8Y Measurement → WEB_HOOK connector; asserts the http-polling-mock **received** the POST (path + JSON body) |
 | `test-outbound-static-subscription` | Static subscription management |
+| `test-outbound-broker-outage` | A broker outage loses no outbound message: the device WebSocket is paused while the connector is down and the queued events are published after the reconnect. The outage is simulated by pointing the connector at an unreachable endpoint and restoring it, so it works against a deployed service and a public broker (needs `mosquitto_sub`) |
 | `test-outbound-type-subscription` | Dynamic type subscription |
 | `test-outbound-type-subscription-resync` | `POST /subscription/type/resync/{type}` backfills pre-existing devices; idempotent; unconfigured type rejected |
 | `test-outbound-group-subscription` | Dynamic group subscription |

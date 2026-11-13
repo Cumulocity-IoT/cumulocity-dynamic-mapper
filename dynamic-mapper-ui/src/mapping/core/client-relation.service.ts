@@ -28,12 +28,33 @@ import {
 } from '../../shared';
 import { NotificationSubscriptionRequest, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/notification-subscription.model';
 
+/** Response of `GET relation/clients`. */
+export interface ClientsResponse {
+  clients: string[];
+}
+
+/** One device-to-client entry of the relation list. */
+export interface ClientRelation {
+  id: string;
+  client: string;
+}
+
+/** Response of `GET relation/client`. */
+export interface ClientRelationsResponse {
+  relations: ClientRelation[];
+}
+
+/** Response of `GET relation/client/{id}`. */
+export interface DevicesForClientResponse {
+  devices: string[];
+}
+
 // Custom error types for better error handling
 export class ClientRelationError extends Error {
   constructor(
     message: string,
     public readonly statusCode?: number,
-    public readonly originalError?: any
+    public readonly originalError?: unknown
   ) {
     super(message);
     this.name = 'ClientRelationError';
@@ -71,7 +92,7 @@ export class ClientRelationService {
   /**
   * Gets all clients
   */
-  async getAllClients(): Promise<any | null> {
+  async getAllClients(): Promise<ClientsResponse | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -103,7 +124,7 @@ export class ClientRelationService {
   /**
  * Gets all client relations
  */
-  async getAllClientRelations(): Promise<any | null> {
+  async getAllClientRelations(): Promise<ClientRelationsResponse | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -135,7 +156,7 @@ export class ClientRelationService {
   /**
 * Gets all devices for a client
 */
-  async getDevicesForClient(clientId: string): Promise<any | null> {
+  async getDevicesForClient(clientId: string): Promise<DevicesForClientResponse | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -167,7 +188,7 @@ export class ClientRelationService {
   /**
   * Delete all client relations
   */
-  async deleteAllClientRelations(): Promise<any | null> {
+  async deleteAllClientRelations(): Promise<unknown> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -199,7 +220,7 @@ export class ClientRelationService {
   /**
 * Clear all client relations
 */
-  async deleteClientRelationForDevice(device: string | IIdentified): Promise<any | null> {
+  async deleteClientRelationForDevice(device: string | IIdentified): Promise<unknown> {
     const features = await this.sharedService.getFeatures();
     let deviceId = device;
     if (typeof device === 'object') {
@@ -237,7 +258,7 @@ export class ClientRelationService {
    */
   async addOrUpdateClientRelations(
     clientId: string, deviceIds: string[]
-  ): Promise<any> {
+  ): Promise<unknown> {
 
     return this.handleOperation(
       'addOrUpdateClientRelations',
@@ -318,7 +339,7 @@ export class ClientRelationService {
   /**
    * Handles subscription-related errors (updated for FetchClient)
    */
-  private handleError(error: any, operationName: string): ClientRelationError {
+  private handleError(error: { message?: string }, operationName: string): ClientRelationError {
     let message = `Failed to ${operationName}`;
     let statusCode: number | undefined;
 

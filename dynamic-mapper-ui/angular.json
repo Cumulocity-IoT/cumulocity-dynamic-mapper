@@ -91,7 +91,10 @@
           "defaultConfiguration": "development"
         },
         "extract-i18n": {
-          "builder": "@c8y/devkit:extract-i18n"
+          "builder": "@c8y/devkit:extract-i18n",
+          "options": {
+            "paths": ["src"]
+          }
         },
         "test": {
           "builder": "@angular/build:karma",

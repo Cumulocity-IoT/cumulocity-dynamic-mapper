@@ -29,7 +29,7 @@ describe('JsonEditorComponent', () => {
   const create = (options: any = {}) => {
     fixture = TestBed.createComponent(JsonEditorComponent);
     component = fixture.componentInstance;
-    component.options = options;
+    fixture.componentRef.setInput('options', options);
     fixture.detectChanges();
   };
 
@@ -40,7 +40,8 @@ describe('JsonEditorComponent', () => {
     const emitted: unknown[] = [];
     component.contentChanged.subscribe(c => emitted.push(c));
 
-    component.data = { a: 1 };
+    fixture.componentRef.setInput('data', { a: 1 });
+    fixture.detectChanges();
     expect(component.get()).toEqual({ a: 1 });
     component.set({ a: 2 });
     expect(component.get()).toEqual({ a: 2 });
@@ -52,9 +53,9 @@ describe('JsonEditorComponent', () => {
   it('applies data and schema received before the editor was created', () => {
     fixture = TestBed.createComponent(JsonEditorComponent);
     component = fixture.componentInstance;
-    component.options = {};
-    component.data = { early: true };
-    component.schema = { type: 'object' };
+    fixture.componentRef.setInput('options', {});
+    fixture.componentRef.setInput('data', { early: true });
+    fixture.componentRef.setInput('schema', { type: 'object' });
     fixture.detectChanges();
 
     expect(component.get()).toEqual({ early: true });
@@ -62,9 +63,12 @@ describe('JsonEditorComponent', () => {
 
   it('ignores empty data', () => {
     create();
-    component.data = { a: 1 };
-    component.data = {};
-    component.data = null;
+    fixture.componentRef.setInput('data', { a: 1 });
+    fixture.detectChanges();
+    fixture.componentRef.setInput('data', {});
+    fixture.detectChanges();
+    fixture.componentRef.setInput('data', null);
+    fixture.detectChanges();
     expect(component.get()).toEqual({ a: 1 });
   });
 

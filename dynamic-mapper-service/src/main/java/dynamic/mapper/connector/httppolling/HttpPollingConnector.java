@@ -771,7 +771,11 @@ public class HttpPollingConnector extends AConnectorClient {
                 return PageOutcome.PROCESSED;
             }
             return httpStatusCode >= 500 ? PageOutcome.SERVER_ERROR : PageOutcome.FAILED;
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("{} - Mapping processing interrupted for topic [{}]", tenant, topic);
+            return PageOutcome.FAILED;
+        } catch (ExecutionException e) {
             log.warn("{} - Mapping processing failed for topic [{}]: {}", tenant, topic, e.getMessage());
             return PageOutcome.FAILED;
         } catch (TimeoutException e) {

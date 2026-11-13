@@ -21,8 +21,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { Subject } from 'rxjs';
+import { PopoverConfirmComponent } from '@c8y/ngx-components';
 import '../../shared';
 import { RepairStrategy, Substitution } from '../../shared';
 import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
@@ -36,9 +35,6 @@ import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitut
 describe('SubstitutionGridComponent', () => {
   let component: SubstitutionGridComponent;
   let fixture: ComponentFixture<SubstitutionGridComponent>;
-  let mockBsModalService: jasmine.SpyObj<BsModalService>;
-  let closeSubject: Subject<boolean>;
-  let modalHide: jasmine.Spy;
 
   const settings = (): SubstitutionGridSettings => ({
     color: '#fff',
@@ -47,95 +43,148 @@ describe('SubstitutionGridComponent', () => {
   });
 
   beforeEach(async () => {
-    closeSubject = new Subject<boolean>();
-    modalHide = jasmine.createSpy('hide');
-    mockBsModalService = jasmine.createSpyObj('BsModalService', ['show']);
-    mockBsModalService.show.and.returnValue({ content: { closeSubject }, hide: modalHide } as any);
-
     TestBed.overrideComponent(SubstitutionGridComponent, {
       set: { imports: [], providers: [], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
     });
 
     await TestBed.configureTestingModule({
       imports: [SubstitutionGridComponent],
-      providers: [{ provide: BsModalService, useValue: mockBsModalService }, provideTranslateStub()]
+      providers: [provideTranslateStub()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SubstitutionGridComponent);
     component = fixture.componentInstance;
-    component.settings = settings();
+    fixture.componentRef.setInput('settings', settings());
   });
 
   it('creates', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('in-grid edits', () => {
+  describe('row labels', () => {
     const sub = (overrides: Partial<Substitution> = {}): Substitution => ({
       pathSource: '$.a', pathTarget: '$.b', repairStrategy: RepairStrategy.DEFAULT, expandArray: false, ...overrides
     });
 
-    it('announces an expandArray change as a patch and leaves the substitution untouched', () => {
-      const original = sub();
-      const patches: any[] = [];
-      component.substitutionPatch.subscribe(p => patches.push(p));
-
-      component.onExpandArrayChange(2, original, true);
-
-      expect(patches).toEqual([{ index: 2, patch: { expandArray: true } }]);
-      expect(original.expandArray).toBeFalse();
+    it('shows a repair strategy label only for a non-default strategy', () => {
+      expect(component.hasCustomRepairStrategy(sub())).toBeFalse();
+      expect(component.hasCustomRepairStrategy(sub({ repairStrategy: undefined }))).toBeFalse();
+      expect(component.hasCustomRepairStrategy(sub({ repairStrategy: RepairStrategy.IGNORE }))).toBeTrue();
     });
 
-    it('also resets an array-only repair strategy when expanding', () => {
-      const patches: any[] = [];
-      component.substitutionPatch.subscribe(p => patches.push(p));
+    it('writes the repair strategy as words', () => {
+      expect(component.repairStrategyLabel(sub({ repairStrategy: RepairStrategy.CREATE_IF_MISSING }))).toBe('Create If Missing');
+    });
+  });
 
-      component.onExpandArrayChange(0, sub({ repairStrategy: RepairStrategy.USE_FIRST_VALUE_OF_ARRAY }), true);
-
-      expect(patches).toEqual([{ index: 0, patch: { expandArray: true, repairStrategy: RepairStrategy.DEFAULT } }]);
+  describe('accessible row name', () => {
+    const sub = (overrides: Partial<Substitution> = {}): Substitution => ({
+      pathSource: '$.a', pathTarget: '$.b', repairStrategy: RepairStrategy.DEFAULT, expandArray: false, ...overrides
     });
 
-    it('announces a repair strategy change as a patch', () => {
-      const patches: any[] = [];
-      component.substitutionPatch.subscribe(p => patches.push(p));
-
-      component.onRepairStrategyChange(1, 'IGNORE');
-
-      expect(patches).toEqual([{ index: 1, patch: { repairStrategy: RepairStrategy.IGNORE } }]);
+    it('names the row by number, source and target', () => {
+      expect(component.rowLabel(sub(), 0, false)).toContain('1');
+      expect(component.rowLabel(sub(), 0, false)).toContain('$.a');
+      expect(component.rowLabel(sub(), 0, false)).toContain('$.b');
     });
+
+    it('adds what the row labels say', () => {
+      const label = component.rowLabel(sub({ expandArray: true, repairStrategy: RepairStrategy.IGNORE }), 2, true);
+
+      expect(label).toContain('Device identifier');
+      expect(label).toContain('Expand as array');
+      expect(label).toContain('Ignore');
+    });
+  });
+
+  describe('keyboard', () => {
+    it('Enter selects the row, but not when pressed on a control inside it', () => {
+      const selected: number[] = [];
+      component.selectSub.subscribe(i => selected.push(i));
+      const row = document.createElement('div');
+      const button = document.createElement('button');
+      row.appendChild(button);
+
+      component.onRowEnter({ target: row, currentTarget: row } as unknown as Event, 4);
+      component.onRowEnter({ target: button, currentTarget: row } as unknown as Event, 5);
+
+      expect(selected).toEqual([4]);
+    });
+
+    it('arrow keys move the focus to the neighbouring row', () => {
+      const list = document.createElement('div');
+      const rows = [0, 1].map(() => {
+        const r = document.createElement('div');
+        r.setAttribute('role', 'option');
+        r.tabIndex = 0;
+        list.appendChild(r);
+        return r;
+      });
+      document.body.appendChild(list);
+      const event = { currentTarget: rows[0], preventDefault: jasmine.createSpy('preventDefault') } as unknown as Event;
+
+      component.focusSibling(event, 1);
+
+      expect(document.activeElement).toBe(rows[1]);
+      expect(event.preventDefault).toHaveBeenCalled();
+      list.remove();
+    });
+  });
+
+  it('removing a row does not also select it', async () => {
+    const selected: number[] = [];
+    component.selectSub.subscribe(i => selected.push(i));
+    const event = jasmine.createSpyObj('Event', ['stopPropagation']);
+    spyOn(component, 'onSubstitutionDelete').and.resolveTo();
+
+    component.onDeleteClick(event, 1, {} as PopoverConfirmComponent);
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(component.onSubstitutionDelete).toHaveBeenCalledWith(1, jasmine.anything());
+    expect(selected).toEqual([]);
   });
 
   it('emits the selected index and leaves the settings to the host', (done) => {
     component.selectSub.subscribe((i) => {
       expect(i).toBe(2);
-      expect(component.settings.selectedSubstitutionIndex).toBe(-1); // the host owns it
+      expect(component.settings().selectedSubstitutionIndex).toBe(-1); // the host owns it
       done();
     });
     component.onSubstitutionSelect(2);
   });
 
-  it('emits deleteSub only after the confirmation modal is confirmed', () => {
+  const fakePopover = (answer: 'confirm' | 'cancel' | 'dismiss') =>
+    ({
+      show: jasmine.createSpy('show').and.callFake((buttons: { action: () => Promise<boolean> }[]) =>
+        answer === 'dismiss' ? Promise.reject() : buttons[answer === 'confirm' ? 1 : 0].action()
+      )
+    }) as unknown as PopoverConfirmComponent;
+
+  it('emits deleteSub only after the confirmation popover is confirmed', async () => {
     const deleted: number[] = [];
     component.deleteSub.subscribe((i) => deleted.push(i));
 
-    component.onSubstitutionDelete(3);
-    expect(mockBsModalService.show).toHaveBeenCalled();
-    expect(deleted).toEqual([]); // nothing yet — awaiting confirmation
+    await component.onSubstitutionDelete(3, fakePopover('confirm'));
 
-    closeSubject.next(true); // user confirms
     expect(deleted).toEqual([3]);
-    expect(component.settings.selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
-    expect(modalHide).toHaveBeenCalled();
+    expect(component.settings().selectedSubstitutionIndex).toBe(-1); // untouched: the host adjusts its own index
   });
 
-  it('does not emit deleteSub when the user cancels the modal', () => {
+  it('does not emit deleteSub when the user cancels the popover', async () => {
     const deleted: number[] = [];
     component.deleteSub.subscribe((i) => deleted.push(i));
 
-    component.onSubstitutionDelete(3);
-    closeSubject.next(false); // user cancels
+    await component.onSubstitutionDelete(3, fakePopover('cancel'));
 
     expect(deleted).toEqual([]);
-    expect(modalHide).toHaveBeenCalled();
+  });
+
+  it('does not emit deleteSub when the popover is dismissed with Escape or an outside click', async () => {
+    const deleted: number[] = [];
+    component.deleteSub.subscribe((i) => deleted.push(i));
+
+    await component.onSubstitutionDelete(3, fakePopover('dismiss'));
+
+    expect(deleted).toEqual([]);
   });
 });

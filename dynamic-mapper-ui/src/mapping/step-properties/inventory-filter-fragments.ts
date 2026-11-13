@@ -21,6 +21,16 @@
 // Same loading style as MappingService / TreeService: the package is CommonJS (`export =`).
 const jsonata = require('jsonata');
 
+/** The parts of a JSONata AST node this walker reads; the library ships no types for it. */
+interface JsonataNode {
+  type?: string;
+  value?: unknown;
+  steps?: JsonataNode[];
+  arguments?: JsonataNode[];
+  expressions?: JsonataNode[];
+  [key: string]: unknown;
+}
+
 /** AST child properties that hold sub-expressions evaluated against the same (root) context. */
 const CHILD_KEYS = ['lhs', 'rhs', 'expression', 'condition', 'then', 'else', 'procedure', 'body'];
 const CHILD_LIST_KEYS = ['arguments', 'expressions'];
@@ -39,7 +49,7 @@ const CHILD_LIST_KEYS = ['arguments', 'expressions'];
  */
 export function extractReferencedAttributes(expression: string): string[] {
   const found = new Set<string>();
-  const visit = (node: any): void => {
+  const visit = (node: JsonataNode | undefined): void => {
     if (!node || typeof node !== 'object') {
       return;
     }
@@ -57,8 +67,11 @@ export function extractReferencedAttributes(expression: string): string[] {
       found.add(node.value);
       return;
     }
-    CHILD_KEYS.forEach(key => visit(node[key]));
-    CHILD_LIST_KEYS.forEach(key => Array.isArray(node[key]) && node[key].forEach(visit));
+    CHILD_KEYS.forEach(key => visit(node[key] as JsonataNode | undefined));
+    CHILD_LIST_KEYS.forEach(key => {
+      const list = node[key];
+      if (Array.isArray(list)) list.forEach(visit);
+    });
   };
   visit(jsonata(expression).ast());
   return [...found];

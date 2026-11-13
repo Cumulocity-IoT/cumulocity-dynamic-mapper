@@ -24,9 +24,8 @@ import {
   Input,
   OnInit,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction } from '../../shared';
+  ViewEncapsulation, viewChild } from '@angular/core';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction, JsonValue } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -52,6 +51,22 @@ import { base64ToString } from '../../shared/mapping/util';
 const SUBMIT_SMART_FUNCTION_TOOL = 'submit-smart-function';
 const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
 
+/**
+ * The mapping as the agent sees it: templates are parsed (the stored ones are JSON strings), substitutions are
+ * dropped, and the code and ESM flag are added.
+ */
+interface MappingForAi extends Record<string, unknown> {
+  sourceTemplate?: unknown;
+  targetTemplate?: unknown;
+  additionalSamples?: { payload: unknown; [key: string]: unknown }[];
+  substitutions?: unknown;
+  code?: string;
+  supportESM?: boolean;
+}
+
+// Default change detection on purpose: a change to it was followed by reports of a lost conversation history.
+// See docs/ui/onpush-signals-migration-plan.md, "Last components on OnPush".
+// eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
 @Component({
   selector: 'd11r-mapping-ai-prompt',
   templateUrl: 'ai-prompt.component.html',
@@ -72,7 +87,7 @@ export class AiPromptComponent implements OnInit {
   private readonly translateService = inject(TranslateService);
   private readonly chatHistoryService = inject(AiChatHistoryService);
 
-  @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
+  readonly agentChat = viewChild(AgentChatComponent);
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
@@ -80,7 +95,7 @@ export class AiPromptComponent implements OnInit {
   @Input() existingMapping = false;
 
   private _save: (value: Substitution[] | string) => void;
-  private _cancel: (reason?: any) => void;
+  private _cancel: (reason?: unknown) => void;
   valid: boolean = false;
 
   result: Promise<Substitution[] | string> = new Promise((resolve, reject) => {
@@ -211,7 +226,7 @@ export class AiPromptComponent implements OnInit {
    */
   suggestions?: Suggestion[];
   /** Cached mapping object (without substitutions) ready to send to AI */
-  private mappingForAI: any = null;
+  private mappingForAI: MappingForAi | null = null;
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -223,14 +238,14 @@ export class AiPromptComponent implements OnInit {
       const settings = await this.aiAgentService.getAISettings(true);
       if (settings.killSwitch) {
         this.aiCapabilitiesDisabled = true;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
         return;
       }
       this.telemetryEnabled = !settings.telemetryOptOut;
     } catch (error) {
       console.error('Failed to check AI settings before opening the AI assistant:', error);
       this.aiAvailabilityCheckFailed = true;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -242,7 +257,7 @@ export class AiPromptComponent implements OnInit {
     this.variables = this.aiAgent?.agent?.variables ?? {};
     this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
 
-    this.mappingForAI = this.buildMappingForAI();
+    this.mappingForAI = this.buildMappingForAi();
 
     if (this.isCodeMapping) {
       this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
@@ -272,6 +287,12 @@ export class AiPromptComponent implements OnInit {
       }
     }
 
+    // A synchronous render, kept on purpose. The chat component renders only once the agent definition
+    // above is set, restores a stored conversation from `initialChatHistory` when it is created, and
+    // `persistSession()` needs the `agentChat` view child that this render resolves. Replacing it with a
+    // wait for the next application tick was followed by a report that a reopened drawer showed no
+    // earlier conversation; the cause was not established, so the render that is known to work stays.
+    // eslint-disable-next-line no-restricted-syntax -- synchronous render kept on purpose, see the comment above
     this.cdr.detectChanges();
 
     if (stored) {
@@ -310,7 +331,7 @@ export class AiPromptComponent implements OnInit {
               )
         )
       };
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -333,7 +354,7 @@ export class AiPromptComponent implements OnInit {
           )
         )
       };
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -456,18 +477,18 @@ export class AiPromptComponent implements OnInit {
     this.bottomDrawerRef.close();
   }
 
-  private buildMappingForAI(): any {
-    const m: any = { ...this.mapping };
+  private buildMappingForAi(): MappingForAi {
+    const m: MappingForAi = { ...this.mapping } as unknown as MappingForAi;
     delete m.substitutions;
-    m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
-    m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    m.sourceTemplate = JSON.parse(m.sourceTemplate as string);
+    m.targetTemplate = JSON.parse(m.targetTemplate as string);
     // Further samples of the same payload type (Message Explorer multi-select), so the agent can
     // generalize instead of fitting a single message. Payloads are parsed like sourceTemplate;
     // raw text that is not JSON stays a string.
     if (Array.isArray(m.additionalSamples) && m.additionalSamples.length > 0) {
-      m.additionalSamples = m.additionalSamples.map((sample: any) => {
+      m.additionalSamples = m.additionalSamples.map((sample) => {
         let payload = sample.payload;
-        try { payload = JSON.parse(sample.payload); } catch { /* keep as string */ }
+        try { payload = JSON.parse(sample.payload as string); } catch { /* keep as string */ }
         return { ...sample, payload };
       });
     } else {
@@ -489,11 +510,11 @@ export class AiPromptComponent implements OnInit {
     if (!this.aiAgent || !this.newMessage) {
       return;
     }
-    if (!this.agentChat) {
+    if (!this.agentChat()) {
       console.error('AiPromptComponent.sendMessage: #agentChat is not available yet');
       return;
     }
-    await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
+    await this.agentChat().sendMessage({ role: 'user', content: this.newMessage });
     this.newMessage = '';
   }
 
@@ -521,7 +542,7 @@ export class AiPromptComponent implements OnInit {
       return;
     }
     this.persistSession();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
@@ -550,7 +571,7 @@ export class AiPromptComponent implements OnInit {
       await this.checkIfResponseContainsSubstitutions(content);
     }
     this.persistSession();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /**
@@ -560,13 +581,13 @@ export class AiPromptComponent implements OnInit {
    * so by then its messages may already be cleared and an empty snapshot would replace the real one.
    */
   persistSession(): void {
-    if (!this.hasMessages || !this.agentChat || !this.inputsKey || !this.mapping?.identifier) return;
+    if (!this.hasMessages || !this.agentChat() || !this.inputsKey || !this.mapping?.identifier) return;
     try {
       this.chatHistoryService.set(this.mapping.identifier, {
         inputsKey: this.inputsKey,
         targetKeyAtOpen: this.targetKeyAtOpen,
         extractedKey: this.extractedKey(),
-        history: this.agentChat.saveChatHistory(),
+        history: this.agentChat().saveChatHistory(),
         generatedCode: this.generatedCode,
         substitutions: [...this.substitutions],
         validationIssues: [...this.validationIssues],
@@ -619,7 +640,7 @@ export class AiPromptComponent implements OnInit {
    * here previously always grabbed the FIRST code block, which could be an earlier example
    * instead of the final function and silently produced the wrong generatedCode.
    */
-  checkIfResponseContainsJavaScript(content: any): void {
+  checkIfResponseContainsJavaScript(content: unknown): void {
     try {
       const trimmedContent = typeof content === 'string' ? content.trim() : '';
       if (!trimmedContent) return;
@@ -668,7 +689,7 @@ export class AiPromptComponent implements OnInit {
    * multi-turn conversation and must NOT revoke a previously extracted, valid `substitutions` array —
    * so this only ever flips `valid` from false to true, never the other way around.
    */
-  async checkIfResponseContainsSubstitutions(content: any): Promise<void> {
+  async checkIfResponseContainsSubstitutions(content: unknown): Promise<void> {
     const trimmedContent = typeof content === 'string' ? content.trim() : '';
     if (!trimmedContent) return;
 
@@ -761,8 +782,8 @@ export class AiPromptComponent implements OnInit {
    */
   private async validateSubstitutions(substitutions: Substitution[]): Promise<string[]> {
     const issues: string[] = [];
-    const sourceTemplate = this.mappingForAI?.sourceTemplate;
-    const targetTemplate = this.mappingForAI?.targetTemplate;
+    const sourceTemplate = this.mappingForAI?.sourceTemplate as JsonValue;
+    const targetTemplate = this.mappingForAI?.targetTemplate as JsonValue;
 
     for (const [index, sub] of substitutions.entries()) {
       const label = `Substitution ${index + 1} [${sub.pathTarget}]`;
@@ -804,13 +825,13 @@ export class AiPromptComponent implements OnInit {
   }
 
   /** Returns the error message if evaluating `path` against `template` fails, else null. */
-  private async evaluationIssue(template: any, path: string): Promise<string | null> {
+  private async evaluationIssue(template: JsonValue, path: string): Promise<string | null> {
     if (!path || template === undefined) return null;
     try {
       await this.mappingService.evaluateExpression(template, path);
       return null;
     } catch (error) {
-      return error?.message ?? 'unknown error';
+      return (error as Error | undefined)?.message ?? 'unknown error';
     }
   }
 

@@ -383,6 +383,12 @@ export const NODE3 = 'node3';
 
 // ─── URL / path constants ─────────────────────────────────────────────────────
 
+// Application routes, as used by breadcrumb links.
+export const ROUTE_EXTENSIONS = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
+export const ROUTE_CONNECTORS = `c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
+export const ROUTE_MAPPINGS_INBOUND = `c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
+export const ROUTE_MAPPINGS_OUTBOUND = `c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
+
 export const BASE_URL = 'service/dynamic-mapper-service';
 export const BASE_AI_URL = 'service/ai';
 export const PATH_OPERATION_ENDPOINT = 'operation';
@@ -407,7 +413,7 @@ export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
 // ─── Functions ────────────────────────────────────────────────────────────────
 
-export function getExternalTemplate(mapping: Mapping): any {
+export function getExternalTemplate(mapping: Mapping) {
   if (
     mapping.mappingType == MappingType.FLAT_FILE ||
     mapping.mappingType == MappingType.HEX
@@ -423,7 +429,7 @@ export function getSchema(
   direction: Direction,
   isTarget: boolean,
   getTesting: boolean
-): any {
+) {
   if (
     (isTarget && direction == Direction.INBOUND) ||
     (!isTarget && direction == Direction.OUTBOUND)

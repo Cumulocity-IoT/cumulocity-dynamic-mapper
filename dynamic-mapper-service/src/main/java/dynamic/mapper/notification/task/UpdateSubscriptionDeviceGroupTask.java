@@ -32,7 +32,11 @@ import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
@@ -333,6 +337,8 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
     /**
      * True if the device is also a member of another subscribed group (per the group cache) or
      * matches a configured type, in which case its dynamic subscription must stay.
+     *
+     * @throws RuntimeException if the type subscriptions cannot be read
      */
     private boolean isStillCovered(String tenant, String leavingGroupId, ManagedObjectRepresentation childMO) {
         String childId = childMO.getId().getValue();
@@ -342,14 +348,11 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 return true;
             }
         }
-        try {
-            List<String> types = notificationSubscriber
-                    .getSubscriptionsByDeviceType(tenant).getTypes();
-            return types != null && childMO.getType() != null && types.contains(childMO.getType());
-        } catch (Exception e) {
-            log.warn("{} - Could not check type subscription for device {}: {}", tenant, childId, e.getMessage());
-            return false;
-        }
+        // A failed lookup must not read as "not covered": the caller would then unsubscribe a device
+        // that a type subscription still needs. Let it propagate; the caller records the device as failed.
+        List<String> types = notificationSubscriber
+                .getSubscriptionsByDeviceType(tenant).getTypes();
+        return types != null && childMO.getType() != null && types.contains(childMO.getType());
     }
 
 }

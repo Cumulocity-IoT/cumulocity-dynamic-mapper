@@ -21,7 +21,7 @@ describe('DeviceSelectorTableComponent', () => {
   });
 
   it('commits the subscribed devices plus the newly selected ones, without duplicates', () => {
-    component.deviceList = [{ id: '1' }, { id: '2' }];
+    Object.assign(component, { deviceList: () => [{ id: '1' }, { id: '2' }] });
     component.selectedItemIds = ['2', '3'];
 
     component.clickedUpdateSubscription();
@@ -31,7 +31,7 @@ describe('DeviceSelectorTableComponent', () => {
 
   it('does not change the list it was given, so a failed save leaves the host unchanged', () => {
     const input: IIdentified[] = [{ id: '1' }];
-    component.deviceList = input;
+    Object.assign(component, { deviceList: () => input });
     component.selectedItemIds = ['9'];
 
     component.clickedUpdateSubscription();
@@ -41,7 +41,7 @@ describe('DeviceSelectorTableComponent', () => {
   });
 
   it('commits the unchanged list when nothing is selected', () => {
-    component.deviceList = [{ id: '1' }];
+    Object.assign(component, { deviceList: () => [{ id: '1' }] });
     component.selectedItemIds = undefined as any;
 
     component.clickedUpdateSubscription();

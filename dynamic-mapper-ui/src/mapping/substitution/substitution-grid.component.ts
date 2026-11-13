@@ -18,36 +18,28 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
-  Input,
   OnDestroy,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
+  ViewEncapsulation, input } from '@angular/core';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
-  ConfirmationModalComponent,
   definesDeviceIdentifier,
-  Direction,
   Mapping,
   RepairStrategy,
   SharedModule,
   Substitution
 } from '../../shared';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, PopoverConfirmComponent } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { Subject, takeUntil } from 'rxjs';
-
-interface RepairStrategyOption {
-  label: string;
-  value: string;
-  description: string;
-  disabled: boolean;
-}
+import { Subject } from 'rxjs';
+import { isExpression } from '../../shared/mapping/util';
+import { formatStringAsWords } from '../../shared/misc/format-string.pipe';
+import { REPAIR_STRATEGY_DESCRIPTIONS } from './repair-strategy';
 
 export interface SubstitutionGridSettings {
   color: string;
@@ -61,68 +53,25 @@ export interface SubstitutionGridSettings {
   styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, PopoverModule, SharedModule, FormsModule]
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CoreModule, PopoverModule, SharedModule]
 })
 export class SubstitutionGridComponent implements OnDestroy {
-  @Input()
-  mapping!: Mapping;
-  @Input()
-  settings!: SubstitutionGridSettings;
+  readonly mapping = input<Mapping>();
+  readonly settings = input<SubstitutionGridSettings>();
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
-  /** An in-grid edit of expandArray/repairStrategy. The grid never changes the mapping itself. */
-  @Output() substitutionPatch = new EventEmitter<{ index: number; patch: Partial<Substitution> }>();
-  /** Fired from the "Cancel / New substitution" control in the header, next to the selection count. */
-  @Output() cancelEdit = new EventEmitter<void>();
 
   constructor(
-    private bsModalService: BsModalService,
     private translateService: TranslateService
   ) { }
 
   readonly id = Math.floor(Math.random() * 1000000);
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
-  readonly substitutionTemplateHelp = gettext('Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.');
-  readonly targetHelp = gettext('The JSON path in the target template where the value extracted from the source is written to.');
+  readonly isExpression = isExpression;
+  readonly substitutionTemplateHelp = gettext('Substitutions defining the device identifier are marked as "Device identifier". Before adding a substitution target and source property in templates have to be selected.');
   readonly expandArrayHelp = gettext('When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings.');
-  readonly repairStrategyHelp = gettext('How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array.');
-  /**
-   * One combined popover for all column meanings, shown above the table, rather than one
-   * popover per header cell. A popover inside a narrow, table-layout: fixed <th> nested in a
-   * position: sticky header consistently mispositioned itself (even with container="body") -
-   * this sidesteps that fragile combination entirely instead of continuing to chase it.
-   */
-  get columnsHelpText(): string {
-    const t = (text: string) => this.translateService.instant(text);
-    return `
-    <p><strong>${t(gettext('Source'))}</strong> - ${t(this.substitutionTemplateHelp)}</p>
-    <p><strong>${t(gettext('Target'))}</strong> - ${t(this.targetHelp)}</p>
-    <p><strong>${t(gettext('Expand as array'))}</strong> - ${t(this.expandArrayHelp)}</p>
-    <p><strong>${t(gettext('Repair strategy'))}</strong> - ${t(this.repairStrategyHelp)}</p>
-  `;
-  }
-
-  private static readonly ARRAY_ONLY_STRATEGIES: string[] = [
-    RepairStrategy.USE_FIRST_VALUE_OF_ARRAY,
-    RepairStrategy.USE_LAST_VALUE_OF_ARRAY
-  ];
-
-  /** Kept in sync with the backend enum `dynamic.mapper.processor.model.RepairStrategy`. */
-  private static readonly REPAIR_STRATEGY_DESCRIPTIONS: Record<string, string> = {
-    [RepairStrategy.DEFAULT]:
-      gettext('Write the extracted value to the target path as-is. The path must already exist in the target template.'),
-    [RepairStrategy.USE_FIRST_VALUE_OF_ARRAY]:
-      gettext('If the extracted value is an array, use only its first element. Not applicable when "Expand as array" is set.'),
-    [RepairStrategy.USE_LAST_VALUE_OF_ARRAY]:
-      gettext('If the extracted value is an array, use only its last element. Not applicable when "Expand as array" is set.'),
-    [RepairStrategy.IGNORE]:
-      gettext('If the extracted value is missing or null, skip the substitution and keep whatever the target template defines.'),
-    [RepairStrategy.REMOVE_IF_MISSING_OR_NULL]:
-      gettext('If the extracted value is missing or null, delete the target node from the target template.'),
-    [RepairStrategy.CREATE_IF_MISSING]:
-      gettext('Create the target node, including missing parent nodes, if it does not exist in the target template.')
-  };
 
   private destroy$ = new Subject<void>();
 
@@ -136,70 +85,67 @@ export class SubstitutionGridComponent implements OnDestroy {
     this.selectSub.emit(index);
   }
 
-  /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
-   *  expand into, so "Expand as array" has no effect and stays locked for that direction. */
-  isExpandArrayDisabled(): boolean {
-    return this.settings.readOnly || this.mapping.direction === Direction.OUTBOUND;
+  /** Enter selects the row, but not when it was pressed on a control inside the row (e.g. Remove). */
+  onRowEnter(event: Event, index: number): void {
+    if (event.target === event.currentTarget) {
+      this.onSubstitutionSelect(index);
+    }
   }
 
-  isRepairStrategyDisabled(): boolean {
-    return this.settings.readOnly;
+  /** Arrow keys move the focus between rows. */
+  focusSibling(event: Event, step: 1 | -1): void {
+    const row = event.currentTarget as HTMLElement;
+    const sibling = (step === 1 ? row.nextElementSibling : row.previousElementSibling) as HTMLElement | null;
+    if (sibling?.getAttribute('role') === 'option') {
+      sibling.focus();
+      event.preventDefault();
+    }
   }
 
-  repairStrategyOptionsFor(sub: Substitution): RepairStrategyOption[] {
-    return Object.keys(RepairStrategy).map(key => ({
-      label: key,
-      value: key,
-      description: this.describeStrategy(key),
-      // USE_FIRST/LAST_VALUE_OF_ARRAY collapse an extracted array to a single element - meaningless
-      // once "Expand as array" already splits the array into N substitutions.
-      disabled: this.isRepairStrategyDisabled() ||
-        (SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
-    }));
+  /** Accessible name of a row: its number, source and target, then what its labels say. */
+  rowLabel(sub: Substitution, index: number, deviceIdentifier: boolean): string {
+    const t = (text: string) => this.translateService.instant(text);
+    const parts = [
+      this.translateService.instant(gettext('Substitution {{number}}: {{source}} to {{target}}'), {
+        number: index + 1,
+        source: sub.pathSource,
+        target: sub.pathTarget
+      })
+    ];
+    if (deviceIdentifier) parts.push(t(gettext('Device identifier')));
+    if (isExpression(sub.pathSource)) parts.push(t(gettext('JSONata expression')));
+    if (sub.expandArray) parts.push(t(gettext('Expand as array')));
+    if (this.hasCustomRepairStrategy(sub)) parts.push(this.repairStrategyLabel(sub));
+    return parts.join(', ');
   }
 
-  private describeStrategy(strategy: string): string {
-    const description = SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[strategy];
+  hasCustomRepairStrategy(sub: Substitution): boolean {
+    return !!sub.repairStrategy && sub.repairStrategy !== RepairStrategy.DEFAULT;
+  }
+
+  repairStrategyLabel(sub: Substitution): string {
+    return formatStringAsWords(sub.repairStrategy);
+  }
+
+  /** Tooltip on the repair strategy label: what the strategy does. */
+  repairStrategyDescriptionFor(sub: Substitution): string {
+    const description = REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy];
     return description ? this.translateService.instant(description) : '';
   }
 
-  /** Tooltip on the select itself: what the currently chosen strategy does. */
-  repairStrategyDescriptionFor(sub: Substitution): string {
-    return this.describeStrategy(sub.repairStrategy);
+  /** Clicking Remove must not also select the row it sits in. */
+  onDeleteClick(event: Event, index: number, popover: PopoverConfirmComponent): void {
+    event.stopPropagation();
+    void this.onSubstitutionDelete(index, popover);
   }
 
-  onExpandArrayChange(index: number, sub: Substitution, expandArray: boolean): void {
-    const patch: Partial<Substitution> = { expandArray };
-    if (expandArray && SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
-      patch.repairStrategy = RepairStrategy.DEFAULT;
-    }
-    this.substitutionPatch.emit({ index, patch });
-  }
-
-  onRepairStrategyChange(index: number, repairStrategy: string): void {
-    this.substitutionPatch.emit({ index, patch: { repairStrategy: repairStrategy as RepairStrategy } });
-  }
-
-  onSubstitutionDelete(index: number): void {
-    const initialState = {
+  async onSubstitutionDelete(index: number, popover: PopoverConfirmComponent): Promise<void> {
+    const confirmed = await confirmWithPopover(popover, {
       title: gettext('Delete substitution'),
-      message: gettext('You are about to delete a substitution. Do you want to proceed?'),
-      labels: {
-        ok: gettext('Delete'),
-        cancel: gettext('Cancel')
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-    confirmDeletionModalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(
-      (result: boolean) => {
-        if (result) {
-          this.deleteSub.emit(index);
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
+      message: gettext('You are about to delete a substitution. Do you want to proceed?')
+    });
+    if (confirmed) {
+      this.deleteSub.emit(index);
+    }
   }
 }

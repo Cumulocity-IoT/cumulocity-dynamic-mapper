@@ -23,12 +23,12 @@
     <div class="card-appicon">
       <i [c8yIcon]="'c8y-java'"></i>
     </div>
-    <p class="e2e-appCardName text-medium" title="{{ app['name'] }}">
-      {{ app['name'] }}
+    <p class="e2e-appCardName text-medium" title="{{ app()['name'] }}">
+      {{ app()['name'] }}
     </p>
-    @if (app['manifest']?.version) {
+    @if (app()['manifest']?.version) {
       <small class="text-muted">
-        <em>{{ app['manifest'].version }}</em>
+        <em>{{ app()['manifest'].version }}</em>
       </small>
     }
   </div>
@@ -45,29 +45,29 @@
     </div>
 
     <div class="card-footer separator card-column-60 p-b-8">
-      @if (app['loaded'] === ExtensionStatus.COMPLETE) {
+      @if (app()['loaded'] === ExtensionStatus.COMPLETE) {
         <div>
           <span class="badge badge-info">
-            {{ app['extensionEntries'].length }}</span
+            {{ app()['extensionEntries'].length }}</span
             ><span class="text-muted">&nbsp;<span translate>Loaded</span></span>
           </div>
         }
-        @if (app['loaded'] === ExtensionStatus.NOT_LOADED) {
+        @if (app()['loaded'] === ExtensionStatus.NOT_LOADED) {
           <div>
             <span class="text-muted" translate>Not Loaded</span>
-            @if (app['message']) {
-              <p class="text-danger small m-b-0 m-t-4 text-break">{{ app['message'] }}</p>
+            @if (app()['message']) {
+              <p class="text-danger small m-b-0 m-t-4 text-break">{{ app()['message'] }}</p>
             }
           </div>
         }
-        @if (app['loaded'] === ExtensionStatus.PARTIALLY) {
+        @if (app()['loaded'] === ExtensionStatus.PARTIALLY) {
           <div>
             <span class="badge badge-info">
-              {{ app['extensionEntries'].length }}</span
+              {{ app()['extensionEntries'].length }}</span
               ><span class="text-muted"><span translate>Partially</span>&nbsp;</span>
             </div>
           }
-          @if (app['loaded'] === ExtensionStatus.UNKNOWN) {
+          @if (app()['loaded'] === ExtensionStatus.UNKNOWN) {
             <div>
               <span class="text-muted" translate>Not Known</span>
             </div>

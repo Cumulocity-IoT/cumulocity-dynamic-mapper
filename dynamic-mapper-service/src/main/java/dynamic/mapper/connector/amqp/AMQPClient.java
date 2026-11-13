@@ -22,7 +22,12 @@
 package dynamic.mapper.connector.amqp;
 
 import dynamic.mapper.util.TenantLogContext;
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Recoverable;
+import com.rabbitmq.client.RecoveryListener;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
@@ -45,7 +50,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -474,9 +481,13 @@ public class AMQPClient extends AConnectorClient {
     }
 
     @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (!isConnected()) {
-            log.warn("{} - Cannot publish: not connected", tenant);
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 

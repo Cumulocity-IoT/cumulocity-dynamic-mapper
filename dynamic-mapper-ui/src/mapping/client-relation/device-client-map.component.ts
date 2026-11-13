@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -36,7 +29,9 @@ import {
   DataGridComponent,
   DisplayOptions,
   Pagination,
+  PopoverConfirmComponent,
 } from '@c8y/ngx-components';
+import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import {
   ConfirmationModalComponent,
   Direction,
@@ -48,7 +43,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { ClientRelationService } from '../core/client-relation.service';
+import { ClientRelation, ClientRelationService, ClientRelationsResponse } from '../core/client-relation.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { CommonModule } from '@angular/common';
 import { ClientRelationStepperComponent } from './client-relation-stepper.component';
@@ -61,6 +56,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: 'device-client-map.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   providers: [...provideGridPersistence('device-client-map')],
   imports: [CoreModule, CommonModule, PopoverModule, ClientRelationStepperComponent]
@@ -69,7 +65,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
 
-  @ViewChild('deviceToClientGrid') deviceToClientGrid: DataGridComponent;
+  readonly deviceToClientGrid = viewChild<DataGridComponent>('deviceToClientGrid');
 
   constructor(
   ) {
@@ -84,8 +80,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   private bsModalService = inject(BsModalService);
   private alertService = inject(AlertService);
 
-  clientRelations: any;
-  mapEntries: any[];
+  clientRelations: ClientRelationsResponse | null = null;
+  private readonly mapEntriesState = signal<ClientRelation[]>([]);
+  get mapEntries(): ClientRelation[] { return this.mapEntriesState(); }
+  set mapEntries(value: ClientRelation[]) { this.mapEntriesState.set(value); }
   Direction = Direction;
 
   titleMapping: string;
@@ -131,7 +129,9 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   actionControlRelation: ActionControl[] = [];
   bulkActionControlRelation: BulkActionControl[] = [];
   feature: Feature;
-  showAddRelation: Boolean = false;
+  private readonly showAddRelationState = signal<boolean>(false);
+  get showAddRelation(): boolean { return this.showAddRelationState(); }
+  set showAddRelation(value: boolean) { this.showAddRelationState.set(value); }
 
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
@@ -157,7 +157,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
       this.mapEntries = this.clientRelations.relations;
     }
 
-    this.deviceToClientGrid?.reload();
+    this.deviceToClientGrid()?.reload();
   }
 
   ngOnDestroy(): void {
@@ -165,28 +165,15 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.destroy$.unsubscribe();
   }
 
-  async onDeleteAllClientRelations() {
-    let result: boolean = false;
-    const initialState = {
+  async onDeleteAllClientRelations(popover: PopoverConfirmComponent) {
+    const confirmed = await confirmWithPopover(popover, {
       title: gettext('Delete all relations'),
-      message: gettext('You are about to delete all relations. Do you want to proceed to delete ALL?')
-      ,
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-
-    result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-    if (result) {
+      message: gettext('You are about to delete all relations. Do you want to proceed to delete ALL?'),
+      okLabel: gettext('Delete')
+    });
+    if (confirmed) {
       await this.clientRelationService.deleteAllClientRelations();
-      this.alertService.success(
-        gettext('Relations deleted successfully')
-      );
+      this.alertService.success(gettext('Relations deleted successfully'));
       this.loadAllClientRelations();
     }
   }
@@ -240,7 +227,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         this.deleteRelation(device2Delete);
       }
     }
-    this.deviceToClientGrid.setAllItemsSelected(false);
+    this.deviceToClientGrid().setAllItemsSelected(false);
   }
 
   private async deleteRelationWithConfirmation(
@@ -270,7 +257,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         await this.deleteRelation(device2Delete);
       }
     }
-    this.deviceToClientGrid.setAllItemsSelected(false);
+    this.deviceToClientGrid().setAllItemsSelected(false);
     return result;
   }
 }

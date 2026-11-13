@@ -66,7 +66,7 @@ export class TestingService {
    * names the cause. Without one (a gateway answering with an HTML page, an empty body) the status says
    * what is wrong; parsing such a body as JSON used to throw "Unexpected token '<'" instead.
    */
-  private async describeFailure(response: { status: number; json(): Promise<any> }): Promise<string> {
+  private async describeFailure(response: { status: number; json(): Promise<{ message?: unknown } | null> }): Promise<string> {
     let backendMessage: unknown;
     try {
       backendMessage = (await response.json())?.message;

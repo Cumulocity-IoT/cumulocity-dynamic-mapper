@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
 
@@ -33,6 +33,7 @@ import { MappingService } from '../core/mapping.service';
       {{ context.value }}
     </a>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: []
 })

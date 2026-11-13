@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  inject,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -72,6 +65,7 @@ import { MappingService } from '../core/mapping.service';
 import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
+import { SubscriptionSuggestions } from '../step-subscription/outbound-subscription-selection.model';
 import { buildMappingColumns } from './mapping-grid.columns';
 import { buildNewMapping, ExplorerPreFill } from './new-mapping.factory';
 import { SubscriptionService } from '../core/subscription.service';
@@ -102,6 +96,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   templateUrl: 'mapping.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent],
   // The grid owns the persistence half of the stepper's commit (the child owns the editing half),
@@ -113,23 +108,33 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   ],
 })
 export class MappingComponent implements OnInit, OnDestroy {
-  @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
+  readonly mappingGrid = viewChild<DataGridComponent>('mappingGrid');
   // Used to move the stepper to a substitution a validation failure points at.
-  @ViewChild('mappingStepper') mappingStepperRef?: MappingStepperComponent;
+  readonly mappingStepperRef = viewChild<MappingStepperComponent>('mappingStepper');
 
-  showConfigMapping = false;
-  isLoading = false;
+  private readonly showConfigMappingState = signal<boolean>(false);
+  get showConfigMapping(): boolean { return this.showConfigMappingState(); }
+  set showConfigMapping(value: boolean) { this.showConfigMappingState.set(value); }
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
 
   readonly mappingsEnriched$ = new BehaviorSubject<MappingEnriched[]>([]);
   mappingsCount = 0;
-  mappingToUpdate!: Mapping;
+  private readonly mappingToUpdateState = signal<Mapping>(undefined as unknown as Mapping);
+  get mappingToUpdate(): Mapping { return this.mappingToUpdateState(); }
+  set mappingToUpdate(value: Mapping) { this.mappingToUpdateState.set(value); }
   substitutionsAsCode = false;
   devices: IIdentified[] = [];
   Direction = Direction;
 
-  stepperConfiguration: StepperConfiguration = {};
+  private readonly stepperConfigurationState = signal<StepperConfiguration>({});
+  get stepperConfiguration(): StepperConfiguration { return this.stepperConfigurationState(); }
+  set stepperConfiguration(value: StepperConfiguration) { this.stepperConfigurationState.set(value); }
   titleMapping!: string;
-  deploymentMapEntry!: DeploymentMapEntry;
+  private readonly deploymentMapEntryState = signal<DeploymentMapEntry>(undefined as unknown as DeploymentMapEntry);
+  get deploymentMapEntry(): DeploymentMapEntry { return this.deploymentMapEntryState(); }
+  set deploymentMapEntry(value: DeploymentMapEntry) { this.deploymentMapEntryState.set(value); }
   /** {@link snapshotConnectors} as the editor opened, so a connector-only change is detectable
    * and an unchanged deployment is not rewritten. */
   private initialDeploymentConnectors = '';
@@ -148,6 +153,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
   private explorerPreFill: ExplorerPreFill | null = null;
+  /** Source device of the Message Explorer message, offered as choices in the Subscription step. */
+  private explorerSubscriptionSuggestions: SubscriptionSuggestions | undefined;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -156,7 +163,9 @@ export class MappingComponent implements OnInit, OnDestroy {
   actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
 
-  feature!: Feature;
+  private readonly featureState = signal<Feature>(undefined as unknown as Feature);
+  get feature(): Feature { return this.featureState(); }
+  set feature(value: Feature) { this.featureState.set(value); }
   codeTemplate!: CodeTemplate;
   private extension?: Partial<ExtensionEntry>;
   private generateSmartFunctionWithAI = false;
@@ -249,6 +258,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           publishTopic: explorerHandoff.publishTopic,
           publishTopicSample: explorerHandoff.publishTopicSample
         };
+        this.explorerSubscriptionSuggestions = explorerHandoff.subscriptionSuggestions;
         this.mappingType = explorerHandoff.mappingType;
         this.transformationType = explorerHandoff.transformationType;
         // A binary, XML or plain-text payload cannot be parsed as JSON; the backend only passes raw
@@ -276,9 +286,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
   }
 
-  private isDeprecatedMapping(item: any): boolean {
+  private isDeprecatedMapping(row: unknown): boolean {
+    const item = row as MappingEnriched;
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- detecting the legacy type is the whole point of this check
-    return item['mapping']['transformationType'] === TransformationType.SUBSTITUTION_AS_CODE;
+    return item.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
   }
 
   private setupActionControls() {
@@ -446,6 +457,11 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.generateSmartFunctionWithAI = false;
     }
 
+    if (this.explorerSubscriptionSuggestions) {
+      this.stepperConfiguration.subscriptionSuggestions = this.explorerSubscriptionSuggestions;
+      this.explorerSubscriptionSuggestions = undefined;
+    }
+
     const direction = this.stepperConfiguration.direction;
     const { mapping, sampleMessageInfo, sampleTransportFields, additionalSamples } = buildNewMapping({
       direction,
@@ -599,7 +615,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(editorState: CommitEditorState): Promise<void> {
     const result = await this.commitService.commitMapping({
       ...editorState,
-      deploymentMapEntry: this.deploymentMapEntry,
       initialDeploymentConnectors: this.initialDeploymentConnectors
       // No `forms`: cdk-stepper enforces linear completion, so the user cannot reach Save with an
       // earlier step invalid. Those blockers are the unified editor's concern.
@@ -631,8 +646,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     this.showConfigMapping = false;
-
-    this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
   }
 
   /**
@@ -652,7 +665,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (result.action !== 'goto') {
       return;
     }
-    await this.mappingStepperRef?.goToSubstitution(result.index);
+    await this.mappingStepperRef()?.goToSubstitution(result.index);
   }
 
   async onReload() {
@@ -675,7 +688,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -686,7 +699,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -699,7 +712,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -711,7 +724,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       true,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -723,7 +736,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       false,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );
@@ -734,7 +747,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ids,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
-      this.mappingGrid,
+      this.mappingGrid(),
       this.destroy$,
       (loading) => this.isLoading = loading
     );

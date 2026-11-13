@@ -43,11 +43,14 @@
       @if (action === 'CREATE' || action === 'RENAME') {
         <c8y-form-group>
           <label translate>Description</label>
-          <textarea
-            class="form-control"
-            rows="4"
+          <c8y-input-group-editable
+            [multiline]="true"
+            [noSaveButton]="true"
+            maxHeight="160px"
+            formGroupClass="m-b-0"
+            ariaLabel="Description"
             [(ngModel)]="codeTemplate.description"
-            ></textarea>
+          ></c8y-input-group-editable>
         </c8y-form-group>
       }
     </div>

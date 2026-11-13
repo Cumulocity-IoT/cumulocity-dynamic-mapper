@@ -19,13 +19,13 @@
  */
 
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
   OnInit,
   Output,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, input, model } from '@angular/core';
 import { C8yTranslateDirective } from '@c8y/ngx-components';
 import {
   ConnectorGridComponent,
@@ -40,23 +40,23 @@ import {
   styleUrls: ['../../shared/mapping/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ConnectorGridComponent, C8yTranslateDirective]
 })
 export class MappingConnectorComponent implements OnInit {
-  @Input() showHeader: boolean = false;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
-  @Input() deploymentMapEntry: DeploymentMapEntry;
-  @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
+  readonly showHeader = input<boolean>(false);
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly directions = input<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
+  /** Two-way: setting it announces `deploymentMapEntryChange` to the host. */
+  readonly deploymentMapEntry = model<DeploymentMapEntry>();
 
   readOnly: boolean;
 
   ngOnInit(): void {
-    this.readOnly = !!this.stepperConfiguration.readOnly;
+    this.readOnly = !!this.stepperConfiguration().readOnly;
   }
 
   onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {
-    this.deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
+    this.deploymentMapEntry.set(value);
   }
 }

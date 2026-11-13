@@ -88,7 +88,8 @@ function admonitionExtension(marked: Marked) {
         tokens: []
       } as unknown as Tokens.Generic;
     },
-    renderer(token: any): string {
+    renderer(generic: Tokens.Generic): string {
+      const token = generic as unknown as { text: string; kind: string; title: string };
       const body = marked.parse(token.text, { async: false }) as string;
       return `<div class="admonition ${token.kind}"><div class="title">${escapeHtml(token.title)}</div><div class="content">${body}</div></div>\n`;
     }

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, OnInit, Output, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef, Injector, viewChild, input, effect } from '@angular/core';
 import { afterNextRenderInZone } from '../misc/after-render';
 import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -48,28 +48,30 @@ import { provideGridPersistence } from '../misc/grid-persistence';
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [...provideGridPersistence((url) => (url.includes('/mappings/') ? 'connectors-select' : 'connectors'))],
   imports: [
     CoreModule,
   ]
 })
-export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly injector = inject(Injector);
-  @Input() selectable = true;
-  @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
+  readonly selectable = input(true);
+  readonly directions = input<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
   private directions$ = new BehaviorSubject<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
   private userDirectionFilter$ = new BehaviorSubject<Direction | 'ALL'>('ALL');
   selectedDirectionFilter: Direction | 'ALL' = 'ALL';
   readonly Direction = Direction;
-  @Input() readOnly = false;
-  @Input() deploy: string[];
-  @Input() deploymentMapEntry: DeploymentMapEntry;
+  readonly readOnly = input(false);
+  readonly deploy = input<string[]>();
+  readonly deploymentMapEntry = input<DeploymentMapEntry>();
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
-  @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
-  @ViewChild('autoRefreshTemplate') autoRefreshTemplate: TemplateRef<any>;
-  @ViewChild(CountdownIntervalComponent)
-  countdownIntervalComponent: CountdownIntervalComponent;
+  readonly connectorGrid = viewChild<DataGridComponent>('connectorGrid');
+  // Static: the template is at the top level of the grid's own template, so it exists before the first
+  // render and the header controls can be set in ngOnInit instead of forcing a render after the view init.
+  readonly autoRefreshTemplate = viewChild<TemplateRef<unknown>>('autoRefreshTemplate');
+  readonly countdownIntervalComponent = viewChild(CountdownIntervalComponent);
   toggleIntervalForm: FormGroup;
   headerActionControls: HeaderActionControl[] = [];
 
@@ -101,7 +103,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   currentPollingInterval: number;
   private destroy$: Subject<void> = new Subject<void>();
   private featurePromise: Promise<Feature>;
-  initialStateDrawer: any;
+  initialStateDrawer: Partial<ConnectorConfigurationDrawerComponent> | undefined;
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -115,15 +117,16 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   constructor() {
     this.toggleIntervalForm = this.initForm();
     this.featurePromise = this.sharedService.getFeatures();
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['directions']) {
-      this.directions$.next(changes['directions'].currentValue);
-    }
+    // The host's direction filter feeds the configurations stream.
+    effect(() => this.directions$.next(this.directions()));
   }
 
   async ngOnInit(): Promise<void> {
+    this.headerActionControls = [{
+      type: 'AUTO_REFRESH',
+      template: this.autoRefreshTemplate(),
+      callback: () => {}
+    }];
     this.initializeColumns();
     this.initializeActionControls();
     this.initializeBulkActionControls();
@@ -150,14 +153,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   ngAfterViewInit(): void {
-    this.headerActionControls = [{
-      type: 'AUTO_REFRESH',
-      template: this.autoRefreshTemplate,
-      callback: () => {}
-    }];
-    this.cdr.detectChanges();
-    if (this.selectable) {
-      afterNextRenderInZone(this.injector, () => this.connectorGrid.setItemsSelected(this.selected, true));
+    if (this.selectable()) {
+      afterNextRenderInZone(this.injector, () => this.connectorGrid().setItemsSelected(this.selected, true));
     }
     afterNextRenderInZone(this.injector, () => this.startCountdown());
     this.initVisibilityTracking();
@@ -178,19 +175,19 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   resetCountdown(): void {
     // console.log('resetCountdown', this.currentPollingInterval);
 
-    this.countdownIntervalComponent?.reset();
+    this.countdownIntervalComponent()?.reset();
   }
 
   startCountdown(): void {
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
     if (this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent.start();
+      this.countdownIntervalComponent().start();
       this.connectorConfigurationService.setPollingEnabled(true);
     }
   }
 
   private stopPolling(): void {
-    this.countdownIntervalComponent?.stop();
+    this.countdownIntervalComponent()?.stop();
     this.connectorConfigurationService.setPollingEnabled(false);
   }
 
@@ -231,7 +228,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   private initializeActionControls(): void {
     this.actionControls = ACTION_CONTROLS
-      .filter(control => !this.selectable || control.type === 'VIEW')
+      .filter(control => !this.selectable() || control.type === 'VIEW')
       .map(control => ({
         ...control,
         callback: this[control.callbackName].bind(this),
@@ -240,7 +237,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
         // 'connectorType' rule that excludes the auto-created default HTTP connector everywhere
         // else. Only the role-gating rule is meant to be bypassed here.
         showIf: (item: ConnectorConfiguration) => {
-          const rules = this.selectable && control.type === 'VIEW'
+          const rules = this.selectable() && control.type === 'VIEW'
             ? control.visibilityRules.filter(rule => rule.type !== 'userRole')
             : control.visibilityRules;
           return this.checkActionVisibility(item, rules);
@@ -251,7 +248,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private initializeBulkActionControls(): void {
     // Bulk selection is only offered on the main connector list; the deployment-map
     // picker (selectable=true) keeps its own single-purpose selection behavior.
-    if (this.selectable) return;
+    if (this.selectable()) return;
 
     this.bulkActionControls = [
       {
@@ -265,13 +262,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   private initializeColumns(): void {
     this.columns = GRID_COLUMNS
-      .filter(column => !(this.selectable && column.name === 'enabled'))
+      .filter(column => !(this.selectable() && column.name === 'enabled'))
       .map(column => ({
         ...column,
         gridTrackSize: column.name === 'status' || column.name === 'enabled'
-          ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
+          ? this.selectable() ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
           : column.gridTrackSize,
-        cellRendererComponent: this.selectable && column.name === 'name' ? undefined : column.cellRendererComponent,
+        cellRendererComponent: this.selectable() && column.name === 'name' ? undefined : column.cellRendererComponent,
       }));
   }
 
@@ -304,26 +301,36 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   private initializeSelection(): void {
-    this.selected = this.deploymentMapEntry?.connectors ?? [];
+    this.selected = this.deploymentMapEntry()?.connectors ?? [];
     this.selected$.next(this.selected);
   }
 
   private setupConfigurationsSubscription(): void {
     combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe(([selected, configurations]) => {
       this.configurations = configurations;
-      if (this.selectable) {
+      if (this.selectable()) {
         this.updateDeploymentMapEntry(selected);
       }
+      // OnPush: the selected connectors' names are looked up in `configurations`, which changes here, from
+      // a subscription rather than from an event of this view.
+      this.cdr.markForCheck();
     });
   }
 
   private updateDeploymentMapEntry(selected: string[]): void {
-    if (!this.deploymentMapEntry) return;
+    const entry = this.deploymentMapEntry();
+    if (!entry) return;
 
-    // A new object: the host owns the entry and hands the new one back through the input.
-    this.deploymentMapEntryChange.emit({ ...this.deploymentMapEntry, connectors: selected });
+    // Only report a real change. Status polls and refreshes re-emit the configurations with an unchanged
+    // selection; reporting those would write to the host's signal on every pass of its change detection.
+    const current = entry.connectors ?? [];
+    const unchanged = current.length === selected.length && current.every((c, i) => c === selected[i]);
+    if (!unchanged) {
+      // A new object: the host owns the entry and hands the new one back through the input.
+      this.deploymentMapEntryChange.emit({ ...entry, connectors: selected });
+    }
 
-    if (this.readOnly) {
+    if (this.readOnly()) {
       this.updateReadOnlyConfigurations(selected);
     }
   }
@@ -331,7 +338,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   private updateReadOnlyConfigurations(selected: string[]): void {
     this.configurations?.forEach(conf => {
       conf['checked'] = selected.includes(conf.identifier);
-      conf['readOnly'] = this.readOnly;
+      conf['readOnly'] = this.readOnly();
     });
   }
 
@@ -354,7 +361,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
   ): Promise<void> {
     await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }
@@ -373,7 +380,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     const copiedConfig = this.prepareCopyConfiguration(config);
     this.initialStateDrawer = {
       action: 'create',
-      configuration: copiedConfig,
+      configuration: copiedConfig as ConnectorConfiguration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
       allowedConnectors: this.computeAllowedConnectors()
@@ -411,13 +418,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     } as Partial<ConnectorConfiguration>;
     if (config) {
       // Determine action: view for enabled connectors or when in selectable mode, otherwise update
-      action = (config.enabled || this.selectable) ? 'view' : 'update';
+      action = (config.enabled || this.selectable()) ? 'view' : 'update';
       configuration = cloneDeep(config);
     }
 
     this.initialStateDrawer = {
       action,
-      configuration,
+      configuration: configuration as ConnectorConfiguration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
       allowedConnectors: this.computeAllowedConnectors()
@@ -459,7 +466,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       .filter(config => ids.includes(config.identifier) && config.connectorType !== ConnectorType.HTTP)
       .map(config => prepareConnectorConfigurationForApi(config));
     this.exportConfigurations(configurations2Export);
-    this.connectorGrid.setAllItemsSelected(false);
+    this.connectorGrid().setAllItemsSelected(false);
   }
 
   async onImport(): Promise<void> {
@@ -489,8 +496,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
-    //return this.selectable && this.readOnly;
-    return this.readOnly;
+    //return this.selectable() && this.readOnly();
+    return this.readOnly();
   }
 
   private showConfirmationModal(): BsModalRef {
@@ -524,7 +531,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
         case 'enabled':
           return item.enabled === rule.value;
         case 'readOnly':
-          return this.readOnly === rule.value;
+          return this.readOnly() === rule.value;
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
         case 'userRole':
@@ -556,9 +563,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
     this.connectorConfigurationService.setPollingEnabled(this.shouldRefreshAutomatic);
     if (!this.shouldRefreshAutomatic) {
-      this.countdownIntervalComponent.stop();
+      this.countdownIntervalComponent().stop();
     } else {
-      this.countdownIntervalComponent.start();
+      this.countdownIntervalComponent().start();
     }
   }
 }

@@ -19,7 +19,7 @@
  */
 import { Column, ColumnDataType } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { API, Direction, LabelTaggedRendererComponent, Mapping } from '../../shared';
+import { API, Direction, LabelTaggedRendererComponent, Mapping, MappingEnriched } from '../../shared';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
 import { MappingStatusActivationRendererComponent } from '../renderer/mapping-status-activation.renderer.component';
@@ -29,7 +29,7 @@ import { StatusRendererComponent } from '../renderer/status.renderer.component';
  * The grid's columns for one direction: inbound mappings show the mapping topic, outbound ones the
  * publish topic. `openVersions` is called with the row when the version/status cell is clicked.
  */
-export function buildMappingColumns(direction: Direction, openVersions: (row: any) => void): Column[] {
+export function buildMappingColumns(direction: Direction, openVersions: (row: MappingEnriched) => void): Column[] {
   const cols: (Column | undefined)[] = [
     {
       name: 'name',

@@ -279,6 +279,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 784,
       preventDuplicates: true
     }),
+    messageDeduplicationNode: new NavigatorNode({
+      parent: gettext('Guides'),
+      icon: 'copy',
+      label: gettext('Message de-duplication'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/message-deduplication',
+      priority: 783.5,
+      preventDuplicates: true
+    }),
     // Label must NOT be plain 'Monitoring'. Cumulocity's NavigatorNode nests by label string,
     // and the application's own Monitoring node (shared/misc/navigation.factory.ts) is the parent
     // of six real pages — Statistic processed, Service events, Cache statistic, Versions,
@@ -399,7 +407,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
   ) {
   }
 
-  async get(): Promise<any> {
+  async get(): Promise<NavigatorNode[]> {
     try {
       const feature = await this.sharedService.getFeatures();
       const navs = Object.values(this.staticNodesStandalone) as NavigatorNode[];

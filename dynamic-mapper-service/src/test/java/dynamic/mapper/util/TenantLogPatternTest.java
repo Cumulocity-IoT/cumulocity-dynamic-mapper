@@ -24,6 +24,7 @@ package dynamic.mapper.util;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Configuration;
@@ -48,6 +50,16 @@ class TenantLogPatternTest {
     }
 
     private static final Logger LOG = LoggerFactory.getLogger("dynamic.mapper.test.TenantLogPatternTest");
+
+    /**
+     * Spring configures logging only once per Logback context. If another test in the same JVM has
+     * already started Spring (or Logback fell back to logback-test.xml), the pattern under test is
+     * never applied and the assertions see a foreign format. Start from a clean context.
+     */
+    @BeforeEach
+    void freshLoggingSystem() {
+        LoggingSystem.get(getClass().getClassLoader()).cleanUp();
+    }
 
     @Test
     void tenantIsAFieldOfEveryLine(CapturedOutput out) throws Exception {

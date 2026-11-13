@@ -24,9 +24,11 @@ package dynamic.mapper.notification.service;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.rest.representation.reliable.notification.*;
+import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
+import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.cumulocity.sdk.client.SDKException;
-import com.cumulocity.sdk.client.messaging.notifications.*;
+import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
+import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
@@ -38,10 +40,19 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.*;
-
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 /**
  * Manages subscription CRUD operations.
  */
@@ -120,19 +131,35 @@ public class SubscriptionManager {
 
     // === Public API ===
 
+    /**
+     * Result of probing the Notification 2.0 service. {@code UNKNOWN} means the probe itself failed in a
+     * way that says nothing about whether the service exists (5xx, timeout, throttling): callers must not
+     * act on it as if the service were absent.
+     */
+    public enum ServiceAvailability { AVAILABLE, UNAVAILABLE, UNKNOWN }
+
     public boolean isNotificationServiceAvailable(String tenant) {
+        return checkNotificationServiceAvailability(tenant) == ServiceAvailability.AVAILABLE;
+    }
+
+    public ServiceAvailability checkNotificationServiceAvailability(String tenant) {
         if (tenant == null) {
-            return false;
+            return ServiceAvailability.UNAVAILABLE;
         }
 
         return subscriptionsService.callForTenant(tenant, () -> {
             try {
                 subscriptionAPI.getSubscriptions().get(1);
                 log.debug("{} - Notification 2.0 service available", tenant);
-                return true;
+                return ServiceAvailability.AVAILABLE;
             } catch (SDKException e) {
-                log.warn("{} - Notification 2.0 service unavailable: {}", tenant, e.getMessage());
-                return false;
+                int status = e.getHttpStatus();
+                // A definitive client error (404, 403, ...) means the service is not there for this tenant.
+                // 408/429, 5xx and a missing status (I/O failure, timeout) are transient.
+                boolean definitive = status >= 400 && status < 500 && status != 408 && status != 429;
+                log.warn("{} - Notification 2.0 service {}: {}", tenant,
+                        definitive ? "unavailable" : "availability unknown", e.getMessage());
+                return definitive ? ServiceAvailability.UNAVAILABLE : ServiceAvailability.UNKNOWN;
             }
         });
     }
@@ -890,7 +917,7 @@ public class SubscriptionManager {
 
             return !staticSubIt.hasNext() && !dynamicSubIt.hasNext(); // Disconnect if no more subscriptions
         } catch (Exception e) {
-            log.warn("{} - Error checking remaining subscriptions: {}", tenant, e.getMessage());
+            log.warn("{} - Error checking remaining subscriptions: {}", tenant, e.getMessage(), e);
             return false;
         }
     }
@@ -909,7 +936,10 @@ public class SubscriptionManager {
                 return subIt.next();
             }
         } catch (Exception e) {
-            log.warn("{} - Error finding existing type subscription: {}", subscriptionsService.getTenant(), e.getMessage());
+            // Fail closed: null would read as "no type subscription", so callers would rebuild the type
+            // filter from only the new types and drop the existing ones, or create a duplicate.
+            log.warn("{} - Error finding existing type subscription: {}", subscriptionsService.getTenant(), e.getMessage(), e);
+            throw new IllegalStateException("Could not look up the existing type subscription: " + e.getMessage(), e);
         }
         return null;
     }
@@ -1013,8 +1043,11 @@ public class SubscriptionManager {
                     .get().allPages().iterator();
             return it.hasNext();
         } catch (Exception e) {
-            log.warn("{} - Error checking existing subscription for device {}: {}", tenant, deviceId, e.getMessage());
-            return false;
+            // Fail closed: "false" would read as "no existing subscription", so dedup would be skipped
+            // and a duplicate (or a static one next to a dynamic one) could be created.
+            log.warn("{} - Error checking existing subscription for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new IllegalStateException("Could not check existing " + subscriptionName
+                    + " subscription for device " + deviceId + ": " + e.getMessage(), e);
         }
     }
 
@@ -1037,7 +1070,7 @@ public class SubscriptionManager {
                     tenant,
                     eventMap);
         } catch (Exception e) {
-            log.warn("{} - Failed to create deduplication event for device {}: {}", tenant, deviceId, e.getMessage());
+            log.warn("{} - Failed to create deduplication event for device {}: {}", tenant, deviceId, e.getMessage(), e);
         }
     }
 

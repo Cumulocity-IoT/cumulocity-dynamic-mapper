@@ -92,6 +92,28 @@ meets your reliability requirements.
 Higher QoS levels (1-2) provide better delivery guarantees, but not all connectors support them. Only MQTT and
 Apache Pulsar offer all three levels.
 
+#### Outbound messages while the broker is down {#broker-outage}
+
+When a connector loses the connection to its broker, the Dynamic Mapper stops receiving the connector's outbound
+messages from Cumulocity. It neither publishes nor discards them. Cumulocity keeps the messages and delivers them
+after the connector is connected again. The Dynamic Mapper stores nothing itself.
+
+This applies to the MQTT, AMQP 0-9-1, AMQP 1.0, Kafka, and Cumulocity MQTT-Service connectors. For the Apache Pulsar
+connector, the Dynamic Mapper does not acknowledge an outbound message that it cannot publish, and Cumulocity
+delivers the message again every few seconds until the broker is back. Other connectors behave as before.
+
+- The Dynamic Mapper checks the connectors every 10 seconds. If a message arrives before the next check, the
+  connector does not acknowledge it and Cumulocity delivers it again. These retries do not count toward
+  **Maximum processing attempts**, because the message is not the cause.
+- After the connector is connected again, the waiting messages arrive in the order Cumulocity delivers them. A
+  message can arrive more than once, so the receiving system must tolerate duplicates.
+- Cumulocity keeps waiting messages only for a limited time and amount. An outage that lasts longer than that can
+  still lose messages. See the Notification 2.0 documentation of your Cumulocity version for the limits.
+- A message that fails for its own reason, for example because it is too large for the broker, is not retried.
+
+The service log shows `paused its device WebSockets` when a connector is held and `resuming its device WebSockets`
+when it is released. See [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting).
+
 #### QoS behavior by connector {#qos-by-connector}
 
 Each connector below lists what happens at each QoS level, for messages that come in from the broker (inbound) and

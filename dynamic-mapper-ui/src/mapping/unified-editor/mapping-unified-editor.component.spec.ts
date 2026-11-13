@@ -64,6 +64,19 @@ const TAB_TEST_MAPPING = 4;
  * isolation. The unified editor differs from the stepper in three important ways covered here:
  * tab-visibility rules, route-driven initial tab selection, and persistence via MappingService.
  */
+/**
+ * Runs `ngOnInit` to completion. The editor waits for a render during init (`whenRendered`), and the
+ * specs call the hook directly with no change-detection pass, so the wait is stubbed to resolve
+ * at once. These specs cover the init logic; rendering is covered by the template and Cypress specs.
+ */
+async function initEditor(component: MappingUnifiedEditorComponent): Promise<void> {
+  const target = component as unknown as { whenRendered: () => Promise<void> };
+  if (!jasmine.isSpy(target.whenRendered)) {
+    spyOn(target, 'whenRendered').and.resolveTo();
+  }
+  await component.ngOnInit();
+}
+
 describe('MappingUnifiedEditorComponent', () => {
   let component: MappingUnifiedEditorComponent;
   let fixture: ComponentFixture<MappingUnifiedEditorComponent>;
@@ -284,9 +297,8 @@ describe('MappingUnifiedEditorComponent', () => {
         { provide: ActivatedRoute, useValue: activatedRoute },
         { provide: Location, useValue: jasmine.createSpyObj('Location', ['back', 'path']) },
         { provide: GlobalContextService, useValue: mockGlobalContextService },
-        // The component injects SubscriptionService, whose real constructor takes a
-        // FetchClient the test injector cannot provide (NG0201). It is only used for
-        // validateSubscriptionOutbound(), so a spy is enough.
+        // MappingPublishService injects SubscriptionService, whose real constructor takes a
+        // FetchClient the test injector cannot provide (NG0201), so a spy is enough.
         { provide: SubscriptionService, useValue: mockSubscriptionService },
         provideTranslateStub()
       ]
@@ -298,7 +310,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
   describe('ngOnInit', () => {
     it('registers the global context with auto-refresh hidden', async () => {
-      await component.ngOnInit();
+      await initEditor(component);
       expect(mockGlobalContextService.register).toHaveBeenCalledWith(
         'mapping-unified-editor',
         jasmine.objectContaining({ showAutoRefresh: false })
@@ -306,14 +318,14 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('reads mapping/config/deployment from the resolved route data', async () => {
-      await component.ngOnInit();
+      await initEditor(component);
       expect(component.mapping.id).toBe('42');
       expect(component.deploymentMapEntry).toBe(deploymentMapEntry);
       expect(component.stepperViewModel).toBeDefined();
     });
 
     it('opens on the Transformation tab for a regular mapping', async () => {
-      await component.ngOnInit();
+      await initEditor(component);
       expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
     });
 
@@ -321,7 +333,7 @@ describe('MappingUnifiedEditorComponent', () => {
       activatedRoute.snapshot.data['mappingEdit'].mapping = buildMapping({
         transformationType: TransformationType.EXTENSION_JAVA
       });
-      await component.ngOnInit();
+      await initEditor(component);
       expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
@@ -329,7 +341,7 @@ describe('MappingUnifiedEditorComponent', () => {
       activatedRoute.snapshot.data['mappingEdit'].mapping = buildMapping({
         mappingType: MappingType.PROTOBUF_INTERNAL
       });
-      await component.ngOnInit();
+      await initEditor(component);
       expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
@@ -338,7 +350,7 @@ describe('MappingUnifiedEditorComponent', () => {
     // tested directly there (mapping-commit.service.spec.ts). These tests only verify the
     // component delegates to it and applies the result back onto its own fields.
     it('delegates to initializeEditorSession with its own mapping/config/destroy$/callbacks', async () => {
-      await component.ngOnInit();
+      await initEditor(component);
 
       expect(mockStepperService.initializeEditorSession).toHaveBeenCalledWith(
         component.mapping,
@@ -366,14 +378,14 @@ describe('MappingUnifiedEditorComponent', () => {
       });
       mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(session));
 
-      await component.ngOnInit();
+      await initEditor(component);
 
       expect(component.stepperViewModel).toBe(session.stepperViewModel);
       expect(component.templateForm).toBe(session.templateForm);
       expect(component.targetSystem).toBe('X-target');
       expect(component.sourceSystem).toBe('Y-source');
-      expect(component.schemaSource).toEqual({ a: 1 });
-      expect(component.schemaTarget).toEqual({ b: 2 });
+      expect(component.schemaSource as unknown).toEqual({ a: 1 });
+      expect(component.schemaTarget as unknown).toEqual({ b: 2 });
       expect(component.codeEditorHelp).toBe('H');
       expect(component.codeEditorLabel).toBe('L');
       expect(component.feature).toBe(session.feature);
@@ -389,7 +401,7 @@ describe('MappingUnifiedEditorComponent', () => {
       mockStepperService.initializeEditorSession.and.returnValue(
         Promise.resolve(buildEditorSessionResult({ editorTemplatesReadOnly: true }))
       );
-      await component.ngOnInit();
+      await initEditor(component);
       expect(component.editorOptionsSourceTemplate.readOnly).toBe(true);
       expect(component.editorOptionsTargetTemplate.readOnly).toBe(true);
     });
@@ -411,6 +423,39 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(component.isTabVisible(2)).toBe(false); // templates (skipped)
       expect(component.isTabVisible(3)).toBe(false); // transformation (skipped)
       expect(component.isTabVisible(TAB_TEST_MAPPING)).toBe(true); // testing always visible
+    });
+
+    describe('outbound mappings (extra Subscription tab)', () => {
+      beforeEach(() => {
+        component.mapping = buildMapping({ direction: Direction.OUTBOUND });
+      });
+
+      it('has the Subscription tab between general settings and templates, and shifts the later tabs', () => {
+        component.stepperConfiguration = buildConfig({ direction: Direction.OUTBOUND });
+        expect(component.TAB_GENERAL_SETTINGS).toBe(1);
+        expect(component.TAB_SUBSCRIPTION).toBe(2);
+        expect(component.TAB_SELECT_TEMPLATES).toBe(3);
+        expect(component.TAB_DEFINE_TRANSFORMATION).toBe(4);
+        expect(component.TAB_TEST_MAPPING).toBe(5);
+        [0, 1, 2, 3, 4, 5].forEach((i) => expect(component.isTabVisible(i)).toBe(true));
+      });
+
+      it('has no Subscription tab for inbound mappings', () => {
+        component.mapping = buildMapping();
+        component.stepperConfiguration = buildConfig({ direction: Direction.INBOUND });
+        expect(component.layout.hasSubscription).toBe(false);
+        expect(component.TAB_SUBSCRIPTION).toBe(-1);
+        expect(component.TAB_SELECT_TEMPLATES).toBe(2);
+      });
+
+      it('reads advanceFromStepToEndStep in the base numbering: Java extensions skip from Templates, not from Subscription', () => {
+        // 2 = Templates in the base numbering, which is tab 3 once the Subscription tab exists
+        component.stepperConfiguration = buildConfig({ direction: Direction.OUTBOUND, advanceFromStepToEndStep: 2 });
+        expect(component.isTabVisible(component.TAB_SUBSCRIPTION)).toBe(true);
+        expect(component.isTabVisible(component.TAB_SELECT_TEMPLATES)).toBe(true);
+        expect(component.isTabVisible(component.TAB_DEFINE_TRANSFORMATION)).toBe(false);
+        expect(component.isTabVisible(component.TAB_TEST_MAPPING)).toBe(true);
+      });
     });
 
     it('hides the Testing tab for deprecated SUBSTITUTION_AS_CODE mappings', () => {
@@ -527,11 +572,13 @@ describe('MappingUnifiedEditorComponent', () => {
     it('passes the editor state, including both forms, to commitMapping', async () => {
       // Read before the call: a successful commit re-baselines these, replacing the objects.
       const snapshotAtCallTime = component['initialContentSnapshot'];
+      // commitMapping gets a draft copy of the mapping, and the re-baseline then replaces the mapping.
+      const mappingAtCallTime = { ...component.mapping };
 
       await component.onCommitButton();
 
       expect(mockCommitService.commitMapping).toHaveBeenCalledWith(jasmine.objectContaining({
-        mapping: component.mapping,
+        mapping: mappingAtCallTime,
         deploymentMapEntry,
         stepperConfiguration: component.stepperConfiguration,
         sourceTemplate: { a: 1 },
@@ -763,7 +810,7 @@ describe('MappingUnifiedEditorComponent', () => {
 
   describe('Lifecycle', () => {
     it('unregisters the global context and cleans up on destroy', async () => {
-      await component.ngOnInit();
+      await initEditor(component);
       component.ngOnDestroy();
       expect(mockGlobalContextService.unregister).toHaveBeenCalledWith('mapping-unified-editor');
       expect(mockStepperService.cleanup).toHaveBeenCalled();

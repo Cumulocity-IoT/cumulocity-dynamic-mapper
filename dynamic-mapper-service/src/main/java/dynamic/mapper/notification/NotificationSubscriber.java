@@ -29,7 +29,13 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.device.Device;
-import dynamic.mapper.notification.service.*;
+import dynamic.mapper.notification.service.DeviceDiscoveryService;
+import dynamic.mapper.notification.service.MessagingManagementService;
+import dynamic.mapper.notification.service.MqttPushManager;
+import dynamic.mapper.notification.service.NotificationConnectionManager;
+import dynamic.mapper.notification.service.SubscriptionManager;
+import dynamic.mapper.notification.service.SubscriptionQueryService;
+import dynamic.mapper.notification.service.TokenManager;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -95,6 +101,10 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
 
     public boolean isNotificationServiceAvailable(String tenant) {
         return subscriptionManager.isNotificationServiceAvailable(tenant);
+    }
+
+    public SubscriptionManager.ServiceAvailability checkNotificationServiceAvailability(String tenant) {
+        return subscriptionManager.checkNotificationServiceAvailability(tenant);
     }
 
     /**

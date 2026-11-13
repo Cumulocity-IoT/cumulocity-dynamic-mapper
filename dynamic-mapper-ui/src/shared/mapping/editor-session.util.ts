@@ -19,6 +19,7 @@
  */
 import * as jsYaml from 'js-yaml';
 import { DeploymentMapEntry, Mapping } from './mapping.model';
+import type { Template } from './json.model';
 import type { JsonEditorComponent } from '../component/json-editor/json-editor.component';
 import { stripTemplateMetadataTags } from './code-template.util';
 import { stringToBase64 } from './encoding.util';
@@ -30,7 +31,7 @@ import { stringToBase64 } from './encoding.util';
 // docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md.
 
 /** Serializes an extension parameter block to YAML for display in the parameter textarea. */
-export function configurationToYaml(configuration: Record<string, any> | undefined): string {
+export function configurationToYaml(configuration: Record<string, unknown> | undefined): string {
   if (!configuration) {
     return '';
   }
@@ -42,13 +43,13 @@ export function configurationToYaml(configuration: Record<string, any> | undefin
 }
 
 /** Parses the extension parameter textarea's YAML back into an object. */
-export function yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+export function yamlToConfiguration(yaml: string): Record<string, unknown> | undefined {
   if (!yaml?.trim()) {
     return undefined;
   }
   try {
     const parsed = jsYaml.load(yaml);
-    return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+    return (parsed && typeof parsed === 'object') ? parsed as Record<string, unknown> : undefined;
   } catch {
     return undefined;
   }
@@ -57,8 +58,8 @@ export function yamlToConfiguration(yaml: string): Record<string, any> | undefin
 /** Builds the mapping snapshot sent to the Testing step / drawer, optionally including the encoded code. */
 export function buildTestMapping(
   mapping: Mapping,
-  sourceTemplate: any,
-  targetTemplate: any,
+  sourceTemplate: Template | undefined,
+  targetTemplate: Template | undefined,
   mappingCode: string | undefined,
   includeCode: boolean
 ): Mapping {
@@ -84,8 +85,8 @@ export function isConnectorSelectionEmpty(deploymentMapEntry: DeploymentMapEntry
  * Narrowed to two methods so this util neither reaches into the step's editors nor imports it.
  */
 export interface TemplateEditorRef {
-  getSourceTemplate(): any;
-  getTargetTemplate(): any;
+  getSourceTemplate(): Template | undefined;
+  getTargetTemplate(): Template | undefined;
 }
 
 /**
@@ -95,7 +96,7 @@ export interface TemplateEditorRef {
  * path (e.g. some tree-mode interactions) — `.get()` is the library's own source of truth and
  * is never stale.
  */
-export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): any {
+export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): Template | undefined {
   if (!editor) return undefined;
   try {
     return editor.get();
@@ -112,9 +113,9 @@ export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined)
  */
 export function updateTemplatesInEditors(
   templateStepRef: TemplateEditorRef | undefined,
-  currentSourceTemplate: any,
-  currentTargetTemplate: any
-): { sourceTemplate: any; targetTemplate: any } {
+  currentSourceTemplate: Template | undefined,
+  currentTargetTemplate: Template | undefined
+): { sourceTemplate: Template | undefined; targetTemplate: Template | undefined } {
   return {
     sourceTemplate: templateStepRef?.getSourceTemplate() ?? currentSourceTemplate,
     targetTemplate: templateStepRef?.getTargetTemplate() ?? currentTargetTemplate

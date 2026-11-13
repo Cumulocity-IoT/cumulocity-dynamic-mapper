@@ -83,6 +83,22 @@ public class MappingStatus implements Serializable {
     }
 
     /**
+     * Constructor with all counters except {@link #messagesDuplicate}, kept for callers that built a status
+     * before that field existed. Equivalent to the full constructor with {@code messagesDuplicate = 0}.
+     */
+    public MappingStatus(String id, String name, String identifier, Direction direction,
+            String mappingTopic, String publishTopic, long messagesReceived, long errors,
+            long currentFailureCount, String loadingError, String cursor,
+            long messagesProcessed, long messagesFiltered, long lastMessageAt, long lastErrorAt, String lastError,
+            long requestsCreated, long requestsFailed, long warnings, long timedMessages,
+            long processingTimeTotalMs, long processingTimeMaxMs) {
+        this(id, name, identifier, direction, mappingTopic, publishTopic, messagesReceived, errors,
+                currentFailureCount, loadingError, cursor, messagesProcessed, messagesFiltered, lastMessageAt,
+                lastErrorAt, lastError, requestsCreated, requestsFailed, warnings, timedMessages,
+                processingTimeTotalMs, processingTimeMaxMs, 0);
+    }
+
+    /**
      * Pre-outcome-counters constructor (the shape with {@code cursor}, before
      * {@code messagesProcessed} and friends existed). Equivalent to the full constructor with all
      * outcome counters at zero and no last-message / last-error information.
@@ -253,6 +269,14 @@ public class MappingStatus implements Serializable {
     @Schema(description = "Slowest single message in milliseconds", example = "420")
     public volatile long processingTimeMaxMs = 0;
 
+    /**
+     * Subset of {@link #messagesFiltered} that a mapping dropped because the filter function
+     * {@code $isDuplicate} reported a repeat. Declared last: the generated all-args constructor takes
+     * the fields in declaration order, and {@link #snapshot()} is its only caller.
+     */
+    @Schema(description = "Messages dropped as repeats by the $isDuplicate filter function; a subset of messagesFiltered", example = "3")
+    public volatile long messagesDuplicate = 0;
+
     /** Caps {@link #lastError}: it is persisted with the status and shown in a table cell. */
     public static final int MAX_LAST_ERROR_LENGTH = 500;
 
@@ -291,6 +315,7 @@ public class MappingStatus implements Serializable {
         timedMessages = 0;
         processingTimeTotalMs = 0;
         processingTimeMaxMs = 0;
+        messagesDuplicate = 0;
         loadingError = "";
     }
 
@@ -304,7 +329,7 @@ public class MappingStatus implements Serializable {
                 messagesReceived, errors, currentFailureCount, loadingError, cursor,
                 messagesProcessed, messagesFiltered, lastMessageAt, lastErrorAt, lastError,
                 requestsCreated, requestsFailed, warnings, timedMessages,
-                processingTimeTotalMs, processingTimeMaxMs);
+                processingTimeTotalMs, processingTimeMaxMs, messagesDuplicate);
     }
 
     /**
@@ -329,6 +354,12 @@ public class MappingStatus implements Serializable {
     public synchronized void recordFiltered(long now) {
         messagesFiltered++;
         lastMessageAt = now;
+    }
+
+    /** Records a message dropped as a repeat. Also counts as filtered, see {@link #messagesDuplicate}. */
+    public synchronized void recordDuplicate(long now) {
+        recordFiltered(now);
+        messagesDuplicate++;
     }
 
     /**

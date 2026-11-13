@@ -22,7 +22,8 @@
 // Side-effect import first: shared/mapping/* have a circular import that only resolves when the
 // `shared` barrel is evaluated before them (see mapping-stepper.component.ts).
 import '../../shared';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import type { TemplateEditorRef } from '../../shared/mapping/editor-session.util';
+import { Component, computed, effect, EventEmitter, OnInit, Output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -35,18 +36,19 @@ import { provideTranslateStub } from '../../shared/testing/translate-stub';
 
 @Component({ selector: 'd11r-test-editor-host', template: '', standalone: true })
 class TestEditorHostComponent extends MappingEditorBase {
-  mapping = {
-    direction: Direction.INBOUND,
-    mappingType: MappingType.JSON,
-    transformationType: TransformationType.JSONATA,
-    substitutions: [],
-    sourceTemplate: '{}',
-    targetTemplate: '{}'
-  } as unknown as Mapping;
-  stepperConfiguration = { direction: Direction.INBOUND, persistence: 'create' } as StepperConfiguration;
-  templateStepRef = undefined as any;
-  codeEditor = undefined as any;
-  currentStepIndex = 0;
+  constructor() {
+    super();
+    this.mapping = {
+      direction: Direction.INBOUND,
+      mappingType: MappingType.JSON,
+      transformationType: TransformationType.JSONATA,
+      substitutions: [],
+      sourceTemplate: '{}',
+      targetTemplate: '{}'
+    } as unknown as Mapping;
+    this.stepperConfiguration = { direction: Direction.INBOUND, persistence: 'create' } as StepperConfiguration;
+  }
+  templateStepRef = signal<TemplateEditorRef | undefined>(undefined);
   protected readonly substitutionStepIndex = 3;
 
   // protected members under test
@@ -55,6 +57,12 @@ class TestEditorHostComponent extends MappingEditorBase {
   enterTransformationStep() { this.enterTransformation(); }
   enterTestingStep() { this.enterTesting(); }
   enqueue(handler: () => Promise<void>) { return this.enqueueTransition(handler); }
+  rendered() { return this.whenRendered(); }
+  useCodeSection(section: { writeCode: (code: string) => void }) { Object.assign(this, { codeSection: () => section }); }
+  get alerts() { return this.alertService; }
+  patch(patch: Partial<Mapping>) { this.patchMapping(patch); }
+  update(recipe: (draft: Mapping) => void) { this.updateMapping(recipe); }
+  withDraft<T>(run: (draft: Mapping) => Promise<T>) { return this.withMappingDraft(run); }
 }
 
 describe('MappingEditorBase', () => {
@@ -63,7 +71,7 @@ describe('MappingEditorBase', () => {
 
   beforeEach(() => {
     stepperService = jasmine.createSpyObj<MappingStepperService>('MappingStepperService', [
-      'loadExtensions', 'computeExtensionItems', 'refreshSubstitutionValidity', 'cleanup'
+      'loadExtensions', 'computeExtensionItems', 'refreshSubstitutionValidity', 'cleanup', 'registerCompletionProvider', 'computeCodeFromTemplate'
     ]);
     stepperService.loadExtensions.and.resolveTo(new Map());
     stepperService.computeExtensionItems.and.returnValue(['ext']);
@@ -192,8 +200,132 @@ describe('MappingEditorBase', () => {
     it('onTestingSourceTemplateChanged keeps the host template and the mapping source template in step', () => {
       host.onTestingSourceTemplateChanged({ a: 2 });
 
-      expect(host.sourceTemplate).toEqual({ a: 2 });
+      expect(host.sourceTemplate as unknown).toEqual({ a: 2 });
       expect(JSON.parse(host.mapping.sourceTemplate)).toEqual({ a: 2 });
+    });
+  });
+
+  describe('mapping state', () => {
+    it('replaces the mapping object on every change and leaves the previous object untouched', () => {
+      const before = host.mapping;
+
+      host.onFilterMappingChange('$exists(foo)');
+
+      expect(host.mapping).not.toBe(before);
+      expect(before.filterMapping).toBeUndefined();
+      expect(host.mapping.filterMapping).toBe('$exists(foo)');
+    });
+
+    it('notifies a computed slice only when that value changes', () => {
+      const slice = TestBed.runInInjectionContext(() => computed(() => host.mappingSignal().filterMapping));
+      let runs = 0;
+      TestBed.runInInjectionContext(() => effect(() => { slice(); runs++; }));
+      TestBed.tick();
+      expect(runs).toBe(1);
+
+      host.patch({ name: 'unrelated' } as Partial<Mapping>);
+      TestBed.tick();
+      expect(runs).toBe(1);
+
+      host.onFilterMappingChange('changed');
+      TestBed.tick();
+      expect(runs).toBe(2);
+      expect(slice()).toBe('changed');
+    });
+
+    it('updateMapping publishes a copy, including a copy of the extension the recipe writes into', () => {
+      host.patch({ extension: { extensionName: 'a' } } as Partial<Mapping>);
+      const before = host.mapping;
+
+      host.update(draft => { draft.extension.extensionName = 'b'; });
+
+      expect(host.mapping).not.toBe(before);
+      expect(before.extension.extensionName).toBe('a');
+      expect(host.mapping.extension.extensionName).toBe('b');
+    });
+
+    it('withMappingDraft adopts what the callback changed and keeps an edit made while it ran', async () => {
+      const result = await host.withDraft(async draft => {
+        host.onFilterMappingChange('edited meanwhile');
+        draft.version = '7';
+        return 'done';
+      });
+
+      expect(result).toBe('done');
+      expect(host.mapping.version).toBe('7');
+      expect(host.mapping.filterMapping).toBe('edited meanwhile');
+    });
+
+    it('withMappingDraft adopts the changes even when the callback throws', async () => {
+      await expectAsync(host.withDraft(async draft => {
+        draft.version = '3';
+        throw new Error('boom');
+      })).toBeRejectedWithError('boom');
+
+      expect(host.mapping.version).toBe('3');
+    });
+
+    it('withMappingDraft leaves the mapping object alone when nothing changed', async () => {
+      const before = host.mapping;
+
+      await host.withDraft(async () => undefined);
+
+      expect(host.mapping).toBe(before);
+    });
+  });
+
+  describe('whenRendered', () => {
+    it('stays pending until Angular has rendered, then resolves', async () => {
+      let resolved = false;
+      const rendered = host.rendered().then(() => { resolved = true; });
+
+      await Promise.resolve();
+      expect(resolved).toBeFalse();
+
+      TestBed.tick();
+      await rendered;
+      expect(resolved).toBeTrue();
+    });
+  });
+
+  describe('replacing the code from a template', () => {
+    let section: jasmine.SpyObj<{ writeCode: (code: string) => void }>;
+
+    beforeEach(() => {
+      section = jasmine.createSpyObj('section', ['writeCode']);
+      host.useCodeSection(section);
+    });
+
+    it('sets the code and writes it into the editor right away', () => {
+      host.templateId = 'INBOUND_SMART_FUNCTION' as never;
+      stepperService.computeCodeFromTemplate.and.returnValue('function onMessage() {}');
+
+      host.onSelectCodeTemplate();
+
+      expect(host.mappingCode).toBe('function onMessage() {}');
+      expect(section.writeCode).toHaveBeenCalledOnceWith('function onMessage() {}');
+    });
+
+    it('warns instead of failing silently when the selected template is not found', () => {
+      host.templateId = 'gone' as never;
+      host.mappingCode = 'untouched';
+      stepperService.computeCodeFromTemplate.and.returnValue(undefined);
+
+      host.onSelectCodeTemplate();
+
+      expect(host.alerts.warning).toHaveBeenCalled();
+      expect(host.mappingCode).toBe('untouched');
+      expect(section.writeCode).not.toHaveBeenCalled();
+    });
+
+    it('does nothing, without a warning, when no template is selected', () => {
+      host.templateId = undefined;
+      stepperService.computeCodeFromTemplate.and.returnValue(undefined);
+
+      host.onSelectCodeTemplate();
+
+      expect(host.alerts.warning).not.toHaveBeenCalled();
+      expect(section.writeCode).not.toHaveBeenCalled();
     });
   });
 

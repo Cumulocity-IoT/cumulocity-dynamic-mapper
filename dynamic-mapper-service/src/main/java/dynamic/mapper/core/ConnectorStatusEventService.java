@@ -131,11 +131,14 @@ public class ConnectorStatusEventService {
 
                 try {
                     semaphore().acquire();
-                    EventRepresentation created = eventApi.create(er);
-                    return created.getId();
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     log.error("{} - Failed to acquire semaphore for creating connector status event", tenant, e);
                     return null;
+                }
+                try {
+                    EventRepresentation created = eventApi.create(er);
+                    return created.getId();
                 } catch (SDKException e) {
                     log.warn("{} - Failed to create connector status event: {}", tenant, e.getMessage());
                     return null;
@@ -166,9 +169,13 @@ public class ConnectorStatusEventService {
 
                 try {
                     semaphore().acquire();
-                    eventApi.update(er);
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     log.error("{} - Failed to acquire semaphore for updating connector status event", tenant, e);
+                    return;
+                }
+                try {
+                    eventApi.update(er);
                 } catch (SDKException e) {
                     log.warn("{} - Failed to update connector status event {}: {}",
                             tenant, eventId.getValue(), e.getMessage());

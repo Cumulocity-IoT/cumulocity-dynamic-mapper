@@ -54,13 +54,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.reflect.Field;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SubscriptionManagerTest {
 
@@ -531,6 +545,41 @@ class SubscriptionManagerTest {
                 .get(5, TimeUnit.SECONDS);
 
         verify(subscriptionAPI, atLeastOnce()).getSubscriptionsByFilter(any());
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_dedupLookupFails_doesNotCreateSubscription() {
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenThrow(new RuntimeException("c8y unavailable"));
+
+        var future = subscriptionManager.subscribeDeviceAndConnect("t1", morWithId("device-9"), API.ALL,
+                Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+        org.junit.jupiter.api.Assertions.assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> future.get(5, TimeUnit.SECONDS));
+        verify(subscriptionAPI, never()).subscribe(any());
+    }
+
+    @Test
+    void updateSubscriptionByType_lookupFails_doesNotOverwriteExistingTypes() {
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenThrow(new RuntimeException("c8y unavailable"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> subscriptionManager.updateSubscriptionByType("t1", java.util.List.of("newType")));
+        verify(subscriptionAPI, never()).subscribe(any());
+        verify(subscriptionAPI, never()).delete(
+                any(com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation.class));
+    }
+
+    @Test
+    void checkNotificationServiceAvailability_distinguishesAbsentFromTransientFailure() {
+        doThrow(new com.cumulocity.sdk.client.SDKException(404, "not found")).when(subscriptionAPI).getSubscriptions();
+        org.junit.jupiter.api.Assertions.assertEquals(SubscriptionManager.ServiceAvailability.UNAVAILABLE,
+                subscriptionManager.checkNotificationServiceAvailability("t1"));
+
+        doThrow(new com.cumulocity.sdk.client.SDKException(503, "down")).when(subscriptionAPI).getSubscriptions();
+        org.junit.jupiter.api.Assertions.assertEquals(SubscriptionManager.ServiceAvailability.UNKNOWN,
+                subscriptionManager.checkNotificationServiceAvailability("t1"));
+        org.junit.jupiter.api.Assertions.assertFalse(subscriptionManager.isNotificationServiceAvailable("t1"));
     }
 
     @Test

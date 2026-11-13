@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { qosLabel } from '../../shared';
@@ -25,6 +25,7 @@ import { qosLabel } from '../../shared';
 @Component({
   selector: 'd11r-mapping-renderer-qos',
   template: `<span [attr.data-cy]="'dm-mapping-qos-' + context.item.id">{{ qosLabel }}</span>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true
 })
 export class QosRendererComponent {

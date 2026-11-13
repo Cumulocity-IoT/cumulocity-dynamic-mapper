@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { Component, ViewEncapsulation, ChangeDetectionStrategy, input } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import {
   connectorStatusToSeverity,
@@ -38,11 +38,12 @@ import {
   selector: 'd11r-connector-status-history',
   templateUrl: 'connector-status-history.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CommonModule, CoreModule]
 })
 export class ConnectorStatusHistoryComponent {
-  @Input() history: ConnectorStatusHistory;
+  readonly history = input<ConnectorStatusHistory>();
 
   getSeverityClass(status: ConnectorStatus): string {
     return getSeverityBadgeClass(connectorStatusToSeverity(status));
@@ -51,7 +52,7 @@ export class ConnectorStatusHistoryComponent {
   /** "+<elapsed>" label for the gap since the previous entry, or `null` for the first entry / an
    * unparsable timestamp (in which case the caller renders nothing). */
   getElapsedSincePrevious(index: number): string | null {
-    const entries = this.history?.history;
+    const entries = this.history()?.history;
     if (!entries || index <= 0) {
       return null;
     }

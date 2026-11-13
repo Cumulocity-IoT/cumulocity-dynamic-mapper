@@ -72,7 +72,7 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     emitted = [];
     alertService = jasmine.createSpyObj('AlertService', ['info', 'warning']);
     refresh = jasmine.createSpy('refreshSubstitutionValidity');
-    step.mapping = mapping;
+    step.mapping = () => mapping;
     step.substitutionService = new SubstitutionManagementService();
     step.alertService = alertService;
     step.translateService = { instant: interpolateMessage };
@@ -93,21 +93,18 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(step.selectedSubstitution).toBe(0); // a row above the selected one was removed
   });
 
+  it('revalidates against the list that was just announced, not the input the host has not replaced yet', () => {
+    step.onDeleteSubstitution(0);
+
+    const checked = refresh.calls.mostRecent().args[0];
+    expect(checked.substitutions.map((s: Substitution) => s.pathSource)).toEqual(['$.b']);
+  });
+
   it('delete of an index outside the list announces nothing', () => {
     step.onDeleteSubstitution(7);
 
     expect(emitted).toEqual([]);
     expect(refresh).not.toHaveBeenCalled();
-  });
-
-  it('an in-grid edit is announced as a new list and leaves the old substitution untouched', () => {
-    const original = mapping.substitutions[1];
-
-    step.onGridSubstitutionPatch({ index: 1, patch: { expandArray: true } });
-
-    expect(emitted[0][1].expandArray).toBeTrue();
-    expect(original.expandArray).toBeFalse();
-    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('a replaced duplicate target is reported to the user', () => {
@@ -118,6 +115,33 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(emitted[0].map(s => s.pathSource)).toEqual(['$.new', '$.b']);
     expect(alertService.info).toHaveBeenCalledWith(jasmine.stringContaining('Replaced substitution # 1'));
     expect(step.selectedSubstitution).toBe(-1);
+  });
+
+  it('adds the options chosen in the editor, then resets them for the next substitution', () => {
+    step.substitutionModel = {
+      pathSource: '$.new', pathTarget: '$.tgtNew', expandArray: true, repairStrategy: RepairStrategy.IGNORE,
+      sourceExpression: { valid: true }, targetExpression: { valid: true }
+    };
+
+    step.onAddSubstitution();
+
+    expect(emitted[0][2]).toEqual(jasmine.objectContaining({ expandArray: true, repairStrategy: RepairStrategy.IGNORE }));
+    expect(step.substitutionModel.expandArray).toBeFalse();
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.DEFAULT);
+  });
+
+  it('save adds when no row is selected and updates when one is', () => {
+    step.onAddSubstitution = jasmine.createSpy('add');
+    step.onUpdateSubstitution = jasmine.createSpy('update');
+
+    step.selectedSubstitution = -1;
+    step.onSaveSubstitution();
+    expect(step.onAddSubstitution).toHaveBeenCalledTimes(1);
+    expect(step.onUpdateSubstitution).not.toHaveBeenCalled();
+
+    step.selectedSubstitution = 1;
+    step.onSaveSubstitution();
+    expect(step.onUpdateSubstitution).toHaveBeenCalledTimes(1);
   });
 
   it('adding an invalid substitution warns and announces nothing', () => {
@@ -148,5 +172,132 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
 
     expect(emitted).toEqual([]);
     expect(step.cancelEditSubstitution).not.toHaveBeenCalled();
+  });
+});
+
+describe('MappingSubstitutionStepComponent async results (OnPush)', () => {
+  let step: any;
+  let markForCheck: jasmine.Spy;
+  let stepperService: jasmine.SpyObj<any>;
+
+  beforeEach(() => {
+    // Exercised without a TestBed, like the specs above: only what the methods read is set.
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    markForCheck = jasmine.createSpy('markForCheck');
+    stepperService = jasmine.createSpyObj('MappingStepperService', [
+      'evaluateSourceExpression', 'evaluateTargetExpression', 'setTargetCustomMessage'
+    ]);
+    const control = { setErrors: jasmine.createSpy('setErrors') };
+    step.cdr = { markForCheck };
+    step.stepperService = stepperService;
+    step.translateService = { instant: interpolateMessage };
+    step.substitutionFormly = { get: () => control };
+    step.substitutionModel = { pathSource: '$.a', pathTarget: '$.b' };
+  });
+
+  // The evaluation runs after an await, from the debounced input or when the host selects a row, so no
+  // event of this view marks the step; it has to mark itself, whether the evaluation succeeds or fails.
+  it('marks itself for checking after a source expression is evaluated', async () => {
+    stepperService.evaluateSourceExpression.and.resolveTo({ result: '1', resultType: 'Number', valid: true });
+    await step.updateSourceExpressionResult('$.a');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a source expression fails', async () => {
+    stepperService.evaluateSourceExpression.and.rejectWith(new Error('bad'));
+    await step.updateSourceExpressionResult('$.a');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a target expression is evaluated', async () => {
+    stepperService.evaluateTargetExpression.and.resolveTo({ result: '1', resultType: 'Number', valid: true });
+    await step.updateTargetExpressionResult('$.b');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+
+  it('marks itself for checking after a target expression fails', async () => {
+    stepperService.evaluateTargetExpression.and.rejectWith(new Error('bad'));
+    await step.updateTargetExpressionResult('$.b');
+    expect(markForCheck).toHaveBeenCalled();
+  });
+});
+
+describe('MappingSubstitutionStepComponent editor options', () => {
+  let step: any;
+
+  beforeEach(() => {
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    step.substitutionModel = { expandArray: false, repairStrategy: RepairStrategy.DEFAULT };
+    step.translateService = { instant: (s: string) => s, getCurrentLang: () => 'en' };
+    step.repairStrategyOptionsCache = new Map();
+  });
+
+  it('enabling expand as array resets an array-only repair strategy', () => {
+    step.substitutionModel.repairStrategy = RepairStrategy.USE_FIRST_VALUE_OF_ARRAY;
+
+    step.onExpandArrayChange(true);
+
+    expect(step.substitutionModel.expandArray).toBeTrue();
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.DEFAULT);
+  });
+
+  it('enabling expand as array keeps any other repair strategy', () => {
+    step.substitutionModel.repairStrategy = RepairStrategy.IGNORE;
+
+    step.onExpandArrayChange(true);
+
+    expect(step.substitutionModel.repairStrategy).toBe(RepairStrategy.IGNORE);
+  });
+
+  it('offers the array-only strategies only while expand as array is off', () => {
+    const disabled = () => step.repairStrategyOptions().filter((o: any) => o.disabled).map((o: any) => o.value);
+
+    expect(disabled()).toEqual([]);
+
+    step.onExpandArrayChange(true);
+
+    expect(disabled()).toEqual([RepairStrategy.USE_FIRST_VALUE_OF_ARRAY, RepairStrategy.USE_LAST_VALUE_OF_ARRAY]);
+  });
+
+  it('builds the repair strategy options once per language and expand setting', () => {
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+
+    const before = step.repairStrategyOptions();
+    step.onExpandArrayChange(true);
+
+    expect(step.repairStrategyOptions()).not.toBe(before);
+    expect(step.repairStrategyOptions()).toBe(step.repairStrategyOptions());
+  });
+
+  describe('hasFieldError', () => {
+    it('follows the flag the field wrapper shows the message with', () => {
+      step.substitutionFormlyFieldsSource = [{ showError: false }];
+      step.substitutionFormlyFieldsTarget = [{ showError: true }];
+
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+      expect(step.hasFieldError('pathTarget')).toBeTrue();
+    });
+
+    it('falls back to an invalid control the user has touched', () => {
+      step.substitutionFormlyFieldsSource = [{}];
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: false }) };
+      expect(step.hasFieldError('pathSource')).toBeFalse();
+
+      step.substitutionFormly = { get: () => ({ invalid: true, dirty: false, touched: true }) };
+      expect(step.hasFieldError('pathSource')).toBeTrue();
+    });
+  });
+
+  it('outbound mappings and read-only users cannot expand', () => {
+    step.mapping = () => ({ direction: 'INBOUND' });
+    step.stepperConfiguration = () => ({ readOnly: false });
+    expect(step.expandArrayDisabled).toBeFalse();
+
+    step.mapping = () => ({ direction: 'OUTBOUND' });
+    expect(step.expandArrayDisabled).toBeTrue();
+
+    step.mapping = () => ({ direction: 'INBOUND' });
+    step.stepperConfiguration = () => ({ readOnly: true });
+    expect(step.expandArrayDisabled).toBeTrue();
   });
 });

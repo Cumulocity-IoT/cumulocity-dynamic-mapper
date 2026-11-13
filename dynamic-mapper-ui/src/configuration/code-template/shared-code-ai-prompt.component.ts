@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, inject, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AIMessage, AgentChatConfig, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
@@ -36,6 +36,7 @@ import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping
   selector: 'd11r-shared-code-ai-prompt',
   templateUrl: 'shared-code-ai-prompt.component.html',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, AgentChatComponent],
   host: { class: 'd-contents' }
@@ -53,7 +54,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   private _save!: (value: string) => void;
-  private _cancel!: (reason?: any) => void;
+  private _cancel!: (reason?: unknown) => void;
   result: Promise<string> = new Promise((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;
@@ -92,14 +93,14 @@ export class SharedCodeAiPromptComponent implements OnInit {
       const settings = await this.aiAgentService.getAISettings(true);
       if (settings.killSwitch) {
         this.aiCapabilitiesDisabled = true;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
         return;
       }
       this.telemetryEnabled = !settings.telemetryOptOut;
     } catch (error) {
       console.error('Failed to check AI settings before opening the AI assistant:', error);
       this.aiAvailabilityCheckFailed = true;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -120,7 +121,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
       }
     ];
     this.aiChatEnabled = true;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   /**
@@ -155,7 +156,7 @@ export class SharedCodeAiPromptComponent implements OnInit {
       this.generatedCode = candidate;
       this.valid = true;
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   save(): void {

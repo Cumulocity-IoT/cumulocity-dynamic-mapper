@@ -13,22 +13,22 @@
     "reason": "Instructions sent to the AI agent, not UI text."
   },
   {
-    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "file": "src/mapping/step-properties/property-form-fields.ts",
     "text": "plant1/+/+",
     "reason": "Example topic, not prose."
   },
   {
-    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "file": "src/mapping/step-properties/property-form-fields.ts",
     "text": "measurements/+",
     "reason": "Example topic, not prose."
   },
   {
-    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "file": "src/mapping/step-properties/property-form-fields.ts",
     "text": "device/110",
     "reason": "Example topic, not prose."
   },
   {
-    "file": "src/mapping/step-properties/mapping-step-properties.component.ts",
+    "file": "src/mapping/step-properties/property-form-fields.ts",
     "text": "lora_device_type",
     "reason": "Example JSONata expression."
   },
@@ -65,7 +65,7 @@
     "reason": "Product name."
   },
   {
-    "file": "src/mapping/message-explorer/message-explorer.component.ts",
+    "file": "src/mapping/message-explorer/explorer-mapping-context.service.ts",
     "text": "externalId",
     "kind": "externalIdLabel",
     "reason": "Name of a Cumulocity concept shown as code."
@@ -123,5 +123,15 @@
     "file": "src/mapping/prompt/ai-prompt.component.ts",
     "kind": "newMessage",
     "reason": "Message sent to the AI agent, not shown as UI text"
+  },
+  {
+    "file": "src/mapping/step-properties/property-form-fields.ts",
+    "text": "type = 'c8y_Event' and $exists(c8y_Temperature)",
+    "reason": "Example JSONata expression, not prose."
+  },
+  {
+    "file": "src/mapping/step-transformation/mapping-substitution-step.component.ts",
+    "text": "c8y_Temperature.T.value",
+    "reason": "Example JSONata path, not prose."
   }
 ]

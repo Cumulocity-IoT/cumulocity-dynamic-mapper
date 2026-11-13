@@ -384,6 +384,79 @@ class NotificationConnectionManagerTest {
     }
 
     // ------------------------------------------------------------------
+    // Pause while the broker connection is down
+    // ------------------------------------------------------------------
+
+    private dynamic.mapper.processor.outbound.OutboundMessageDispatcher dispatcherFor(
+            String connectorId, boolean holds, boolean connected) {
+        dynamic.mapper.connector.core.client.AConnectorClient connector =
+                mock(dynamic.mapper.connector.core.client.AConnectorClient.class);
+        when(connector.getConnectorIdentifier()).thenReturn(connectorId);
+        when(connector.holdsOutboundWhileDisconnected()).thenReturn(holds);
+        when(connector.isConnected()).thenReturn(connected);
+        dynamic.mapper.configuration.ConnectorConfiguration configuration =
+                mock(dynamic.mapper.configuration.ConnectorConfiguration.class);
+        when(configuration.getEnabled()).thenReturn(true);
+        when(connector.getConnectorConfiguration()).thenReturn(configuration);
+        dynamic.mapper.processor.outbound.OutboundMessageDispatcher dispatcher =
+                mock(dynamic.mapper.processor.outbound.OutboundMessageDispatcher.class);
+        when(dispatcher.getConnectorClient()).thenReturn(connector);
+        when(dispatcherRegistry.getAll(TENANT)).thenReturn(Map.of(connectorId, dispatcher));
+        return dispatcher;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aDisconnectedConnectorHasItsDeviceWebSocketsClosedButNotUnsubscribed() throws Exception {
+        dispatcherFor("connA", true, false);
+        CustomWebSocketClient staticClient = mock(CustomWebSocketClient.class);
+        CustomWebSocketClient dynamicClient = mock(CustomWebSocketClient.class);
+        when(staticClient.isOpen()).thenReturn(true);
+        when(dynamicClient.isOpen()).thenReturn(true);
+        ((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .put(TENANT, new ConcurrentHashMap<>(Map.of("connA", staticClient)));
+        ((Map<String, Map<String, CustomWebSocketClient>>) getField("dynamicDeviceClients"))
+                .put(TENANT, new ConcurrentHashMap<>(Map.of("connA", dynamicClient)));
+
+        manager.syncConnectorAvailability(TENANT);
+
+        verify(staticClient).close();
+        verify(dynamicClient).close();
+        assertFalse(((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .get(TENANT).containsKey("connA"));
+        // closing keeps the subscription, so Cumulocity keeps the unacknowledged messages
+        org.mockito.Mockito.verify(tokenManager, org.mockito.Mockito.never())
+                .unsubscribeDeviceSubscriberByConnector(anyString(), anyString());
+        assertTrue(((Set<String>) getField("pausedConnectors")).contains(TENANT + "|connA"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aConnectorThatDoesNotHoldOutboundIsLeftAlone() throws Exception {
+        dispatcherFor("connA", false, false);
+        CustomWebSocketClient client = mock(CustomWebSocketClient.class);
+        when(client.isOpen()).thenReturn(true);
+        ((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .put(TENANT, new ConcurrentHashMap<>(Map.of("connA", client)));
+
+        manager.syncConnectorAvailability(TENANT);
+
+        org.mockito.Mockito.verify(client, org.mockito.Mockito.never()).close();
+        assertTrue(((Set<String>) getField("pausedConnectors")).isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aConnectedConnectorIsNotPausedAndAPausedOneIsResumed() throws Exception {
+        dispatcherFor("connA", true, true);
+        ((Set<String>) getField("pausedConnectors")).add(TENANT + "|connA");
+
+        manager.syncConnectorAvailability(TENANT);
+
+        assertFalse(((Set<String>) getField("pausedConnectors")).contains(TENANT + "|connA"));
+    }
+
+    // ------------------------------------------------------------------
     // Reflection helpers
     // ------------------------------------------------------------------
 

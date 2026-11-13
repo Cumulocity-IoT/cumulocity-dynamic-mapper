@@ -19,16 +19,16 @@
  */
 
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   inject,
-  Input,
   OnDestroy,
   OnInit,
   Output,
   ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+  ViewEncapsulation, viewChild, input } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
@@ -39,10 +39,13 @@ import {
   ConfirmationModalComponent,
   ContentChanges,
   Direction,
+  isJsonObject,
   JsonEditorComponent,
+  JsonObject,
   Mapping,
   MappingType,
   StepperConfiguration,
+  Template,
   isSubstitutionsAsCode
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
@@ -54,8 +57,8 @@ import { CommonModule } from '@angular/common';
 
 interface TestingModel {
   results: DynamicMapperRequest[];
-  request?: any;
-  response?: any;
+  request?: Template;
+  response?: Template;
   logs?: string[];
 }
 
@@ -74,21 +77,22 @@ function stableStringify(value: unknown): string {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]
 
 
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
-  @Input() mapping!: Mapping;
+  readonly mapping = input<Mapping>();
   /** The Connector tab has changes that are not saved yet; an outbound Live Test ignores them. */
-  @Input() connectorsUnsaved = false;
-  @Input() stepperConfiguration!: StepperConfiguration;
-  @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
-  @Output() sourceTemplateChanged = new EventEmitter<any>();
+  readonly connectorsUnsaved = input(false);
+  readonly stepperConfiguration = input<StepperConfiguration>();
+  readonly updateTestingTemplate = input<ReplaySubject<Mapping>>();
+  @Output() sourceTemplateChanged = new EventEmitter<Template>();
 
-  @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
-  @ViewChild('editorTestingRequest') editorTestingRequest!: JsonEditorComponent;
-  @ViewChild('editorTestingResponse') editorTestingResponse!: JsonEditorComponent;
+  readonly editorTestingPayload = viewChild<JsonEditorComponent>('editorTestingPayload');
+  readonly editorTestingRequest = viewChild<JsonEditorComponent>('editorTestingRequest');
+  readonly editorTestingResponse = viewChild<JsonEditorComponent>('editorTestingResponse');
 
   // Template helpers
   readonly Direction = Direction;
@@ -119,6 +123,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
   private readonly translateService = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
   /**
@@ -132,7 +137,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // State
   testingModel: TestingModel = { results: [] };
   testMapping!: Mapping;
-  sourceTemplate: any;
+  sourceTemplate: Template | undefined;
   sourceSystem = '';
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(-1);
@@ -177,7 +182,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       // Patch a copy rather than mutating this.sourceTemplate in place: the payload editor's
       // [data] input is only re-applied on reference change, and testMapping/mapping.sourceTemplate
       // (the strings actually sent to the backend) must be resynced with the freshly patched id too.
-      const patchedTemplate = { ...this.sourceTemplate };
+      const patchedTemplate = { ...(this.sourceTemplate as JsonObject | undefined) };
       patchC8YTemplateForTesting(patchedTemplate, this.testMapping);
       this.syncPayload(patchedTemplate, undefined, false);
       this.resetTestingModel();
@@ -215,19 +220,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * by an explanation rather than showing inert controls.
    */
   get testingUnavailable(): boolean {
-    return !this.stepperConfiguration?.allowTestTransformation
-      && !this.stepperConfiguration?.allowTestSending;
+    return !this.stepperConfiguration()?.allowTestTransformation
+      && !this.stepperConfiguration()?.allowTestSending;
   }
 
   get liveTestTitle(): string {
-    return this.mapping?.direction === Direction.OUTBOUND
+    return this.mapping()?.direction === Direction.OUTBOUND
       ? gettext('Publishes the result to the connected broker')
       : gettext('Sends the result to Cumulocity using a test device');
   }
 
   get testHelpText(): string {
     const dryRun = this.t(gettext('Dry Run runs the mapping without writing anything to your tenant.'));
-    if (this.mapping?.direction === Direction.OUTBOUND) {
+    if (this.mapping()?.direction === Direction.OUTBOUND) {
       return this.t(gettext('Dry Run runs the mapping without sending anything.'))
         + ' ' + this.t(gettext('Live Test publishes the result to the connected broker and needs a mapping that uses an external id and a Dry Run result.'));
     }
@@ -246,7 +251,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * keeps it disabled for good).
    */
   get liveTestDisabledReason(): string | undefined {
-    if (!this.stepperConfiguration.allowTestSending) {
+    if (!this.stepperConfiguration().allowTestSending) {
       return gettext('Live Test is not available for this combination of payload type and transformation type');
     }
     if (!this.testMapping.useExternalId) {
@@ -281,23 +286,25 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private initializeMapping(): void {
     // A mapping without a direction is treated as inbound; the host's mapping is not modified.
-    const isInbound = (this.mapping.direction ?? Direction.INBOUND) === Direction.INBOUND;
+    const isInbound = (this.mapping().direction ?? Direction.INBOUND) === Direction.INBOUND;
     this.sourceSystem = isInbound ? 'Broker' : 'Cumulocity';
     this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
 
     // Initialize testMapping with the full mapping object
-    this.updateTestMapping(this.mapping);
+    this.updateTestMapping(this.mapping());
 
     // Initialize testing model with the payload
     this.resetTestingModel();
   }
 
   private setupSubscriptions(): void {
-    this.updateTestingTemplate
+    this.updateTestingTemplate()
       .pipe(takeUntil(this.destroy$))
       .subscribe(mapping => {
         this.updateTestMapping(mapping);
         this.resetTestingModel();
+        // OnPush: the host pushes a new test mapping when its templates or code change, outside any event here.
+        this.cdr.markForCheck();
       });
   }
 
@@ -327,9 +334,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private updateEditors(): void {
     // Data is already sorted in displayTestResult(), pass it directly
-    this.editorTestingRequest?.set(this.testingModel.request);
+    this.editorTestingRequest()?.set(this.testingModel.request);
     // Handle null response for test mode (don't try to sort null)
-    this.editorTestingResponse?.set(this.testingModel.response);
+    this.editorTestingResponse()?.set(this.testingModel.response);
   }
 
   private getNextVisibleResultIndex(): number {
@@ -393,6 +400,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading = false;
       this.runningTest = undefined;
+      // OnPush: the results, console, and loading flags all change after awaits, outside any event.
+      this.cdr.markForCheck();
     }
   }
 
@@ -403,15 +412,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * discarded the whole result and its errors; sorting the keys of such text would also have turned it
    * into one entry per character. It is shown as { "payload": <text> } instead, and the caller adds a note.
    */
-  private toEditable(value: unknown): { value: any; wrapped: boolean } {
+  private toEditable(value: unknown): { value: Template | undefined; wrapped: boolean } {
+    // The request and response come from the backend as untyped JSON, so the casts below are at that boundary.
     if (typeof value !== 'string' || value === '') {
-      return { value, wrapped: false };
+      return { value: value as Template | undefined, wrapped: false };
     }
     const parsed = this.tryParse(value);
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (isJsonObject(parsed)) {
       return { value: parsed, wrapped: false };
     }
-    return { value: { payload: parsed === undefined ? value : parsed }, wrapped: true };
+    return { value: { payload: (parsed === undefined ? value : parsed) as Template }, wrapped: true };
   }
 
   private parseRequestResponse(req: DynamicMapperRequest): { request: DynamicMapperRequest; wrapped: boolean } {
@@ -430,7 +440,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // (and store the test-only patched device id in it), and the editor would then report unsaved
   // changes although the user changed nothing.
   // topicSample is only provided when called from the editor onChange handler.
-  private syncPayload(parsedContent: any, topicSample?: string, propagate = false): void {
+  private syncPayload(parsedContent: Template | undefined | null, topicSample?: string, propagate = false): void {
     const sourceTemplateStr = JSON.stringify(parsedContent || {});
     this.sourceTemplate = parsedContent;
     this.testMapping = {
@@ -446,7 +456,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async performTest(sendPayload: boolean, assumeDeviceExists = false): Promise<TestResult> {
     // Always read directly from the editor to capture the latest content,
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
-    this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate, undefined, false);
+    this.syncPayload(this.editorTestingPayload()?.get() ?? this.sourceTemplate, undefined, false);
 
     // Raw-payload types carry their text in a `payload` property. An ANY_PAYLOAD mapping handled by a
     // Java extension can instead have a plain JSON source template (the shipped IN-17 sample): then
@@ -508,7 +518,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
-      if (sendPayload && this.mapping?.direction === Direction.OUTBOUND && this.connectorsUnsaved) {
+      if (sendPayload && this.mapping()?.direction === Direction.OUTBOUND && this.connectorsUnsaved()) {
         this.testingModel.logs.push('INFO ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.')));
       }
       // The errors are listed in the console output; no alert repeats them.
@@ -537,13 +547,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
    */
   describeSendResult(result: TestResult): string {
-    if (this.mapping?.direction === Direction.OUTBOUND) {
+    if (this.mapping()?.direction === Direction.OUTBOUND) {
       return this.describePublishResult(result);
     }
     const first = result.requests?.[0];
     const rawResponse = first?.response;
     const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
-    const id = response?.id;
+    const id = (response as { id?: string } | null | undefined)?.id;
     const api = (first?.api ?? '').toUpperCase();
     const externalId = first?.externalId
       ? ` (${first.externalIdType ? first.externalIdType + ' ' : ''}${first.externalId})`
@@ -605,7 +615,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (connectors) {
       text += ' ' + this.t(gettext('Published through connector(s): {{connectors}}.'), { connectors });
     }
-    if (this.connectorsUnsaved) {
+    if (this.connectorsUnsaved()) {
       text += ' ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.'));
     }
     return text;
@@ -622,7 +632,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private tryParse(value: string): any {
+  private tryParse(value: string): unknown {
     try {
       return JSON.parse(value);
     } catch {
@@ -648,7 +658,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return String(error || '');
   }
 
-  private parseJsonContent(content: Content): any {
+  private parseJsonContent(content: Content): Template | null | undefined {
     if ('text' in content && content.text) {
       try {
         return JSON.parse(content.text);
@@ -701,7 +711,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return 'log';
   }
 
-  private extractTopicSample(contentAsJson: any): string {
+  private extractTopicSample(contentAsJson: Template | null | undefined): string {
     if (!contentAsJson?.[MappingTokens.TOPIC_LEVEL] || !Array.isArray(contentAsJson[MappingTokens.TOPIC_LEVEL])) {
       return '';
     }

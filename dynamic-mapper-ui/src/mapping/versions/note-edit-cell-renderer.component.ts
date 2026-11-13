@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
@@ -30,6 +30,11 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
  * a callback the parent injects per-row. When the callback is absent the input
  * is read-only (canManage=false).
  */
+/** Version rows may carry a callback the grid attaches. */
+interface NoteRow {
+  onNoteChange?: (note: string) => void;
+}
+
 @Component({
   selector: 'd11r-note-edit-cell',
   template: `
@@ -47,6 +52,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       <span></span>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CoreModule, FormsModule]
 })
@@ -63,14 +69,14 @@ export class NoteEditCellRendererComponent implements OnInit {
   }
 
   get canEdit(): boolean {
-    return typeof (this.context.item as any).onNoteChange === 'function';
+    return typeof (this.context.item as NoteRow).onNoteChange === 'function';
   }
 
   onBlur(): void {
     if (this.editValue === this.originalValue) {
       return;
     }
-    const row = this.context.item as any;
+    const row = this.context.item as NoteRow;
     if (typeof row.onNoteChange === 'function') {
       row.onNoteChange(this.editValue);
       this.originalValue = this.editValue;

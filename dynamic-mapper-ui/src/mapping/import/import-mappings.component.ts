@@ -19,13 +19,7 @@
  */
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
-import {
-  ApplicationRef,
-  Component,
-  NgZone,
-  OnDestroy,
-  ViewChild,
-  ViewEncapsulation, inject } from '@angular/core';
+import { ApplicationRef, Component, NgZone, OnDestroy, ViewChild, ViewEncapsulation, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import {
   CoreModule,
   DropAreaComponent,
@@ -40,19 +34,32 @@ import { createCustomUuid, Mapping } from '../../shared';
   templateUrl: './import-mappings.component.html',
   styleUrls: ['./import-mappings.component.style.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports:[CoreModule]
 })
 export class ImportMappingsComponent implements OnDestroy {
   private readonly translateService = inject(TranslateService);
-  @ViewChild(DropAreaComponent) dropAreaComponent;
+  readonly dropAreaComponent = viewChild(DropAreaComponent);
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-  isLoading: boolean = false;
-  isAppCreated: boolean = false;
-  errorMessage: string;
-  resultType: 'success' | 'warning' | 'error' = 'success';
-  resultText: string = '';
-  failedMappings: string[] = [];
+  private readonly isLoadingState = signal<boolean>(false);
+  get isLoading(): boolean { return this.isLoadingState(); }
+  set isLoading(value: boolean) { this.isLoadingState.set(value); }
+  private readonly isAppCreatedState = signal<boolean>(false);
+  get isAppCreated(): boolean { return this.isAppCreatedState(); }
+  set isAppCreated(value: boolean) { this.isAppCreatedState.set(value); }
+  private readonly errorMessageState = signal<string | null>(null);
+  get errorMessage(): string | null { return this.errorMessageState(); }
+  set errorMessage(value: string | null) { this.errorMessageState.set(value); }
+  private readonly resultTypeState = signal<'success' | 'warning' | 'error'>('success');
+  get resultType(): 'success' | 'warning' | 'error' { return this.resultTypeState(); }
+  set resultType(value: 'success' | 'warning' | 'error') { this.resultTypeState.set(value); }
+  private readonly resultTextState = signal<string>('');
+  get resultText(): string { return this.resultTextState(); }
+  set resultText(value: string) { this.resultTextState.set(value); }
+  private readonly failedMappingsState = signal<string[]>([]);
+  get failedMappings(): string[] { return this.failedMappingsState(); }
+  set failedMappings(value: string[]) { this.failedMappingsState.set(value); }
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 

@@ -164,6 +164,8 @@ public class Utils {
     public static final String EXPLORER_DEVICE_SUBSCRIPTION = "DynamicMapperExplorerDeviceSubscription";
     public static final int CONNECTION_TIMEOUT_SECONDS = 30;
     public static final int RECONNECT_INTERVAL_SECONDS = 60;
+    /** How often the device WebSockets are paused or resumed to follow the broker connections. */
+    public static final int CONNECTOR_AVAILABILITY_CHECK_SECONDS = 10;
     /**
      * Waits before each retry after a 409 on the notification WebSocket. Starts short because a
      * deliberate reconnect (old consumer just closed by us) is usually released within seconds,

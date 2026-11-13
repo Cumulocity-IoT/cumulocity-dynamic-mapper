@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 import { MAPPING_STATUS_UNSPECIFIED, MAPPING_STATUS_UNSPECIFIED_LABEL } from '../../mapping/mapping.model';
 
@@ -27,10 +27,12 @@ import { MAPPING_STATUS_UNSPECIFIED, MAPPING_STATUS_UNSPECIFIED_LABEL } from '..
     <span
       [attr.data-cy]="'dm-mapping-name-' + context.item.id"
       [class]="isUnmapped ? 'text-bold' : 'text-normal'"
-      [title]="isUnmapped ? unmappedHint : context.item.id"
+      [title]="isUnmapped ? unmappedHint : displayName"
+      style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden"
       >{{ displayName }}</span
     >
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: []
 })

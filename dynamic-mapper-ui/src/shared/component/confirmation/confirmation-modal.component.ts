@@ -17,14 +17,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  AfterViewInit,
-  Component,
-  Input,
-  OnDestroy,
-  OnInit,
-  ViewChild
-} from '@angular/core';
+import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy, viewChild } from '@angular/core';
 import {
   ConfirmModalComponent,
   CoreModule,
@@ -39,6 +32,7 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'd11r-confirmation-modal',
   templateUrl: 'confirmation-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports:[CoreModule]
 })
@@ -47,7 +41,7 @@ export class ConfirmationModalComponent
 {
   @Input() title: string;
   @Input() message: string;
-  @ViewChild('modalRef', { static: false }) modalRef: ConfirmModalComponent;
+  readonly modalRef = viewChild<ConfirmModalComponent>('modalRef');
   messageTranslated: string;
   closeSubject: Subject<boolean> = new Subject();
   @Input() labels: ModalLabels = {
@@ -66,7 +60,7 @@ export class ConfirmationModalComponent
 
   async ngAfterViewInit() {
     try {
-      await this.modalRef.result;
+      await this.modalRef().result;
       this.onClose();
     } catch (error) {
       this.onDismiss();

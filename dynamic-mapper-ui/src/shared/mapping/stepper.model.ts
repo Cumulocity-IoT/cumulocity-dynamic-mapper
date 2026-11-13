@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import type * as Monaco from 'monaco-editor';
 import { Direction, StepperConfiguration, Substitution } from '../../shared/mapping/mapping.model';
 import { ClassDefinition, ClassOrEnum, EnumDefinition } from './smart-function-api.model';
 import { SMART_FUNCTION_API } from './generated/smart-function-api.generated';
@@ -46,6 +47,66 @@ export const STEP_SELECT_TEMPLATES = 2;
 export const STEP_DEFINE_SUBSTITUTIONS = 3;
 export const STEP_TEST_MAPPING = 4;
 
+/**
+ * The editors' sections. The `STEP_*` constants above number the sections every mapping has and
+ * stay what `StepperConfiguration.advanceFromStepToEndStep` is expressed in. Outbound mappings
+ * have one more section, `subscription`, between general settings and templates, so the position
+ * a section has in the stepper or the tab bar comes from {@link StepLayout}, not from the constants.
+ */
+export type StepId = 'connector' | 'general' | 'subscription' | 'templates' | 'transformation' | 'testing';
+
+const BASE_STEP_ORDER: readonly StepId[] = ['connector', 'general', 'templates', 'transformation', 'testing'];
+
+/** Where each section sits for a direction. Inbound is the base order, outbound adds `subscription`. */
+export class StepLayout {
+  private static readonly cache = new Map<Direction, StepLayout>();
+
+  static for(direction: Direction | undefined): StepLayout {
+    const key = direction === Direction.OUTBOUND ? Direction.OUTBOUND : Direction.INBOUND;
+    let layout = StepLayout.cache.get(key);
+    if (!layout) {
+      layout = new StepLayout(key === Direction.OUTBOUND);
+      StepLayout.cache.set(key, layout);
+    }
+    return layout;
+  }
+
+  readonly steps: readonly StepId[];
+
+  private constructor(readonly hasSubscription: boolean) {
+    this.steps = hasSubscription
+      ? ['connector', 'general', 'subscription', 'templates', 'transformation', 'testing']
+      : BASE_STEP_ORDER;
+  }
+
+  /** Position of a section, or -1 when this direction has no such section. */
+  indexOf(id: StepId): number {
+    return this.steps.indexOf(id);
+  }
+
+  idAt(index: number): StepId | undefined {
+    return this.steps[index];
+  }
+
+  get connector(): number { return this.indexOf('connector'); }
+  get general(): number { return this.indexOf('general'); }
+  get subscription(): number { return this.indexOf('subscription'); }
+  get templates(): number { return this.indexOf('templates'); }
+  get transformation(): number { return this.indexOf('transformation'); }
+  get testing(): number { return this.indexOf('testing'); }
+
+  /**
+   * Position of a section given in the base numbering (`STEP_*`), which is what
+   * `advanceFromStepToEndStep` uses. Sections from templates onward move one place for outbound.
+   */
+  fromBase(baseStep: number): number;
+  fromBase(baseStep: number | undefined): number | undefined;
+  fromBase(baseStep: number | undefined): number | undefined {
+    if (baseStep == null) return undefined;
+    return this.indexOf(BASE_STEP_ORDER[baseStep]);
+  }
+}
+
 // The shape these providers consume, and the table itself — generated from the Smart Function
 // type definitions so the editor cannot describe an API the types do not have. Regenerate with
 // `npm run generate:editor-api` in dynamic-mapper-smart-function; CI fails on a stale file.
@@ -56,7 +117,7 @@ export const STEP_TEST_MAPPING = 4;
  * @param {Monaco} monaco - The Monaco instance
  * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderFlowFunction(monaco: any, direction: Direction = Direction.INBOUND): { dispose: () => void } {
+export function createCompletionProviderFlowFunction(monaco: typeof Monaco, direction: Direction = Direction.INBOUND): { dispose: () => void } {
   // Register flow-specific classes and interfaces
   const allClasses: ClassOrEnum[] = SMART_FUNCTION_API;
 
@@ -213,7 +274,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
     // No ' ': a space triggered the widget on essentially every keystroke of prose inside strings
     // and comments, which made the editor feel noisy without ever offering anything useful.
     triggerCharacters: ['.', '('],
-    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
+    provideCompletionItems: function (model: Monaco.editor.ITextModel, position: Monaco.Position) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -504,7 +565,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
   });
 
   const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
-    provideHover: function(model: any, position: any) {
+    provideHover: function(model: Monaco.editor.ITextModel, position: Monaco.Position) {
       const word = model.getWordAtPosition(position);
       if (!word) return null;
       const w = word.word;
@@ -604,7 +665,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       for (const cls of allClasses) {
         if (cls.name === w) {
           const kind = cls.isEnum ? 'enum' : 'class';
-          const dep = (cls as any).deprecated ? '\n\n⚠️ **DEPRECATED**' : '';
+          const dep = cls.deprecated ? '\n\n⚠️ **DEPRECATED**' : '';
           return { range, contents: [{ value: `\`\`\`typescript\n${kind} ${cls.name}\n\`\`\`\n\n${cls.documentation}${dep}`, isTrusted: true }] };
         }
         if (cls.isEnum) {

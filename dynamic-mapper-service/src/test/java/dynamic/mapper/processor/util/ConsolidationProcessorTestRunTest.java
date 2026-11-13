@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.model.Mapping;
@@ -47,8 +46,7 @@ class ConsolidationProcessorTestRunTest {
     void setUp() {
         mappingService = mock(MappingService.class);
         when(mappingService.getMappingStatus(any(), any(Mapping.class))).thenReturn(mock(MappingStatus.class));
-        processor = new ConsolidationProcessor();
-        ReflectionTestUtils.setField(processor, "mappingService", mappingService);
+        processor = new ConsolidationProcessor(mappingService);
         mapping = Mapping.builder().identifier("m").build();
     }
 

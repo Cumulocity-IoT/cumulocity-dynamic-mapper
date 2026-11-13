@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { IEvent } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 export interface ConnectorStatusEvent {
@@ -51,7 +52,7 @@ export interface ConnectorStatusEvent {
   statusLog?: ConnectorStatusHistory;
   /** The raw Cumulocity event, kept around as a fallback for the collapsible detail panel when
    * there's no statusLog to show (e.g. legacy events created before this fragment existed). */
-  raw?: any;
+  raw?: IEvent;
 }
 
 export enum ConnectorStatus {
@@ -319,7 +320,7 @@ export function getLoggingEventTypeDetails(eventType: LoggingEventType): Logging
  * componentDisplayName, severity, description). Falls back to `LoggingEventTypeMap`
  * for legacy events created before `d11r_metadata` was added.
  */
-export function getEventMetadata(event: { type?: string; [key: string]: any }): EventMetadata | null {
+export function getEventMetadata(event: IEvent): EventMetadata | null {
   const metadata = event?.['d11r_metadata'];
   if (metadata) {
     return metadata as EventMetadata;
@@ -356,7 +357,7 @@ export function getSeverityBadgeClass(severity: string): string {
  * only `d11r_connector` misses every non-connector event. Returns null for events without a
  * subject (e.g. system-wide events).
  */
-export function getEventSubject(event: { type?: string; [key: string]: any }): string | null {
+export function getEventSubject(event: IEvent): string | null {
   const component = getEventMetadata(event)?.component;
   const fragment = (component && event?.[component]) || event?.['d11r_connector'];
   if (!fragment) {

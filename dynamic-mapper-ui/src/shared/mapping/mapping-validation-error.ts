@@ -62,11 +62,18 @@ export class MappingValidationError extends Error {
   }
 }
 
+/** The error body the backend returns for a rejected mapping or request. */
+export interface BackendErrorBody {
+  errors?: string[];
+  details?: ValidationIssue[];
+  message?: string;
+}
+
 /**
  * Builds the right error type from a parsed backend error body: a MappingValidationError when the
  * body carries validation codes, otherwise a plain Error with the same message as before.
  */
-export function toBackendError(body: any, message: string): Error {
+export function toBackendError(body: BackendErrorBody | null | undefined, message: string): Error {
   const errors: string[] = Array.isArray(body?.errors) ? body.errors : [];
   const details: ValidationIssue[] = Array.isArray(body?.details) ? body.details : [];
   return errors.length > 0 || details.length > 0
