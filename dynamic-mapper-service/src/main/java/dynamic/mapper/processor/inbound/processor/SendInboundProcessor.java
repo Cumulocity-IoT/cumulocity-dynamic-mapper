@@ -243,7 +243,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             mergedRequests.add(request);
         }
-        context.setRequests(mergedRequests);
+        context.replaceRequests(mergedRequests);
 
         log.info("{} - Merged {} measurement requests into one bulk request with {} measurements",
                 tenant, measurementRequests.size(), combinedMeasurements.size());
@@ -407,9 +407,9 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            if (context.getCurrentRequest() != null) {
-                context.getCurrentRequest().setError(e);
-            }
+            // The error belongs to THIS request. getCurrentRequest() is the LAST request of the context,
+            // so marking it here flagged an unrelated (often not yet sent) request as failed whenever
+            // the failing request was not the last one.
             request.setError(e);
             throw e;
         }

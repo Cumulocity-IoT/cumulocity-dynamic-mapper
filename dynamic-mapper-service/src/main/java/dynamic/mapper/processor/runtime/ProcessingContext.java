@@ -129,11 +129,19 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object rawPayload;
 
-    // Thread-safe: the parallel-request-processing route (direct:processRequestsInParallel)
-    // runs SendInboundProcessor concurrently across virtual threads against this SAME
-    // ProcessingContext, and each leg may call addError() on failure.
+    // Result channels (requests, errors, warnings, logs).
+    //
+    // Writers: the pipeline of one mapping runs on ONE worker thread, so normally there is a single
+    // writer. A mapping that matches a message together with others gets its own context, so contexts
+    // are never shared between mapping workers. The collections are still concurrent because a Smart
+    // Function / extension callback or a cancelling timeout thread can touch the context while the
+    // worker is running.
+    //
+    // Readers: the thread that waits on the ProcessingResultWrapper future. It only reads the contexts
+    // after Future.get() returned (happens-before), or - on a timeout - does not read them at all.
+    // `requests` is volatile because replaceRequests() swaps the whole list.
     @Builder.Default
-    private List<DynamicMapperRequest> requests = new CopyOnWriteArrayList<DynamicMapperRequest>();
+    private volatile List<DynamicMapperRequest> requests = new CopyOnWriteArrayList<DynamicMapperRequest>();
 
     @Builder.Default
     private List<Exception> errors = new CopyOnWriteArrayList<Exception>();
@@ -200,6 +208,10 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     private final List<dynamic.mapper.processor.inbound.MessageDeduplicationService.Claim> deduplicationClaims =
             new CopyOnWriteArrayList<>();
+
+    @Getter(lombok.AccessLevel.NONE)
+    @Setter(lombok.AccessLevel.NONE)
+    private final java.util.concurrent.atomic.AtomicBoolean outcomeRecorded = new java.util.concurrent.atomic.AtomicBoolean();
 
     private String key;
 
@@ -314,19 +326,46 @@ public class ProcessingContext<O> implements AutoCloseable {
     }
 
     /**
+     * True if any request of this context failed. A request failure is not always mirrored into
+     * {@link #getErrors()} (outbound publishing records it on the request only), so a leg that must
+     * be judged as a whole asks this as well as {@link #hasError()}.
+     */
+    public boolean hasFailedRequest() {
+        for (DynamicMapperRequest request : requests) {
+            if (request != null && request.hasError()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True if the leg failed: a context error, or a request that did not go through. */
+    public boolean hasFailure() {
+        return hasError() || hasFailedRequest();
+    }
+
+    /**
      * Adds a request to the processing context.
      *
-     * NOTE: This method is NOT thread-safe due to ArrayList not being thread-safe.
-     * If multiple threads call this method concurrently on the same ProcessingContext,
-     * race conditions may occur (lost updates, ArrayIndexOutOfBoundsException, corrupted state).
-     * Consider synchronizing this method or using a thread-safe list if concurrent access is needed.
+     * <p>Thread-safe. Add and index are taken under one lock, so the returned index is the position
+     * of this request even if another thread adds one at the same time (reading {@code size() - 1}
+     * after an unlocked add can return the index of the other thread's request).
      *
      * @param c8yRequest the request to add
      * @return the index of the added request in the list
      */
-    public int addRequest(DynamicMapperRequest c8yRequest) {
+    public synchronized int addRequest(DynamicMapperRequest c8yRequest) {
         requests.add(c8yRequest);
         return requests.size() - 1;
+    }
+
+    /**
+     * Replaces the request list, for example when measurements are merged into one bulk request. The
+     * new list is always a concurrent one: storing a plain {@code ArrayList} (as {@code setRequests}
+     * allowed) silently dropped the thread-safety the other result channels rely on.
+     */
+    public synchronized void replaceRequests(List<DynamicMapperRequest> newRequests) {
+        this.requests = new CopyOnWriteArrayList<>(newRequests);
     }
 
     /**
@@ -344,15 +383,40 @@ public class ProcessingContext<O> implements AutoCloseable {
     }
 
     /**
-     * Adds an error to the processing context.
-     *
-     * NOTE: This method is NOT thread-safe due to ArrayList not being thread-safe.
-     * If multiple threads call this method concurrently, consider synchronizing or using a thread-safe list.
+     * Adds an error to the processing context. Thread-safe ({@link CopyOnWriteArrayList}).
      *
      * @param processingException the exception to add
      */
     public void addError(ProcessingException processingException) {
         errors.add(processingException);
+    }
+
+    /**
+     * Adds any failure as an error of this context. A {@link ProcessingException} is kept as it is
+     * (never double wrapped); anything else is wrapped with {@code message} so the original exception
+     * stays reachable as its origin, which the HTTP status extraction relies on.
+     */
+    public void addError(Exception e, String message) {
+        if (e instanceof ProcessingException pe) {
+            errors.add(pe);
+        } else {
+            errors.add(new ProcessingException(message, e));
+        }
+    }
+
+    /** Adds a warning. Thread-safe. */
+    public void addWarning(String warning) {
+        warnings.add(warning);
+    }
+
+    /**
+     * Marks the outcome of this leg as booked on the mapping status. Returns {@code true} only for the
+     * first caller. A leg can reach the end of the pipeline twice (a failure after the normal end
+     * routes to the error handler, which consolidates again), and booking it twice would double the
+     * counters of the mapping.
+     */
+    public boolean claimOutcomeRecording() {
+        return outcomeRecorded.compareAndSet(false, true);
     }
 
     /**

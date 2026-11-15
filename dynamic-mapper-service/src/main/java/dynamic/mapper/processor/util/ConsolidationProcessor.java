@@ -61,15 +61,25 @@ public class ConsolidationProcessor extends CommonProcessor {
     }
 
     public void process(ProcessingContext<?> context) throws Exception {
-        if (context != null) {
+        if (context == null) {
+            return;
+        }
+        // A leg can arrive here twice (a failure after the normal end routes to the error handler,
+        // which consolidates again). Book it once; the second visit only gives back the
+        // de-duplication keys, because the failure may be new.
+        if (context.claimOutcomeRecording()) {
             // A clean leg ends the failure streak. Skipped for test runs, which must never
-            // change the runtime status of a mapping.
-            if (!context.hasError() && context.affectsMappingStatus() && context.getMapping() != null) {
+            // change the runtime status of a mapping. A failed request or a cancelled leg is not
+            // clean, although outbound publishing records a failure on the request only.
+            if (!context.hasFailure() && !context.wasCancelledOrInterrupted()
+                    && context.affectsMappingStatus() && context.getMapping() != null) {
                 mappingService.resetFailureCountOnSuccess(context.getTenant(), context.getMapping());
             }
             recordOutcome(context);
-            context.close();
+        } else {
+            releaseDeduplicationClaimsIfNothingWasDelivered(context);
         }
+        context.close();
     }
 
     /**
@@ -80,8 +90,7 @@ public class ConsolidationProcessor extends CommonProcessor {
      * that first key must be given back too.
      */
     private void releaseDeduplicationClaimsIfNothingWasDelivered(ProcessingContext<?> context) {
-        boolean failedRequest = context.getRequests().stream().anyMatch(DynamicMapperRequest::hasError);
-        if (context.hasError() || failedRequest || context.isIgnoreFurtherProcessing()
+        if (context.hasFailure() || context.isIgnoreFurtherProcessing()
                 || context.wasCancelledOrInterrupted()) {
             context.releaseDeduplicationClaims();
         }
@@ -104,10 +113,8 @@ public class ConsolidationProcessor extends CommonProcessor {
         List<DynamicMapperRequest> requests = context.getRequests();
         int failedRequests = (int) requests.stream().filter(DynamicMapperRequest::hasError).count();
         status.recordWork(durationMs, requests.size(), failedRequests, context.getWarnings().size());
-        if (context.hasError()) {
-            List<Exception> errors = context.getErrors();
-            Exception last = errors.get(errors.size() - 1);
-            status.recordError(now, last.getMessage());
+        if (context.hasFailure() || context.wasCancelledOrInterrupted()) {
+            status.recordError(now, failureMessage(context));
         } else if (context.isIgnoreFurtherProcessing()) {
             if (context.isDroppedAsDuplicate()) {
                 status.recordDuplicate(now);
@@ -117,5 +124,22 @@ public class ConsolidationProcessor extends CommonProcessor {
         } else {
             status.recordProcessed(now);
         }
+    }
+
+    /**
+     * The message shown as the mapping's last error: the newest context error, else the first failed
+     * request, else the reason a timeout or interrupt stopped the leg without recording any error.
+     */
+    private static String failureMessage(ProcessingContext<?> context) {
+        List<Exception> errors = context.getErrors();
+        if (!errors.isEmpty()) {
+            return errors.get(errors.size() - 1).getMessage();
+        }
+        for (DynamicMapperRequest request : context.getRequests()) {
+            if (request != null && request.hasError()) {
+                return request.getErrorMessage();
+            }
+        }
+        return "Processing was cancelled before it finished (timeout or interrupt)";
     }
 }

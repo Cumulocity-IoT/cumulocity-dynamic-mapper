@@ -499,15 +499,15 @@ public class ProcessingResultHelper {
         boolean anyError = false;
         int maxStatus = 0;
         for (ProcessingContext<?> context : results) {
+            if (context == null) continue;
             boolean contextError = context.hasError();
             if (contextError) {
                 anyError = true;
                 log.error("{} - Error in processing context for topic: [{}]", tenant, topic);
                 for (Exception error : context.getErrors()) {
-                    if (error instanceof ProcessingException pe
-                            && pe.getOriginException() instanceof SDKException sdk) {
-                        maxStatus = Math.max(maxStatus, sdk.getHttpStatus());
-                    }
+                    // Walks the cause chain: an extension may add a raw SDKException, or one wrapped in
+                    // another exception, and a 5xx hidden there must still cause a retry.
+                    maxStatus = Math.max(maxStatus, httpStatusOf(error));
                 }
             }
             if (includeRequestErrors) {
@@ -527,6 +527,7 @@ public class ProcessingResultHelper {
     private static boolean hasConnectorNotConnectedError(List<? extends ProcessingContext<?>> results) {
         if (results == null) return false;
         for (ProcessingContext<?> context : results) {
+            if (context == null) continue;
             for (Exception error : context.getErrors()) {
                 if (isNotConnected(error)) return true;
             }
@@ -548,7 +549,7 @@ public class ProcessingResultHelper {
     }
 
     /** The HTTP status carried by an error or one of its causes, 0 if none carries one. */
-    private static int httpStatusOf(Throwable error) {
+    public static int httpStatusOf(Throwable error) {
         int status = 0;
         Throwable current = error;
         for (int depth = 0; current != null && depth < 10; depth++) {

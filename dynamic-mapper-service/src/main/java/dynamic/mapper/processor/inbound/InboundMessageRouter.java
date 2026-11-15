@@ -152,8 +152,9 @@ public class InboundMessageRouter extends MessageRoutingSupport {
         // immediately block this one waiting on it — a pure thread-hop with no concurrency
         // benefit, since there is nothing to run in parallel against. Run it inline instead.
         if (validMappings.size() == 1) {
-            return List.of(processSingleInboundMapping(validMappings.get(0), connectorMessage, testing,
-                    serviceConfiguration, resultWrapper));
+            ProcessingContext<Object> single = processSingleInboundMapping(validMappings.get(0), connectorMessage,
+                    testing, serviceConfiguration, resultWrapper);
+            return single == null ? new ArrayList<>() : List.of(single);
         }
 
         // Submitted via ExecutorService.submit (a real FutureTask), not
@@ -174,7 +175,12 @@ public class InboundMessageRouter extends MessageRoutingSupport {
         List<ProcessingContext<Object>> results = new ArrayList<>();
         for (Future<ProcessingContext<Object>> future : futures) {
             try {
-                results.add(future.get());
+                ProcessingContext<Object> leg = future.get();
+                // A mapping that failed before it had a context has nothing to report; callers scan the
+                // result and must never meet a null entry.
+                if (leg != null) {
+                    results.add(leg);
+                }
             } catch (CancellationException | InterruptedException e) {
                 log.warn("{} - Mapping worker cancelled before completing (timeout/shutdown)", tenant);
                 Thread.currentThread().interrupt();

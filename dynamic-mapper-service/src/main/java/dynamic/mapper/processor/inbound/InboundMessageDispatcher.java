@@ -29,7 +29,9 @@ import java.util.concurrent.Future;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.sdk.client.SDKException;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -233,60 +235,45 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 List<ProcessingContext<Object>> contexts = inboundMessageRouter.processInboundMessage(
                         connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
 
-                boolean resend = false;
-                boolean hasError = false;
+                // A 422 means a cached device no longer exists. Only the legs that failed this way are
+                // processed again: resending the whole message to every mapping would send the
+                // requests of the mappings that already succeeded a second time.
+                List<ProcessingContext<Object>> staleDeviceLegs = new ArrayList<>();
                 if (contexts != null) {
-                    for (ProcessingContext<?> context : contexts) {
-                        if (context == null) continue;
-                        int httpStatus = 0;
-                        if (context.hasError()) {
-                            hasError = true;
-                            for (Exception error : context.getErrors()) {
-                                if (error instanceof ProcessingException) {
-                                    if (((ProcessingException) error)
-                                            .getOriginException() instanceof SDKException) {
-                                        if (((SDKException) ((ProcessingException) error).getOriginException())
-                                                .getHttpStatus() > httpStatus) {
-                                            httpStatus = ((SDKException) ((ProcessingException) error).getOriginException())
-                                                    .getHttpStatus();
-                                        }
-                                    }
-                                }
-                            }
-                            if(httpStatus == 422) {
-                                log.info("{} - Removing device from Identity Cache with external ID: {}",
-                                        tenant, context.getCurrentRequest().getExternalId());
-                                ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
-                                this.serviceRegistry.getCacheManager().removeDeviceFromInboundExternalIdCache(tenant, identity);
-                                // Also evict the implicit-device-creation cache
-                                // (IdentityResolutionService.getOrCreateDeviceThreadSafe reads from
-                                // this one, not InboundExternalIdCache above) — otherwise the resend
-                                // below re-substitutes the same stale, no-longer-existing sourceId and
-                                // fails identically. See attic/fix/inconsistant-cache/ISSUE.md.
-                                this.serviceRegistry.getTenantRegistry().removeFromExternalIdCache(tenant, identity);
-                                if(context.getMapping().getCreateNonExistingDevice())
-                                    resend = true;
-                            }
+                    for (ProcessingContext<Object> context : contexts) {
+                        if (context == null || !context.hasFailure()) continue;
+                        if (evictStaleDevice(tenant, context)
+                                && Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
+                            staleDeviceLegs.add(context);
                         }
                     }
                 }
-                if(resend) {
+                if (!staleDeviceLegs.isEmpty()) {
                     if (serviceConfiguration.getLogPayload()) {
                         String payload = dynamic.mapper.processor.util.PayloadClassifier.describeForLog(connectorMessage.getPayload());
                         log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, payload);
                     } else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
-                    contexts = inboundMessageRouter.processInboundMessage(
-                            connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
-                    if (contexts != null) {
-                        for (ProcessingContext<?> retryContext : contexts) {
-                            if (retryContext != null && retryContext.hasError()) {
-                                log.warn("{} - Retry after 422 also failed for topic {}: {}",
-                                        tenant, topic, retryContext.getErrors());
-                            }
+                    List<Mapping> retryMappings = staleDeviceLegs.stream().map(ProcessingContext::getMapping).toList();
+                    List<ProcessingContext<Object>> retried = inboundMessageRouter.processInboundMessage(
+                            connectorMessage, retryMappings, testing, serviceConfiguration, result);
+                    // The result of the message is the legs that were fine plus the retried ones. The failed
+                    // first attempts are replaced, not kept: they would report an error the retry fixed.
+                    List<ProcessingContext<Object>> merged = new ArrayList<>(contexts);
+                    merged.removeAll(staleDeviceLegs);
+                    if (retried != null) {
+                        merged.addAll(retried);
+                    }
+                    contexts = merged;
+                    for (ProcessingContext<Object> retryContext : retried != null ? retried : List.<ProcessingContext<Object>>of()) {
+                        if (retryContext != null && retryContext.hasFailure()) {
+                            log.warn("{} - Retry after 422 also failed for topic {}: {}",
+                                    tenant, topic, retryContext.getErrors());
                         }
                     }
                 }
+                boolean hasError = contexts != null
+                        && contexts.stream().anyMatch(c -> c != null && c.hasFailure());
                 if (hasError && testMapping == null) {
                     inboundErrorCounter.increment();
                 }
@@ -310,6 +297,53 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         result.setProcessingResult((Future) futureProcessingResult);
 
         return result;
+    }
+
+    /**
+     * Evicts the external ID of every request of the leg that failed with HTTP 422 from both device
+     * caches, so a retry resolves the device again instead of substituting the same stale source ID.
+     * The failing request is looked up, not taken as "the last one": a leg can hold several requests
+     * and the failed one is not necessarily the newest (and a leg may hold none at all).
+     *
+     * @return {@code true} if the leg failed with a 422
+     */
+    private boolean evictStaleDevice(String tenant, ProcessingContext<Object> context) {
+        boolean found = false;
+        for (DynamicMapperRequest request : context.getRequests()) {
+            if (request == null || !request.hasError()
+                    || ProcessingResultHelper.httpStatusOf(request.getError()) != 422) {
+                continue;
+            }
+            found = true;
+            String externalId = request.getExternalId() != null ? request.getExternalId() : context.getExternalId();
+            String externalIdType = request.getExternalIdType() != null ? request.getExternalIdType()
+                    : context.getMapping().getExternalIdType();
+            evictExternalId(tenant, externalIdType, externalId);
+        }
+        if (!found) {
+            // The 422 was recorded on the context only (for example by a step that is not a request).
+            for (Exception error : context.getErrors()) {
+                if (ProcessingResultHelper.httpStatusOf(error) == 422) {
+                    found = true;
+                    evictExternalId(tenant, context.getMapping().getExternalIdType(), context.getExternalId());
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    private void evictExternalId(String tenant, String externalIdType, String externalId) {
+        if (externalId == null) {
+            return;
+        }
+        log.info("{} - Removing device from Identity Cache with external ID: {}", tenant, externalId);
+        ID identity = new ID(externalIdType, externalId);
+        this.serviceRegistry.getCacheManager().removeDeviceFromInboundExternalIdCache(tenant, identity);
+        // Also evict the implicit-device-creation cache (IdentityResolutionService.getOrCreateDeviceThreadSafe
+        // reads from this one, not InboundExternalIdCache above) - otherwise the resend re-substitutes the same
+        // stale, no-longer-existing sourceId and fails identically. See attic/fix/inconsistant-cache/ISSUE.md.
+        this.serviceRegistry.getTenantRegistry().removeFromExternalIdCache(tenant, identity);
     }
 
     @Override
