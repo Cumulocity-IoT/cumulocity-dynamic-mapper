@@ -31,6 +31,7 @@ import {
   OnInit,
   inject, viewChild, input, effect, untracked, Injector } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
+import { stringifyJSONPathCustom } from '../../shared/component/json-editor/util';
 import { FormGroup, PristineChangeEvent } from '@angular/forms';
 import {
   AlertService,
@@ -77,6 +78,32 @@ interface RepairStrategyOption {
   label: string;
   description: string;
   disabled: boolean;
+}
+
+/**
+ * Path of the first value in a template: depth first, the keys starting with `_` (helper nodes) last.
+ * Empty objects and arrays hold no value and are skipped. Without any value outside the helper nodes,
+ * the first top-level key is used.
+ */
+export function firstLeafPath(template: unknown): string[] | undefined {
+  if (!template || typeof template !== 'object' || Array.isArray(template)) return undefined;
+  const find = (value: unknown, path: string[]): string[] | undefined => {
+    if (value === null || typeof value !== 'object') return path;
+    const entries: [string, unknown][] = Array.isArray(value)
+      ? value.map((v, i): [string, unknown] => [String(i), v])
+      : Object.entries(value);
+    for (const [key, child] of entries) {
+      const found = find(child, [...path, key]);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const keys = Object.keys(template);
+  for (const key of keys.filter(k => !k.startsWith('_'))) {
+    const found = find((template as Record<string, unknown>)[key], [key]);
+    if (found) return found;
+  }
+  return keys.length ? [keys[0]] : undefined;
 }
 
 @Component({
@@ -195,6 +222,10 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       if (!mapping) return;
       untracked(() => this.refreshSubstitutionValidity(mapping));
     });
+    effect(() => {
+      if (!this.sourceTemplate()) return;
+      untracked(() => afterNextRenderInZone(this.injector, () => this.selectFirstSourceNode()));
+    });
   }
 
   ngOnInit(): void {
@@ -205,32 +236,30 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.initializeSubstitutionModel();
     this.initializeFormlyFields();
     this.updateEditorPermissions();
-    // With nothing defined yet, a node is already picked: it shows how the template, the substitutions
-    // and the source expression belong together.
-    afterNextRenderInZone(this.injector, () => this.selectFirstSourceNode());
   }
 
+  /** Set once the first source node was picked, or when it is not wanted (substitutions exist, code mode). */
+  private firstNodeHandled = false;
+
   /**
-   * Picks the first node of the source template when the mapping has no substitution yet. Skips the
-   * `_TOPIC_LEVEL_`, `_IDENTITY_` and `_CONTEXT_DATA_` helper nodes, which the mapper adds itself,
-   * unless the template holds nothing else.
+   * Picks the first value of the source template when the mapping has no substitution yet: it shows how
+   * the template, the substitutions and the source expression belong together. Helper nodes the mapper
+   * adds itself (`_TOPIC_LEVEL_`, `_IDENTITY_`, `_CONTEXT_DATA_`) are skipped, unless nothing else exists.
+   * The template can arrive after the step opened (wizard), so this runs again when it changes, until it
+   * has found a node.
    */
   private async selectFirstSourceNode(): Promise<void> {
-    if (!this.stepperConfiguration().showEditorSource || this.stepperConfiguration().showCodeEditor) return;
-    if (this.mapping()?.substitutions?.length || this.selectedSubstitution !== -1) return;
-    const editor = this.editorSourceStepSubstitution();
-    if (!editor) return;
-    let template: unknown;
-    try {
-      template = editor.get();
-    } catch {
-      return; // Template in text mode and not valid JSON right now.
+    if (this.firstNodeHandled) return;
+    if (!this.stepperConfiguration().showEditorSource || this.stepperConfiguration().showCodeEditor ||
+      this.mapping()?.substitutions?.length || this.selectedSubstitution !== -1) {
+      this.firstNodeHandled = true;
+      return;
     }
-    if (!template || typeof template !== 'object' || Array.isArray(template)) return;
-    const keys = Object.keys(template);
-    const key = keys.find(k => !k.startsWith('_')) ?? keys[0];
-    if (key === undefined) return;
-    await editor.setSelectionToPath(key);
+    const editor = this.editorSourceStepSubstitution();
+    const path = firstLeafPath(this.sourceTemplate());
+    if (!editor || !path) return;
+    this.firstNodeHandled = true;
+    await editor.setSelectionToPath(stringifyJSONPathCustom(path));
     this.cdr.markForCheck();
   }
 

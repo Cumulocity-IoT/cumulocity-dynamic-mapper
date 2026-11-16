@@ -20,7 +20,7 @@
  */
 
 import '../../shared';
-import { MappingSubstitutionStepComponent } from './mapping-substitution-step.component';
+import { MappingSubstitutionStepComponent, firstLeafPath } from './mapping-substitution-step.component';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { RepairStrategy, Substitution } from '../../shared';
 import { interpolateMessage } from '../../shared/testing/translate-stub';
@@ -109,38 +109,49 @@ describe('MappingSubstitutionStepComponent first source node', () => {
   let editor: jasmine.SpyObj<any>;
 
   const arrange = (template: unknown, substitutions: unknown[] = [], config: any = {}) => {
-    editor = jasmine.createSpyObj('editor', ['get', 'setSelectionToPath']);
-    editor.get.and.returnValue(template);
+    editor = jasmine.createSpyObj('editor', ['setSelectionToPath']);
     editor.setSelectionToPath.and.resolveTo();
     step = Object.create(MappingSubstitutionStepComponent.prototype);
+    step.firstNodeHandled = false;
     step.selectedSubstitution = -1;
     step.mapping = () => ({ substitutions });
+    step.sourceTemplate = () => template;
     step.stepperConfiguration = () => ({ showEditorSource: true, showCodeEditor: false, ...config });
     step.editorSourceStepSubstitution = () => editor;
     step.cdr = jasmine.createSpyObj('cdr', ['markForCheck']);
   };
 
-  it('picks the first template node when no substitution exists', async () => {
-    arrange({ _TOPIC_LEVEL_: [], msg_type: 'x', txt: 'y' });
-    await step.selectFirstSourceNode();
-    expect(editor.setSelectionToPath).toHaveBeenCalledWith('msg_type');
+  it('firstLeafPath goes down to the first value and skips helper nodes', () => {
+    expect(firstLeafPath({ Temperature: { value: 110, unit: 'C' }, time: 't' })).toEqual(['Temperature', 'value']);
+    expect(firstLeafPath({ _TOPIC_LEVEL_: ['a'], mea: [{ tid: 'x' }] })).toEqual(['mea', '0', 'tid']);
+    expect(firstLeafPath({ empty: {}, list: [], txt: 'y' })).toEqual(['txt']);
+    expect(firstLeafPath({ _TOPIC_LEVEL_: ['a'] })).toEqual(['_TOPIC_LEVEL_']);
+    expect(firstLeafPath({})).toBeUndefined();
+    expect(firstLeafPath([1, 2])).toBeUndefined();
+    expect(firstLeafPath(undefined)).toBeUndefined();
   });
 
-  it('falls back to a helper node when the template holds nothing else', async () => {
-    arrange({ _TOPIC_LEVEL_: [] });
+  it('picks the first value when no substitution exists', async () => {
+    arrange({ Temperature: { value: 110, unit: 'C' }, time: 't' });
     await step.selectFirstSourceNode();
-    expect(editor.setSelectionToPath).toHaveBeenCalledWith('_TOPIC_LEVEL_');
+    expect(editor.setSelectionToPath).toHaveBeenCalledWith('Temperature.value');
   });
 
-  it('does nothing once a substitution exists, in code mode, or without a usable template', async () => {
+  it('waits for a template that arrives later, then picks once', async () => {
+    arrange({});
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).not.toHaveBeenCalled();
+
+    step.sourceTemplate = () => ({ a: 1 });
+    await step.selectFirstSourceNode();
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing once a substitution exists or in code mode', async () => {
     arrange({ a: 1 }, [{}]);
     await step.selectFirstSourceNode();
     arrange({ a: 1 }, [], { showCodeEditor: true });
-    await step.selectFirstSourceNode();
-    expect(editor.setSelectionToPath).not.toHaveBeenCalled();
-    arrange([1, 2]);
-    await step.selectFirstSourceNode();
-    arrange({});
     await step.selectFirstSourceNode();
     expect(editor.setSelectionToPath).not.toHaveBeenCalled();
   });
