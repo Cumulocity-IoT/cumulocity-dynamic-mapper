@@ -25,13 +25,22 @@
 #     - the second is dropped: the new fingerprint was recorded, so the repeat is caught again
 #   Expected on top of phase 1: +devices measurements, +devices duplicates, 2*devices more messages received.
 #
-# Transport
-#   MQTT through the active connector, published with mosquitto_pub (one process per device, DM_DD_PARALLEL at
-#   a time). In Cumulocity MQTT Service mode only one client per certificate may connect, so DM_DD_PARALLEL is
-#   forced to 1 and the devices are sent one after the other.
+# Transport (DM_DD_TRANSPORT)
+#   mqtt (default)  Through the active MQTT connector, published with mosquitto_pub (one process per device,
+#                   DM_DD_PARALLEL at a time). The connector hands the messages over in order, so an original
+#                   and its copy are processed one after the other. In Cumulocity MQTT Service mode only one
+#                   client per certificate may connect, so DM_DD_PARALLEL is forced to 1.
+#   http            POSTs to the HTTP connector (<service>/httpConnector/<topic>) with ONE curl process that
+#                   keeps DM_DD_HTTP_PARALLEL requests in flight. Every request is handled on its own thread,
+#                   so an original and its copy are processed at the same moment: this tests that exactly one
+#                   of two simultaneous copies passes. DM_DD_INTERVAL does not apply. curl, not c8y, sends the
+#                   requests, because c8y would rewrite the body (member order, 21.0) and defeat the test.
+#                   Needs C8Y_HOST and either C8Y_TOKEN or C8Y_USER and C8Y_PASSWORD (and C8Y_TENANT).
+#   The device id is a member of the payload, so both transports use the same Smart Function and key.
 #
 # Prerequisites
-#   - Dynamic Mapper service is running, an active MQTT connector, c8y CLI authenticated, jq, mosquitto_pub
+#   - Dynamic Mapper service is running, c8y CLI authenticated, jq
+#   - mqtt: an active MQTT connector and mosquitto_pub;  http: the HTTP connector and curl
 #
 # Tuning (environment)
 #   DM_DD_DEVICES      number of devices                                   (default 50)
@@ -42,6 +51,8 @@
 #   DM_DD_WINDOW       de-duplication window in seconds, 1..3600           (default 30)
 #                      Phase 1 needs it longer than the gap between a message and its copy (milliseconds,
 #                      plus processing lag); phase 2 waits window + 3 s after phase 1, so keep it short.
+#   DM_DD_TRANSPORT    mqtt | http                                         (default mqtt)
+#   DM_DD_HTTP_PARALLEL  requests in flight at the same time (http)        (default 50)
 #   DM_DD_EXPIRY       run phase 2, the window expiry check               (default true)
 #   DM_DD_SETTLE_SECS  max wait for the burst to be processed              (default 120)
 #
@@ -54,7 +65,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=../../integration/test-harness.sh
 source "${SCRIPT_DIR}/../../integration/test-harness.sh"
 
-TEST_TITLE="De-duplication across ${DM_DD_DEVICES:-50} devices"
+TEST_TITLE="De-duplication across ${DM_DD_DEVICES:-50} devices (${DM_DD_TRANSPORT:-mqtt})"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEVICES="${DM_DD_DEVICES:-50}"
@@ -64,6 +75,8 @@ INTERVAL="${DM_DD_INTERVAL:-0.2}"
 PARALLEL="${DM_DD_PARALLEL:-$DEVICES}"
 WINDOW="${DM_DD_WINDOW:-30}"
 EXPIRY="${DM_DD_EXPIRY:-true}"
+TRANSPORT="${DM_DD_TRANSPORT:-mqtt}"
+HTTP_PARALLEL="${DM_DD_HTTP_PARALLEL:-50}"
 SETTLE_SECS="${DM_DD_SETTLE_SECS:-120}"
 
 STAMP="$(date +%s)"
@@ -105,41 +118,50 @@ dm_register_cleanup cleanup
 
 dm_banner "$TEST_TITLE"
 
+case "$TRANSPORT" in
+    mqtt|http) ;;
+    *) dm_error "DM_DD_TRANSPORT must be 'mqtt' or 'http' (got '${TRANSPORT}')" ;;
+esac
+
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_test_setup_and_validate
+if [ "$TRANSPORT" = "mqtt" ]; then
+    dm_test_setup_and_validate
+else
+    dm_wait_for_service
+    command -v curl >/dev/null 2>&1 || dm_error "curl is required for DM_DD_TRANSPORT=http"
+fi
 dm_validate_only_exit
 
-if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ] && [ "$PARALLEL" -gt 1 ]; then
+if [ "$TRANSPORT" = "mqtt" ] && [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ] && [ "$PARALLEL" -gt 1 ]; then
     dm_warn "Cumulocity MQTT Service allows one client per certificate: DM_DD_PARALLEL forced to 1"
     PARALLEL=1
 fi
-dm_info "devices=${DEVICES} messages/device=${MESSAGES} copies=${COPIES} interval=${INTERVAL}s parallel=${PARALLEL} window=${WINDOW}s"
+dm_info "transport=${TRANSPORT} devices=${DEVICES} messages/device=${MESSAGES} copies=${COPIES} interval=${INTERVAL}s parallel=${PARALLEL} window=${WINDOW}s"
 dm_info "published=${PUBLISHED} expected measurements=${EXPECTED_MEASUREMENTS} expected duplicates=${EXPECTED_DUPLICATES}"
 
 # ── Payloads ───────────────────────────────────────────────────────────────────
 # Two spellings of the same JSON value: other member order at both levels, 21.0 versus 21.
-payload_a() {   # <seq> <temperature_int>
-    printf '{"seq":%s,"temperature":%s.0,"meta":{"unit":"C","site":"berlin"},"time":"2026-11-15T10:00:%02dZ"}' \
-        "$1" "$2" "$(($1 % 60))"
+payload_a() {   # <seq> <temperature_int> <external_id>
+    printf '{"device":"%s","seq":%s,"temperature":%s.0,"meta":{"unit":"C","site":"berlin"},"time":"2026-11-15T10:00:%02dZ"}' \
+        "$3" "$1" "$2" "$(($1 % 60))"
 }
-payload_b() {   # <seq> <temperature_int>
-    printf '{"time":"2026-11-15T10:00:%02dZ","meta":{"site":"berlin","unit":"C"},"temperature":%s,"seq":%s}' \
-        "$(($1 % 60))" "$2" "$1"
+payload_b() {   # <seq> <temperature_int> <external_id>
+    printf '{"time":"2026-11-15T10:00:%02dZ","meta":{"site":"berlin","unit":"C"},"temperature":%s,"seq":%s,"device":"%s"}' \
+        "$(($1 % 60))" "$2" "$1" "$3"
 }
 
 # ── Mapping ────────────────────────────────────────────────────────────────────
 SF_CODE=$(cat <<'JSCODE'
 function onMessage(msg, ctx) {
     const payload = msg.getPayload();
-    const config = ctx.getConfig ? ctx.getConfig() : {};
-    const levels = typeof config.topic === 'string' ? config.topic.split('/') : [];
-    const externalId = levels.length > 0 ? levels[levels.length - 1] : null;
+    const externalId = payload['device'];
     if (!externalId) {
         return [];
     }
 
-    // The key is the whole payload as an OBJECT: members are sorted and numbers normalized before hashing.
-    if (ctx.isDuplicate({ device: externalId, reading: payload }, __WINDOW__)) {
+    // The key is the whole payload, device included, as an OBJECT: members are sorted and numbers normalized
+    // before hashing.
+    if (ctx.isDuplicate(payload, __WINDOW__)) {
         return [];
     }
 
@@ -175,7 +197,7 @@ dm_create_mapping "$(jq -cn \
       direction: "INBOUND",
       mappingType: "JSON",
       transformationType: "SMART_FUNCTION",
-      sourceTemplate: "{\"seq\":1,\"temperature\":21.0,\"meta\":{\"unit\":\"C\",\"site\":\"berlin\"},\"time\":\"2026-11-15T10:00:01Z\"}",
+      sourceTemplate: "{\"device\":\"sample\",\"seq\":1,\"temperature\":21.0,\"meta\":{\"unit\":\"C\",\"site\":\"berlin\"},\"time\":\"2026-11-15T10:00:01Z\"}",
       targetTemplate: "{}",
       substitutions: [],
       code: $code,
@@ -190,9 +212,17 @@ dm_create_mapping "$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
-dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
-dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active "$MAPPING_ID"
+if [ "$TRANSPORT" = "mqtt" ]; then
+    dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
+    dm_activate_mapping "$MAPPING_ID"
+    dm_assert_mqtt_topics_active "$MAPPING_ID"
+else
+    # Deploy before activating, and connect the HTTP connector so it rebuilds its inbound mappings
+    dm_deploy_mapping_to_connector "$MAPPING_ID" "HTTP_CONNECTOR_IDENTIFIER"
+    dm_activate_mapping "$MAPPING_ID"
+    dm_connect_connector "HTTP_CONNECTOR_IDENTIFIER"
+    dm_wait 3 "letting the HTTP connector pick up the mapping"
+fi
 
 SINCE=$(dm_now -10)
 DUP_BEFORE=$(dm_mapping_stat "$MAPPING_ID" messagesDuplicate)
@@ -210,24 +240,100 @@ publish_device() {   # <device_number> [phase=1]
     _dm_mqtt_append_tls_args _args
     if [ "$_phase" = "2" ]; then
         # after the window: message 1 reordered (processed again), then as first sent (dropped again)
-        { payload_b 1 21; printf '\n'; sleep "$INTERVAL"; payload_a 1 21; printf '\n'; } | mosquitto_pub "${_args[@]}"
+        { payload_b 1 21 "$_ext"; printf '\n'; sleep "$INTERVAL"; payload_a 1 21 "$_ext"; printf '\n'; } | mosquitto_pub "${_args[@]}"
         return
     fi
     {
         for _seq in $(seq 1 "$MESSAGES"); do
             _temp=$((20 + _seq))
-            payload_a "$_seq" "$_temp"; printf '\n'
+            payload_a "$_seq" "$_temp" "$_ext"; printf '\n'
             for _c in $(seq 1 "$COPIES"); do
-                payload_b "$_seq" "$_temp"; printf '\n'
+                payload_b "$_seq" "$_temp" "$_ext"; printf '\n'
             done
             sleep "$INTERVAL"
         done
         # control: sequence number 1 again, other temperature, so it is not a repeat
-        payload_a 1 99; printf '\n'
+        payload_a 1 99 "$_ext"; printf '\n'
     } | mosquitto_pub "${_args[@]}"
 }
 
+# ── HTTP transport ──────────────────────────────────────────────────────────
+# Base URL of the service: the tenant's host, or DM_SERVICE_HOST for a locally started mapper.
+http_base_url() {
+    local _h
+    if [ -n "${DM_SERVICE_HOST:-}" ]; then
+        _h="${DM_SERVICE_HOST%/}"
+    elif [ -n "${C8Y_HOST:-}" ]; then
+        _h="${C8Y_HOST%/}"
+    else
+        dm_skip_exit "DM_DD_TRANSPORT=http sends with curl and needs C8Y_HOST (or DM_SERVICE_HOST)."
+    fi
+    case "$_h" in http*) ;; *) _h="https://${_h}" ;; esac
+    printf '%s%s' "$_h" "$DM_SERVICE"
+}
+
+# One curl config block. Written to a private file: it holds the credentials. 'next' resets every option, so
+# each block repeats them. The body is sent exactly as written: --data-raw does no parsing.
+http_block() {   # <url> <body>
+    local _body=${2//\\/\\\\}
+    _body=${_body//\"/\\\"}
+    printf 'url = "%s"\n' "$1"
+    printf 'header = "Content-Type: application/json"\n'
+    if [ -n "${C8Y_TOKEN:-}" ]; then
+        printf 'header = "Authorization: Bearer %s"\n' "$C8Y_TOKEN"
+    elif [ -n "${C8Y_USER:-}" ] && [ -n "${C8Y_PASSWORD:-}" ]; then
+        printf 'user = "%s%s:%s"\n' "${C8Y_TENANT:+${C8Y_TENANT}/}" "$C8Y_USER" "$C8Y_PASSWORD"
+    fi
+    printf 'data-raw = "%s"\n' "$_body"
+    printf 'output = "/dev/null"\nwrite-out = "%%{http_code}\\n"\nsilent\nshow-error\nnext\n'
+}
+
+# Phase 1 and 2 as one curl config. An original and its copy stand next to each other, so they are in flight
+# together.
+build_http_config() {   # <phase> <file>
+    local _phase=$1 _file=$2 _n _ext _seq _c _temp _url
+    ( umask 077; : > "$_file" )
+    for _n in $(seq 1 "$DEVICES"); do
+        _ext="${EXT_PREFIX}-$(printf '%03d' "$_n")"
+        _url="$(http_base_url)/httpConnector/${TOPIC_PREFIX}/${_ext}"
+        if [ "$_phase" = "2" ]; then
+            http_block "$_url" "$(payload_b 1 21 "$_ext")" >> "$_file"
+            http_block "$_url" "$(payload_a 1 21 "$_ext")" >> "$_file"
+            continue
+        fi
+        for _seq in $(seq 1 "$MESSAGES"); do
+            _temp=$((20 + _seq))
+            http_block "$_url" "$(payload_a "$_seq" "$_temp" "$_ext")" >> "$_file"
+            for _c in $(seq 1 "$COPIES"); do
+                http_block "$_url" "$(payload_b "$_seq" "$_temp" "$_ext")" >> "$_file"
+            done
+        done
+        http_block "$_url" "$(payload_a 1 99 "$_ext")" >> "$_file"   # control
+    done
+    # 'next' separates blocks: the one after the last block would be an empty request, which curl rejects
+    ( umask 077; sed '$d' "$_file" > "${_file}.tmp" ) && mv "${_file}.tmp" "$_file"
+}
+
+publish_all_http() {   # <phase> <message_count_for_the_rate_line>
+    local _phase=$1 _count=$2 _cfg="${WORK_DIR}/curl-${1}.cfg" _t0 _secs _bad
+    build_http_config "$_phase" "$_cfg"
+    _t0=$(date +%s)
+    # --parallel-immediate: open new connections at once instead of waiting to multiplex onto one
+    curl --parallel --parallel-max "$HTTP_PARALLEL" --parallel-immediate --config "$_cfg" \
+        > "${WORK_DIR}/http-codes-${_phase}.txt" 2> "${WORK_DIR}/http-err-${_phase}.txt" || true
+    _secs=$(( $(date +%s) - _t0 ))
+    [ "$_secs" -lt 1 ] && _secs=1
+    _bad=$(grep -vc '^2' "${WORK_DIR}/http-codes-${_phase}.txt" || true)
+    [ "$(grep -c . "${WORK_DIR}/http-codes-${_phase}.txt" || true)" -lt "$_count" ] && _bad=$((_count - $(grep -c '^2' "${WORK_DIR}/http-codes-${_phase}.txt" || true)))
+    dm_assert_eq "Every HTTP request was accepted, 2xx (phase ${_phase})" "0" "${_bad:-0}"
+    dm_info "Sent ${_count} requests in ${_secs}s (about $((_count / _secs)) req/s, ${HTTP_PARALLEL} in flight)"
+}
+
 publish_all() {   # <phase> <message_count_for_the_rate_line>
+    if [ "$TRANSPORT" = "http" ]; then
+        publish_all_http "$@"
+        return
+    fi
     local _phase=$1 _count=$2 _t0 _secs _errors _running=0 _n
     rm -f "${WORK_DIR}"/pub-*.err
     _t0=$(date +%s)
