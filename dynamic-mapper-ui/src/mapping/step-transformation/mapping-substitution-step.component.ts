@@ -150,7 +150,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   selectedSubstitution: number = -1;
   readonly isExpression = isExpression;
   expandArrayHelp = gettext(
-    'If the source expression returns an array: <strong>on</strong> creates one request per array element, using the same target template for each (for example several measurements in one payload). <strong>Off</strong> writes the whole array to the target as it is, or reduces it to one element with the repair strategy <code>Use First Value Of Array</code> or <code>Use Last Value Of Array</code>.'
+    'If the source expression returns an array:<ul class="m-b-0 p-l-16"><li><strong>On:</strong> creates one request per array element, using the same target template for each (for example several measurements in one payload).</li><li><strong>Off:</strong> writes the whole array to the target as it is, or reduces it to one element with the repair strategy <code>Use First Value Of Array</code> or <code>Use Last Value Of Array</code>.</li></ul>'
   );
   targetTemplateHelp = gettext('The template contains the dummy field <code>_TOPIC_LEVEL_</code>...');
 
