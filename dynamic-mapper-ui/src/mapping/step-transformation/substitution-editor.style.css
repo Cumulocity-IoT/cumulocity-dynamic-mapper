@@ -129,3 +129,14 @@
 .d11r-sub-panel ::ng-deep .d11r-linked .d11r-jsonata-input .monaco-editor .margin {
   background-color: transparent;
 }
+
+/* The rule that a device identifier substitution must exist. Under a list it lines up with the rows; under
+   the empty state it is centered like that text, with the same side padding, as part of the same block. */
+.d11r-sub-hint {
+  padding: 8px 10px 0;
+}
+
+.d11r-sub-hint--empty {
+  padding: 0 16px 24px;
+  text-align: center;
+}

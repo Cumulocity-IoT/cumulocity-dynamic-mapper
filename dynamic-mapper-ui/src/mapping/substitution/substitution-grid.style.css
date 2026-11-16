@@ -25,8 +25,14 @@
 }
 
 .d11r-sub-empty {
-  padding: 24px 16px;
+  /* The hint under it ("a device identifier substitution must exist") belongs to the same block, so the
+     bottom padding is small and the top one gives the block air below the header. */
+  padding: 40px 16px 12px;
   text-align: center;
+}
+
+.d11r-sub-empty strong {
+  margin-bottom: 4px;
 }
 
 .d11r-sub-row {

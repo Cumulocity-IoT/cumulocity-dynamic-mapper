@@ -108,7 +108,8 @@
                 }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
             </d11r-mapping-substitution-grid>
             @if (!(isSubstitutionValid$ | async)) {
-            <span class="text-warning text-12 d-block p-t-8" [innerHTML]="identitySubstitutionHint"></span>
+            <span class="text-warning text-12 d-block d11r-sub-hint" [class.d11r-sub-hint--empty]="!mapping().substitutions?.length"
+              [innerHTML]="identitySubstitutionHint"></span>
             }
           </div>
         </c8y-sv-list>
