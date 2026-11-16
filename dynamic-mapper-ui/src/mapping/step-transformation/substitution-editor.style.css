@@ -22,9 +22,9 @@
    elements have no height until it is handed down, and without one the details pane grows past the
    panel and is clipped instead of scrolling (its own scroll area, `inner-scroll`, needs a bounded height). */
 .d11r-sub-panel {
-  /* The tabs and the two template trees above take about 660px of the window, so the panel takes what is
-     left of it: its panes then scroll instead of the whole step. Not below 320px, not above 560px. */
-  height: clamp(320px, calc(100vh - 660px), 560px);
+  /* The tabs and the two template trees above take about 560px of the window, so the panel takes what is
+     left of it: its panes then scroll instead of the whole step. Not below 440px, not above 640px. */
+  height: clamp(440px, calc(100vh - 560px), 640px);
   border: 1px solid var(--c8y-root-component-separator-color, #ddd);
   border-radius: 4px;
   overflow: hidden;
@@ -50,9 +50,12 @@
   height: 100%;
   min-height: 0;
   overflow-y: auto;
+  /* Never a horizontal bar: the editor is as wide as the pane, not wider. */
+  overflow-x: hidden;
 }
 
 .d11r-sub-editor {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -60,6 +63,13 @@
      label closer to the header, and keep the 16px at the other edges. */
   margin-top: -16px;
   padding: 0 0 16px;
+}
+
+/* The form field wrapper puts each input in a flex child (`.flex-grow` in `.d-flex`). A flex child does not
+   shrink below its content (min-width: auto), so the Monaco editor's own width pushed the field past the
+   pane and hid its right border. */
+.d11r-sub-panel ::ng-deep .d-flex > .flex-grow:has(d11r-formly-field-d11r-jsonata-input) {
+  min-width: 0;
 }
 
 /* The first field's own top margin adds to the gap as well. */

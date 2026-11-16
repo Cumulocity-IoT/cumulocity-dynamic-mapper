@@ -1289,6 +1289,9 @@ msgstr ""
 msgid "If the extracted value is missing or null, skip the substitution and keep whatever the target template defines."
 msgstr ""
 
+msgid "If the source expression returns an array: <strong>on</strong> creates one request per array element, using the same target template for each (for example several measurements in one payload). <strong>Off</strong> writes the whole array to the target as it is, or reduces it to one element with the repair strategy <code>Use First Value Of Array</code> or <code>Use Last Value Of Array</code>."
+msgstr ""
+
 msgid "If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type."
 msgstr ""
 
@@ -2034,9 +2037,6 @@ msgstr ""
 msgid "Please select a device or group to monitor."
 msgstr ""
 
-msgid "Please select nodes in both templates to define a substitution."
-msgstr ""
-
 msgid "polling suspended, session still alive on broker"
 msgstr ""
 
@@ -2325,12 +2325,6 @@ msgstr ""
 msgid "Select Payload Format and Transformation Type"
 msgstr ""
 
-msgid "Select source node to define substitution!"
-msgstr ""
-
-msgid "Select target node to define substitution!"
-msgstr ""
-
 msgid "Select template..."
 msgstr ""
 
@@ -2347,15 +2341,6 @@ msgid "Selected connectors"
 msgstr ""
 
 msgid "Selected connectors for mapping"
-msgstr ""
-
-msgid "Selected source node: {{path}}"
-msgstr ""
-
-msgid "Selected substitution is an expression"
-msgstr ""
-
-msgid "Selected target node: {{path}}"
 msgstr ""
 
 msgid "Send connector lifecycle"

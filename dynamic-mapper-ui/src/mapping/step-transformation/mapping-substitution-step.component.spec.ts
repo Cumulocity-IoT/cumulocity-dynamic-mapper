@@ -144,13 +144,26 @@ describe('MappingSubstitutionStepComponent substitution changes', () => {
     expect(step.onUpdateSubstitution).toHaveBeenCalledTimes(1);
   });
 
-  it('adding an invalid substitution warns and announces nothing', () => {
+  it('adding an invalid substitution announces nothing', () => {
     step.substitutionModel = { pathSource: '', pathTarget: '', sourceExpression: { valid: true }, targetExpression: { valid: true } };
 
     step.onAddSubstitution();
 
-    expect(alertService.warning).toHaveBeenCalled();
     expect(emitted).toEqual([]);
+  });
+
+  it('names the other row that already targets the form target, in add and edit mode', () => {
+    step.substitutionModel = { pathSource: '$.new', pathTarget: '$.tgtA' };
+    step.selectedSubstitution = -1;
+    expect(step.takenTargetNumber()).toBe(1);
+
+    step.selectedSubstitution = 0; // editing row 1 itself: not a collision
+    expect(step.takenTargetNumber()).toBeUndefined();
+    step.selectedSubstitution = 1; // editing row 2 onto row 1's target
+    expect(step.takenTargetNumber()).toBe(1);
+
+    step.substitutionModel = { pathSource: '$.new', pathTarget: '$.free' };
+    expect(step.takenTargetNumber()).toBeUndefined();
   });
 
   it('update announces the list, then leaves edit mode', () => {

@@ -34,8 +34,8 @@ $exists(deviceId) and $exists(time) and $not($isDuplicate(deviceId & "|" & time,
 // Combine it with another condition
 telemetry.telemetryReadings[0].value > 10.00 and $not($isDuplicate(deviceId & "|" & time, 60))
 
-// Drop exact repeats of the whole payload
-$not($isDuplicate($string($), 60))
+// Drop repeats of the whole payload. Pass the payload itself, not $string($), as explained under "Choose the key and the window"
+$not($isDuplicate($, 60))
 ```
 
 ##### Smart Function
@@ -57,15 +57,29 @@ function onMessage(msg, context) {
 }
 ```
 
+A Smart Function runs for every message, including a repeat, because the check is part of its code. Code before the
+check, such as a lookup, also runs for a repeat. If it returns an empty array for a repeat, the mapper counts the
+message as **Repeated**, writes the log line `No valid messages produced from onMessage function`, and adds a warning
+with the same text to the message. To skip the function for a repeat, check in the execution filter instead: the filter
+runs before the function and stops the message. The filter works for Smart Function mappings, but its key can use only
+what JSONata reaches in the payload.
+
 The sample mapping **IN-19 Smart Function - drop repeated messages** contains this code, and **IN-18 JSONata - drop
 repeated messages** contains the filter version. You can import both from the sample mappings.
 
 #### Choose the key and the window
 
-- **Key:** any value that identifies one message. Text is used as it is. A whole number has no decimal point, so `5.0`
-  and `5` are the same key. An object is converted to JSON text with its members sorted by name, so two messages that
-  list the members in another order still match. Join several fields with a separator such as `"|"`, so that `a` and
-  `bc` differ from `ab` and `c`.
+- **Key:** any value that identifies one message. A whole number has no decimal point, so `5.0` and `5` are the same
+  key. An object is converted to JSON text with its members sorted by name, so two messages that list the members in
+  another order still match. Join several fields with a separator such as `"|"`, so that `a` and `bc` differ from `ab`
+  and `c`.
+- **Text is not normalized:** the service uses text exactly as written, including member order and spaces. A key built
+  from the whole payload as text, with `$string($)` in JSONata or `JSON.stringify(payload)` in a Smart Function, makes
+  two copies with the members in another order different keys. Pass the object itself instead, as in
+  `$isDuplicate($, 60)` or `context.isDuplicate(payload, 60)`. Unicode form also counts: an accented character written
+  as one code point and the same character written as a base letter plus a combining accent are different keys. A key
+  built from selected fields, such as `deviceId & "|" & time`, does not depend on member order, because each field is a
+  value, not serialized JSON.
 - **Per mapping:** the keys of a mapping are separate from every other mapping and tenant. Do not add the mapping or the
   tenant to the key. The topic is not part of the key either.
 - **Missing fields:** the `&` operator in JSONata and the `+` operator in JavaScript turn a missing field into text,
@@ -79,8 +93,19 @@ repeated messages** contains the filter version. You can import both from the sa
 #### What happens to messages that fail
 
 A key is recorded when the check runs. If the message then fails, for example because Cumulocity rejects a request, or
-if another condition rejects it, the service gives the key back, so the broker's retry is processed. A copy that
-arrived while the first was still being processed is already dropped and is not processed again.
+if another condition rejects it, the service gives the key back, so the broker's retry is processed.
+
+A copy that arrives while the first message is still being processed is dropped at once. Giving the key back later does
+not bring that copy back:
+
+1. The first message records the key and starts processing.
+2. A copy arrives and is dropped as a repeat.
+3. The first message fails, and the service gives the key back.
+
+If something delivers the first message again after the failure, such as a broker that retries, that delivery is
+processed, so no data is lost. If the sender sends each copy once and never sends it again, for example an HTTP client
+that does not retry, nothing delivers the data again: the copy was dropped and the first message failed. De-duplication
+cannot recover that message. Decide per sender whether a lost message or a duplicate message is the worse outcome.
 
 #### See what was dropped
 

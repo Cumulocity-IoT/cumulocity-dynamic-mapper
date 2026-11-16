@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, Injector, inject, ChangeDetectionStrategy, signal, viewChild, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
@@ -46,6 +47,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 })
 export class DocOverviewComponent implements OnInit {
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   readonly docBodyRef = viewChild<ElementRef<HTMLElement>>('docBody');
 
   countMappingInbound$ = new BehaviorSubject<number | string>(0);
@@ -93,6 +95,7 @@ export class DocOverviewComponent implements OnInit {
     );
 
     this.connectorConfigurationService.getConfigurations()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((count) => this.countConnector$.next(!count ? 'no' : count.length));
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {

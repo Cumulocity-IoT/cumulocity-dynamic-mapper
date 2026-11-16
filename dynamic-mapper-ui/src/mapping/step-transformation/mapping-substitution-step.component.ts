@@ -45,7 +45,7 @@ import {
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
+import { debounceTime, filter, Observable, Subject, takeUntil, tap } from 'rxjs';
 import {
   COLOR_HIGHLIGHTED,
   Direction,
@@ -149,6 +149,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   substitutionModel: SubstitutionModel = {};
   selectedSubstitution: number = -1;
   readonly isExpression = isExpression;
+  expandArrayHelp = gettext(
+    'If the source expression returns an array: <strong>on</strong> creates one request per array element, using the same target template for each (for example several measurements in one payload). <strong>Off</strong> writes the whole array to the target as it is, or reduces it to one element with the repair strategy <code>Use First Value Of Array</code> or <code>Use Last Value Of Array</code>.'
+  );
   targetTemplateHelp = gettext('The template contains the dummy field <code>_TOPIC_LEVEL_</code>...');
 
   /** Help shown next to the disabled AI button. */
@@ -207,6 +210,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /** Last path each field evaluated; reset together with the form so the same node can be picked again. */
+  private lastEvaluatedPath: { source?: string; target?: string } = {};
+
   private initializeSubstitutionModel(): void {
     this.substitutionModel = {
       stepperConfiguration: this.stepperConfiguration(),
@@ -259,7 +265,10 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
           onInit: (field: FormlyFieldConfig) => {
             field.formControl.valueChanges.pipe(
               debounceTime(500),
-              distinctUntilChanged(),
+              // Not distinctUntilChanged(): cancelEditSubstitution() resets the control silently, so the
+              // operator would still remember the old path and swallow picking that same node again.
+              filter(path => path !== this.lastEvaluatedPath.source),
+              tap(path => (this.lastEvaluatedPath.source = path)),
               takeUntil(this.destroy$)
             ).subscribe(path => this.updateSourceExpressionResult(path));
           }
@@ -286,7 +295,10 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
           onInit: (field: FormlyFieldConfig) => {
             field.formControl.valueChanges.pipe(
               debounceTime(500),
-              distinctUntilChanged(),
+              // Not distinctUntilChanged(): cancelEditSubstitution() resets the control silently, so the
+              // operator would still remember the old path and swallow picking that same node again.
+              filter(path => path !== this.lastEvaluatedPath.target),
+              tap(path => (this.lastEvaluatedPath.target = path)),
               takeUntil(this.destroy$)
             ).subscribe(path => this.updateTargetExpressionResult(path));
           }
@@ -455,10 +467,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   }
 
   onAddSubstitution(): void {
-    if (!this.isSubstitutionValid()) {
-      this.alertService.warning(gettext('Please select nodes in both templates to define a substitution.'));
-      return;
-    }
+    // The button is disabled while the form is invalid, so this only guards a programmatic call.
+    if (!this.isSubstitutionValid()) return;
 
     this.applySubstitutions(
       this.substitutionService.addSubstitution(this.substitutionModel, this.mapping().substitutions)
@@ -523,6 +533,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.selectedSubstitution = -1;
     this.syncSplitSelection();
     this.initializeSubstitutionModel();
+    this.lastEvaluatedPath = { source: '', target: '' };
     this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
     this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
     this.editorSourceStepSubstitution()?.clearSelection();
@@ -643,7 +654,21 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   saveSubstitutionDisabled(): boolean {
     return !this.stepperConfiguration().showEditorSource ||
       this.stepperConfiguration().readOnly ||
-      !this.isSubstitutionValid();
+      !this.isSubstitutionValid() ||
+      this.takenTargetNumber() !== undefined;
+  }
+
+  /**
+   * 1-based number of ANOTHER substitution that already writes the target in the form, or undefined.
+   * Saving would silently replace (add) or merge into (edit) that row, so the button is disabled
+   * instead and the footer names the row.
+   */
+  takenTargetNumber(): number | undefined {
+    const target = this.substitutionModel?.pathTarget;
+    if (!target) return undefined;
+    const index = (this.mapping().substitutions ?? [])
+      .findIndex((sub, i) => i !== this.selectedSubstitution && sub.pathTarget === target);
+    return index === -1 ? undefined : index + 1;
   }
 
   private isSubstitutionValid(): boolean {

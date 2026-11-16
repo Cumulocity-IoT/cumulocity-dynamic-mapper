@@ -19,7 +19,8 @@
  */
 
 import { gettext } from '@c8y/ngx-components/gettext';
-import { Component, inject, Input, OnInit, OnChanges, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, Input, OnInit, OnChanges, ChangeDetectionStrategy, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
@@ -109,6 +110,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly connectorConfigService = inject(ConnectorConfigurationService);
   private readonly alertService = inject(AlertService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly inventoryService = inject(InventoryService);
 
   private readonly selectedDeviceTypeState = signal<string | null>(null);
@@ -133,7 +135,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
     combineLatest([
       this.connectorConfigService.getConfigurations(),
       this.connectorConfigService.getSpecifications()
-    ]).subscribe(([configs, specs]) => {
+    ]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(([configs, specs]) => {
       this.allConnectors = configs.map(c => ({
         ...c,
         supportedDirections: specs.find(s => s.connectorType === c.connectorType)?.supportedDirections ?? []

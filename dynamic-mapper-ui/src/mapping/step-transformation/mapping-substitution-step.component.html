@@ -43,17 +43,6 @@
             </d11r-mapping-json-editor>
             }
           </div>
-          @if (stepperConfiguration().showEditorSource) {
-          <span class="text-info text-12 p-l-8 p-t-4">
-            @if (substitutionModel.pathSource === '') {
-            <span translate>Select source node to define substitution!</span>
-            } @else if (substitutionModel.pathSourceIsExpression) {
-            <span translate>Selected substitution is an expression</span>
-            } @else {
-            <span [textContent]="'Selected source node: {{path}}' | translate: { path: substitutionModel.pathSource }"></span>
-            }
-          </span>
-          }
         </div>
         <!-- Target Template Editor -->
         <div class="column-left-border d-col p-l-2">
@@ -72,13 +61,6 @@
               #editorTargetStepSubstitution>
             </d11r-mapping-json-editor>
           </div>
-          <span class="text-info text-12 p-l-8 p-t-4">
-            @if (substitutionModel.pathTarget === '' && stepperConfiguration().showEditorSource) {
-            <span translate>Select target node to define substitution!</span>
-            } @else {
-            <span [textContent]="'Selected target node: {{path}}' | translate: { path: substitutionModel.pathTarget }"></span>
-            }
-          </span>
         </div>
       </div>
     </div>
@@ -172,6 +154,13 @@
                 <span></span>
                 <span translate>Expand as array</span>
               </label>
+              <ng-template #popupExpandArrayHelp>
+                <div [innerHtml]="expandArrayHelp | translate"></div>
+              </ng-template>
+              <button type="button" placement="left" [popover]="popupExpandArrayHelp" triggers="focus"
+                container="body" class="btn-help" data-cy="dm-substitution-expand-array-help"
+                [attr.aria-label]="'Help content' | translate">
+              </button>
             </div>
 
             <div class="d11r-flush-field">
@@ -214,6 +203,11 @@
               <span translate>Save change</span>
               }
             </button>
+            @if (takenTargetNumber(); as taken) {
+            <span class="text-warning text-12 m-l-8" data-cy="dm-mapping-transform-target-taken">
+              {{ 'Target is already used by substitution {{number}}. Select that row to change it.' | translate: { number: taken } }}
+            </span>
+            }
           </c8y-sv-footer>
         </c8y-sv-details>
       </c8y-sv>
