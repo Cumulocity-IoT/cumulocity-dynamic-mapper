@@ -229,6 +229,15 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
     } catch (error) {
       console.warn('Set selection to path not possible:', pathString, error);
       this.clearSelection();
+      this.pathChanged.emit(pathString);
+      return;
+    }
+    // The node can be below the fold or inside a collapsed parent; scrolling expands the parents. A node
+    // the user clicked is already in view, so only a selection made from outside (a row) comes through here.
+    try {
+      await this.editor.scrollTo(path);
+    } catch (error) {
+      console.warn('Scroll to path not possible:', pathString, error);
     }
     this.pathChanged.emit(pathString);
   }

@@ -56,7 +56,9 @@ body .jse-main {
 }
 
 .jse-json-node.jse-selected > .jse-contents-outer > .jse-contents {
-  background-color: #ffe391;
+  /* The same blue as the selected substitution row and the linked Source/Target Expression field. */
+  background-color: var(--c8y-component-background-active, #e8f2fb);
+  box-shadow: inset 0 0 0 1px var(--c8y-brand-primary, #1776bf);
 }
 
 .jse-main-large {

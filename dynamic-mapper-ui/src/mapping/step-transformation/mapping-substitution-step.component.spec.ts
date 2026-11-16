@@ -54,6 +54,98 @@ describe('MappingSubstitutionStepComponent showExpandArrayHint', () => {
   });
 });
 
+describe('MappingSubstitutionStepComponent tree link of the expression fields', () => {
+  let step: any;
+  let sourceEditor: jasmine.SpyObj<any>;
+  let targetEditor: jasmine.SpyObj<any>;
+  let controls: Record<string, any>;
+
+  beforeEach(() => {
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    sourceEditor = jasmine.createSpyObj('source', ['clearSelection']);
+    targetEditor = jasmine.createSpyObj('target', ['clearSelection']);
+    controls = {
+      pathSource: jasmine.createSpyObj('c', ['setValue', 'markAsPristine']),
+      pathTarget: jasmine.createSpyObj('c', ['setValue', 'markAsPristine'])
+    };
+    step.substitutionFormly = { get: (key: string) => controls[key] };
+    step.substitutionModel = {};
+    step.editorSourceStepSubstitution = () => sourceEditor;
+    step.editorTargetStepSubstitution = () => targetEditor;
+    step.cdr = jasmine.createSpyObj('cdr', ['markForCheck']);
+  });
+
+  it('a node picked in a tree links its field, which stays pristine', () => {
+    step.onSelectedPathSourceChanged('$.a');
+    step.onSelectedPathTargetChanged('$.b');
+
+    expect(step.sourceLinked).toBeTrue();
+    expect(step.targetLinked).toBeTrue();
+    expect(controls['pathSource'].markAsPristine).toHaveBeenCalled();
+    expect(controls['pathTarget'].markAsPristine).toHaveBeenCalled();
+  });
+
+  it('typing in a field removes its tint and its node highlight, and leaves the other field alone', () => {
+    step.sourceLinked = true;
+    step.targetLinked = true;
+
+    step.onManualEdit('source');
+
+    expect(step.sourceLinked).toBeFalse();
+    expect(sourceEditor.clearSelection).toHaveBeenCalled();
+    expect(step.targetLinked).toBeTrue();
+    expect(targetEditor.clearSelection).not.toHaveBeenCalled();
+  });
+
+  it('typing in a field that is not linked does not touch the tree', () => {
+    step.onManualEdit('target');
+
+    expect(targetEditor.clearSelection).not.toHaveBeenCalled();
+  });
+});
+
+describe('MappingSubstitutionStepComponent first source node', () => {
+  let step: any;
+  let editor: jasmine.SpyObj<any>;
+
+  const arrange = (template: unknown, substitutions: unknown[] = [], config: any = {}) => {
+    editor = jasmine.createSpyObj('editor', ['get', 'setSelectionToPath']);
+    editor.get.and.returnValue(template);
+    editor.setSelectionToPath.and.resolveTo();
+    step = Object.create(MappingSubstitutionStepComponent.prototype);
+    step.selectedSubstitution = -1;
+    step.mapping = () => ({ substitutions });
+    step.stepperConfiguration = () => ({ showEditorSource: true, showCodeEditor: false, ...config });
+    step.editorSourceStepSubstitution = () => editor;
+    step.cdr = jasmine.createSpyObj('cdr', ['markForCheck']);
+  };
+
+  it('picks the first template node when no substitution exists', async () => {
+    arrange({ _TOPIC_LEVEL_: [], msg_type: 'x', txt: 'y' });
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).toHaveBeenCalledWith('msg_type');
+  });
+
+  it('falls back to a helper node when the template holds nothing else', async () => {
+    arrange({ _TOPIC_LEVEL_: [] });
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).toHaveBeenCalledWith('_TOPIC_LEVEL_');
+  });
+
+  it('does nothing once a substitution exists, in code mode, or without a usable template', async () => {
+    arrange({ a: 1 }, [{}]);
+    await step.selectFirstSourceNode();
+    arrange({ a: 1 }, [], { showCodeEditor: true });
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).not.toHaveBeenCalled();
+    arrange([1, 2]);
+    await step.selectFirstSourceNode();
+    arrange({});
+    await step.selectFirstSourceNode();
+    expect(editor.setSelectionToPath).not.toHaveBeenCalled();
+  });
+});
+
 describe('MappingSubstitutionStepComponent substitution changes', () => {
   const sub = (pathSource: string, pathTarget: string): Substitution => ({
     pathSource, pathTarget, repairStrategy: RepairStrategy.DEFAULT, expandArray: false

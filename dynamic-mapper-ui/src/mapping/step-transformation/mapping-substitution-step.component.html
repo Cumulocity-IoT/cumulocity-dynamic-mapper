@@ -120,7 +120,7 @@
           (backClick)="onSplitBack()">
           <div class="d11r-sub-editor" [formGroup]="substitutionFormly" data-cy="dm-substitution-editor">
             <!-- The preview sits right under the field, where its validation message would be. -->
-            <div class="d11r-flush-field">
+            <div class="d11r-flush-field" [class.d11r-linked]="sourceLinked" data-cy="dm-substitution-source-field">
               <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
               </formly-form>
               <!-- Plain bindings for the results, not Formly fields: a Formly label expression left the label
@@ -163,7 +163,7 @@
               </button>
             </div>
 
-            <div class="d11r-flush-field">
+            <div class="d11r-flush-field" [class.d11r-linked]="targetLinked" data-cy="dm-substitution-target-field">
               <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
               </formly-form>
               <div class="d11r-preview" [class.d11r-preview--below-error]="hasFieldError('pathTarget')" data-cy="dm-substitution-target-preview">

@@ -29,8 +29,9 @@ import {
   ViewChild,
   OnDestroy,
   OnInit,
-  inject, viewChild, input, effect, untracked } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+  inject, viewChild, input, effect, untracked, Injector } from '@angular/core';
+import { afterNextRenderInZone } from '../../shared/misc/after-render';
+import { FormGroup, PristineChangeEvent } from '@angular/forms';
 import {
   AlertService,
   BottomDrawerService,
@@ -93,6 +94,7 @@ interface RepairStrategyOption {
 export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   readonly mapping = input<Mapping>();
   readonly stepperConfiguration = input<StepperConfiguration>();
+  private readonly injector = inject(Injector);
   readonly sourceTemplate = input<Template | undefined>();
   readonly targetTemplate = input<Template | undefined>();
   readonly sourceSystem = input<string>();
@@ -203,12 +205,46 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.initializeSubstitutionModel();
     this.initializeFormlyFields();
     this.updateEditorPermissions();
+    // With nothing defined yet, a node is already picked: it shows how the template, the substitutions
+    // and the source expression belong together.
+    afterNextRenderInZone(this.injector, () => this.selectFirstSourceNode());
+  }
+
+  /**
+   * Picks the first node of the source template when the mapping has no substitution yet. Skips the
+   * `_TOPIC_LEVEL_`, `_IDENTITY_` and `_CONTEXT_DATA_` helper nodes, which the mapper adds itself,
+   * unless the template holds nothing else.
+   */
+  private async selectFirstSourceNode(): Promise<void> {
+    if (!this.stepperConfiguration().showEditorSource || this.stepperConfiguration().showCodeEditor) return;
+    if (this.mapping()?.substitutions?.length || this.selectedSubstitution !== -1) return;
+    const editor = this.editorSourceStepSubstitution();
+    if (!editor) return;
+    let template: unknown;
+    try {
+      template = editor.get();
+    } catch {
+      return; // Template in text mode and not valid JSON right now.
+    }
+    if (!template || typeof template !== 'object' || Array.isArray(template)) return;
+    const keys = Object.keys(template);
+    const key = keys.find(k => !k.startsWith('_')) ?? keys[0];
+    if (key === undefined) return;
+    await editor.setSelectionToPath(key);
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
+  /**
+   * The expression field mirrors a node picked in a template tree (by click, or by selecting a row). It is
+   * tinted like the node, until the user edits the field by hand.
+   */
+  sourceLinked = false;
+  targetLinked = false;
 
   /** Last path each field evaluated; reset together with the form so the same node can be picked again. */
   private lastEvaluatedPath: { source?: string; target?: string } = {};
@@ -271,6 +307,11 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
               tap(path => (this.lastEvaluatedPath.source = path)),
               takeUntil(this.destroy$)
             ).subscribe(path => this.updateSourceExpressionResult(path));
+            // The JSONata input marks the control dirty only for text the user typed; the tree sets it programmatically.
+            field.formControl.events.pipe(
+              filter(event => event instanceof PristineChangeEvent && !event.pristine),
+              takeUntil(this.destroy$)
+            ).subscribe(() => this.onManualEdit('source'));
           }
         }
       }
@@ -301,6 +342,11 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
               tap(path => (this.lastEvaluatedPath.target = path)),
               takeUntil(this.destroy$)
             ).subscribe(path => this.updateTargetExpressionResult(path));
+            // The JSONata input marks the control dirty only for text the user typed; the tree sets it programmatically.
+            field.formControl.events.pipe(
+              filter(event => event instanceof PristineChangeEvent && !event.pristine),
+              takeUntil(this.destroy$)
+            ).subscribe(() => this.onManualEdit('target'));
           }
         }
       }
@@ -379,14 +425,34 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** Typing in an expression field cuts its link to the tree: the tint and the node highlight go. */
+  onManualEdit(key: 'source' | 'target'): void {
+    if (key === 'source') {
+      if (!this.sourceLinked) return;
+      this.sourceLinked = false;
+      this.editorSourceStepSubstitution()?.clearSelection();
+    } else {
+      if (!this.targetLinked) return;
+      this.targetLinked = false;
+      this.editorTargetStepSubstitution()?.clearSelection();
+    }
+    this.cdr.markForCheck();
+  }
+
   onSelectedPathSourceChanged(path: string): void {
+    this.sourceLinked = true;
     this.substitutionFormly.get('pathSource').setValue(path);
+    this.substitutionFormly.get('pathSource').markAsPristine();
+    this.cdr.markForCheck();
     this.substitutionModel.pathSource = path;
     this.substitutionModel.pathSourceIsExpression = isExpression(path);
   }
 
   onSelectedPathTargetChanged(path: string): void {
+    this.targetLinked = true;
     this.substitutionFormly.get('pathTarget').setValue(path);
+    this.substitutionFormly.get('pathTarget').markAsPristine();
+    this.cdr.markForCheck();
     this.substitutionModel.pathTarget = path;
   }
 
@@ -534,6 +600,8 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.syncSplitSelection();
     this.initializeSubstitutionModel();
     this.lastEvaluatedPath = { source: '', target: '' };
+    this.sourceLinked = false;
+    this.targetLinked = false;
     this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
     this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
     this.editorSourceStepSubstitution()?.clearSelection();
@@ -565,6 +633,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     if (selected < 0 || selected >= this.mapping().substitutions.length) return;
 
     this.selectedSubstitution = selected;
+    // Linked again only if the row's path selects a node in the tree (an expression selects none).
+    this.sourceLinked = false;
+    this.targetLinked = false;
     this.syncSplitSelection();
     this.substitutionModel = {
       ...this.mapping().substitutions[selected],

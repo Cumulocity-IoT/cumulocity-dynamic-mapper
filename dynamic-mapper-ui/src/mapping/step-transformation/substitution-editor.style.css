@@ -116,3 +116,16 @@
   border-radius: 4px;
   background: var(--c8y-component-background-active, #e8f2fb);
 }
+
+/* An expression field that mirrors a node picked in a template tree is tinted like that node and like the
+   selected row, until the user edits it by hand. Monaco paints its own background, so that goes transparent. */
+.d11r-sub-panel ::ng-deep .d11r-linked .d11r-jsonata-input {
+  background: var(--c8y-component-background-active, #e8f2fb);
+  --vscode-editor-background: var(--c8y-component-background-active, #e8f2fb);
+}
+
+.d11r-sub-panel ::ng-deep .d11r-linked .d11r-jsonata-input .monaco-editor,
+.d11r-sub-panel ::ng-deep .d11r-linked .d11r-jsonata-input .monaco-editor-background,
+.d11r-sub-panel ::ng-deep .d11r-linked .d11r-jsonata-input .monaco-editor .margin {
+  background-color: transparent;
+}
