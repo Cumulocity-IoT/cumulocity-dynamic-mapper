@@ -73,7 +73,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     protected final String tenant;
     protected final String connectorIdentifier;
     protected final String connectorName;
-    protected final ServiceConfiguration serviceConfiguration;
+    private final ServiceRegistry serviceRegistry;
     protected final ExecutorService virtualThreadPool;
 
     /** Whether to trigger a broker reconnect when a message cannot be processed. */
@@ -109,7 +109,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.serviceRegistry = serviceRegistry;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.reconnectTrigger = reconnectTrigger;
         this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
@@ -132,6 +132,15 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     // -------------------------------------------------------------------------
     // Protocol-specific hooks — implemented by MQTT3Callback / MQTT5Callback
     // -------------------------------------------------------------------------
+
+    /**
+     * The tenant's current configuration. Looked up per use, not captured at construction: the registry
+     * replaces the object when the configuration is saved, so a captured copy kept the old
+     * {@code logPayload} until the connector was rebuilt.
+     */
+    protected ServiceConfiguration serviceConfiguration() {
+        return serviceRegistry.getServiceConfiguration(tenant);
+    }
 
     /** Decode the topic string from the protocol message. */
     protected abstract String extractTopic(M message);
@@ -169,9 +178,9 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
             String topic = extractTopic(mqttMessage);
             byte[] payloadBytes = extractPayload(mqttMessage);
-            String messageId = getMessageId(topic, payloadBytes);
             ConnectorMessage connectorMessage = buildConnectorMessage(mqttMessage, topic, payloadBytes);
 
+            ServiceConfiguration serviceConfiguration = serviceConfiguration();
             if (serviceConfiguration.getLogPayload()) {
                 log.info("{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
                         tenant, topic, extractQos(mqttMessage), connectorName, connectorIdentifier);
@@ -193,6 +202,9 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
             }
 
             if (effectiveQos > 0) {
+                // Only the retry bookkeeping needs it, and it hashes the whole payload: a QoS 0 message
+                // (acknowledged at once below) no longer pays for that.
+                String messageId = getMessageId(topic, payloadBytes);
                 activeProcessingMessages.incrementAndGet();
                 virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
                     try {

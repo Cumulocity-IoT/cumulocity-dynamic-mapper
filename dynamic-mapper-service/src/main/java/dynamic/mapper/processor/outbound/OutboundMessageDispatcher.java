@@ -127,7 +127,10 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         // the Message Explorer works regardless of which connector type owns the WebSocket.
         // This is necessary in multi-tenant setups where the TEST connector may be the
         // only (or first) dispatcher available for opening the explorer WebSocket.
-        if (notification != null && notification.getMessage() != null
+        // Parsing the notification and compiling the source-id expression just for the explorer cost every
+        // notification a second parse even when no explorer session is open, which is almost always.
+        if (connectorClient.hasOutboundExplorerListeners()
+                && notification != null && notification.getMessage() != null
                 && ("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
                 && !(notification.getApi() != null && notification.getApi().equals(API.OPERATION)
                         && "UPDATE".equals(notification.getOperation()))) {
@@ -386,7 +389,8 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                 if (testMapping == null && contexts != null) {
                     boolean hasError = false;
                     for (ProcessingContext<?> context : contexts) {
-                        if (context != null && context.hasError()) {
+                        // hasFailure, as inbound: a publish failure is recorded on the request too
+                        if (context != null && context.hasFailure()) {
                             hasError = true;
                             break;
                         }

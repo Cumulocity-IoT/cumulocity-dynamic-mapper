@@ -58,6 +58,9 @@ public class SmartFunctionContext implements DataPrepContext {
     private final FlowStateStore stateStore;
     private final String mappingIdentifier;
     private Map<String, Object> config;
+    // Built on first getConfig() and reused: the config is fixed for the invocation, but a Smart Function
+    // that calls context.getConfig() several times (or in a loop) rebuilt the whole proxy tree each time.
+    private Value configValue;
     // Keys this invocation wrote, and whether it called clearState(): only these reach the store.
     private final java.util.Set<String> changedKeys = new java.util.HashSet<>();
     private boolean wipeRequested;
@@ -126,6 +129,7 @@ public class SmartFunctionContext implements DataPrepContext {
      */
     public void setConfig(Map<String, Object> config) {
         this.config = config;
+        this.configValue = null;
     }
 
     /**
@@ -137,7 +141,10 @@ public class SmartFunctionContext implements DataPrepContext {
         if (graalContext == null || config == null) {
             return null;
         }
-        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(config));
+        if (configValue == null) {
+            configValue = graalContext.asValue(JavaScriptInteropHelper.toJsInteropLazy(config));
+        }
+        return configValue;
     }
 
     @Override
@@ -209,8 +216,9 @@ public class SmartFunctionContext implements DataPrepContext {
             return null;
         }
 
-        // Convert back to GraalJS Value
-        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
+        // Convert back to GraalJS Value. Lazy: a stored value is replaced by setState, never changed in
+        // place, so the script cannot see it change underneath the view.
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInteropLazy(javaValue));
     }
 
     /**
@@ -231,7 +239,7 @@ public class SmartFunctionContext implements DataPrepContext {
             return graalContext.asValue(defaultValue);
         }
         Object javaValue = state.get(key);
-        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInteropLazy(javaValue));
     }
 
     @Override

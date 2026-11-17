@@ -75,7 +75,7 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
                     .payload(payloadBytes)
                     .build();
 
-            if (serviceConfiguration.getLogPayload()) {
+            if (serviceConfiguration().getLogPayload()) {
                 log.info("{} - INITIAL: message {} on topic: [{}], connector: {}, {}",
                         tenant, messageId, towardsDeviceTopic, connectorName, connectorIdentifier);
             }
@@ -113,7 +113,7 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
                             processedResults, tenant, towardsDeviceTopic, log, timeoutOverride);
                     if (outcome == AckOutcome.ACK) {
                         failureTracker.clear(messageId);
-                        if (serviceConfiguration.getLogPayload()) {
+                        if (serviceConfiguration().getLogPayload()) {
                             log.info("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                     tenant, towardsDeviceTopic, connectorIdentifier);
                         }

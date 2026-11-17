@@ -100,10 +100,13 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
             Object payloadObject = context.getPayload();
-            String payloadAsString = toPrettyJsonString(payloadObject);
+            // Pretty-printing serializes the whole payload twice; it is only wanted for the log below
+            // and for an error message, which formats it itself (see extractContentFromPayload).
+            String payloadAsString = null;
 
             // Log payload if configured
             if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
+                payloadAsString = toPrettyJsonString(payloadObject);
                 log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
                         payloadAsString,
                         serviceConfiguration.getLogPayload(), mapping.getDebug(),
@@ -203,7 +206,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * @param context The processing context
      * @param substitution The substitution containing the path to extract
      * @param payloadObject The payload object
-     * @param payloadAsString The payload as a string (for error logging)
+     * @param payloadAsString The payload as a string for error logging; may be null, then it is formatted on demand
      * @return The extracted content, or null if extraction fails
      */
     protected Object extractContentFromPayload(ProcessingContext<?> context,
@@ -222,7 +225,8 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                     substitution.getPathSource(), substitution.getPathTarget(),
                     isSyntaxError(e) ? "has a syntax error at position " + e.getLocation() : "failed",
                     e.getMessage());
-            log.error("{} - {}, payload: {}", context.getTenant(), description, payloadAsString, e);
+            log.error("{} - {}, payload: {}", context.getTenant(), description,
+                    payloadAsString != null ? payloadAsString : toPrettyJsonString(payloadObject), e);
             if (isSyntaxError(e)) {
                 throw new ExpressionException(description, e);
             }
@@ -234,7 +238,8 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
         } catch (Exception e) {
             String description = String.format("JSONata expression '%s' (for target '%s') failed: %s",
                     substitution.getPathSource(), substitution.getPathTarget(), e.getMessage());
-            log.error("{} - {}, payload: {}", context.getTenant(), description, payloadAsString, e);
+            log.error("{} - {}, payload: {}", context.getTenant(), description,
+                    payloadAsString != null ? payloadAsString : toPrettyJsonString(payloadObject), e);
             context.getWarnings().add(description);
             return null;
         }

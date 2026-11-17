@@ -71,14 +71,14 @@ public class PulsarCallback extends AbstractPulsarCallback {
                     .metadata(pulsarMetadata(message))
                     .build();
 
-            if (serviceConfiguration.getLogPayload()) {
+            if (serviceConfiguration().getLogPayload()) {
                 log.info("{} - INITIAL: message on topic: [{}], connector: {}, {}",
                         tenant, topic, connectorName, connectorIdentifier);
             }
 
             ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-            if (serviceConfiguration.getLogPayload()) {
+            if (serviceConfiguration().getLogPayload()) {
                 log.info("{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                         tenant, topic, connectorIdentifier);
             }
@@ -97,7 +97,7 @@ public class PulsarCallback extends AbstractPulsarCallback {
                     AckOutcome outcome = ProcessingResultHelper.awaitOutcome(processedResults, tenant, topic, log, null);
                     if (outcome == AckOutcome.ACK) {
                         failureTracker.clear(messageId);
-                        if (serviceConfiguration.getLogPayload()) {
+                        if (serviceConfiguration().getLogPayload()) {
                             log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                     tenant, topic, connectorIdentifier);
                         }

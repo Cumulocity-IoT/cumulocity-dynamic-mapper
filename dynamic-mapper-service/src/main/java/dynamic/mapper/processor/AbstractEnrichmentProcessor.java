@@ -23,8 +23,8 @@ package dynamic.mapper.processor;
 
 import dynamic.mapper.core.GraalHostAccessPolicy;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +42,7 @@ import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.util.MappingCodeFingerprint;
 import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.runtime.SmartFunctionContext;
@@ -98,9 +99,9 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 if (!supportESM) {
-                    String decodedForCheck = new String(
-                            java.util.Base64.getDecoder().decode(mapping.getCode()), StandardCharsets.UTF_8);
-                    if (dynamic.mapper.processor.util.JavaScriptModuleStripper.containsExportStatement(decodedForCheck)) {
+                    // Cached per distinct code: decoding and scanning the code on every message was
+                    // pure repeat work, see MappingCodeFingerprint.
+                    if (MappingCodeFingerprint.containsExport(tenant, mapping.getIdentifier(), mapping.getCode())) {
                         context.getWarnings().add(String.format(
                             "Mapping code for '%s' uses ES module 'export' syntax, which is being stripped " +
                                 "because 'Support ESM modules' is disabled in the service configuration. " +
@@ -135,9 +136,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSystemCode(systemTemplate.getCode());
 
                 // Build the pool key: tenant:mappingId:codeHash (use a stable hash to avoid collisions)
-                String codeHash = java.util.HexFormat.of().formatHex(
-                        java.security.MessageDigest.getInstance("SHA-256")
-                                .digest(mapping.getCode().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                String codeHash = MappingCodeFingerprint.sha256Hex(tenant, mapping.getIdentifier(), mapping.getCode());
                 String poolKey = tenant + ":" + mapping.getIdentifier() + ":" + codeHash;
 
                 // Borrow a pre-warmed context from the pool (or create one on first use)
@@ -307,7 +306,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             extractedSourceContent = expr.evaluate(payloadJsonNode);
         } catch (Exception e) {
             log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
-                    pathExpression, payloadAsString, e);
+                    pathExpression, payloadAsString != null ? payloadAsString : toPrettyJsonString(payloadJsonNode), e);
         }
         return extractedSourceContent;
     }

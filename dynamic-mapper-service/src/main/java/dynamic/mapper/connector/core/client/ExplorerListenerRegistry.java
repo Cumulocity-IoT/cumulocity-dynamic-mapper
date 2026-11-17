@@ -54,6 +54,11 @@ public class ExplorerListenerRegistry {
         listeners.remove(listener);
     }
 
+    /** True if at least one explorer session is listening, so callers can skip building a message nobody reads. */
+    public boolean hasListeners() {
+        return !listeners.isEmpty();
+    }
+
     /** Notify all registered listeners. Exceptions from individual listeners are logged and swallowed. */
     public void notifyListeners(ConnectorMessage message) {
         for (Consumer<ConnectorMessage> listener : listeners) {

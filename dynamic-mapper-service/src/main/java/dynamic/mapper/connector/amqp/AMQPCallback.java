@@ -51,7 +51,7 @@ public class AMQPCallback extends DefaultConsumer {
     private final String tenant;
     private final String connectorIdentifier;
     private final String connectorName;
-    private final ServiceConfiguration serviceConfiguration;
+    private final ServiceRegistry serviceRegistry;
     private final ExecutorService virtualThreadPool;
     private final boolean autoAck;
     private final MessageFailureTracker failureTracker;
@@ -76,8 +76,16 @@ public class AMQPCallback extends DefaultConsumer {
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.serviceRegistry = serviceRegistry;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+    }
+
+    /**
+     * The tenant's current configuration, looked up per use: the registry replaces the object when the
+     * configuration is saved, so a copy captured at construction kept the old {@code logPayload}.
+     */
+    private ServiceConfiguration serviceConfiguration() {
+        return serviceRegistry.getServiceConfiguration(tenant);
     }
 
     @Override
@@ -104,7 +112,7 @@ public class AMQPCallback extends DefaultConsumer {
                         .metadata(amqpMetadata(envelope, properties))
                         .build();
 
-                if (serviceConfiguration.getLogPayload()) {
+                if (serviceConfiguration().getLogPayload()) {
                     log.info("{} - INITIAL: message on routing key: [{}], connector: {}, {}",
                             tenant, routingKey, connectorName, connectorIdentifier);
                 }
@@ -112,7 +120,7 @@ public class AMQPCallback extends DefaultConsumer {
                 // Process the message
                 ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-                if (serviceConfiguration.getLogPayload()) {
+                if (serviceConfiguration().getLogPayload()) {
                     log.info("{} - PREPARING_RESULTS: message on routing key: [{}], connector: {}",
                             tenant, routingKey, connectorIdentifier);
                 }
@@ -134,7 +142,7 @@ public class AMQPCallback extends DefaultConsumer {
                     }
                 }
 
-                if (serviceConfiguration.getLogPayload()) {
+                if (serviceConfiguration().getLogPayload()) {
                     log.info("{} - PROCESSING_COMPLETED: message on routing key: [{}], connector: {}",
                             tenant, routingKey, connectorIdentifier);
                 }

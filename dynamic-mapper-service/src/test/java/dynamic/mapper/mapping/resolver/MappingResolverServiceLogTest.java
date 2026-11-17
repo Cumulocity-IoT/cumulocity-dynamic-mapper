@@ -81,7 +81,7 @@ class MappingResolverServiceLogTest {
         for (Mapping m : mappings) {
             all.put(m.getIdentifier(), m);
         }
-        when(cache.getAllOutboundMappings("t1")).thenReturn(all);
+        when(cache.outboundMappingsView("t1")).thenReturn(all.values());
         C8YMessage message = new C8YMessage();
         message.setApi(API.MEASUREMENT);
         new MappingResolverService(cache, mock(InventoryFilterEvaluator.class)).resolveOutbound("t1", message);

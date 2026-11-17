@@ -76,9 +76,12 @@ public class SendOutboundProcessor extends BaseProcessor {
             return;
         }
 
+        // The operation is parsed from the raw notification at most once per message: it is needed for the
+        // EXECUTING and again for the final status update, and not at all for a mapping without auto-ack.
+        java.util.function.Supplier<OperationRepresentation> operation = memoizedOperation(context);
         try {
             // Auto-acknowledge operation before sending
-            autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
+            autoAckOperation(context, operation, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
             boolean delivered = processAndPrepareRequests(context, connectorIdentifier);
@@ -89,7 +92,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
             if(context.hasError()) {
-                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
+                autoAckOperation(context, operation, tenant, mapping, OperationStatus.FAILED);
             } else {
                 // Commit extension state only for a fully published message; on failure the message
                 // is redelivered and must not look like a duplicate. An empty error list does not prove
@@ -97,7 +100,7 @@ public class SendOutboundProcessor extends BaseProcessor {
                 if (delivered && publishedCompletely(context, wrapper)) {
                     context.runDeferredStateCommit();
                 }
-                autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
+                autoAckOperation(context, operation, tenant, mapping, OperationStatus.SUCCESSFUL);
             }
         } catch (Exception e) {
             String errorMessage = String.format(
@@ -108,7 +111,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             // Ensure the operation isn't left stuck in EXECUTING when send/alarm processing
             // itself throws before the normal FAILED/SUCCESSFUL ack above is reached.
-            autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
+            autoAckOperation(context, operation, tenant, mapping, OperationStatus.FAILED);
 
             if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -128,14 +131,31 @@ public class SendOutboundProcessor extends BaseProcessor {
     /**
      * Update the operation status (EXECUTING, FAILED, or SUCCESSFUL) around sending the outbound message.
      */
-    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
+    private static java.util.function.Supplier<OperationRepresentation> memoizedOperation(
+            ProcessingContext<Object> context) {
+        return new java.util.function.Supplier<>() {
+            private OperationRepresentation parsed;
+
+            @Override
+            public OperationRepresentation get() {
+                if (parsed == null) {
+                    parsed = JSONBase.getJSONParser().parse(
+                            OperationRepresentation.class, (String) context.getRawPayload());
+                }
+                return parsed;
+            }
+        };
+    }
+
+    private void autoAckOperation(ProcessingContext<Object> context,
+            java.util.function.Supplier<OperationRepresentation> operation, String tenant, Mapping mapping,
+            OperationStatus operationStatus) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())
                 || Boolean.TRUE.equals(context.isTesting())) {
             return;
         }
         try {
-            OperationRepresentation op = JSONBase.getJSONParser().parse(
-                    OperationRepresentation.class, (String) context.getRawPayload());
+            OperationRepresentation op = operation.get();
             // Join error messages for the status update
             if(context.hasError()) {
                 String errorMessage = context.getErrors().stream()

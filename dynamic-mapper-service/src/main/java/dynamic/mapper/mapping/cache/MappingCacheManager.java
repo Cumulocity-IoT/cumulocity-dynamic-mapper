@@ -383,6 +383,19 @@ public class MappingCacheManager {
         return outbound(tenant).map(s -> (Map<String, Mapping>) new HashMap<>(s.byId)).orElseGet(HashMap::new);
     }
 
+    /**
+     * Read-only live view of a tenant's outbound mappings, for the per-notification hot path.
+     * {@link #getAllOutboundMappings} copies the whole map, which the outbound resolver did for every
+     * notification before scanning it once. The view iterates weakly consistently (a mapping added or
+     * removed during the scan may or may not be seen), the same guarantee the copy gave for a change
+     * right after it was taken.
+     */
+    public java.util.Collection<Mapping> outboundMappingsView(String tenant) {
+        return outbound(tenant)
+                .map(s -> java.util.Collections.unmodifiableCollection(s.byId.values()))
+                .orElseGet(java.util.Collections::emptyList);
+    }
+
     // ========== Generic Operations ==========
 
     /**

@@ -121,7 +121,6 @@ public class FilterInboundProcessor extends BaseProcessor {
                 return;
             }
 
-            String payload = toPrettyJsonString(payloadObjectNode);
             try {
                 var expr = jsonata(mappingFilter);
                 registerIsDuplicate(expr, context);
@@ -129,7 +128,8 @@ public class FilterInboundProcessor extends BaseProcessor {
                 if (!Utils.isNodeTrue(extractedSourceContent)) {
                     if (mapping.getDebug()) {
                         log.info("{} - Inbound mapping {}/{} filtered out - message filter mismatch: filter={}, payload={}",
-                                tenant, mapping.getName(), mapping.getIdentifier(), mappingFilter, payload);
+                                tenant, mapping.getName(), mapping.getIdentifier(), mappingFilter,
+                                toPrettyJsonString(payloadObjectNode));
                     }
                     context.getWarnings().add("Payload will be ignored due to filter: " + mappingFilter);
                     context.setIgnoreFurtherProcessing(true);
@@ -140,7 +140,8 @@ public class FilterInboundProcessor extends BaseProcessor {
                 // (MappingResolverService.evaluateMessageFilter/evaluateInventoryFilter treat any
                 // evaluation error as "does not match").
                 log.error("{} - Inbound mapping {}/{} filter evaluation failed - message will be ignored: filter={}, payload={}",
-                        tenant, mapping.getName(), mapping.getIdentifier(), mappingFilter, payload, e);
+                        tenant, mapping.getName(), mapping.getIdentifier(), mappingFilter,
+                        toPrettyJsonString(payloadObjectNode), e);
                 context.getWarnings().add("Payload will be ignored - filter evaluation failed: " + mappingFilter);
                 context.setIgnoreFurtherProcessing(true);
             }

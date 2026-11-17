@@ -46,7 +46,9 @@ public abstract class BaseProcessor extends CommonProcessor {
         } catch (Exception e) {
             log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                     ps,
-                    payloadAsString, e);
+                    payloadAsString != null ? payloadAsString
+                            : dynamic.mapper.model.Substitution.toPrettyJsonString(payloadJsonNode),
+                    e);
         }
         return extractedSourceContent;
     }

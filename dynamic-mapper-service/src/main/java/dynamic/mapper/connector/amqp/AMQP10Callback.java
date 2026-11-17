@@ -64,7 +64,7 @@ public class AMQP10Callback implements MessageListener {
     private final String connectorName;
     private final String subscriptionTopic;
     private final Qos qos;
-    private final ServiceConfiguration serviceConfiguration;
+    private final ServiceRegistry serviceRegistry;
     private final Session session;
     private final MessageFailureTracker failureTracker;
 
@@ -95,10 +95,18 @@ public class AMQP10Callback implements MessageListener {
         this.connectorName = connectorName;
         this.subscriptionTopic = subscriptionTopic;
         this.qos = qos;
-        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.serviceRegistry = serviceRegistry;
         this.session = session;
         this.failureTracker = MessageFailureTracker.forConfiguration(
                 () -> serviceRegistry.getServiceConfiguration(tenant));
+    }
+
+    /**
+     * The tenant's current configuration, looked up per use: the registry replaces the object when the
+     * configuration is saved, so a copy captured at construction kept the old {@code logPayload}.
+     */
+    private ServiceConfiguration serviceConfiguration() {
+        return serviceRegistry.getServiceConfiguration(tenant);
     }
 
     @Override
@@ -126,7 +134,7 @@ public class AMQP10Callback implements MessageListener {
                         .payload(payload)
                         .build();
 
-                if (serviceConfiguration.getLogPayload()) {
+                if (serviceConfiguration().getLogPayload()) {
                     log.info("{} - INITIAL: AMQP 1.0 message on address: [{}], connector: {}, {}",
                             tenant, address, connectorName, connectorIdentifier);
                 }
@@ -143,7 +151,7 @@ public class AMQP10Callback implements MessageListener {
                     settle(message, address, payload, processedResults);
                 }
 
-                if (serviceConfiguration.getLogPayload()) {
+                if (serviceConfiguration().getLogPayload()) {
                     log.info("{} - PROCESSING_COMPLETED: AMQP 1.0 message on address: [{}], connector: {}",
                             tenant, address, connectorIdentifier);
                 }

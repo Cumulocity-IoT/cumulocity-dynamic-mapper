@@ -91,6 +91,16 @@ public class JavaScriptInteropHelper {
     }
 
     /**
+     * Like {@link #toJsInterop}, but converts a nested value only when the script first reads it, see
+     * {@link LazyJsProxies}. Use it for data that Java code leaves unchanged while the script runs (the
+     * message payload, a stored state value, the config). Data shared with other threads, or changed
+     * during the call (the whole state map, the inventory cache), still needs the eager copy.
+     */
+    public static Object toJsInteropLazy(Object value) {
+        return LazyJsProxies.wrap(value);
+    }
+
+    /**
      * Creates a JavaScript-compatible message object from Java objects
      * 
      * @param context The GraalJS context

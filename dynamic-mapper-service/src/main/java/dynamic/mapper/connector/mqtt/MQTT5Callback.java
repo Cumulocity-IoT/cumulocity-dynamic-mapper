@@ -71,7 +71,7 @@ public class MQTT5Callback extends AbstractMqttCallback<Mqtt5Publish> {
                 .map(p -> p.getValue().toString())
                 .findFirst()
                 .orElse(null);
-        if (publisherClientId != null && serviceConfiguration.getLogPayload()) {
+        if (publisherClientId != null && serviceConfiguration().getLogPayload()) {
             log.info("{} - Publisher client ID from user properties: {}", tenant, publisherClientId);
         }
         TransportMetadata metadata = new TransportMetadata();

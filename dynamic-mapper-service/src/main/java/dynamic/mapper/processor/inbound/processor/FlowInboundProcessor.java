@@ -79,7 +79,7 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         // Convert nested Map/List (e.g. JSONata's LinkedHashMap/ArrayList payload tree) into
         // ProxyObject/ProxyArray so Smart Functions can use native JS array methods like
         // .forEach()/.map() instead of hitting GraalVM's List<->Consumer interop failure.
-        payload = JavaScriptInteropHelper.toJsInterop(payload);
+        payload = JavaScriptInteropHelper.toJsInteropLazy(payload);
         Map<String, String> transportFields = context.buildTransportFields();
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 payload,

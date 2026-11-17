@@ -58,7 +58,7 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
     protected final String tenant;
     protected final String connectorIdentifier;
     protected final String connectorName;
-    protected final ServiceConfiguration serviceConfiguration;
+    protected final ServiceRegistry serviceRegistry;
     protected final ExecutorService virtualThreadPool;
 
     /**
@@ -78,9 +78,17 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.serviceRegistry = serviceRegistry;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
+    }
+
+    /**
+     * The tenant's current configuration, looked up per use: the registry replaces the object when the
+     * configuration is saved, so a copy captured at construction kept the old {@code logPayload}.
+     */
+    protected ServiceConfiguration serviceConfiguration() {
+        return serviceRegistry.getServiceConfiguration(tenant);
     }
 
     /**

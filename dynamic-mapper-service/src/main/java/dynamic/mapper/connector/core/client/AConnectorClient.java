@@ -204,6 +204,10 @@ public abstract class AConnectorClient {
     }
 
     /** Notify all registered outbound explorer listeners (called by SendOutboundProcessor). */
+    public boolean hasOutboundExplorerListeners() {
+        return outboundExplorerListeners != null && outboundExplorerListeners.hasListeners();
+    }
+
     public void notifyOutboundExplorerListeners(dynamic.mapper.connector.core.callback.ConnectorMessage message) {
         outboundExplorerListeners.notifyListeners(message);
     }

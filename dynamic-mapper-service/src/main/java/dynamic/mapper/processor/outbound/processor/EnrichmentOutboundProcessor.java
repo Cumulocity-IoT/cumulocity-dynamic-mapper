@@ -99,8 +99,8 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
             normalizeTestPayload(tenant, payloadMap, identifier);
         }
-        String payloadAsString = toPrettyJsonString(payloadObject);
-        Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
+        // null: formatted only if the extraction fails, not for every message
+        Object sourceId = extractContent(context, payloadObject, null, identifier);
         if (sourceId == null) {
             if (context.isTesting()) {
                 // Test payload may not contain the source identifier (e.g. no source.id on a

@@ -382,7 +382,9 @@ public class GraalVMContextService implements TenantScoped {
             return pooled;
         }
 
-        // Slow path: create a new context, load all code once
+        // Slow path: create a new context, load all code once. Counted: a steady miss rate means bursts
+        // of concurrent messages exceed the idle contexts of this mapping (see contextPoolSize).
+        poolCounter("dynmapper_graal_context_pool_miss_total", tenant).increment();
         log.debug("{} - Creating new pooled GraalVM context for mapping [{}]", tenant, mappingIdentifier);
         try {
             Context ctx = createFreshGraalContext(engine, supportESM);
@@ -481,6 +483,13 @@ public class GraalVMContextService implements TenantScoped {
         }
     }
 
+    private static io.micrometer.core.instrument.Counter poolCounter(String name, String tenant) {
+        return io.micrometer.core.instrument.Counter.builder(name)
+                .description("GraalVM context pool: " + name)
+                .tag("tenant", tenant)
+                .register(io.micrometer.core.instrument.Metrics.globalRegistry);
+    }
+
     /**
      * Returns a borrowed {@link PooledGraalContext} to the pool or discards it.
      *
@@ -518,6 +527,8 @@ public class GraalVMContextService implements TenantScoped {
             log.debug("Returned GraalVM context to pool [{}] (idle={})", poolKey, deque.size());
         } else {
             pooled.closeQuietly();
+            // Counted with the misses: contexts built under load and thrown away again are the pool churn
+            poolCounter("dynmapper_graal_context_pool_discard_total", tenant).increment();
             log.debug("Pool [{}] full or missing — closed returned context", poolKey);
         }
     }

@@ -67,9 +67,7 @@ public class MappingResolverService {
         API api = message.getApi();
 
         try {
-            Map<String, Mapping> allMappings = cacheManager.getAllOutboundMappings(tenant);
-
-            for (Mapping mapping : allMappings.values()) {
+            for (Mapping mapping : cacheManager.outboundMappingsView(tenant)) {
                 if (shouldProcessMapping(tenant, mapping, message, api)) {
                     result.add(mapping);
                 }
