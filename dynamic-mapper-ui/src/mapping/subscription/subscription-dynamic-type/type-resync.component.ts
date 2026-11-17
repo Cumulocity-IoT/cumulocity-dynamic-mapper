@@ -225,14 +225,23 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
       const types = new Set(this.typeListInternal);
       const latest: Record<string, ResyncState> = {};
       const resolved = new Set<string>();
+      // Per type: the newest "started" event, the newest result event, the newest completed run.
+      // Compared by time, never by list position or id, so the outcome doesn't depend on how the
+      // API orders events (ids are not monotonic; same-millisecond events sort arbitrarily).
+      interface Seen {
+        startTime?: string;
+        endTime?: string;
+        endOutcome?: ResyncOutcome;
+        endDetail?: string;
+        completedTime?: string;
+      }
+      const seen: Record<string, Seen> = {};
+      const ms = (t?: string) => (t ? new Date(t).getTime() : Number.NEGATIVE_INFINITY);
 
+      // Default order is newest first. Do not pass revert=true: with a date range it means OLDEST first.
       let page = await this.eventService.list({
         source: agentId,
         type: BACKFILL_EVENT_TYPE,
-        // revert=true (newest first) is only honoured together with a date range
-        dateFrom: new Date(0).toISOString(),
-        dateTo: new Date(Date.now() + 60_000).toISOString(),
-        revert: true,
         pageSize: EVENT_PAGE_SIZE,
         withTotalPages: false
       });
@@ -241,29 +250,34 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
         for (const event of page.data as IEvent[]) {
           const fragment = event[BACKFILL_FRAGMENT];
           const type: string | undefined = fragment?.type;
-          if (!type || !types.has(type) || resolved.has(type)) {
+          if (!type || !types.has(type)) {
             continue;
           }
           const completed = fragment.subscribed !== undefined;
           const incomplete = fragment.subscribedBeforeFailure !== undefined;
-          const state = latest[type];
-          if (!state) {
-            latest[type] = {
-              time: event.time,
-              outcome: completed ? 'FINISHED' : incomplete ? 'INCOMPLETE' : 'RUNNING',
-              detail: completed
-                ? this.translateService.instant(gettext('{{subscribed}} subscribed, {{failed}} failed'),
-                    { subscribed: fragment.subscribed, failed: fragment.failed })
-                : incomplete
-                  ? this.translateService.instant(gettext('{{count}} subscribed before failure: {{error}}'),
-                      { count: fragment.subscribedBeforeFailure, error: fragment.error })
-                  : undefined,
-              lastCompletedTime: completed ? event.time : undefined
-            };
-          } else if (completed && !state.lastCompletedTime) {
-            state.lastCompletedTime = event.time;
+          const s = (seen[type] ??= {});
+          if (!completed && !incomplete) {
+            if (ms(event.time) > ms(s.startTime)) {
+              s.startTime = event.time;
+            }
+            continue;
           }
-          if (latest[type].lastCompletedTime) {
+          if (ms(event.time) > ms(s.endTime)) {
+            s.endTime = event.time;
+            s.endOutcome = completed ? 'FINISHED' : 'INCOMPLETE';
+            s.endDetail = completed
+              ? this.translateService.instant(gettext('{{subscribed}} subscribed, {{failed}} failed'),
+                  { subscribed: fragment.subscribed, failed: fragment.failed })
+              : this.translateService.instant(gettext('{{count}} subscribed before failure: {{error}}'),
+                  { count: fragment.subscribedBeforeFailure, error: fragment.error });
+          }
+          if (completed && ms(event.time) > ms(s.completedTime)) {
+            s.completedTime = event.time;
+          }
+        }
+        // A type is settled once its latest completed run and a start event are both known
+        for (const [type, s] of Object.entries(seen)) {
+          if (s.completedTime && s.startTime) {
             resolved.add(type);
           }
         }
@@ -271,6 +285,13 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
           break;
         }
         page = await page.paging.next();
+      }
+      for (const [type, s] of Object.entries(seen)) {
+        // A result at or after the newest start ends that run; only a newer start means "running"
+        const running = !!s.startTime && ms(s.startTime) > ms(s.endTime);
+        latest[type] = running
+          ? { time: s.startTime!, outcome: 'RUNNING', lastCompletedTime: s.completedTime }
+          : { time: s.endTime!, outcome: s.endOutcome!, detail: s.endDetail, lastCompletedTime: s.completedTime };
       }
       if (quick) {
         // keep what the first page does not show: the last completed run of each type

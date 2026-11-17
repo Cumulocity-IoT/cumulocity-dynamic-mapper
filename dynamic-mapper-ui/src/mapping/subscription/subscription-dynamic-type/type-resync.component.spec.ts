@@ -79,6 +79,25 @@ describe('TypeResyncComponent (status polling)', () => {
     expect(action.showIf!({ type: 'a' } as any)).toBeTrue();
   });
 
+  it('shows a finished run as OK whatever order the API lists its events in (ids are not monotonic)', async () => {
+    // Real data: oldest first, and the result event has a LOWER id than its start event
+    const start = { id: '1975577', ...event('a', {}, '2026-11-17T14:12:19.012Z') };
+    const end = { id: '1943965', ...event('a', { subscribed: '10', failed: '0' }, '2026-11-17T14:12:19.389Z') };
+    nextPage.and.resolveTo({ data: [], paging: {} });
+    for (const data of [[start, end], [end, start]]) {
+      list.and.resolveTo(page(data));
+      await component['loadSyncStates']();
+      expect(component['states']['a'].outcome).toBe('FINISHED');
+      expect(component.rows[0].status).toBe('OK (10 subscribed, 0 failed)');
+    }
+  });
+
+  it('does not ask the API for oldest-first order', async () => {
+    list.and.resolveTo(page([]));
+    await component['loadSyncStates']();
+    expect(list.calls.mostRecent().args[0].revert).toBeUndefined();
+  });
+
   it('offers a run whose start event is older than the stale limit (a job lost to a restart)', async () => {
     list.and.resolveTo(page([event('a', {}, new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString())]));
     nextPage.and.resolveTo({ data: [], paging: {} });
