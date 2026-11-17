@@ -21,6 +21,11 @@
     "resolveJsonModule": true,
     "noUncheckedSideEffectImports": false
   },
+  "ts-node": {
+    "compilerOptions": {
+      "ignoreDeprecations": "6.0"
+    }
+  },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

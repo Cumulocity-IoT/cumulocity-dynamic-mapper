@@ -207,6 +207,10 @@ export const openConnectorRowAction = (
   identifier: string,
   actionLabel: string
 ): void => {
+  // A drawer that was just saved is still leaving the DOM for a moment. Opening the next one while
+  // it is there leaves two `dm-field-*` elements, and a command that picked both fails once the old
+  // one is removed ("the page updated while this command was executing").
+  cy.get('c8y-bottom-drawer').should('not.exist');
   getConnector(identifier).closest('[role="row"]').as('connectorRow');
 
   // c8y renders the Edit action as a dedicated primary button in the row

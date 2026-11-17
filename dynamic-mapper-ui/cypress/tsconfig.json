@@ -8,6 +8,7 @@
     ],
     "compilerOptions": {
       "noEmit": false,
+      "ignoreDeprecations": "6.0",
       "sourceMap": false,
       "target": "ES2022",
       "lib": ["ES2022", "dom"],
