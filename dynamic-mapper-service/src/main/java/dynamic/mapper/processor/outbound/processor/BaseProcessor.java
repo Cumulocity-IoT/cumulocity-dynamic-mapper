@@ -53,11 +53,20 @@ public abstract class BaseProcessor extends CommonProcessor {
         return extractedSourceContent;
     }
 
+    private static boolean needsDeepCopy(Mapping mapping, Boolean testing) {
+        return Boolean.TRUE.equals(testing)
+                || dynamic.mapper.model.TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
+    }
+
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
             C8YMessage message, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
-                // Its own copy: the mappings of one notification run in parallel and enrichment writes into the payload.
-                .payload(PayloadCopy.deepCopy(message.getParsedPayload()))
+                // Its own top level: the mappings of one notification run in parallel and enrichment writes its
+                // tokens into the payload. Nested containers are shared, which is safe only while nobody writes into
+                // them, so a Java extension (gets the real maps) and test mode (normalizes the payload) get a deep copy.
+                .payload(needsDeepCopy(mapping, testing)
+                        ? PayloadCopy.deepCopy(message.getParsedPayload())
+                        : PayloadCopy.shallowCopy(message.getParsedPayload()))
                 .topic(mapping.getPublishTopic())
                 .rawPayload(message.getPayload())
                 .mappingType(mapping.getMappingType())

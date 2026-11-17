@@ -42,6 +42,22 @@ public final class PayloadCopy {
     private PayloadCopy() {
     }
 
+    /**
+     * Copies only the top-level map; nested maps and lists stay shared with the source.
+     *
+     * <p>Enough when the receiver writes only top-level keys (the enrichment tokens) and never into a nested
+     * container: JSONata evaluation only reads, and a Smart Function sees the payload through
+     * {@link JavaScriptInteropHelper#toJsInteropLazy}, whose views copy on write and never touch the source. Not enough
+     * for a Java extension, which gets the real maps and may change them, or for test mode, which normalizes the payload.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T shallowCopy(T value) {
+        if (value instanceof Map<?, ?> map) {
+            return (T) new LinkedHashMap<Object, Object>(map);
+        }
+        return deepCopy(value);
+    }
+
     @SuppressWarnings("unchecked")
     public static <T> T deepCopy(T value) {
         if (value instanceof Map<?, ?> map) {
