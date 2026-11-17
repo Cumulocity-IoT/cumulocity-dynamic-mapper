@@ -233,7 +233,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 }
                 return resultInner;
             } catch (SDKException e) {
-                log.warn("{} - External ID {} not found", tenant, identity.getValue());
+                if (e.getHttpStatus() == 404) {
+                    log.warn("{} - External ID {} (type {}) not found", tenant, identity.getValue(),
+                            identity.getType());
+                } else {
+                    log.warn("{} - External ID lookup {} (type {}) failed: HTTP {}", tenant, identity.getValue(),
+                            identity.getType(), e.getHttpStatus());
+                }
             }
             return null;
         });

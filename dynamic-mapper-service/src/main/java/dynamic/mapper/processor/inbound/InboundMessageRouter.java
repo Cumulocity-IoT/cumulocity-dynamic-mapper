@@ -140,8 +140,10 @@ public class InboundMessageRouter extends MessageRoutingSupport {
                 .toList();
 
         if (validMappings.isEmpty()) {
-            log.info("{} - All {} candidate mapping(s) filtered out for connector {} — no processing will occur",
-                    tenant, mappings.size(), connectorIdentifier);
+            log.info("{} - All {} candidate mapping(s) filtered out for connector {} (inactive or not deployed to it): {} - no processing will occur",
+                    tenant, mappings.size(), connectorIdentifier,
+                    mappings.stream().filter(java.util.Objects::nonNull)
+                            .map(m -> m.getName() + " [" + m.getId() + ", active=" + m.getActive() + "]").toList());
             return new ArrayList<>();
         }
         log.info("{} - Filtered {} candidate mapping(s) to {} valid mapping(s) for connector {}",

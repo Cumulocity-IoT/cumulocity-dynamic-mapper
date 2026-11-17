@@ -114,14 +114,13 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
                 notification.getNotificationHeaders(), tenant);
 
             // A DELETE notification has an empty body, so the id comes from the channel header.
+            // Only fall back to parsing the body when the header carries no id: the body of a DELETE
+            // is not guaranteed to be JSON, and parsing it only produced a misleading parse warning.
+            String sourceId = NotificationHelper.extractSourceIdFromHeaders(notification.getNotificationHeaders());
             String message = notification.getMessage();
-            String sourceId = null;
-            if (message != null && !message.isBlank()) {
+            if (sourceId == null && message != null && !message.isBlank()) {
                 Map<String, Object> payload = NotificationHelper.parsePayload(message);
                 sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
-            }
-            if (sourceId == null) {
-                sourceId = NotificationHelper.extractSourceIdFromHeaders(notification.getNotificationHeaders());
             }
 
             if (sourceId == null) {

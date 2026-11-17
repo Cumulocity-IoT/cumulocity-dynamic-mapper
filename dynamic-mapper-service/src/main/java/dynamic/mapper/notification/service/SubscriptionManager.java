@@ -415,7 +415,18 @@ public class SubscriptionManager {
                 while (subIt.hasNext()) {
                     NotificationSubscriptionRepresentation nsr = subIt.next();
                     if (Utils.CACHE_INVENTORY_SUBSCRIPTION.equals(nsr.getSubscription())) {
-                        subscriptionAPI.delete(nsr);
+                        try {
+                            subscriptionAPI.delete(nsr);
+                        } catch (SDKException de) {
+                            if (de.getHttpStatus() == 404) {
+                                // Cumulocity removes a MO's subscriptions together with the MO, so on a
+                                // DELETE notification the subscription is usually gone already.
+                                log.info("{} - Cache subscription of MO {} already removed by the platform",
+                                        tenant, mor.getId().getValue());
+                                return false;
+                            }
+                            throw de;
+                        }
                         log.info("{} - Unsubscribed MO {} from cache updates", tenant, mor.getId().getValue());
                         return true;
                     }
