@@ -283,6 +283,13 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
                 currentPage, pageSize, withTotalPages, search);
     }
 
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search,
+            String sortBy, String sortDir) {
+        return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription,
+                currentPage, pageSize, withTotalPages, search, sortBy, sortDir);
+    }
+
     public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant) {
         return queryService.getSubscriptionsByDeviceGroup(tenant);
     }

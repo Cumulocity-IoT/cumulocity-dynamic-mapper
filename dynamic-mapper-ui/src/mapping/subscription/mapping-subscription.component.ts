@@ -181,7 +181,8 @@ export class MappingSubscriptionComponent implements OnInit {
       name: 'subscriptionSource',
       path: 'subscriptionSource',
       filterable: true,
-      sortable: true,
+      // Derived in the UI per page (enrichDevices); the backend cannot order by it
+      sortable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: LabelTaggedRendererComponent
     }
@@ -265,11 +266,17 @@ export class MappingSubscriptionComponent implements OnInit {
     // The backend resolves the search against every subscribed device (there is no name/text
     // predicate on the underlying notification-subscription API), so a search request re-paginates
     // over the filtered set rather than the full unfiltered one.
+    // Server-side grids do not sort themselves: the active column's order arrives on mod.columns.
+    // The backend sorts the full set before paging (groupNames is the display form of "groups").
+    const sorted = this.resolveSortColumn(mod.columns ?? []);
+    const sortBy = sorted ? (sorted.name === 'groupNames' ? 'groups' : sorted.name) : undefined;
     const response = await this.subscriptionService.getSubscriptionDevice(
       subscription,
       currentPage,
       pageSize,
-      searchText
+      searchText,
+      sortBy,
+      sorted?.sortOrder as 'asc' | 'desc' | undefined
     );
     this.subscriptionDevices = response ?? undefined;
 
@@ -292,6 +299,32 @@ export class MappingSubscriptionComponent implements OnInit {
       size,
       filteredSize: size
     } as unknown as ServerSideDataResult;
+  }
+
+  /** Sort state seen on the previous page request, by column name. */
+  private lastSortOrders: Record<string, string> = {};
+  private lastSortColumn?: string;
+
+  /**
+   * The grid allows several columns to carry a sort order at once: clicking a second column does not
+   * clear the first. The backend orders by a single column, so pick the one the user changed last
+   * (a "load more" request changes nothing and keeps the previous choice) and clear the others so
+   * the header arrows match what is applied.
+   */
+  private resolveSortColumn(columns: Column[]): Column | undefined {
+    const active = columns.filter(c => c.sortOrder === 'asc' || c.sortOrder === 'desc');
+    const changed = active.find(c => this.lastSortOrders[c.name as string] !== c.sortOrder);
+    const chosen = changed
+      ?? active.find(c => c.name === this.lastSortColumn)
+      ?? active[0];
+    for (const c of active) {
+      if (c !== chosen) {
+        c.sortOrder = '';
+      }
+    }
+    this.lastSortOrders = chosen ? { [chosen.name as string]: chosen.sortOrder as string } : {};
+    this.lastSortColumn = chosen?.name as string | undefined;
+    return chosen;
   }
 
   /**

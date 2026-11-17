@@ -340,7 +340,9 @@ export class SubscriptionService {
     subscription: string,
     currentPage?: number,
     pageSize?: number,
-    search?: string
+    search?: string,
+    sortBy?: string,
+    sortDir?: 'asc' | 'desc'
   ): Promise<NotificationSubscriptionResponse | null> {
     const features = await this.sharedService.getFeatures();
 
@@ -357,6 +359,9 @@ export class SubscriptionService {
         }
         if (search) {
           url += `&search=${encodeURIComponent(search)}`;
+        }
+        if (sortBy) {
+          url += `&sortBy=${encodeURIComponent(sortBy)}&sortDir=${sortDir === 'desc' ? 'desc' : 'asc'}`;
         }
         const response = await this.client.fetch(
           url,

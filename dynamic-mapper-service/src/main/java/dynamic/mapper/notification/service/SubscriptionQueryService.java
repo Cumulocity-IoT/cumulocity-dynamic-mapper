@@ -41,6 +41,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -243,6 +244,18 @@ public class SubscriptionQueryService {
      */
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
             String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search) {
+        return getSubscriptionsDevices(tenant, deviceId, deviceSubscription, currentPage, pageSize,
+                withTotalPages, search, null, null);
+    }
+
+    /**
+     * As above, additionally ordered by {@code sortBy} (id, name, type, or groups; {@code sortDir}
+     * "asc"/"desc"). Sorting needs the whole set, so it resolves every subscribed device like a
+     * search does, then sorts before slicing out the page.
+     */
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search,
+            String sortBy, String sortDir) {
 
         if (tenant == null) {
             throw new IllegalArgumentException("Tenant cannot be null");
@@ -258,8 +271,10 @@ public class SubscriptionQueryService {
         }
         filter = filter.byContext("mo");
 
-        if (search != null && !search.isBlank()) {
-            return searchAndPaginate(tenant, filter, search, currentPage, pageSize);
+        boolean hasSearch = search != null && !search.isBlank();
+        Comparator<Device> comparator = buildDeviceComparator(sortBy, sortDir);
+        if (hasSearch || comparator != null) {
+            return searchAndPaginate(tenant, filter, hasSearch ? search : null, comparator, currentPage, pageSize);
         }
 
         return getSubscriptionsDevicesPaged(tenant, filter, currentPage, pageSize, withTotalPages);
@@ -339,11 +354,11 @@ public class SubscriptionQueryService {
      * {@link #buildSearchMatcher}).
      */
     private NotificationSubscriptionResponse searchAndPaginate(String tenant, NotificationSubscriptionFilter filter,
-            String search, int currentPage, int pageSize) {
+            String search, Comparator<Device> comparator, int currentPage, int pageSize) {
 
         int effectivePageSize = pageSize > 0 ? pageSize : 30;
         int requestedPage = Math.max(1, currentPage);
-        Predicate<String> searchMatcher = buildSearchMatcher(search);
+        Predicate<String> searchMatcher = search == null ? null : buildSearchMatcher(search);
 
         NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder =
                 NotificationSubscriptionResponse.builder();
@@ -367,8 +382,11 @@ public class SubscriptionQueryService {
         });
 
         List<Device> matches = allDevices.stream()
-                .filter(d -> matchesSearch(d, searchMatcher))
+                .filter(d -> searchMatcher == null || matchesSearch(d, searchMatcher))
                 .collect(Collectors.toList());
+        if (comparator != null) {
+            matches.sort(comparator);
+        }
 
         int totalElements = matches.size();
         int fromIndex = Math.min((requestedPage - 1) * effectivePageSize, totalElements);
@@ -385,6 +403,38 @@ public class SubscriptionQueryService {
                         .hasNext(toIndex < totalElements)
                         .build())
                 .build();
+    }
+
+    /** Null when no (known) sort column is requested. Case-insensitive, nulls last; id numeric-aware. */
+    private Comparator<Device> buildDeviceComparator(String sortBy, String sortDir) {
+        if (sortBy == null || sortBy.isBlank()) {
+            return null;
+        }
+        Comparator<Device> c;
+        switch (sortBy) {
+            case "id":
+                c = Comparator.comparing(Device::getId, Comparator.nullsLast(
+                        Comparator.comparingLong((String v) -> v.chars().allMatch(Character::isDigit) && v.length() < 19
+                                ? Long.parseLong(v) : Long.MAX_VALUE).thenComparing(Comparator.naturalOrder())));
+                break;
+            case "name":
+                c = Comparator.comparing(Device::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                break;
+            case "type":
+                c = Comparator.comparing(Device::getType, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                break;
+            case "groups":
+                c = Comparator.comparing(
+                        (Device d) -> d.getGroups() == null || d.getGroups().isEmpty() ? null
+                                : String.join(", ", d.getGroups()),
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                break;
+            default:
+                return null;
+        }
+        // Stable tie-break so paging never shuffles equal rows between pages
+        c = c.thenComparing(Device::getId, Comparator.nullsLast(Comparator.<String>naturalOrder()));
+        return "desc".equalsIgnoreCase(sortDir) ? c.reversed() : c;
     }
 
     private boolean matchesSearch(Device device, Predicate<String> searchMatcher) {

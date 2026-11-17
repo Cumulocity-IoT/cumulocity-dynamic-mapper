@@ -105,7 +105,7 @@ class NotificationSubscriptionControllerTest {
             assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
                     () -> controller.deleteSubscription("d1", bucket)).getStatusCode());
             assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
-                    () -> controller.getSubscriptions(bucket, null, null, true, null)).getStatusCode());
+                    () -> controller.getSubscriptions(bucket, null, null, true, null, null, null)).getStatusCode());
         }
         verifyNoInteractions(subscriptionService);
     }

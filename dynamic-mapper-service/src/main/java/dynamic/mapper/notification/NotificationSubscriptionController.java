@@ -153,7 +153,11 @@ public class NotificationSubscriptionController {
             @RequestParam(value = "pageSize", required = false) Integer pageSize,
             @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages,
             @Parameter(description = "Restrict the result to devices whose id, name, type, or group matches this text (case-insensitive substring; * and ? act as wildcards)")
-            @RequestParam(value = "search", required = false) String search) {
+            @RequestParam(value = "search", required = false) String search,
+            @Parameter(description = "Order by id, name, type, or groups")
+            @RequestParam(value = "sortBy", required = false) String sortBy,
+            @Parameter(description = "asc (default) or desc")
+            @RequestParam(value = "sortDir", required = false) String sortDir) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
         validateDeviceBucket(subscription);
@@ -167,7 +171,8 @@ public class NotificationSubscriptionController {
                             .getSubscriptionsDevices(tenant, null, subscription)
                     : notificationSubscriber
                             .getSubscriptionsDevices(tenant, null, subscription,
-                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search);
+                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search,
+                                    sortBy, sortDir);
             return ResponseEntity.ok(response);
         } catch (ResponseStatusException e) {
             throw e; // a deliberate 4xx must not become a 500
