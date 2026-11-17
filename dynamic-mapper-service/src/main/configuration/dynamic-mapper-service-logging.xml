@@ -35,7 +35,7 @@
 
     <appender name="OpenTelemetry"
               class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-        <captureMdcAttributes>mapperTenant</captureMdcAttributes>
+        <mdcAttributesIncluded>mapperTenant</mdcAttributesIncluded>
     </appender>
 
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">

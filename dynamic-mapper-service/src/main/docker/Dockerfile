@@ -13,6 +13,8 @@ COPY --from=base /opt/jdk-mini /opt/jdk-mini
 RUN apk add --no-cache coreutils
 ENV JAVA_HOME=/opt/jdk-mini
 ENV PATH="$PATH:$JAVA_HOME/bin"
+# GraalVM Truffle (Smart Functions) calls sun.misc.Unsafe and System::load, which JDK 24+ warns about; allow both explicitly
+ENV JAVA_TOOL_OPTIONS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
 COPY etc/ /etc/@package.name@/
 ADD resources/* /data/
 RUN chmod +x /data/entrypoint.sh
