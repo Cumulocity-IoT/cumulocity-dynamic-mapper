@@ -37,7 +37,7 @@
 		<revision>6.6.2-SNAPSHOT</revision>
 		<spring-boot-dependencies.version>4.1.2</spring-boot-dependencies.version>
 		<c8y.version>2026.55.0</c8y.version>
-		<lombok.version>1.18.46</lombok.version>
+		<lombok.version>1.18.48</lombok.version>
 		<slf4j.version>2.0.20</slf4j.version>
 		<maven.compiler.source>25</maven.compiler.source>
 		<maven.compiler.target>25</maven.compiler.target>
@@ -321,7 +321,7 @@
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>flatten-maven-plugin</artifactId>
-					<version>1.8.0</version>
+					<version>1.9.0</version>
 					<configuration>
 						<updatePomFile>true</updatePomFile>
 						<flattenMode>resolveCiFriendliesOnly</flattenMode>
