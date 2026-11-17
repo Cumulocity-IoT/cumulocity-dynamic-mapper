@@ -12,7 +12,6 @@
       "target": "ES2022",
       "lib": ["ES2022", "dom"],
       "types": ["cypress"],
-      "paths": {},
-      "baseUrl": "."
+      "paths": {}
     }
   }
