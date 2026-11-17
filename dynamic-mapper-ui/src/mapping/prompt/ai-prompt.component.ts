@@ -18,14 +18,16 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   inject,
   Input,
   OnInit,
-  ViewChild,
-  ViewEncapsulation, viewChild } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction, JsonValue } from '../../shared';
+  ViewEncapsulation,
+  viewChild
+} from '@angular/core';
+import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType, JsonValue } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -41,38 +43,33 @@ import {
   substitutionsTargetKey
 } from '../core/ai-chat-history.service';
 import { MappingService } from '../core/mapping.service';
-import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToString } from '../../shared/mapping/util';
+import {
+  coerceRepairStrategy,
+  duplicateTargetIssues,
+  identityTokenIssue,
+  TranslateFn,
+  validateSmartFunctionCode
+} from './ai-result-validation';
+import { buildGenerateMessage, buildProvideSampleMessage, buildReviewMessage, buildMappingForAi, MappingForAi } from './ai-prompt-messages';
 
 
 /** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
 const SUBMIT_SMART_FUNCTION_TOOL = 'submit-smart-function';
 const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
 
-/**
- * The mapping as the agent sees it: templates are parsed (the stored ones are JSON strings), substitutions are
- * dropped, and the code and ESM flag are added.
- */
-interface MappingForAi extends Record<string, unknown> {
-  sourceTemplate?: unknown;
-  targetTemplate?: unknown;
-  additionalSamples?: { payload: unknown; [key: string]: unknown }[];
-  substitutions?: unknown;
-  code?: string;
-  supportESM?: boolean;
-}
-
-// Default change detection on purpose: a change to it was followed by reports of a lost conversation history.
+// Eager (the pre-Angular-22 default) on purpose: OnPush made the drawer lose the stored conversation history.
+// Angular 22 made OnPush the default, so this must be explicit.
 // See docs/ui/onpush-signals-migration-plan.md, "Last components on OnPush".
-// eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
 @Component({
   selector: 'd11r-mapping-ai-prompt',
   templateUrl: 'ai-prompt.component.html',
   styleUrls: ['./ai-prompt.component.css'],
+  // eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
+  changeDetection: ChangeDetectionStrategy.Eager,
   encapsulation: ViewEncapsulation.None,
-  standalone: true,
   imports:[CoreModule, AgentChatComponent, EditorComponent],
   host: { class: 'd-contents' }
 })
@@ -86,6 +83,7 @@ export class AiPromptComponent implements OnInit {
   private readonly aiAgentService = inject(AiAgentService);
   private readonly translateService = inject(TranslateService);
   private readonly chatHistoryService = inject(AiChatHistoryService);
+  private readonly t: TranslateFn = (key, params) => this.translateService.instant(key, params);
 
   readonly agentChat = viewChild(AgentChatComponent);
 
@@ -153,18 +151,18 @@ export class AiPromptComponent implements OnInit {
     // Tool names come from the agent definitions in dynamic-mapper-service/.../resources/agents.
     toolCallConfig: {
       [SUBMIT_SMART_FUNCTION_TOOL]: {
-        executingLabel: this.translateService.instant(gettext('Submitting the Smart Function')),
-        completedLabel: this.translateService.instant(gettext('Submitted the Smart Function')),
+        executingLabel: gettext('Submitting the Smart Function'),
+        completedLabel: gettext('Submitted the Smart Function'),
         isShownWithMainAnswer: true
       },
       [SUBMIT_SUBSTITUTIONS_TOOL]: {
-        executingLabel: this.translateService.instant(gettext('Submitting the substitutions')),
-        completedLabel: this.translateService.instant(gettext('Submitted the substitutions')),
+        executingLabel: gettext('Submitting the substitutions'),
+        completedLabel: gettext('Submitted the substitutions'),
         isShownWithMainAnswer: true
       },
       'evaluate-jsonata-expression': {
-        executingLabel: this.translateService.instant(gettext('Testing a JSONata expression')),
-        completedLabel: this.translateService.instant(gettext('Tested a JSONata expression'))
+        executingLabel: gettext('Testing a JSONata expression'),
+        completedLabel: gettext('Tested a JSONata expression')
       }
     }
   };
@@ -257,10 +255,10 @@ export class AiPromptComponent implements OnInit {
     this.variables = this.aiAgent?.agent?.variables ?? {};
     this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
 
-    this.mappingForAI = this.buildMappingForAi();
+    this.mappingForAI = buildMappingForAi(this.mapping, this.serviceConfiguration?.supportESM ?? false);
 
     if (this.isCodeMapping) {
-      this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
+      this.mappingForAI.code = this.mapping.code ? base64ToString(this.mapping.code) : '';
     }
 
     // ngOnInit is async, and everything above runs after its first await — by then
@@ -316,8 +314,8 @@ export class AiPromptComponent implements OnInit {
         ? gettext('Generate new Smart Function from scratch')
         : gettext('Generate new substitutions from scratch');
       this.suggestions = [
-        { label: this.translateService.instant(reviewLabel), prompt: this.buildReviewMessage(), icon: 'search' },
-        { label: this.translateService.instant(generateLabel), prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
+        { label: this.translateService.instant(reviewLabel), prompt: buildReviewMessage(this.mapping), icon: 'search' },
+        { label: this.translateService.instant(generateLabel), prompt: buildGenerateMessage(this.mapping), icon: 'plus-circle-o' }
       ];
       this.chatConfig = {
         ...this.chatConfig,
@@ -342,8 +340,8 @@ export class AiPromptComponent implements OnInit {
     if (this.isCodeMapping) {
       this.drawerTitle = this.translateService.instant(gettext('Generate Smart Function'));
       this.suggestions = [
-        { label: this.translateService.instant(gettext('Let AI propose a target structure')), prompt: this.buildGenerateMessage(), icon: 'magic' },
-        { label: this.translateService.instant(gettext('I want to provide a sample target payload')), prompt: this.buildProvideSampleMessage(), icon: 'code' }
+        { label: this.translateService.instant(gettext('Let AI propose a target structure')), prompt: buildGenerateMessage(this.mapping), icon: 'magic' },
+        { label: this.translateService.instant(gettext('I want to provide a sample target payload')), prompt: buildProvideSampleMessage(), icon: 'code' }
       ];
       this.chatConfig = {
         ...this.chatConfig,
@@ -370,33 +368,8 @@ export class AiPromptComponent implements OnInit {
         )
       )
     };
-    this.newMessage = this.buildGenerateMessage();
+    this.newMessage = buildGenerateMessage(this.mapping);
     await this.sendMessage();
-  }
-
-  /**
-   * "I want to provide a sample target payload" suggestion prompt (Smart Function, CREATE mode).
-   * Asks the agent to wait for the user's next message — a pasted JSON sample — before
-   * generating, rather than proceeding on generic assumptions.
-   */
-  private buildProvideSampleMessage(): string {
-    return "I'd like to provide a sample of the expected target payload before you generate the" +
-      " Smart Function. Ask me to paste it, then wait for my next message and use it as the" +
-      " authoritative shape to produce — do not generate code yet.\n";
-  }
-
-  private buildReviewMessage(): string {
-    const direction = this.mapping.direction ?? 'INBOUND';
-    const targetAPI = this.mapping.targetAPI ?? '';
-
-    if (this.isCodeMapping) {
-      return `Review the existing ${direction} Smart Function` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') +
-        " and suggest improvements.\n";
-    }
-    return `Review the existing substitutions for this ${direction}` +
-      (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
-      " and suggest improvements.\n";
   }
 
   /**
@@ -416,49 +389,6 @@ export class AiPromptComponent implements OnInit {
 
   groundingContextProvider = (): string => this.buildMappingContext();
 
-  private buildGenerateMessage(): string {
-    const direction = this.mapping.direction ?? 'INBOUND';
-    const targetAPI = this.mapping.targetAPI ?? '';
-
-    if (this.isCodeMapping) {
-      const isOutbound = direction === 'OUTBOUND';
-      // Outbound Smart Functions never have a fixed targetTemplate — it is always "{}" by design,
-      // because the function body itself defines whatever message structure the target broker/
-      // protocol expects (there's no fixed Cumulocity-side schema to map into, as there is for
-      // inbound). Treating that as "missing context" made the AI always stop and ask the user a
-      // clarifying question instead of generating code, so the editor stayed empty on every attempt.
-      const inboundSample = !isOutbound && targetAPI ? SAMPLE_TEMPLATES_C8Y[targetAPI] : undefined;
-      const missingContextHint = isOutbound
-        ? "This is an OUTBOUND mapping: there is no fixed targetTemplate/schema — the Smart Function" +
-          " itself builds whatever payload structure the target broker/protocol expects. Use the" +
-          " sourceTemplate (the Cumulocity object being published) plus the topic/description in the" +
-          " mapping context to infer reasonable field names and generate the code directly — do not" +
-          " ask the user for a target format before generating.\n"
-        : !targetAPI
-          ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
-            " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
-          // INBOUND Smart Functions also always carry an empty targetTemplate ("{}") by design —
-          // the function body constructs the Cumulocity API payload itself instead of mapping into
-          // a fixed template. Without a concrete example the AI has no shape to aim for, so give it
-          // the standard sample payload for the mapping's targetAPI as a reference.
-          : inboundSample
-            ? `There is no fixed targetTemplate — the Smart Function itself builds the Cumulocity` +
-              ` ${targetAPI} API payload from the sourceTemplate fields. A typical ${targetAPI} object` +
-              " looks like:\n```json\n" + inboundSample + "\n```\n" +
-              " Generate the code directly — do not ask the user for a target format before generating.\n"
-            : "";
-      return `Generate a ${direction} Smart Function for the following mapping` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        missingContextHint;
-    }
-    const identityTarget = getGenericDeviceIdentifier(this.mapping);
-    return `Generate JSONata substitutions for this ${direction}` +
-      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n" +
-      `Map the device identity to \`${identityTarget}\` — this mapping has` +
-      ` useExternalId=${!!this.mapping.useExternalId} — do not use the other` +
-      " `_IDENTITY_` field.\n";
-  }
-
   save() {
     // Persist (also done on destroy) rather than discard: reopening the drawer after Save should
     // still show the conversation that produced the saved result.
@@ -475,35 +405,6 @@ export class AiPromptComponent implements OnInit {
     this.persistSession();
     this._cancel("User canceled");
     this.bottomDrawerRef.close();
-  }
-
-  private buildMappingForAi(): MappingForAi {
-    const m: MappingForAi = { ...this.mapping } as unknown as MappingForAi;
-    delete m.substitutions;
-    m.sourceTemplate = JSON.parse(m.sourceTemplate as string);
-    m.targetTemplate = JSON.parse(m.targetTemplate as string);
-    // Further samples of the same payload type (Message Explorer multi-select), so the agent can
-    // generalize instead of fitting a single message. Payloads are parsed like sourceTemplate;
-    // raw text that is not JSON stays a string.
-    if (Array.isArray(m.additionalSamples) && m.additionalSamples.length > 0) {
-      m.additionalSamples = m.additionalSamples.map((sample) => {
-        let payload = sample.payload;
-        try { payload = JSON.parse(sample.payload as string); } catch { /* keep as string */ }
-        return { ...sample, payload };
-      });
-    } else {
-      delete m.additionalSamples;
-    }
-    // Tell the AI whether ESM exports are required in the generated code
-    m.supportESM = this.serviceConfiguration?.supportESM ?? false;
-    return m;
-  }
-
-  private extractExistingJavaScriptCode(mapping: Mapping): string {
-    if (!mapping.code) {
-      return '';
-    }
-    return base64ToString(mapping.code);
   }
 
   async sendMessage(): Promise<void> {
@@ -667,7 +568,7 @@ export class AiPromptComponent implements OnInit {
   /** Takes the Smart Function source as the current result and marks it valid for saving. */
   private acceptSmartFunction(code: string): void {
     this.generatedCode = this.applyESMExport(code);
-    this.validationIssues = this.validateSmartFunctionCode(code);
+    this.validationIssues = validateSmartFunctionCode(code, this.t);
     this.valid = true;
   }
 
@@ -755,19 +656,11 @@ export class AiPromptComponent implements OnInit {
     this.substitutions = candidate.map(sub => ({
       ...sub,
       expandArray: !!sub.expandArray,
-      repairStrategy: this.coerceRepairStrategy(sub.repairStrategy)
+      repairStrategy: coerceRepairStrategy(sub.repairStrategy)
     }));
     this.validationIssues = await this.validateSubstitutions(this.substitutions);
     this.valid = true;
     return true;
-  }
-
-  /** Maps an LLM-supplied repairStrategy onto the enum, falling back to DEFAULT when it is
-   *  missing, null, or not a real strategy name. */
-  private coerceRepairStrategy(value: unknown): RepairStrategy {
-    return typeof value === 'string' && Object.values(RepairStrategy).includes(value as RepairStrategy)
-      ? (value as RepairStrategy)
-      : RepairStrategy.DEFAULT;
   }
 
   /**
@@ -786,42 +679,35 @@ export class AiPromptComponent implements OnInit {
     const targetTemplate = this.mappingForAI?.targetTemplate as JsonValue;
 
     for (const [index, sub] of substitutions.entries()) {
-      const label = `Substitution ${index + 1} [${sub.pathTarget}]`;
+      const where = { index: index + 1, pathTarget: sub.pathTarget };
 
       const sourceIssue = await this.evaluationIssue(sourceTemplate, sub.pathSource);
       if (sourceIssue) {
-        issues.push(`${label}: source expression "${sub.pathSource}" did not evaluate against the source template — ${sourceIssue}`);
+        issues.push(
+          this.t(
+            gettext('Substitution {{index}} [{{pathTarget}}]: source expression "{{expression}}" did not evaluate against the source template: {{reason}}'),
+            { ...where, expression: sub.pathSource, reason: sourceIssue }
+          )
+        );
       }
 
       const targetIssue = await this.evaluationIssue(targetTemplate, sub.pathTarget);
       if (targetIssue) {
-        issues.push(`${label}: target path "${sub.pathTarget}" is not a valid expression — ${targetIssue}`);
+        issues.push(
+          this.t(
+            gettext('Substitution {{index}} [{{pathTarget}}]: target path "{{expression}}" is not a valid expression: {{reason}}'),
+            { ...where, expression: sub.pathTarget, reason: targetIssue }
+          )
+        );
       }
     }
 
-    const identityIssue = this.identityTokenIssue(substitutions);
+    const identityIssue = identityTokenIssue(substitutions, this.mapping, this.t);
     if (identityIssue) {
       issues.push(identityIssue);
     }
-    issues.push(...this.duplicateTargetIssues(substitutions));
+    issues.push(...duplicateTargetIssues(substitutions, this.t));
     return issues;
-  }
-
-  /**
-   * Two substitutions writing the same target are never both meaningful, and which one survives
-   * depends on where the generated set is applied — the bulk replace used by the transformation
-   * step keeps both, while the stepper's per-item add silently collapses them.
-   */
-  private duplicateTargetIssues(substitutions: Substitution[]): string[] {
-    const seen = new Set<string>();
-    const duplicates = new Set<string>();
-    for (const sub of substitutions) {
-      if (seen.has(sub.pathTarget)) duplicates.add(sub.pathTarget);
-      seen.add(sub.pathTarget);
-    }
-    return [...duplicates].map(
-      pathTarget => `More than one substitution writes to "${pathTarget}" — only one of them will take effect.`
-    );
   }
 
   /** Returns the error message if evaluating `path` against `template` fails, else null. */
@@ -831,56 +717,7 @@ export class AiPromptComponent implements OnInit {
       await this.mappingService.evaluateExpression(template, path);
       return null;
     } catch (error) {
-      return (error as Error | undefined)?.message ?? 'unknown error';
-    }
-  }
-
-  /**
-   * The mapping's `useExternalId` decides which identity token is correct, and the generation
-   * prompt says which one to use — but both the frontend and backend validators accept either,
-   * so picking the wrong one is silently allowed and resolves the wrong device.
-   */
-  private identityTokenIssue(substitutions: Substitution[]): string | null {
-    const expected = getGenericDeviceIdentifier(this.mapping);
-    const other = expected.endsWith('externalId')
-      ? `${MappingTokens.IDENTITY}.c8ySourceId`
-      : `${MappingTokens.IDENTITY}.externalId`;
-    const isInbound = (this.mapping.direction ?? Direction.INBOUND) === Direction.INBOUND;
-
-    const usesWrongToken = substitutions.some(sub => {
-      const path = isInbound ? sub.pathTarget : sub.pathSource;
-      return typeof path === 'string' && path.includes(other) && !path.includes(expected);
-    });
-    return usesWrongToken
-      ? `The device identity is mapped via "${other}", but this mapping has useExternalId=${!!this.mapping.useExternalId}, so it must use "${expected}".`
-      : null;
-  }
-
-  /**
-   * Syntax-checks generated Smart Function code. Nothing else does: the backend persists
-   * `code` untouched, and the only compile is an opportunistic warm-up on activation that runs
-   * on a virtual thread and swallows failures into a log line — so broken code saves *and*
-   * activates silently and first fails per message.
-   */
-  private validateSmartFunctionCode(code: string): string[] {
-    // `new Function` parses a function *body*, so module syntax has to go first — the agent may
-    // already have emitted the ESM export that applyESMExport() would otherwise add. The backend
-    // strips the same constructs via JavaScriptModuleStripper before compiling.
-    const plainScript = code
-      .replace(/^\s*export\s+\{[^}]*\}\s*;?\s*$/gm, '')
-      .replace(/^\s*import\s+.*$/gm, '')
-      .replace(/^\s*export\s+(?=(?:function|const|let|var|class)\b)/gm, '');
-
-    try {
-      new Function(plainScript);
-      return [];
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        return [`The generated code is not valid JavaScript: ${error.message}. It was most likely truncated before the function was complete — ask the agent to regenerate it.`];
-      }
-      // Anything else (e.g. a Content-Security-Policy block on Function()) means the check could
-      // not run at all, which says nothing about the code — so report nothing.
-      return [];
+      return (error as Error | undefined)?.message ?? this.t(gettext('unknown error'));
     }
   }
 

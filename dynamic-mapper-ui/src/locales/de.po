@@ -1719,6 +1719,9 @@ msgstr ""
 msgid "More save options"
 msgstr ""
 
+msgid "More than one substitution writes to \"{{pathTarget}}\". Only one of them takes effect."
+msgstr ""
+
 msgid "Most lines per run"
 msgstr ""
 
@@ -2645,6 +2648,12 @@ msgstr ""
 msgid "Subscriptions are processed asynchronously. Verify the result on the Subscription outbound page or in the Service Events."
 msgstr ""
 
+msgid "Substitution {{index}} [{{pathTarget}}]: source expression \"{{expression}}\" did not evaluate against the source template: {{reason}}"
+msgstr ""
+
+msgid "Substitution {{index}} [{{pathTarget}}]: target path \"{{expression}}\" is not a valid expression: {{reason}}"
+msgstr ""
+
 msgid "Substitution {{number}}"
 msgstr ""
 
@@ -2735,6 +2744,9 @@ msgstr ""
 msgid "The current subscriptions could not be loaded. Subscriptions cannot be changed here. Use the Subscription outbound page instead."
 msgstr ""
 
+msgid "The device identity is mapped via \"{{other}}\", but this mapping has useExternalId={{useExternalId}}, so it must use \"{{expected}}\"."
+msgstr ""
+
 msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
 msgstr ""
 
@@ -2748,6 +2760,9 @@ msgid "The filter expression must return of boolean type"
 msgstr ""
 
 msgid "The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = \"lora-device-type\"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "The generated code is not valid JavaScript: {{message}}. It was most likely truncated before the function was complete. Ask the agent to regenerate it."
 msgstr ""
 
 msgid "The inventory filter must be valid and return a boolean result."

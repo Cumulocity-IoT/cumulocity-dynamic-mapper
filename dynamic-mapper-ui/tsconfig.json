@@ -1,7 +1,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": ".",
+    "rootDir": "..",
     "paths": {
       "@c8y/dynamic-mapper-smart-function": [
         "../dynamic-mapper-smart-function/src/types/smart-function-dynamic-mapper.types"
@@ -18,7 +18,8 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noUncheckedSideEffectImports": false
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
