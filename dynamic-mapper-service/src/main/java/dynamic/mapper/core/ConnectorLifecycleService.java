@@ -616,7 +616,7 @@ public class ConnectorLifecycleService {
             throws ConnectorRegistryException {
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         if (client == null) {
-            log.warn("{} - Cannot delete resources for connector {}: client not found in registry (already disconnected)",
+            log.debug("{} - No broker resources to delete for connector {}: no client in registry (never connected or already disconnected)",
                     tenant, connectorIdentifier);
             return;
         }

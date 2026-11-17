@@ -204,10 +204,10 @@ public class ConnectorRegistry implements TenantScoped {
                 // store last connector status for monitoring
                 connectorMap.remove(identifier);
             } else {
-                log.warn("{} - Client {} is not registered", tenant, identifier);
+                log.info("{} - Client {} is not registered, nothing to unregister (never connected or already removed)", tenant, identifier);
             }
         } else {
-            log.warn("{} - Client {} is not registered", tenant, identifier);
+            log.info("{} - Client {} is not registered, nothing to unregister (never connected or already removed)", tenant, identifier);
         }
     }
 

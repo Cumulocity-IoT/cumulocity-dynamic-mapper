@@ -60,7 +60,9 @@ public class NotificationHelper {
         try {
             return (Map<String, Object>) Json.parseJson(payload);
         } catch (Exception e) {
-            log.warn("Failed to parse notification payload: {}", e.getMessage());
+            String preview = payload == null ? "null"
+                    : (payload.length() > 200 ? payload.substring(0, 200) + "...(" + payload.length() + " chars)" : payload);
+            log.warn("Failed to parse notification payload: {} - payload: [{}]", e.getMessage(), preview);
             return new HashMap<>();
         }
     }
