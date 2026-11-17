@@ -147,11 +147,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * The platform's /etc/&lt;service&gt;-logging.xml pins org.apache.pulsar.client to ERROR after Spring
      * has applied logging.level.*, so neither logback-spring.xml nor application properties can
-     * raise it. Without INFO there is no trace of connects, subscribes or broker-side closes.
+     * raise it. WARN keeps connection problems visible without the INFO client/consumer/producer
+     * config dumps.
      */
-    private static void enablePulsarClientInfoLogging() {
+    private static void enablePulsarClientWarnLogging() {
         if (org.slf4j.LoggerFactory.getLogger("org.apache.pulsar.client") instanceof ch.qos.logback.classic.Logger pulsarLogger) {
-            pulsarLogger.setLevel(ch.qos.logback.classic.Level.INFO);
+            pulsarLogger.setLevel(ch.qos.logback.classic.Level.WARN);
         }
     }
 
@@ -259,7 +260,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     @Override
     public boolean initialize() {
         loadConfiguration();
-        enablePulsarClientInfoLogging();
+        enablePulsarClientWarnLogging();
 
         try {
             // Build Pulsar client
