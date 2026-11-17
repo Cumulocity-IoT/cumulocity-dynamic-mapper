@@ -70,7 +70,7 @@ public class GroupCacheManager {
 
     /**
      * Lock for the read-modify-write of one group's membership. Notifications are processed on
-     * separate threads, so two quick UPDATEs of the same group could both read the same cached
+     * separate threads, so two quick updates of the same group could both read the same cached
      * set and the older one could overwrite the newer one's result, losing a delta.
      */
     public java.util.concurrent.locks.ReentrantLock lockFor(String groupId) {
