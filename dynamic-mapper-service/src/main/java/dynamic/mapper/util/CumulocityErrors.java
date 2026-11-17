@@ -38,6 +38,10 @@ public final class CumulocityErrors {
 
     private static final Set<Integer> RETRYABLE_HTTP_STATUS_CODES = Set.of(502, 503, 504);
 
+    private static final Set<String> CONNECTION_ERROR_CLASS_NAMES = Set.of(
+            "NoHttpResponseException", "ConnectTimeoutException", "ConnectionPoolTimeoutException",
+            "ConnectionClosedException", "HttpHostConnectException");
+
     private CumulocityErrors() {
     }
 
@@ -58,7 +62,39 @@ public final class CumulocityErrors {
     }
 
     public static boolean isTransientPlatformError(Throwable t) {
-        return findTransientPlatformError(t).isPresent();
+        return findTransientPlatformError(t).isPresent() || isTransientConnectionError(t);
+    }
+
+    /**
+     * True if the cause chain contains a connection-level failure, i.e. the platform could not be
+     * reached or dropped the connection without answering (a stale pooled connection, a restart,
+     * a connect/read timeout). Matched by class name so both Apache HttpClient 4
+     * ({@code org.apache.http.*}) and 5 ({@code org.apache.hc.*}) variants are recognized.
+     */
+    public static boolean isTransientConnectionError(Throwable t) {
+        Throwable current = t;
+        int depth = 0;
+        while (current != null && depth++ < 20) {
+            if (current instanceof java.net.ConnectException
+                    || current instanceof java.net.SocketException
+                    || current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.net.UnknownHostException
+                    || CONNECTION_ERROR_CLASS_NAMES.contains(current.getClass().getSimpleName())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /** The innermost cause, e.g. {@code NoHttpResponseException: cumulocity:8111 failed to respond}. */
+    public static String rootCauseSummary(Throwable t) {
+        Throwable root = t;
+        int depth = 0;
+        while (root.getCause() != null && root.getCause() != root && depth++ < 20) {
+            root = root.getCause();
+        }
+        return root.getClass().getSimpleName() + ": " + firstLine(root.getMessage());
     }
 
     /**

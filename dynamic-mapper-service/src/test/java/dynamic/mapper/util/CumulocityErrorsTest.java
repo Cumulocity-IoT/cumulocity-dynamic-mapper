@@ -63,6 +63,28 @@ class CumulocityErrorsTest {
     }
 
     @Test
+    void connectionDropWrappedInProcessingException_isTransient() {
+        Throwable t = new jakarta.ws.rs.ProcessingException(
+                new org.apache.http.NoHttpResponseException("cumulocity:8111 failed to respond"));
+
+        assertTrue(CumulocityErrors.isTransientPlatformError(t));
+        assertEquals("NoHttpResponseException: cumulocity:8111 failed to respond",
+                CumulocityErrors.rootCauseSummary(t));
+    }
+
+    @Test
+    void connectException_isTransient() {
+        assertTrue(CumulocityErrors.isTransientConnectionError(
+                new RuntimeException(new java.net.ConnectException("refused"))));
+    }
+
+    @Test
+    void unrelatedProcessingException_isNotTransient() {
+        assertFalse(CumulocityErrors.isTransientPlatformError(
+                new jakarta.ws.rs.ProcessingException(new IllegalStateException("bad"))));
+    }
+
+    @Test
     void firstLine_multiLineMessage_returnsOnlyFirstLine() {
         String message = "Http status code: 502\nReceived non-JSON error response (status=502, content-type=text/plain).";
 
