@@ -145,8 +145,10 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                         i, deviceEntries.size());
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
             } catch (Exception e) {
-                log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
                 String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                // One line here: the exception is rethrown and logged with its stack by the caller.
+                log.error("Failed to create request {} of {} for mapping {}: {}", i + 1, cardinality,
+                        mapping.getName(), msg);
                 context.addError(new ProcessingException(msg, e));
 
                 if (!context.isNeedsRepair()) {

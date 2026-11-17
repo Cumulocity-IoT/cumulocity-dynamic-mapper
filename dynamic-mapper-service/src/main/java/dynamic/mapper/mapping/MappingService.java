@@ -365,6 +365,9 @@ public class MappingService implements TenantScoped {
             if (direction == Direction.UNSPECIFIED) continue;
             for (Mapping mapping : getMappings(tenant, direction)) {
                 if (mapping.getCode() == null || mapping.getCode().isBlank()) continue;
+                // Only Smart Functions are warmed up; skip the rest before decoding, since other
+                // transformation types may carry code that is not Base64 and would only warn.
+                if (!TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) continue;
                 try {
                     byte[] decoded = Base64.getDecoder().decode(mapping.getCode());
                     // Strip all ESM export/import declarations so the warm-up context
@@ -375,7 +378,7 @@ public class MappingService implements TenantScoped {
                         result.put(id + ".js", code);
                     }
                 } catch (Exception e) {
-                    log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,
+                    log.warn("{} - Could not prepare Smart Function code for warm-up [{}] (code is not valid Base64 or module syntax): {}", tenant,
                             mapping.getName(), e.getMessage());
                 }
             }

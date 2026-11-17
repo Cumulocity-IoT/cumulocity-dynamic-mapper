@@ -503,7 +503,11 @@ public class ProcessingResultHelper {
             boolean contextError = context.hasError();
             if (contextError) {
                 anyError = true;
-                log.error("{} - Error in processing context for topic: [{}]", tenant, topic);
+                log.error("{} - Error in processing context for topic: [{}], mapping: {}, errors: {}", tenant, topic,
+                        context.getMapping() != null ? context.getMapping().getName() : null,
+                        context.getErrors().stream()
+                                .map(er -> er.getMessage() != null ? er.getMessage() : er.getClass().getSimpleName())
+                                .toList());
                 for (Exception error : context.getErrors()) {
                     // Walks the cause chain: an extension may add a raw SDKException, or one wrapped in
                     // another exception, and a 5xx hidden there must still cause a retry.

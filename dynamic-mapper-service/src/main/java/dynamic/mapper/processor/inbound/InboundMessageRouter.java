@@ -218,6 +218,16 @@ public class InboundMessageRouter extends MessageRoutingSupport {
                 context.setProcessingResultWrapper(resultWrapper);
             }
 
+            // A payload that could not be deserialized has already been reported (warning, error,
+            // mapping statistics). Running the remaining processors on it only adds misleading
+            // "substitution not in payload" warnings, and could send values built from nothing.
+            // Extension mappings parse the raw payload themselves, so they continue.
+            if (context.hasError() && !isExtension(context)) {
+                log.debug("{} - inbound message not processed further after deserialization error", context.getTenant());
+                consolidationProcessor.process(context);
+                return (ProcessingContext<Object>) context;
+            }
+
             enrichmentProcessor.process(context, connectorMessage.getConnectorIdentifier());
             filterInboundProcessor.process((ProcessingContext<Object>) context);
 

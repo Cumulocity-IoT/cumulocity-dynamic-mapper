@@ -190,7 +190,8 @@ public class CacheManager implements TenantScoped {
         if (inboundExternalIdCache != null) {
             inboundExternalIdCache.removeIdForExternalId(identity);
         }
-        log.info("{} - Removed device {} from InboundExternalIdCache", tenant, identity.getValue());
+        log.info("{} - Removed device {} (type {}) from InboundExternalIdCache", tenant, identity.getValue(),
+                identity.getType());
     }
 
     /** Evicts all inbound and outbound external-ID cache entries pointing at a (deleted) source id. */

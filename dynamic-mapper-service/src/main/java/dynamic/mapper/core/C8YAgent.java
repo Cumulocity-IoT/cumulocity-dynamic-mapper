@@ -234,7 +234,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 return resultInner;
             } catch (SDKException e) {
                 if (e.getHttpStatus() == 404) {
-                    log.warn("{} - External ID {} (type {}) not found", tenant, identity.getValue(),
+                    // Expected for a new device (it is created implicitly next); callers warn when it matters.
+                    log.debug("{} - External ID {} (type {}) not found", tenant, identity.getValue(),
                             identity.getType());
                 } else {
                     log.warn("{} - External ID lookup {} (type {}) failed: HTTP {}", tenant, identity.getValue(),
@@ -477,7 +478,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     pe.set(new ProcessingException(sendFailureText(targetAPI, payload, s), s));
 
                     // Remove device from Cache
-                    if (s.getHttpStatus() == 422) {
+                    // (only possible when the request was addressed by external ID; a request addressed
+                    // by Cumulocity ID has no cache entry to remove)
+                    if (s.getHttpStatus() == 422 && currentRequest.getExternalId() != null) {
                         ID identity = new ID(currentRequest.getExternalIdType(), currentRequest.getExternalId());
                         cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
                     }
