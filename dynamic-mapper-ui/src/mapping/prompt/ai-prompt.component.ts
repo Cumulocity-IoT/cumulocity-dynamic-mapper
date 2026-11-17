@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   inject,
@@ -64,13 +65,15 @@ interface MappingForAi extends Record<string, unknown> {
   supportESM?: boolean;
 }
 
-// Default change detection on purpose: a change to it was followed by reports of a lost conversation history.
+// Eager (the pre-Angular-22 default) on purpose: OnPush made the drawer lose the stored conversation history.
+// Angular 22 made OnPush the default, so this must be explicit.
 // See docs/ui/onpush-signals-migration-plan.md, "Last components on OnPush".
-// eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
 @Component({
   selector: 'd11r-mapping-ai-prompt',
   templateUrl: 'ai-prompt.component.html',
   styleUrls: ['./ai-prompt.component.css'],
+  // eslint-disable-next-line @angular-eslint/prefer-on-push-component-change-detection
+  changeDetection: ChangeDetectionStrategy.Eager,
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports:[CoreModule, AgentChatComponent, EditorComponent],
