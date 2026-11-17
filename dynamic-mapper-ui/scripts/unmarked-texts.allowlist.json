@@ -8,7 +8,7 @@
     "reason": "Code-editor completion help for the Smart Function API. Technical English, like the API names."
   },
   {
-    "file": "src/mapping/prompt/ai-prompt.component.ts",
+    "file": "src/mapping/prompt/ai-prompt-messages.ts",
     "kind": "missingContextHint",
     "reason": "Instructions sent to the AI agent, not UI text."
   },
