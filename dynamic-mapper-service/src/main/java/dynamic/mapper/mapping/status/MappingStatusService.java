@@ -334,16 +334,14 @@ public class MappingStatusService {
         } catch (IllegalArgumentException e) {
             log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage(), e);
         } catch (Exception e) {
-            var transientError = CumulocityErrors.findTransientPlatformError(e);
-            if (transientError.isPresent()) {
+            if (CumulocityErrors.isTransientPlatformError(e)) {
                 // Expected during a platform outage/maintenance window — log a compact summary
                 // instead of an "unexpected error" with a full stack trace on every housekeeping
                 // cycle (every HOUSEKEEPING_INTERVAL_SECONDS) for as long as the outage lasts.
                 // It's not otherwise retried: the next scheduled housekeeping run tries again.
-                log.warn("{} - Cumulocity backend temporarily unavailable (HTTP {}), skipping status "
+                log.warn("{} - Cumulocity backend temporarily unavailable, skipping status "
                                 + "update this cycle, will retry next housekeeping cycle: {}",
-                        tenant, transientError.get().getHttpStatus(),
-                        CumulocityErrors.firstLine(e.getMessage()));
+                        tenant, CumulocityErrors.rootCauseSummary(e));
                 log.debug("{} - Full details of transient inventory status-push failure", tenant, e);
             } else {
                 log.error("{} - Unexpected error sending status to inventory", tenant, e);
@@ -541,7 +539,8 @@ public class MappingStatusService {
             try {
                 inventoryApi.update(updateMor, false);
             } catch (jakarta.ws.rs.ProcessingException e) {
-                if (e.getCause() instanceof org.apache.hc.core5.http.NoHttpResponseException) {
+                if (e.getCause() instanceof org.apache.hc.core5.http.NoHttpResponseException
+                        || CumulocityErrors.isTransientConnectionError(e)) {
                     log.warn("{} - Stale connection detected, retrying inventory update", tenant);
                     inventoryApi.update(updateMor, false);
                 } else {
