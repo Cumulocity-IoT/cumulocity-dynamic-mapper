@@ -36,7 +36,7 @@
       "options": {
         "mode": "markdown",
         "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
-        "content": "**Dynamic Mapper service has no `/actuator/prometheus` endpoint** — metrics are pushed via OTLP to Grafana Alloy (`otel.instrumentation.micrometer.enabled=true`). The exact Prometheus metric names your Alloy/Mimir pipeline produces for the Timer-based panels below (*Processing Time*, *C8Y Processing Time*) depend on your collector's unit-suffix setting:\n- This dashboard assumes **no unit infix**: `<name>_sum`, `<name>_count`, `<name>_bucket`.\n- If your pipeline adds one, the real names will be `<name>_milliseconds_sum/_count/_bucket` or `<name>_seconds_sum/_count/_bucket`.\n- Open **Explore** on the `$datasource` variable's datasource and search the metrics browser for `dynmapper_inbound_processing_time` to confirm, then edit the affected panel queries.\n\n**CPU Utilization** is not a custom metric emitted by this service's own code (no Spring Boot Actuator / `micrometer-registry-prometheus` dependency exists). It is a best-effort query against `process_runtime_jvm_cpu_utilization`, the standard metric name from the OTel Java runtime-telemetry auto-instrumentation that this service enables (`otel.instrumentation.runtime-telemetry.enabled=true`). Verify the name in your metrics browser and adjust if your collector translates it differently.\n\n**Outbound identity cache hit rate** cannot be shown as a percentage — the code only counts outbound cache *hits* (`dynmapper_outbound_identity_cache_hits_total`); there is no outbound \"total lookups\" counter to divide by (unlike the inbound path). Only the hit rate (count/sec) is shown for outbound.\n\n**C8Y Processing Time** and **Available C8Y Connections** are process-wide (untagged) metrics — the Tenant/Connector selectors do not filter them."
+        "content": "**Dynamic Mapper service has no `/actuator/prometheus` endpoint** — metrics are pushed via OTLP to Grafana Alloy (`otel.instrumentation.micrometer.enabled=true`). The exact Prometheus metric names your Alloy/Mimir pipeline produces for the Timer-based panels below (*Processing Time*, *C8Y Processing Time*) depend on your collector's unit-suffix setting:\n- This dashboard assumes **no unit infix**: `<name>_sum`, `<name>_count`, `<name>_bucket`.\n- If your pipeline adds one, the real names will be `<name>_milliseconds_sum/_count/_bucket` or `<name>_seconds_sum/_count/_bucket`.\n- Open **Explore** on the `$datasource` variable's datasource and search the metrics browser for `dynmapper_inbound_processing_time` to confirm, then edit the affected panel queries.\n\n**CPU Utilization** is not a custom metric emitted by this service's own code (no Spring Boot Actuator / `micrometer-registry-prometheus` dependency exists). The CPU panels query the OTel Java runtime-telemetry metric `jvm_cpu_recent_utilization` that this service enables (`otel.instrumentation.runtime-telemetry.enabled=true`). Alloy may append a `_ratio` unit suffix, and older instrumentation versions use `process_runtime_jvm_cpu_utilization`, so the query matches all of these names plus Micrometer's `process_cpu_usage`. Verify in your metrics browser which one exists and narrow the `__name__` regex if you like.\n\n**Outbound identity cache hit rate** cannot be shown as a percentage — the code only counts outbound cache *hits* (`dynmapper_outbound_identity_cache_hits_total`); there is no outbound \"total lookups\" counter to divide by (unlike the inbound path). Only the hit rate (count/sec) is shown for outbound.\n\n**C8Y Processing Time** and **Available C8Y Connections** are process-wide metrics without tenant or connector labels, so only the Instance selector filters them. The JVM panels (CPU, heap, metaspace) and the version tile are also filtered by Instance only."
       },
       "pluginVersion": "11.0.0",
       "title": "",
@@ -44,8 +44,44 @@
       "type": "text"
     },
     {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Information only: the service version reported by the selected instance (dynmapper_build_info). Does not filter the other panels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 7 },
+      "id": 1002,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true },
+        "textMode": "name"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count by (version) (dynmapper_build_info{instance=\"$instance\"})",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Deployed Version (selected instance)",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
       "id": 10,
       "panels": [],
       "title": "Inbound Messages",
@@ -58,11 +94,12 @@
           "color": { "mode": "thresholds" },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "msgs/sec"
+          "unit": "msgs/sec",
+          "noValue": "0"
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 11 },
       "id": 11,
       "options": {
         "colorMode": "value",
@@ -76,9 +113,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+          "expr": "sum(rate(dynmapper_inbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
           "legendFormat": "avg msgs/sec",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Avg Inbound Messages (rate)",
@@ -91,11 +130,12 @@
           "color": { "mode": "thresholds" },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
-          "unit": "short"
+          "unit": "short",
+          "noValue": "0"
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 11 },
       "id": 12,
       "options": {
         "colorMode": "value",
@@ -109,9 +149,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(increase(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
+          "expr": "sum(increase(dynmapper_inbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
           "legendFormat": "total",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Total Inbound Messages (selected range)",
@@ -143,7 +185,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 11 },
       "id": 13,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -153,7 +195,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
+          "expr": "sum(rate(dynmapper_inbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
           "legendFormat": "{{tenant}} / {{connectorName}} ({{connectorType}})",
           "refId": "A"
         }
@@ -163,7 +205,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
       "id": 20,
       "panels": [],
       "title": "Outbound Messages",
@@ -180,7 +222,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 15 },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 18 },
       "id": 21,
       "options": {
         "colorMode": "value",
@@ -194,9 +236,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+          "expr": "sum(rate(dynmapper_outbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
           "legendFormat": "avg msgs/sec",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Avg Outbound Messages (rate)",
@@ -213,7 +257,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 15 },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 18 },
       "id": 22,
       "options": {
         "colorMode": "value",
@@ -227,9 +271,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(increase(dynmapper_outbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
+          "expr": "sum(increase(dynmapper_outbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
           "legendFormat": "total",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Total Outbound Messages (selected range)",
@@ -261,7 +307,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 15 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
       "id": 23,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -271,7 +317,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
+          "expr": "sum(rate(dynmapper_outbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
           "legendFormat": "{{tenant}} / {{connectorName}} ({{connectorType}})",
           "refId": "A"
         }
@@ -280,657 +326,905 @@
       "type": "timeseries"
     },
     {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
       "id": 30,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 25 },
+          "id": 31,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_inbound_processing_time_sum{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_processing_time_count{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+              "legendFormat": "avg",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Avg Inbound Processing Time",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 25 },
+          "id": 32,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "histogram_quantile(1.0, sum(rate(dynmapper_inbound_processing_time_bucket{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (le))",
+              "legendFormat": "max (p100)",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Max Inbound Processing Time (p100)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 25 },
+          "id": 33,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_outbound_processing_time_sum{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_outbound_processing_time_count{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+              "legendFormat": "avg",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Avg Outbound Processing Time",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 25 },
+          "id": 34,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "histogram_quantile(1.0, sum(rate(dynmapper_outbound_processing_time_bucket{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (le))",
+              "legendFormat": "max (p100)",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Max Outbound Processing Time (p100)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "mappings": [],
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 31 },
+          "id": 35,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_inbound_processing_time_sum{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_processing_time_count{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+              "legendFormat": "inbound avg",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_outbound_processing_time_sum{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_outbound_processing_time_count{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+              "legendFormat": "outbound avg",
+              "refId": "B"
+            }
+          ],
+          "title": "Avg Processing Time Over Time",
+          "type": "timeseries"
+        }
+      ],
       "title": "Processing Time",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 22 },
-      "id": 31,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_processing_time_sum{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_processing_time_count{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
-          "legendFormat": "avg",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg Inbound Processing Time",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 22 },
-      "id": 32,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "histogram_quantile(1.0, sum(rate(dynmapper_inbound_processing_time_bucket{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (le))",
-          "legendFormat": "max (p100)",
-          "refId": "A"
-        }
-      ],
-      "title": "Max Inbound Processing Time (p100)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 22 },
-      "id": 33,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_processing_time_sum{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_outbound_processing_time_count{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
-          "legendFormat": "avg",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg Outbound Processing Time",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 22 },
-      "id": 34,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "histogram_quantile(1.0, sum(rate(dynmapper_outbound_processing_time_bucket{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (le))",
-          "legendFormat": "max (p100)",
-          "refId": "A"
-        }
-      ],
-      "title": "Max Outbound Processing Time (p100)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 28 },
-      "id": 35,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_processing_time_sum{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_processing_time_count{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
-          "legendFormat": "inbound avg",
-          "refId": "A"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_processing_time_sum{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) / sum(rate(dynmapper_outbound_processing_time_count{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
-          "legendFormat": "outbound avg",
-          "refId": "B"
-        }
-      ],
-      "title": "Avg Processing Time Over Time",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
       "id": 40,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 39 },
+          "id": 41,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_c8y_request_processing_time_sum{instance=\"$instance\"}[$__rate_interval])) / sum(rate(dynmapper_c8y_request_processing_time_count{instance=\"$instance\"}[$__rate_interval]))",
+              "legendFormat": "avg",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Avg C8Y Processing Time (untagged)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 39 },
+          "id": 42,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "histogram_quantile(1.0, sum(rate(dynmapper_c8y_request_processing_time_bucket{instance=\"$instance\"}[$__rate_interval])) by (le))",
+              "legendFormat": "max (p100)",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Max C8Y Processing Time (p100, untagged)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 1 }, { "color": "green", "value": 5 }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 39 },
+          "id": 43,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "dynmapper_available_c8y_connections{instance=\"$instance\"}",
+              "legendFormat": "available permits",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Available C8Y Connections (untagged)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "mappings": [],
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 39 },
+          "id": 44,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_c8y_request_processing_time_sum{instance=\"$instance\"}[$__rate_interval])) / sum(rate(dynmapper_c8y_request_processing_time_count{instance=\"$instance\"}[$__rate_interval]))",
+              "legendFormat": "avg",
+              "refId": "A"
+            }
+          ],
+          "title": "C8Y Processing Time Over Time",
+          "type": "timeseries"
+        }
+      ],
       "title": "C8Y API",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 36 },
-      "id": 41,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_c8y_request_processing_time_sum[$__rate_interval])) / sum(rate(dynmapper_c8y_request_processing_time_count[$__rate_interval]))",
-          "legendFormat": "avg",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg C8Y Processing Time (untagged)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 36 },
-      "id": 42,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "histogram_quantile(1.0, sum(rate(dynmapper_c8y_request_processing_time_bucket[$__rate_interval])) by (le))",
-          "legendFormat": "max (p100)",
-          "refId": "A"
-        }
-      ],
-      "title": "Max C8Y Processing Time (p100, untagged)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 1 }, { "color": "green", "value": 5 }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 36 },
-      "id": 43,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_available_c8y_connections",
-          "legendFormat": "available permits",
-          "refId": "A"
-        }
-      ],
-      "title": "Available C8Y Connections (untagged)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 36 },
-      "id": 44,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_c8y_request_processing_time_sum[$__rate_interval])) / sum(rate(dynmapper_c8y_request_processing_time_count[$__rate_interval]))",
-          "legendFormat": "avg",
-          "refId": "A"
-        }
-      ],
-      "title": "C8Y Processing Time Over Time",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 },
       "id": 50,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 0, "y": 46 },
+          "id": 51,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(dynmapper_inbound_identity_cache_size{instance=\"$instance\",tenant=~\"$tenant\"})",
+              "legendFormat": "size",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Inbound Identity Cache Size",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "green", "value": 0.85 }] },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 4, "y": 46 },
+          "id": 52,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_inbound_identity_cache_hits_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_identity_requests_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "hit rate",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Inbound Identity Cache Hit Rate",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 8, "y": 46 },
+          "id": 53,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_inbound_identity_requests_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "lookups/sec",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Inbound Identity Lookups/sec",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 12, "y": 46 },
+          "id": 54,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(dynmapper_outbound_identity_cache_size{instance=\"$instance\",tenant=~\"$tenant\"})",
+              "legendFormat": "size",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Outbound Identity Cache Size",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 16, "y": 46 },
+          "id": 55,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(rate(dynmapper_outbound_identity_cache_hits_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "hits/sec",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Outbound Identity Cache Hits/sec (no denominator metric exists)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 20, "y": 46 },
+          "id": 56,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(dynmapper_inbound_inventory_cache_size{instance=\"$instance\",tenant=~\"$tenant\"})",
+              "legendFormat": "size",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Inventory Cache Size",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "mappings": [],
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 52 },
+          "id": 57,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "dynmapper_inbound_identity_cache_size{instance=\"$instance\",tenant=~\"$tenant\"}",
+              "legendFormat": "inbound identity / {{tenant}}",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "dynmapper_outbound_identity_cache_size{instance=\"$instance\",tenant=~\"$tenant\"}",
+              "legendFormat": "outbound identity / {{tenant}}",
+              "refId": "B"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "dynmapper_inbound_inventory_cache_size{instance=\"$instance\",tenant=~\"$tenant\"}",
+              "legendFormat": "inventory / {{tenant}}",
+              "refId": "C"
+            }
+          ],
+          "title": "Cache Sizes Over Time",
+          "type": "timeseries"
+        }
+      ],
       "title": "Identity & Inventory Caches",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 43 },
-      "id": 51,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(dynmapper_inbound_identity_cache_size{tenant=~\"$tenant\"})",
-          "legendFormat": "size",
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound Identity Cache Size",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "max": 1,
-          "min": 0,
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "green", "value": 0.85 }] },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 43 },
-      "id": 52,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_identity_cache_hits_total{tenant=~\"$tenant\"}[$__rate_interval])) / sum(rate(dynmapper_inbound_identity_requests_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "hit rate",
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound Identity Cache Hit Rate",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 43 },
-      "id": 53,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_identity_requests_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "lookups/sec",
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound Identity Lookups/sec",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 43 },
-      "id": 54,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(dynmapper_outbound_identity_cache_size{tenant=~\"$tenant\"})",
-          "legendFormat": "size",
-          "refId": "A"
-        }
-      ],
-      "title": "Outbound Identity Cache Size",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 43 },
-      "id": 55,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_identity_cache_hits_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "hits/sec",
-          "refId": "A"
-        }
-      ],
-      "title": "Outbound Identity Cache Hits/sec (no denominator metric exists)",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 43 },
-      "id": 56,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(dynmapper_inbound_inventory_cache_size{tenant=~\"$tenant\"})",
-          "legendFormat": "size",
-          "refId": "A"
-        }
-      ],
-      "title": "Inventory Cache Size",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 49 },
-      "id": 57,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_inbound_identity_cache_size{tenant=~\"$tenant\"}",
-          "legendFormat": "inbound identity / {{tenant}}",
-          "refId": "A"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_outbound_identity_cache_size{tenant=~\"$tenant\"}",
-          "legendFormat": "outbound identity / {{tenant}}",
-          "refId": "B"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_inbound_inventory_cache_size{tenant=~\"$tenant\"}",
-          "legendFormat": "inventory / {{tenant}}",
-          "refId": "C"
-        }
-      ],
-      "title": "Cache Sizes Over Time",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
       "id": 60,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Process CPU utilization of the selected instance, 0 to 1. Not a custom metric from this codebase: it comes from the OpenTelemetry runtime telemetry (jvm.cpu.recent_utilization), with the older OpenTelemetry and Micrometer names as fallbacks. See Setup Notes.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 60 },
+          "id": 61,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "max by (instance) ({__name__=~\"jvm_cpu_recent_utilization(_ratio)?|process_runtime_jvm_cpu_utilization(_ratio)?|process_cpu_usage\",instance=\"$instance\"})",
+              "legendFormat": "CPU",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "CPU Utilization",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Micrometer jvm_memory_used_bytes, of the selected instance. Standard Micrometer metric, not a custom metric from this codebase.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "bytes",
+              "noValue": "0"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 60 },
+          "id": 62,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(jvm_memory_used_bytes{area=\"heap\",instance=\"$instance\"})",
+              "legendFormat": "heap",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Heap Used",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Micrometer jvm_memory_used_bytes for the Metaspace pool, of the selected instance.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "bytes",
+              "noValue": "0"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 60 },
+          "id": 63,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(jvm_memory_used_bytes{id=\"Metaspace\",instance=\"$instance\"})",
+              "legendFormat": "metaspace",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Metaspace Used",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Micrometer jvm_memory_used_bytes for all non-heap pools (Metaspace, code cache, compressed class space), of the selected instance.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "bytes",
+              "noValue": "0"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 60 },
+          "id": 64,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum(jvm_memory_used_bytes{area=\"nonheap\",instance=\"$instance\"})",
+              "legendFormat": "non-heap",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Non-heap Used",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Micrometer jvm_memory_used_bytes per scrape instance. Heap is the sum of its pools; metaspace is the Metaspace pool. One line per instance shows whether a high value comes from many instances or one.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "mappings": [],
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 66 },
+          "id": 65,
+          "maxDataPoints": 300,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum by (instance) (jvm_memory_used_bytes{area=\"heap\",instance=\"$instance\"})",
+              "legendFormat": "heap {{instance}}",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "sum by (instance) (jvm_memory_used_bytes{id=\"Metaspace\",instance=\"$instance\"})",
+              "legendFormat": "metaspace {{instance}}",
+              "refId": "B"
+            }
+          ],
+          "title": "Memory Over Time (per instance)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Process CPU (jvm.cpu.recent_utilization) and whole-host CPU where the runtime reports it, 0 to 1 for the selected instance. Not custom metrics from this codebase: they come from the OpenTelemetry runtime telemetry, with the older OpenTelemetry and Micrometer names as fallbacks.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "mappings": [],
+              "min": 0,
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 66 },
+          "id": 66,
+          "maxDataPoints": 300,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "max by (instance) ({__name__=~\"jvm_cpu_recent_utilization(_ratio)?|process_runtime_jvm_cpu_utilization(_ratio)?|process_cpu_usage\",instance=\"$instance\"})",
+              "legendFormat": "process {{instance}}",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "max by (instance) ({__name__=~\"process_runtime_jvm_system_cpu_utilization(_ratio)?|system_cpu_usage\",instance=\"$instance\"})",
+              "legendFormat": "system {{instance}}",
+              "refId": "B"
+            }
+          ],
+          "title": "CPU Over Time (per instance)",
+          "type": "timeseries"
+        }
+      ],
       "title": "System",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Best-effort query — not a custom metric from this codebase. See Setup Notes at the top of the dashboard.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "max": 1,
-          "min": 0,
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 57 },
-      "id": 61,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "process_runtime_jvm_cpu_utilization{application=\"dynamic-mapper-service\"}",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "CPU Utilization (best-effort, verify metric name)",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 63 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 66 },
       "id": 70,
       "panels": [],
       "title": "Errors",
@@ -943,11 +1237,12 @@
           "color": { "mode": "thresholds" },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] },
-          "unit": "ops"
+          "unit": "ops",
+          "noValue": "0"
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 64 },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 67 },
       "id": 71,
       "options": {
         "colorMode": "value",
@@ -961,9 +1256,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+          "expr": "sum(rate(dynmapper_inbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
           "legendFormat": "errors/sec",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Inbound Error Rate",
@@ -979,11 +1276,12 @@
           "max": 1,
           "min": 0,
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.01 }, { "color": "red", "value": 0.05 }] },
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "0"
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 64 },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 67 },
       "id": 72,
       "options": {
         "colorMode": "value",
@@ -997,9 +1295,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(increase(dynmapper_inbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range])) / sum(increase(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
+          "expr": "sum(increase(dynmapper_inbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range])) / sum(increase(dynmapper_inbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
           "legendFormat": "error ratio",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Inbound Error Ratio (selected range)",
@@ -1016,7 +1316,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 64 },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 67 },
       "id": 73,
       "options": {
         "colorMode": "value",
@@ -1030,9 +1330,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
+          "expr": "sum(rate(dynmapper_outbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval]))",
           "legendFormat": "errors/sec",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Outbound Error Rate",
@@ -1052,7 +1354,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 64 },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 67 },
       "id": 74,
       "options": {
         "colorMode": "value",
@@ -1066,9 +1368,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(increase(dynmapper_outbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range])) / sum(increase(dynmapper_outbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
+          "expr": "sum(increase(dynmapper_outbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range])) / sum(increase(dynmapper_outbound_message_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__range]))",
           "legendFormat": "error ratio",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Outbound Error Ratio (selected range)",
@@ -1100,7 +1404,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 70 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 73 },
       "id": 75,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -1110,13 +1414,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_inbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
+          "expr": "sum(rate(dynmapper_inbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
           "legendFormat": "inbound errors / {{tenant}} / {{connectorName}} ({{connectorType}})",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(rate(dynmapper_outbound_processing_errors_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
+          "expr": "sum(rate(dynmapper_outbound_processing_errors_total{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}[$__rate_interval])) by (tenant, connectorName, connectorType)",
           "legendFormat": "outbound errors / {{tenant}} / {{connectorName}} ({{connectorType}})",
           "refId": "B"
         }
@@ -1125,92 +1429,98 @@
       "type": "timeseries"
     },
     {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 77 },
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 80 },
       "id": 80,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Current status per connector. Value mapping: 0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, 5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "UNKNOWN", "color": "text", "index": 0 } } },
+                { "type": "value", "options": { "1": { "text": "CONFIGURED", "color": "blue", "index": 1 } } },
+                { "type": "value", "options": { "2": { "text": "ENABLED", "color": "blue", "index": 2 } } },
+                { "type": "value", "options": { "3": { "text": "CONNECTING", "color": "yellow", "index": 3 } } },
+                { "type": "value", "options": { "4": { "text": "CONNECTED", "color": "green", "index": 4 } } },
+                { "type": "value", "options": { "5": { "text": "DISCONNECTED", "color": "red", "index": 5 } } },
+                { "type": "value", "options": { "6": { "text": "DISCONNECTING", "color": "orange", "index": 6 } } },
+                { "type": "value", "options": { "7": { "text": "FAILED", "color": "red", "index": 7 } } },
+                { "type": "value", "options": { "8": { "text": "RETRYING", "color": "orange", "index": 8 } } }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 81 },
+          "id": 81,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "value_and_name"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "dynmapper_connector_status{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}",
+              "legendFormat": "{{tenant}} / {{connectorName}} ({{connectorType}})",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Connector Status",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "description": "Connectors currently reporting FAILED (ordinal 7). Alert on this being > 0.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 81 },
+          "id": 82,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "${datasource}" },
+              "expr": "count(dynmapper_connector_status{instance=\"$instance\",tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"} == 7)",
+              "legendFormat": "failed connectors",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Connectors Currently FAILED",
+          "type": "stat"
+        }
+      ],
       "title": "Connector Health",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Live status per connector. Value mapping: 0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, 5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "UNKNOWN", "color": "text", "index": 0 } } },
-            { "type": "value", "options": { "1": { "text": "CONFIGURED", "color": "blue", "index": 1 } } },
-            { "type": "value", "options": { "2": { "text": "ENABLED", "color": "blue", "index": 2 } } },
-            { "type": "value", "options": { "3": { "text": "CONNECTING", "color": "yellow", "index": 3 } } },
-            { "type": "value", "options": { "4": { "text": "CONNECTED", "color": "green", "index": 4 } } },
-            { "type": "value", "options": { "5": { "text": "DISCONNECTED", "color": "red", "index": 5 } } },
-            { "type": "value", "options": { "6": { "text": "DISCONNECTING", "color": "orange", "index": 6 } } },
-            { "type": "value", "options": { "7": { "text": "FAILED", "color": "red", "index": 7 } } },
-            { "type": "value", "options": { "8": { "text": "RETRYING", "color": "orange", "index": 8 } } }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 78 },
-      "id": 81,
-      "options": {
-        "mergeValues": true,
-        "showValue": "auto",
-        "alignValue": "left",
-        "rowHeight": 0.9,
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_connector_status{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"}",
-          "legendFormat": "{{tenant}} / {{connectorName}} ({{connectorType}})",
-          "refId": "A"
-        }
-      ],
-      "title": "Connector Status Over Time",
-      "type": "state-timeline"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Connectors currently reporting FAILED (ordinal 7). Alert on this being > 0.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 78 },
-      "id": 82,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(dynmapper_connector_status{tenant=~\"$tenant\",connectorName=~\"$connectorName\",connectorType=~\"$connectorType\"} == 7)",
-          "legendFormat": "failed connectors",
-          "refId": "A"
-        }
-      ],
-      "title": "Connectors Currently FAILED",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1218,430 +1528,441 @@
         "y": 86
       },
       "id": 90,
-      "panels": [],
-      "title": "De-duplication",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Mappings that hold de-duplication fingerprints now (they call $isDuplicate or context.isDuplicate). A mapping with no traffic for one window drops out. Deduplicated across replicas.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 87
-      },
-      "id": 91,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
+      "panels": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(max by (tenant) (dynmapper_deduplication_mappings{tenant=~\"$tenant\"}))",
-          "legendFormat": "value",
-          "refId": "A"
-        }
-      ],
-      "title": "Mappings Using De-duplication",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Fingerprints held now, including expired ones not yet removed by the once-a-minute cleanup.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "description": "Mappings that hold de-duplication fingerprints now (they call $isDuplicate or context.isDuplicate). A mapping with no traffic for one window drops out. Deduplicated across replicas.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
           },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 0,
+            "y": 87
           },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 6,
-        "y": 87
-      },
-      "id": 92,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+          "id": 91,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(max by (tenant) (dynmapper_deduplication_mappings{instance=\"$instance\",tenant=~\"$tenant\"}))",
+              "legendFormat": "value",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
           ],
-          "fields": "",
-          "values": false
+          "title": "Mappings Using De-duplication",
+          "type": "stat"
         },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(max by (tenant) (dynmapper_deduplication_entries{tenant=~\"$tenant\"}))",
-          "legendFormat": "value",
-          "refId": "A"
-        }
-      ],
-      "title": "Fingerprints Held",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Estimated heap of the fingerprints (entries x 150 bytes). An estimate, not a measurement. Each replica holds its own copy, so this is the largest replica, not the sum.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "description": "Fingerprints held now, including expired ones not yet removed by the once-a-minute cleanup.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
           },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 6,
+            "y": 87
           },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 12,
-        "y": 87
-      },
-      "id": 93,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+          "id": 92,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(max by (tenant) (dynmapper_deduplication_entries{instance=\"$instance\",tenant=~\"$tenant\"}))",
+              "legendFormat": "value",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
           ],
-          "fields": "",
-          "values": false
+          "title": "Fingerprints Held",
+          "type": "stat"
         },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(max by (tenant) (dynmapper_deduplication_memory_bytes{tenant=~\"$tenant\"}))",
-          "legendFormat": "value",
-          "refId": "A"
-        }
-      ],
-      "title": "De-duplication Memory (estimated)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Messages dropped as repeats. Summed over replicas.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "description": "Estimated heap of the fingerprints (entries x 150 bytes). An estimate, not a measurement. Each replica holds its own copy, so this is the largest replica, not the sum.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
           },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 12,
+            "y": 87
           },
-          "unit": "msgs/sec"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 87
-      },
-      "id": 94,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+          "id": 93,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(max by (tenant) (dynmapper_deduplication_memory_bytes{instance=\"$instance\",tenant=~\"$tenant\"}))",
+              "legendFormat": "value",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
           ],
-          "fields": "",
-          "values": false
+          "title": "De-duplication Memory (estimated)",
+          "type": "stat"
         },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(dynmapper_deduplication_dropped_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "value",
-          "refId": "A"
-        }
-      ],
-      "title": "Repeats Dropped/sec",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Mappings, estimated memory, and drop rate per tenant. Memory is on the left axis in bytes.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
+          "description": "Messages dropped as repeats. Summed over replicas.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "msgs/sec"
+            },
+            "overrides": []
           },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 18,
+            "y": 87
+          },
+          "id": 94,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(rate(dynmapper_deduplication_dropped_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "value",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Repeats Dropped/sec",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "description": "Mappings, estimated memory, and drop rate per tenant. Memory is on the left axis in bytes.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              "mappings": [],
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "memory.*"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 93
+          },
+          "id": 95,
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
             }
           },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "memory.*"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 93
-      },
-      "id": 95,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "max by (tenant) (dynmapper_deduplication_memory_bytes{tenant=~\"$tenant\"})",
-          "legendFormat": "memory / {{tenant}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "max by (tenant) (dynmapper_deduplication_mappings{tenant=~\"$tenant\"})",
-          "legendFormat": "mappings / {{tenant}}",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (tenant) (rate(dynmapper_deduplication_dropped_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "dropped/sec / {{tenant}}",
-          "refId": "C"
-        }
-      ],
-      "title": "De-duplication Over Time by Tenant",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Messages processed without a duplicate check because a de-duplication store was full (limit mapping or total). Repeats are not dropped while this is above 0. Summed over replicas.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
               },
-              {
-                "color": "red",
-                "value": 0.0001
-              }
-            ]
-          },
-          "unit": "msgs/sec"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 100
-      },
-      "id": 96,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+              "expr": "max by (tenant) (dynmapper_deduplication_memory_bytes{instance=\"$instance\",tenant=~\"$tenant\"})",
+              "legendFormat": "memory / {{tenant}}",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max by (tenant) (dynmapper_deduplication_mappings{instance=\"$instance\",tenant=~\"$tenant\"})",
+              "legendFormat": "mappings / {{tenant}}",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum by (tenant) (rate(dynmapper_deduplication_dropped_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "dropped/sec / {{tenant}}",
+              "refId": "C"
+            }
           ],
-          "fields": "",
-          "values": false
+          "title": "De-duplication Over Time by Tenant",
+          "type": "timeseries"
         },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(dynmapper_deduplication_unchecked_total{tenant=~\"$tenant\"}[$__rate_interval]))",
-          "legendFormat": "value",
-          "refId": "A"
+          "description": "Messages processed without a duplicate check because a de-duplication store was full (limit mapping or total). Repeats are not dropped while this is above 0. Summed over replicas.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.0001
+                  }
+                ]
+              },
+              "unit": "msgs/sec"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 0,
+            "y": 100
+          },
+          "id": 96,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "11.0.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(rate(dynmapper_deduplication_unchecked_total{instance=\"$instance\",tenant=~\"$tenant\"}[$__rate_interval]))",
+              "legendFormat": "value",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "title": "Checks Skipped (store full)/sec",
+          "type": "stat"
         }
       ],
-      "title": "Checks Skipped (store full)/sec",
-      "type": "stat"
+      "title": "De-duplication",
+      "type": "row"
     }
   ],
   "preload": false,
-  "refresh": "30s",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": ["dynamic-mapper", "observability"],
   "templating": {
@@ -1662,15 +1983,15 @@
       {
         "current": {},
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "definition": "label_values(dynmapper_inbound_message_total, tenant)",
+        "definition": "label_values(dynmapper_inbound_inventory_cache_size, tenant)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": "Tenant",
-        "multi": true,
+        "multi": false,
         "name": "tenant",
         "options": [],
-        "query": { "query": "label_values(dynmapper_inbound_message_total, tenant)", "refId": "StandardVariableQuery" },
-        "refresh": 2,
+        "query": { "query": "label_values(dynmapper_inbound_inventory_cache_size, tenant)", "refId": "StandardVariableQuery" },
+        "refresh": 1,
         "regex": "",
         "sort": 1,
         "type": "query"
@@ -1678,15 +1999,32 @@
       {
         "current": {},
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "definition": "label_values(dynmapper_inbound_message_total{tenant=~\"$tenant\"}, connectorName)",
+        "definition": "label_values(dynmapper_inbound_inventory_cache_size{tenant=\"$tenant\"}, instance)",
+        "description": "Scrape instance (pod or replica) serving the selected tenant. Memory and CPU are per instance, so select exactly one.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Instance",
+        "multi": false,
+        "name": "instance",
+        "options": [],
+        "query": { "query": "label_values(dynmapper_inbound_inventory_cache_size{tenant=\"$tenant\"}, instance)", "refId": "StandardVariableQuery" },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "definition": "label_values(dynmapper_connector_status{instance=\"$instance\",tenant=\"$tenant\"}, connectorName)",
         "hide": 0,
         "includeAll": true,
         "label": "Connector Name",
         "multi": true,
         "name": "connectorName",
         "options": [],
-        "query": { "query": "label_values(dynmapper_inbound_message_total{tenant=~\"$tenant\"}, connectorName)", "refId": "StandardVariableQuery" },
-        "refresh": 2,
+        "query": { "query": "label_values(dynmapper_connector_status{instance=\"$instance\",tenant=\"$tenant\"}, connectorName)", "refId": "StandardVariableQuery" },
+        "refresh": 1,
         "regex": "",
         "sort": 1,
         "type": "query"
@@ -1694,15 +2032,15 @@
       {
         "current": {},
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "definition": "label_values(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\"}, connectorType)",
+        "definition": "label_values(dynmapper_connector_status{instance=\"$instance\",tenant=\"$tenant\",connectorName=~\"$connectorName\"}, connectorType)",
         "hide": 0,
         "includeAll": true,
         "label": "Connector Type",
         "multi": true,
         "name": "connectorType",
         "options": [],
-        "query": { "query": "label_values(dynmapper_inbound_message_total{tenant=~\"$tenant\",connectorName=~\"$connectorName\"}, connectorType)", "refId": "StandardVariableQuery" },
-        "refresh": 2,
+        "query": { "query": "label_values(dynmapper_connector_status{instance=\"$instance\",tenant=\"$tenant\",connectorName=~\"$connectorName\"}, connectorType)", "refId": "StandardVariableQuery" },
+        "refresh": 1,
         "regex": "",
         "sort": 1,
         "type": "query"
