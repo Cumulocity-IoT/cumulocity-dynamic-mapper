@@ -63,12 +63,12 @@
     <springProfile name="prod">
         <logger name="com.cumulocity" level="INFO" />
         <logger name="dynamic.mapper" level="INFO" />
-        <logger name="org.apache.pulsar.client" level="INFO" />
+        <logger name="org.apache.pulsar.client" level="WARN" />
     </springProfile>
 
     <appender name="OpenTelemetry"
               class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-        <captureMdcAttributes>mapperTenant</captureMdcAttributes>
+        <mdcAttributesIncluded>mapperTenant</mdcAttributesIncluded>
     </appender>
 
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
