@@ -115,7 +115,12 @@ public class NotificationConnectionManager {
     private final Map<String, NotificationCallback> managementCallbacks = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> cacheInventoryCallbacks = new ConcurrentHashMap<>();
     //FIXME As we have multiple WS connections the statusCode will only reflect the last connection attempt. We should consider a more granular status tracking if needed.
+    // Tenant-level summary of the device WebSockets (what the connector lifecycle reports) ...
     private final Map<String, Integer> deviceWSStatusCodes = new ConcurrentHashMap<>();
+    // ... derived from the status of each connector's WebSocket ("tenant|connectorId"). One shared
+    // value per tenant let a healthy connector's "open" overwrite another connector's 401, so the
+    // expired token of the latter was never replaced.
+    private final Map<String, Integer> deviceWSStatusByConnector = new ConcurrentHashMap<>();
     private final Map<String, Integer> managementWSStatusCodes = new ConcurrentHashMap<>();
     private final Map<String, Integer> cacheInventoryWSStatusCodes = new ConcurrentHashMap<>();
 
@@ -124,6 +129,14 @@ public class NotificationConnectionManager {
 
     /** Connectors (as {@code tenant|connectorId}) whose device WebSockets are closed because the broker is down. */
     private final Set<String> pausedConnectors = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Device WebSockets that should be open but whose connect failed ("tenant|connectorId|static" or
+     * "...|dynamic"). A failed connect leaves no client in the maps, so the periodic reconnect has
+     * nothing to reconnect: without this marker the connector stays without a consumer until the
+     * next restart. Cleared on success and when the clients are closed on purpose.
+     */
+    private final Set<String> failedDeviceConnects = ConcurrentHashMap.newKeySet();
 
     /**
      * Create a subscriber token for EXPLORER_DEVICE_SUBSCRIPTION and open a WebSocket
@@ -448,7 +461,7 @@ public class NotificationConnectionManager {
         mqttPushManager.disconnectAll(tenant);
 
         // Clear status
-        deviceWSStatusCodes.remove(tenant);
+        clearDeviceStatus(tenant);
 
         // Send notification
         try {
@@ -485,9 +498,11 @@ public class NotificationConnectionManager {
         managementClients.remove(tenant);
         cacheInventoryClients.remove(tenant);
         managementInitLocks.remove(tenant);
-        deviceWSStatusCodes.remove(tenant);
+        clearDeviceStatus(tenant);
         managementWSStatusCodes.remove(tenant);
         cacheInventoryWSStatusCodes.remove(tenant);
+        failedDeviceConnects.removeIf(k -> k.startsWith(tenant + "|"));
+        pausedConnectors.removeIf(k -> k.startsWith(tenant + "|"));
     }
 
     /**
@@ -501,7 +516,7 @@ public class NotificationConnectionManager {
             return;
         }
         disconnectDeviceClients(tenant);
-        deviceWSStatusCodes.remove(tenant);
+        clearDeviceStatus(tenant);
     }
 
     public void initializeConnectionsIfNeeded(String tenant) {
@@ -622,6 +637,47 @@ public class NotificationConnectionManager {
         }
     }
 
+    /** Records the status of one connector's device WebSocket and refreshes the tenant summary. */
+    public void setDeviceConnectionStatus(String tenant, String connectorId, Integer status) {
+        if (tenant == null) {
+            return;
+        }
+        if (connectorId == null) {
+            setDeviceConnectionStatus(tenant, status);
+            return;
+        }
+        String key = pauseKey(tenant, connectorId);
+        if (status != null) {
+            deviceWSStatusByConnector.put(key, status);
+        } else {
+            deviceWSStatusByConnector.remove(key);
+        }
+        // Summary: any connector unauthorized -> 401 (it needs a new token); else any open -> 200
+        String prefix = tenant + "|";
+        Integer summary = null;
+        for (Map.Entry<String, Integer> e : deviceWSStatusByConnector.entrySet()) {
+            if (!e.getKey().startsWith(prefix) || e.getValue() == null) {
+                continue;
+            }
+            if (e.getValue() == 401) {
+                summary = 401;
+                break;
+            }
+            summary = e.getValue();
+        }
+        setDeviceConnectionStatus(tenant, summary);
+    }
+
+    private boolean isUnauthorized(String tenant, String connectorId) {
+        Integer status = deviceWSStatusByConnector.get(pauseKey(tenant, connectorId));
+        return status != null && status == 401;
+    }
+
+    private void clearDeviceStatus(String tenant) {
+        deviceWSStatusCodes.remove(tenant);
+        deviceWSStatusByConnector.keySet().removeIf(k -> k.startsWith(tenant + "|"));
+    }
+
     public void setManagementConnectionStatus(String tenant, Integer status) {
         if (tenant != null) {
             if (status != null) {
@@ -732,9 +788,13 @@ public class NotificationConnectionManager {
                 }
                 if (client != null) {
                     staticDeviceClients.get(tenant).put(connectorId, client);
+                    failedDeviceConnects.remove(connectKey(tenant, connectorId, "static"));
                     log.info("{} - Initialized device connection for connector: {}", tenant, connectorId);
+                } else {
+                    failedDeviceConnects.add(connectKey(tenant, connectorId, "static"));
                 }
             } catch (Exception e) {
+                failedDeviceConnects.add(connectKey(tenant, connectorId, "static"));
                 log.error("{} - Failed to initialize static device connection for connector {}: {}",
                         tenant, connectorId, e.getMessage(), e);
             }
@@ -801,9 +861,13 @@ public class NotificationConnectionManager {
                 }
                 if (client != null) {
                     dynamicDeviceClients.get(tenant).put(connectorId, client);
+                    failedDeviceConnects.remove(connectKey(tenant, connectorId, "dynamic"));
                     log.info("{} - Initialized dynamic connection for connector: {}", tenant, connectorId);
+                } else {
+                    failedDeviceConnects.add(connectKey(tenant, connectorId, "dynamic"));
                 }
             } catch (Exception e) {
+                failedDeviceConnects.add(connectKey(tenant, connectorId, "dynamic"));
                 log.error("{} - Failed to initialize dynamic device connection for connector {}: {}",
                         tenant, connectorId, e.getMessage(), e);
             }
@@ -998,6 +1062,7 @@ public class NotificationConnectionManager {
     }
 
     private void disconnectDeviceClients(String tenant) {
+        failedDeviceConnects.removeIf(k -> k.startsWith(tenant + "|"));
         Map<String, CustomWebSocketClient> staticDeviceClientsForTenant = staticDeviceClients.get(tenant);
         if (staticDeviceClientsForTenant != null) {
             int disconnectedCount = 0;
@@ -1061,6 +1126,10 @@ public class NotificationConnectionManager {
         return tenant + "|" + connectorId;
     }
 
+    private static String connectKey(String tenant, String connectorId, String bucket) {
+        return tenant + "|" + connectorId + "|" + bucket;
+    }
+
     /** A connector that holds outbound messages while its broker connection is down, and is down now. */
     private boolean isHeldWhileDisconnected(OutboundMessageDispatcher dispatcher) {
         return dispatcher.getConnectorClient().holdsOutboundWhileDisconnected()
@@ -1121,6 +1190,8 @@ public class NotificationConnectionManager {
 
     /** Closes the connector's device WebSockets without unsubscribing. @return whether one was open */
     private boolean closeDeviceClientsForConnector(String tenant, String connectorId) {
+        failedDeviceConnects.remove(connectKey(tenant, connectorId, "static"));
+        failedDeviceConnects.remove(connectKey(tenant, connectorId, "dynamic"));
         boolean closed = false;
         for (Map<String, Map<String, CustomWebSocketClient>> clientsByTenant
                 : List.of(staticDeviceClients, dynamicDeviceClients)) {
@@ -1142,11 +1213,21 @@ public class NotificationConnectionManager {
     private void reconnectAll() {
         log.debug("Starting reconnection cycle");
 
+        // A scheduleAtFixedRate task that throws is never run again: nothing may escape this method
+        try {
+            reconnectAllTenants();
+        } catch (Throwable t) {
+            log.error("Reconnection cycle failed: {}", t.getMessage(), t);
+        }
+    }
+
+    private void reconnectAllTenants() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
 
             try {
                 reconnectDeviceClients(tenant);
+                retryFailedDeviceConnects(tenant);
                 reconnectManagementClients(tenant);
 
                 connectorStatusEventService.sendNotificationLifecycle(
@@ -1160,6 +1241,24 @@ public class NotificationConnectionManager {
         });
     }
 
+    /**
+     * Opens the device WebSockets whose earlier connect failed. {@link #reconnectDeviceClients} only
+     * revisits clients that exist, and a failed connect leaves none.
+     */
+    void retryFailedDeviceConnects(String tenant) {
+        String prefix = tenant + "|";
+        boolean staticFailed = failedDeviceConnects.stream().anyMatch(k -> k.startsWith(prefix) && k.endsWith("|static"));
+        boolean dynamicFailed = failedDeviceConnects.stream().anyMatch(k -> k.startsWith(prefix) && k.endsWith("|dynamic"));
+        if (staticFailed) {
+            log.info("{} - Retrying static device WebSocket connect that failed earlier", tenant);
+            initializeStaticDeviceClient(tenant);
+        }
+        if (dynamicFailed) {
+            log.info("{} - Retrying dynamic device WebSocket connect that failed earlier", tenant);
+            initializeDynamicDeviceClient(tenant);
+        }
+    }
+
     private void reconnectDeviceClients(String tenant) {
         Map<String, CustomWebSocketClient> staticDeviceClientsForTenant = staticDeviceClients.get(tenant);
         if (staticDeviceClientsForTenant == null) {
@@ -1169,10 +1268,10 @@ public class NotificationConnectionManager {
         int reconnectedCount = 0;
         for (Map.Entry<String, CustomWebSocketClient> entry : staticDeviceClientsForTenant.entrySet()) {
             CustomWebSocketClient client = entry.getValue();
-            if (shouldReconnectClient(tenant, client)) {
+            if (shouldReconnectClient(tenant, entry.getKey(), client)) {
                 try {
                     if (client.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
-                            (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
+                            isUnauthorized(tenant, entry.getKey())) {
                         log.info("{} - Re-initializing static device client", tenant);
                         initializeStaticDeviceClient(tenant);
                         // M6: don't break — continue so remaining CLOSED clients are also reconnected
@@ -1199,10 +1298,10 @@ public class NotificationConnectionManager {
         reconnectedCount = 0;
         for (Map.Entry<String, CustomWebSocketClient> entry : dynamicDeviceClientsForTenant.entrySet()) {
             CustomWebSocketClient client = entry.getValue();
-            if (shouldReconnectClient(tenant, client)) {
+            if (shouldReconnectClient(tenant, entry.getKey(), client)) {
                 try {
                     if (client.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
-                            (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
+                            isUnauthorized(tenant, entry.getKey())) {
                         log.info("{} - Re-initializing dynamic device client", tenant);
                         initializeDynamicDeviceClient(tenant);
                         // L5: don't break — initializeDynamic covers all connectors in one call,
@@ -1265,19 +1364,19 @@ public class NotificationConnectionManager {
         }
     }
 
-    private Boolean shouldReconnectClient(String tenant, CustomWebSocketClient client) {
+    private Boolean shouldReconnectClient(String tenant, String connectorId, CustomWebSocketClient client) {
         if (client == null) {
             return false;
         }
 
         ReadyState state = client.getReadyState();
-        Integer statusCode = deviceWSStatusCodes.get(tenant);
+        boolean unauthorized = isUnauthorized(tenant, connectorId);
 
         return !client.isOpen() &&
                 (state == ReadyState.CLOSING ||
                         state == ReadyState.CLOSED ||
                         state == ReadyState.NOT_YET_CONNECTED ||
-                        (statusCode != null && statusCode == 401));
+                        unauthorized);
     }
 
     /**
@@ -1341,6 +1440,7 @@ public class NotificationConnectionManager {
         managementCallbacks.clear();
         cacheInventoryCallbacks.clear();
         deviceWSStatusCodes.clear();
+        deviceWSStatusByConnector.clear();
         managementWSStatusCodes.clear();
         cacheInventoryWSStatusCodes.clear();
 

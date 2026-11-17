@@ -50,6 +50,7 @@ public class GroupCacheManager {
     private final String tenant;
     private final Map<String, CachedGroup> groupCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cacheCleanupExecutor;
+    private final Map<String, java.util.concurrent.locks.ReentrantLock> groupLocks = new ConcurrentHashMap<>();
 
     public GroupCacheManager(String tenant) {
         this.tenant = tenant;
@@ -65,6 +66,15 @@ public class GroupCacheManager {
             CACHE_CLEANUP_INTERVAL_MINUTES,
             TimeUnit.MINUTES
         );
+    }
+
+    /**
+     * Lock for the read-modify-write of one group's membership. Notifications are processed on
+     * separate threads, so two quick UPDATEs of the same group could both read the same cached
+     * set and the older one could overwrite the newer one's result, losing a delta.
+     */
+    public java.util.concurrent.locks.ReentrantLock lockFor(String groupId) {
+        return groupLocks.computeIfAbsent(groupId, id -> new java.util.concurrent.locks.ReentrantLock());
     }
 
     public Map<String, CachedGroup> getCache() {

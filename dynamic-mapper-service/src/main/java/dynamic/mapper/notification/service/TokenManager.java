@@ -239,13 +239,48 @@ public class TokenManager {
                 t.setDaemon(true);
                 return t;
             });
-            tokenRefreshExecutor.scheduleAtFixedRate(this::refreshTokens,
+            tokenRefreshExecutor.scheduleAtFixedRate(this::refreshTokensSafely,
                     TOKEN_REFRESH_INTERVAL_HOURS, TOKEN_REFRESH_INTERVAL_HOURS, TimeUnit.HOURS);
             log.info("{} - Started token refresh scheduler", tenant);
         }
     }
 
+    /** Pause before the retry cycle that follows a cycle with failed refreshes. */
+    private static final long REFRESH_RETRY_MINUTES = 15;
+    private final java.util.concurrent.atomic.AtomicBoolean refreshRetryScheduled =
+            new java.util.concurrent.atomic.AtomicBoolean();
+
+    /**
+     * The scheduled entry point. A task given to scheduleAtFixedRate that throws is never run
+     * again, so nothing may escape. Tokens live 24 h and are refreshed every 12 h, so one failed
+     * cycle leaves no margin: failures are retried after {@value #REFRESH_RETRY_MINUTES} minutes
+     * instead of waiting for the next regular cycle.
+     */
+    private void refreshTokensSafely() {
+        try {
+            if (doRefreshTokens() > 0 && refreshRetryScheduled.compareAndSet(false, true)) {
+                ScheduledExecutorService executor = tokenRefreshExecutor;
+                if (executor != null && !executor.isShutdown()) {
+                    executor.schedule(() -> {
+                        refreshRetryScheduled.set(false);
+                        refreshTokensSafely();
+                    }, REFRESH_RETRY_MINUTES, TimeUnit.MINUTES);
+                } else {
+                    refreshRetryScheduled.set(false);
+                }
+            }
+        } catch (Throwable t) {
+            log.error("Token refresh cycle failed: {}", t.getMessage(), t);
+        }
+    }
+
     public void refreshTokens() {
+        doRefreshTokens();
+    }
+
+    /** @return the number of tokens that could not be refreshed, over all tenants */
+    private int doRefreshTokens() {
+        java.util.concurrent.atomic.AtomicInteger totalFailed = new java.util.concurrent.atomic.AtomicInteger();
 
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
@@ -308,6 +343,7 @@ public class TokenManager {
                 }
             }
 
+            totalFailed.addAndGet(failedCount);
             if (refreshedCount > 0 || failedCount > 0) {
                 log.info("{} - Token refresh completed: {} successful, {} failed",
                         tenant, refreshedCount, failedCount);
@@ -315,6 +351,7 @@ public class TokenManager {
                 log.debug("{} - No tokens to refresh", tenant);
             }
         });
+        return totalFailed.get();
     }
 
     @PreDestroy

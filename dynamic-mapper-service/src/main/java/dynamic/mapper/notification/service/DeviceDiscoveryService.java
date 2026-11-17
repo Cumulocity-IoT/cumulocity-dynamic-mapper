@@ -31,9 +31,9 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for discovering devices and their relationships.
@@ -51,9 +51,11 @@ public class DeviceDiscoveryService {
         this.serviceRegistry = serviceRegistry;
     }
 
-    // Circuit breaker for preventing infinite recursion
-    // L10: keyed by "tenant:deviceId" to prevent cross-tenant false collisions; atomic add
-    private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
+    // Cycle guard: the "tenant:deviceId" keys of the objects on the CURRENT traversal path.
+    // Must be per call (thread-local), not shared: a shared set made a concurrent traversal that
+    // reached the same device mistake it for a cycle and silently drop it from its result, which
+    // callers then treated as "not covered" and unsubscribed.
+    private final ThreadLocal<Set<String>> traversalPath = ThreadLocal.withInitial(HashSet::new);
     private final ThreadLocal<Integer> recursionDepth = ThreadLocal.withInitial(() -> 0);
 
     // === Public API ===
@@ -92,9 +94,10 @@ public class DeviceDiscoveryService {
 
             String deviceId = mor.getId().getValue();
 
-            // L10: tenant-scoped key prevents cross-tenant false collisions; atomic add is the guard
+            // Tenant-scoped key; the set only holds the ancestors of the current traversal path
             String processingKey = tenant + ":" + deviceId;
-            if (!processingDevices.add(processingKey)) {
+            Set<String> path = traversalPath.get();
+            if (!path.add(processingKey)) {
                 log.debug("{} - Circular reference detected for device {}, skipping", tenant, deviceId);
                 return devices;
             }
@@ -109,10 +112,15 @@ public class DeviceDiscoveryService {
                     log.debug("{} - ManagedObject {} is neither device nor group, skipping", tenant, deviceId);
                 }
             } finally {
-                processingDevices.remove(processingKey);
+                path.remove(processingKey);
             }
         } finally {
             recursionDepth.set(depth);
+            if (depth == 0) {
+                // outermost call finished: do not keep thread-local state on pooled threads
+                recursionDepth.remove();
+                traversalPath.remove();
+            }
         }
 
         return devices;
@@ -235,14 +243,8 @@ public class DeviceDiscoveryService {
     @PreDestroy
     public void cleanup() {
         log.info("Cleaning up DeviceDiscoveryService");
-        processingDevices.clear();
         recursionDepth.remove();
+        traversalPath.remove();
         log.info("DeviceDiscoveryService cleanup completed");
-    }
-
-    /** Drops tenant-scoped in-flight markers on tenant removal. */
-    public void removeTenant(String tenant) {
-        String prefix = tenant + ":";
-        processingDevices.removeIf(k -> k.startsWith(prefix));
     }
 }

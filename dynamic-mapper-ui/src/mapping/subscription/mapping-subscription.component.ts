@@ -315,22 +315,29 @@ export class MappingSubscriptionComponent implements OnInit {
   private enrichDevices(
     devices: Device[]
   ): SubscribedDevice[] {
+    const subscribedGroupIds = new Set((this.subscribedDeviceGroups ?? []).map(g => g.id));
     const subscribedGroupNames = new Set(
       (this.subscribedDeviceGroups ?? []).map(g => g.name).filter(Boolean)
     );
+    // Ids tell groups apart (names are not unique); fall back to names for a device the backend
+    // answered without ids
+    const inSubscribedGroup = (d: Device): boolean =>
+      d.groupIds?.length
+        ? d.groupIds.some(id => subscribedGroupIds.has(id))
+        : (d.groups ?? []).some(g => subscribedGroupNames.has(g));
     const subscribedTypesSet = new Set(this.subscribedDeviceTypes ?? []);
 
     return (devices ?? []).map(d => {
       const groupNames = (d.groups ?? []).join(', ');
       let subscriptionSource: string;
       if (this.path === 'static') {
-        subscriptionSource = 'Static';
-      } else if ((d.groups ?? []).some(g => subscribedGroupNames.has(g))) {
-        subscriptionSource = 'Group';
+        subscriptionSource = this.translateService.instant(gettext('Static'));
+      } else if (inSubscribedGroup(d)) {
+        subscriptionSource = this.translateService.instant(gettext('Group'));
       } else if (d.type && subscribedTypesSet.has(d.type)) {
-        subscriptionSource = 'Type';
+        subscriptionSource = this.translateService.instant(gettext('Type'));
       } else {
-        subscriptionSource = 'Dynamic';
+        subscriptionSource = this.translateService.instant(gettext('Dynamic'));
       }
       return { ...d, groupNames, subscriptionSource };
     });
@@ -341,8 +348,12 @@ export class MappingSubscriptionComponent implements OnInit {
    * the complete desired set, so they must not operate on a single grid page.
    */
   private async loadAllSubscribedDevicesForDrawer(): Promise<void> {
-    const subscription = this.getDeviceSubscriptionKind();
-    const response = await this.subscriptionService.getSubscriptionDevice(subscription);
+    // The device drawers edit the static bucket only (see onCommitSubscriptionDevice), so they
+    // must be seeded from it regardless of the tab: seeding from the dynamic bucket and writing
+    // to static would replace the static list.
+    const response = await this.subscriptionService.getSubscriptionDevice(
+      this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
+    );
     this.subscribedDevices = this.enrichDevices(response?.devices ?? []);
   }
 
@@ -487,17 +498,17 @@ export class MappingSubscriptionComponent implements OnInit {
     };
     try {
       const response = await this.subscriptionService.updateSubscriptionDevice(
-        subscriptionDevices
+        subscriptionDevices,
+        this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
       );
       this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
+      // Close only on success: a failed commit keeps the drawer (and the user's edits) open
+      this.showConfigSubscription1 = false;
+      this.showConfigSubscription2 = false;
     } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to update subscriptions:') + error
-      );
+      this.reportCommitFailure(error);
     }
-    this.showConfigSubscription1 = false;
-    this.showConfigSubscription2 = false;
   }
 
   async onCommitSubscriptionByDeviceGroup(deviceList: IIdentified[]): Promise<void> {
@@ -512,12 +523,10 @@ export class MappingSubscriptionComponent implements OnInit {
       await this.loadSubscriptionByDeviceGroup();
       this.subscriptionGrid()?.reload();
       this.reportSubscriptionResult(response);
+      this.showConfigSubscription3 = false;
     } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to update subscriptions:') + error
-      );
+      this.reportCommitFailure(error);
     }
-    this.showConfigSubscription3 = false;
   }
 
   async onCommitSubscriptionByDeviceType(typeList: string[]): Promise<void> {
@@ -526,18 +535,24 @@ export class MappingSubscriptionComponent implements OnInit {
       types: typeList as string[]
     };
     try {
-      await this.subscriptionService.updateSubscriptionByDeviceType(
+      const response = await this.subscriptionService.updateSubscriptionByDeviceType(
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceType();
       this.subscriptionGrid()?.reload();
-      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      this.reportSubscriptionResult(response);
+      this.showConfigSubscription4 = false;
     } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to update subscriptions:') + error
-      );
+      this.reportCommitFailure(error);
     }
-    this.showConfigSubscription4 = false;
+  }
+
+  /** Shows why a commit failed. The message is translated first, then the cause is appended. */
+  private reportCommitFailure(error: unknown): void {
+    const cause = error instanceof Error ? error.message : String(error);
+    this.alertService.danger(
+      this.translateService.instant(gettext('Failed to update subscriptions:')) + ' ' + cause
+    );
   }
 
   async resyncType(type: string): Promise<void> {
@@ -557,7 +572,7 @@ export class MappingSubscriptionComponent implements OnInit {
       this.alertService.add({ text: gettext('Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.alertService.danger(gettext('Failed to resync type subscription: ') + msg);
+      this.alertService.danger(this.translateService.instant(gettext('Failed to resync type subscription: ')) + msg);
     }
   }
 

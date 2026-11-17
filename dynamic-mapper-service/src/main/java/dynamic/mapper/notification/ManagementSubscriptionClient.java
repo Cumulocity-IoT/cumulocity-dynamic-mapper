@@ -35,7 +35,11 @@ import dynamic.mapper.notification.task.UpdateSubscriptionDeviceTypeTask;
 import dynamic.mapper.notification.websocket.Notification;
 import jakarta.annotation.PreDestroy;
 import java.net.URI;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import dynamic.mapper.notification.task.SubscriptionUpdateResult;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 @Slf4j
 /**
  * Handles management notifications for device groups and device types.
@@ -117,15 +121,51 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             .build();
     }
 
+    /**
+     * Upper bound the notification waits for the subscribe task before it is left unacknowledged: three
+     * attempts of up to 30 s each plus the pauses between them.
+     */
+    private static final int DEVICE_CREATION_TASK_BUDGET_MS = 120_000;
+
+    /** Overrides the pauses between the task's attempts; {@code null} keeps its defaults (for tests). */
+    long[] deviceCreationRetryPausesMs;
+
+    /**
+     * The CREATE notification is acknowledged only once the device is subscribed. The result carries a
+     * future that completes when the task is done: normally when it succeeded or failed in a way a retry
+     * cannot fix (acknowledge, the failure is reported), exceptionally when the failure is transient and
+     * outlived the task's own retries (do not acknowledge: Cumulocity delivers the notification again,
+     * bounded by the poison-pill limit of the WebSocket client). Before, the notification was
+     * acknowledged up front, so a failed subscribe or a restart at that moment lost the device until a
+     * manual resync.
+     */
     private ProcessingResultWrapper<?> handleDeviceCreation(Notification notification, String notificationTenant) {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
         log.debug("{} - Handling device creation for: {}", notificationTenant, message.getSourceId());
 
-        virtualThreadPool.submit(
-            new UpdateSubscriptionDeviceTypeTask(serviceRegistry, notificationSubscriber, message)
-        );
+        CompletableFuture<List<ProcessingContext<Object>>> done = new CompletableFuture<>();
+        UpdateSubscriptionDeviceTypeTask task =
+                new UpdateSubscriptionDeviceTypeTask(serviceRegistry, notificationSubscriber, message);
+        if (deviceCreationRetryPausesMs != null) {
+            task.setRetryPausesMs(deviceCreationRetryPausesMs);
+        }
+        virtualThreadPool.submit(() -> {
+            try {
+                SubscriptionUpdateResult result = task.call();
+                if (result.isRetryable()) {
+                    done.completeExceptionally(result.getError() != null ? result.getError()
+                            : new IllegalStateException("Subscribing device " + message.getSourceId() + " failed"));
+                } else {
+                    done.complete(List.of());
+                }
+            } catch (Throwable t) {
+                done.completeExceptionally(t);
+            }
+        });
 
-        return ProcessingResultWrapper.builder()
+        return ProcessingResultWrapper.<Object>builder()
+            .processingResult(done)
+            .pipelineTimeoutMS(DEVICE_CREATION_TASK_BUDGET_MS)
             .consolidatedQos(Qos.AT_LEAST_ONCE)
             .build();
     }

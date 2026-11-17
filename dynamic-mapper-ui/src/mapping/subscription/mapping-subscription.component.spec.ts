@@ -92,6 +92,7 @@ describe('MappingSubscriptionComponent', () => {
     mockAlertService = jasmine.createSpyObj('AlertService', [
       'success',
       'danger',
+      'warning',
       'add'
     ]);
 
@@ -243,6 +244,33 @@ describe('MappingSubscriptionComponent', () => {
       );
     });
 
+    it('should seed the device drawers from the static bucket even on the dynamic tab', async () => {
+      component.path = 'dynamic';
+
+      await component['loadAllSubscribedDevicesForDrawer']();
+
+      expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalledWith(
+        mockSubscriptionService.STATIC_DEVICE_SUBSCRIPTION
+      );
+    });
+
+    it('should tell two groups with the same name apart by id when classifying a dynamic device', async () => {
+      component.path = 'dynamic';
+      // only group g1 is subscribed; both groups are called "Plant"
+      component.subscribedDeviceGroups = [{ id: 'g1', name: 'Plant' }] as any;
+      component.subscribedDeviceTypes = [];
+
+      const [inSubscribed, inOther, withoutIds] = (component as any).enrichDevices([
+        { id: 'd1', groups: ['Plant'], groupIds: ['g1'] },
+        { id: 'd2', groups: ['Plant'], groupIds: ['g2'] },
+        { id: 'd3', groups: ['Plant'] } // answered without ids: falls back to the name
+      ]);
+
+      expect(inSubscribed.subscriptionSource).toBe('Group');
+      expect(inOther.subscriptionSource).not.toBe('Group');
+      expect(withoutIds.subscriptionSource).toBe('Group');
+    });
+
     it('should load device group subscriptions', async () => {
       await component.loadSubscriptionByDeviceGroup();
 
@@ -264,15 +292,6 @@ describe('MappingSubscriptionComponent', () => {
 
       expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalledWith(
         mockSubscriptionService.STATIC_DEVICE_SUBSCRIPTION
-      );
-    });
-
-    it('should use dynamic subscription path', async () => {
-      component.path = 'dynamic';
-      await component['loadAllSubscribedDevicesForDrawer']();
-
-      expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalledWith(
-        mockSubscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
       );
     });
   });
@@ -361,6 +380,17 @@ describe('MappingSubscriptionComponent', () => {
       expect(component.showConfigSubscription1).toBe(false);
     });
 
+    it('should always write device selections to the static bucket', async () => {
+      component.path = 'dynamic';
+
+      await component.onCommitSubscriptionDevice(mockDevices as IIdentified[]);
+
+      expect(mockSubscriptionService.updateSubscriptionDevice).toHaveBeenCalledWith(
+        jasmine.anything(),
+        mockSubscriptionService.STATIC_DEVICE_SUBSCRIPTION
+      );
+    });
+
     it('should update device group subscriptions', async () => {
       await component.onCommitSubscriptionByDeviceGroup(mockDevices as IIdentified[]);
 
@@ -387,6 +417,26 @@ describe('MappingSubscriptionComponent', () => {
       await component.onCommitSubscriptionDevice(mockDevices as IIdentified[]);
 
       expect(mockAlertService.danger).toHaveBeenCalled();
+    });
+
+    it('should keep the drawer open when the commit fails, so the edits are not lost', async () => {
+      mockSubscriptionService.updateSubscriptionDevice.and.returnValue(Promise.reject(new Error('503')));
+      component.showConfigSubscription1 = true;
+
+      await component.onCommitSubscriptionDevice(mockDevices as IIdentified[]);
+
+      expect(component.showConfigSubscription1).toBe(true);
+    });
+
+    it('should report failed devices of a type update like those of a device update', async () => {
+      mockSubscriptionService.updateSubscriptionByDeviceType.and.returnValue(
+        Promise.resolve({ status: 'ERROR', failedDeviceIds: ['d1'] } as any)
+      );
+      mockAlertService.warning.calls.reset();
+
+      await component.onCommitSubscriptionByDeviceType(['t1']);
+
+      expect(mockAlertService.warning).toHaveBeenCalled();
     });
   });
 

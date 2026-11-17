@@ -127,7 +127,8 @@ class SubscriptionQueryServiceTest {
         // The whole getSubscriptionsByFilter(...).get().allPages() chain.
         when(subscriptionAPI.getSubscriptionsByFilter(any(NotificationSubscriptionFilter.class)))
                 .thenReturn(subscriptionCollection);
-        when(subscriptionCollection.get()).thenReturn(pagedCollection);
+        org.mockito.Mockito.lenient().when(subscriptionCollection.get()).thenReturn(pagedCollection);
+        org.mockito.Mockito.lenient().when(subscriptionCollection.get(org.mockito.ArgumentMatchers.anyInt())).thenReturn(pagedCollection);
     }
 
     /**
@@ -152,7 +153,7 @@ class SubscriptionQueryServiceTest {
     }
 
     @Test
-    void getSubscriptionsDevices_deviceMONotFound_schedulesAsyncDeletionWithoutSyncDelete() {
+    void getSubscriptionsDevices_deviceMONotResolved_isLeftOutAndNeverDeleted() {
         // Arrange: one device subscription for "d1"
         NotificationSubscriptionRepresentation nsr = deviceSubscription("sub-1", DEVICE_ID);
         when(pagedCollection.allPages()).thenReturn(Collections.singletonList(nsr));
@@ -166,13 +167,11 @@ class SubscriptionQueryServiceTest {
         NotificationSubscriptionResponse response = queryService.getSubscriptionsDevices(
                 TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION);
 
-        // M10 fixed: deletion is async via virtualThreadPool.submit() — never called synchronously
+        // A GET must not delete: a null MO is also what a transient SDK failure looks like
         verify(subscriptionAPI, never()).delete(any(NotificationSubscriptionRepresentation.class));
+        verify(virtualThreadPool, never()).submit(any(Runnable.class));
 
-        // M10 fixed: a cleanup task was submitted to the thread pool instead
-        verify(virtualThreadPool, times(1)).submit(any(Runnable.class));
-
-        // The stale device is excluded from the response.
+        // The unresolved device is excluded from the response.
         assertNotNull(response);
         assertNotNull(response.getDevices());
         assertTrue(response.getDevices().isEmpty(),
@@ -407,5 +406,81 @@ class SubscriptionQueryServiceTest {
         } catch (IllegalArgumentException expected) {
             assertEquals("Tenant cannot be null", expected.getMessage());
         }
+    }
+
+    @Test
+    void getSubscriptionsDevices_readFails_propagatesInsteadOfReturningEmpty() {
+        when(pagedCollection.allPages()).thenThrow(new RuntimeException("platform 503"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> queryService.getSubscriptionsDevices(TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION));
+    }
+
+    @Test
+    void getSubscriptionsByDeviceGroup_readFails_propagatesInsteadOfReturningEmpty() {
+        when(pagedCollection.allPages()).thenThrow(new RuntimeException("platform 503"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> queryService.getSubscriptionsByDeviceGroup(TEST_TENANT));
+    }
+
+    @Test
+    void getSubscriptionsByDeviceType_readFails_propagatesInsteadOfEmptyError() {
+        when(pagedCollection.allPages()).thenThrow(new RuntimeException("platform 503"));
+        // the lookup runs through virtualThreadPool.submit(() -> callForTenant(..)): run both inline
+        doAnswer(inv -> {
+            java.util.concurrent.Callable<?> c = inv.getArgument(1);
+            return c.call();
+        }).when(subscriptionsService).callForTenant(eq(TEST_TENANT), any(java.util.concurrent.Callable.class));
+        doAnswer(inv -> {
+            java.util.concurrent.Callable<?> c = inv.getArgument(0);
+            try {
+                return java.util.concurrent.CompletableFuture.completedFuture(c.call());
+            } catch (Exception e) {
+                return java.util.concurrent.CompletableFuture.failedFuture(e);
+            }
+        }).when(virtualThreadPool).submit(any(java.util.concurrent.Callable.class));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> queryService.getSubscriptionsByDeviceType(TEST_TENANT));
+    }
+
+    @Test
+    void getSubscriptionsDevices_search_readsTheSubscriptionsWithTheLargePageSize() {
+        when(pagedCollection.allPages()).thenReturn(Collections.<NotificationSubscriptionRepresentation>emptyList());
+
+        queryService.getSubscriptionsDevices(TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 1, 30, true, "pump");
+
+        // a search walks every subscription: with the SDK default page size that is thousands of requests
+        verify(subscriptionCollection).get(Utils.FULL_SCAN_PAGE_SIZE);
+    }
+
+    @Test
+    void getSubscriptionsDevices_returnsTheIdsOfTheGroupsNextToTheirNames() {
+        NotificationSubscriptionRepresentation nsr = deviceSubscription("sub-1", DEVICE_ID);
+        when(pagedCollection.allPages()).thenReturn(Collections.singletonList(nsr));
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        mor.setId(GId.asGId(DEVICE_ID));
+        mor.setName("Pump");
+        ManagedObjectRepresentation parent = new ManagedObjectRepresentation();
+        parent.setId(GId.asGId("g-77"));
+        parent.setName("Plant");
+        com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation ref =
+                new com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation();
+        ref.setManagedObject(parent);
+        com.cumulocity.rest.representation.inventory.ManagedObjectReferenceCollectionRepresentation parents =
+                new com.cumulocity.rest.representation.inventory.ManagedObjectReferenceCollectionRepresentation();
+        parents.setReferences(List.of(ref));
+        mor.setAssetParents(parents);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq(DEVICE_ID), anyBoolean(), anyBoolean()))
+                .thenReturn(mor);
+
+        var device = queryService.getSubscriptionsDevices(TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION)
+                .getDevices().get(0);
+
+        // names are not unique: the ids are what tells two groups called "Plant" apart
+        assertEquals(List.of("Plant"), device.getGroups());
+        assertEquals(List.of("g-77"), device.getGroupIds());
     }
 }

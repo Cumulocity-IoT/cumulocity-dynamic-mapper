@@ -95,9 +95,17 @@ export function changedDevices(s: OutboundSubscriptionSelection): boolean {
   return s.mode !== 'skip' && s.devices !== null && !sameIds(s.devices, s.baseline?.devices ?? []);
 }
 
+/**
+ * Types ticked for a resync that are part of the selection. A resync that failed stays ticked
+ * (and is not "added" any more once its type is written), so a retry runs it again.
+ */
+export function pendingResyncTypes(s: OutboundSubscriptionSelection): string[] {
+  return s.mode === 'skip' ? [] : s.resyncTypes.filter(t => (s.types ?? []).includes(t));
+}
+
 /** True when saving would write something. An untouched selection writes nothing and shows no alert. */
 export function hasPendingSubscriptionChanges(s: OutboundSubscriptionSelection | undefined): boolean {
-  return !!s && (changedTypes(s) || changedGroups(s) || changedDevices(s));
+  return !!s && (changedTypes(s) || changedGroups(s) || changedDevices(s) || pendingResyncTypes(s).length > 0);
 }
 
 /** True when the user edited any list, whatever the mode: the baseline then must not be replaced. */

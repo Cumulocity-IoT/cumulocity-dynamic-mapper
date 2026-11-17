@@ -91,7 +91,9 @@ public class MappingSubscriptionManager {
     // Track mappings that are currently applied on this connector
     // Structure: <mapping identifier, mapping>
     private final Map<String, Mapping> effectiveMappingsInbound = new ConcurrentHashMap<>();
-    private final Map<String, Mapping> effectiveMappingsOutbound = new ConcurrentHashMap<>();
+    // Replaced as a whole (never cleared and refilled) by updateSubscriptionsOutbound: readers take
+    // no lock, and a clear-then-fill window made notifications see no outbound mappings at all.
+    private volatile Map<String, Mapping> effectiveMappingsOutbound = new ConcurrentHashMap<>();
 
     // Callback interface for actual connector subscribe/unsubscribe operations
     private final SubscriptionCallback subscriptionCallback;
@@ -502,15 +504,15 @@ public class MappingSubscriptionManager {
      */
     public void updateSubscriptionsOutbound(List<Mapping> updatedMappings, MappingValidator validator) {
         synchronized (lock) {
-            effectiveMappingsOutbound.clear();
-
+            Map<String, Mapping> updated = new ConcurrentHashMap<>();
             updatedMappings.stream()
                     .filter(Mapping::getActive)
                     .filter(validator::isValid)
                     .forEach(mapping -> {
-                        effectiveMappingsOutbound.put(mapping.getIdentifier(), mapping);
+                        updated.put(mapping.getIdentifier(), mapping);
                         log.debug("{} - Deployed outbound mapping: {}", tenant, mapping.getIdentifier());
                     });
+            effectiveMappingsOutbound = updated; // one atomic switch from the old set to the new one
 
             log.info("{} - Updated outbound mappings for connector: {}, active mappings: {}",
                     tenant, connectorName, effectiveMappingsOutbound.size());

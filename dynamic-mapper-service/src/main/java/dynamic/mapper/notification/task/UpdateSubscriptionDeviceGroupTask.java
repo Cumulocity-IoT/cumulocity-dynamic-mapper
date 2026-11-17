@@ -26,19 +26,25 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.device.Device;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.GroupCacheManager.CachedGroup;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Task to update device subscriptions when a device group membership changes.
@@ -77,6 +83,9 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             return SubscriptionUpdateResult.empty();
         }
 
+        // One notification per group at a time: read-modify-write of the cached membership
+        ReentrantLock groupLock = groupCacheManager.lockFor(groupId);
+        groupLock.lock();
         try {
             Map<String, Object> payload = c8yMessage.getParsedPayload();
 
@@ -122,8 +131,16 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 return SubscriptionUpdateResult.empty();
             }
 
-            SubscriptionUpdateResult result = processSubscriptionChanges(tenant, groupId, toAdd, toRemove);
-            groupCacheManager.updateSubscribedDevices(groupId, payloadChildIds);
+            Set<String> failedAdds = new HashSet<>();
+            Set<String> failedRemoves = new HashSet<>();
+            SubscriptionUpdateResult result = processSubscriptionChanges(tenant, groupId, toAdd, toRemove,
+                    failedAdds, failedRemoves);
+            // Record only what was handled: a member whose subscribe failed stays "unknown" so the
+            // next delta adds it again, and one whose unsubscribe failed stays known so it is removed again.
+            Set<String> newKnown = new HashSet<>(payloadChildIds);
+            newKnown.removeAll(failedAdds);
+            newKnown.addAll(failedRemoves);
+            groupCacheManager.updateSubscribedDevices(groupId, newKnown);
 
             log.info("{} - Updated group {} subscriptions: {} added, {} removed, {} failed",
                     tenant, groupId, result.getAddedCount(), result.getRemovedCount(), result.getFailedCount());
@@ -133,6 +150,8 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         } catch (Exception e) {
             log.error("{} - Error updating group {} subscription: {}", tenant, groupId, e.getMessage(), e);
             return SubscriptionUpdateResult.withError(e);
+        } finally {
+            groupLock.unlock();
         }
     }
 
@@ -178,9 +197,12 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 tenant, groupId, payloadChildIds.size());
 
         // toRemove is empty: we have no prior knowledge of what was subscribed
+        Set<String> failedAdds = new HashSet<>();
         SubscriptionUpdateResult result = processSubscriptionChanges(
-                tenant, groupId, payloadChildIds, Collections.emptySet());
-        groupCacheManager.updateSubscribedDevices(groupId, payloadChildIds);
+                tenant, groupId, payloadChildIds, Collections.emptySet(), failedAdds, new HashSet<>());
+        Set<String> known = new HashSet<>(payloadChildIds);
+        known.removeAll(failedAdds);
+        groupCacheManager.updateSubscribedDevices(groupId, known);
 
         log.info("{} - Re-sync completed for group {}: {} subscribed, {} failed",
                 tenant, groupId, result.getAddedCount(), result.getFailedCount());
@@ -253,13 +275,21 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         return toRemove;
     }
 
+    /** How long the task waits for the asynchronous subscribe futures of one notification. */
+    private static final long SUBSCRIBE_WAIT_SECONDS = 60;
+
     /**
-     * Process subscription changes for devices
+     * Process subscription changes for the members listed in a group's childAssets. A member can
+     * be a device, or a sub-group: a sub-group is expanded to the devices below it (as the REST
+     * path does), so its devices are subscribed and unsubscribed instead of the group object.
+     * Members whose change failed are reported in {@code failedAdds} / {@code failedRemoves}.
      */
     private SubscriptionUpdateResult processSubscriptionChanges(
-            String tenant, String groupId, Set<String> toAdd, Set<String> toRemove) {
+            String tenant, String groupId, Set<String> toAdd, Set<String> toRemove,
+            Set<String> failedAdds, Set<String> failedRemoves) {
 
         SubscriptionUpdateResult.Builder resultBuilder = SubscriptionUpdateResult.builder();
+        Map<String, List<Future<NotificationSubscriptionRepresentation>>> futuresByMember = new HashMap<>();
 
         // Process additions
         for (String childId : toAdd) {
@@ -270,29 +300,58 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 if (childMO == null) {
                     log.warn("{} - Child device {} not found for subscription", tenant, childId);
                     resultBuilder.addFailed(childId, "Device not found");
+                    failedAdds.add(childId);
                     continue;
                 }
 
-                Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
-                        // API.ALL, not c8yMessage.getApi(): that is INVENTORY (the group's own
-                        // notification channel) and would restrict the device to inventory data.
-                        .subscribeDeviceAndConnect(tenant, childMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                for (ManagedObjectRepresentation target : devicesOf(tenant, childMO)) {
+                    String targetId = target.getId().getValue();
+                    Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
+                            // API.ALL, not c8yMessage.getApi(): that is INVENTORY (the group's own
+                            // notification channel) and would restrict the device to inventory data.
+                            .subscribeDeviceAndConnect(tenant, target, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
-                // Pre-populate inventory cache for this device to ensure inventory filters work correctly
-                log.debug("{} - Pre-populating inventory cache for child device {} in group {}",
-                        tenant, childId, groupId);
-                serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childId, false);
+                    // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                    log.debug("{} - Pre-populating inventory cache for child device {} in group {}",
+                            tenant, targetId, groupId);
+                    serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, targetId, false);
 
-                resultBuilder.addSubscription(childId, future);
-                log.debug("{} - Subscribed child device {} to group {}", tenant, childId, groupId);
+                    resultBuilder.addSubscription(targetId, future);
+                    futuresByMember.computeIfAbsent(childId, k -> new ArrayList<>()).add(future);
+                    log.debug("{} - Subscribed child device {} to group {}", tenant, targetId, groupId);
+                }
 
             } catch (Exception e) {
                 log.error("{} - Failed to subscribe child device {}: {}", tenant, childId, e.getMessage(), e);
                 resultBuilder.addFailed(childId, e.getMessage());
+                failedAdds.add(childId);
+            }
+        }
+
+        // The subscribes run asynchronously: a failure there must not be recorded as success
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(SUBSCRIBE_WAIT_SECONDS);
+        for (Map.Entry<String, List<Future<NotificationSubscriptionRepresentation>>> entry : futuresByMember.entrySet()) {
+            for (Future<NotificationSubscriptionRepresentation> future : entry.getValue()) {
+                try {
+                    future.get(Math.max(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    resultBuilder.addFailed(entry.getKey(), "interrupted");
+                    failedAdds.add(entry.getKey());
+                    break;
+                } catch (Exception e) {
+                    // includes a timeout: unknown outcome, so the next delta retries it
+                    log.warn("{} - Subscribing member {} of group {} did not succeed: {}",
+                            tenant, entry.getKey(), groupId, e.toString());
+                    resultBuilder.addFailed(entry.getKey(), String.valueOf(e.getMessage()));
+                    failedAdds.add(entry.getKey());
+                    break;
+                }
             }
         }
 
         // Process removals
+        Set<String> coveredElsewhere = null; // computed live, once, when the first removal needs it
         for (String childId : toRemove) {
             try {
                 ManagedObjectRepresentation childMO = serviceRegistry.getC8yAgent()
@@ -313,21 +372,37 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
-                if (isStillCovered(tenant, groupId, childMO)) {
-                    log.debug("{} - Keeping child device {}: still covered by another group or type subscription",
-                            tenant, childId);
-                    continue;
+                boolean memberFailed = false;
+                for (ManagedObjectRepresentation target : devicesOf(tenant, childMO)) {
+                    if (coveredElsewhere == null) {
+                        coveredElsewhere = liveCoverage(tenant, groupId);
+                    }
+                    if (isStillCovered(tenant, groupId, target, coveredElsewhere)) {
+                        log.debug("{} - Keeping child device {}: still covered by another group or type subscription",
+                                tenant, target.getId().getValue());
+                        continue;
+                    }
+                    try {
+                        notificationSubscriber
+                                .unsubscribeDeviceAndDisconnect(tenant, target, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                        resultBuilder.addUnsubscription(target.getId().getValue());
+                        log.debug("{} - Unsubscribed child device {} from group {}", tenant,
+                                target.getId().getValue(), groupId);
+                    } catch (Exception e) {
+                        memberFailed = true;
+                        log.error("{} - Failed to unsubscribe child device {}: {}", tenant,
+                                target.getId().getValue(), e.getMessage(), e);
+                        resultBuilder.addFailed(target.getId().getValue(), e.getMessage());
+                    }
                 }
-
-                notificationSubscriber
-                        .unsubscribeDeviceAndDisconnect(tenant, childMO, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
-
-                resultBuilder.addUnsubscription(childId);
-                log.debug("{} - Unsubscribed child device {} from group {}", tenant, childId, groupId);
+                if (memberFailed) {
+                    failedRemoves.add(childId);
+                }
 
             } catch (Exception e) {
                 log.error("{} - Failed to unsubscribe child device {}: {}", tenant, childId, e.getMessage(), e);
                 resultBuilder.addFailed(childId, e.getMessage());
+                failedRemoves.add(childId);
             }
         }
 
@@ -335,13 +410,68 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
     }
 
     /**
-     * True if the device is also a member of another subscribed group (per the group cache) or
-     * matches a configured type, in which case its dynamic subscription must stay.
+     * The devices a group member stands for: itself when it is a device (or any other object, as
+     * before), all devices below it when it is a sub-group.
+     */
+    private List<ManagedObjectRepresentation> devicesOf(String tenant, ManagedObjectRepresentation member) {
+        if (!member.hasProperty("c8y_IsDeviceGroup")) {
+            return List.of(member);
+        }
+        List<ManagedObjectRepresentation> devices = new ArrayList<>();
+        List<Device> found = notificationSubscriber.findAllRelatedDevicesByMO(tenant, member, new ArrayList<>(), false);
+        for (Device d : found == null ? List.<Device>of() : found) {
+            ManagedObjectRepresentation mo = serviceRegistry.getC8yAgent()
+                    .getManagedObjectForId(tenant, d.getId(), false);
+            if (mo != null) {
+                devices.add(mo);
+            }
+        }
+        return devices;
+    }
+
+    /**
+     * Ids of all devices reachable from the subscribed groups other than {@code leavingGroupId},
+     * read live. The group cache expires after 24 hours and may only hold the inline child
+     * references of a group, so it cannot be the only source for "still covered".
+     *
+     * @throws RuntimeException if the groups cannot be read: callers must not assume "not covered"
+     */
+    private Set<String> liveCoverage(String tenant, String leavingGroupId) {
+        Set<String> covered = new HashSet<>();
+        NotificationSubscriptionResponse groups = notificationSubscriber.getSubscriptionsByDeviceGroup(tenant);
+        if (groups == null || groups.getDevices() == null) {
+            return covered;
+        }
+        for (Device group : groups.getDevices()) {
+            if (leavingGroupId.equals(group.getId())) {
+                continue;
+            }
+            ManagedObjectRepresentation groupMO = serviceRegistry.getC8yAgent()
+                    .getManagedObjectForId(tenant, group.getId(), false);
+            if (groupMO == null) {
+                continue;
+            }
+            List<Device> members = notificationSubscriber.findAllRelatedDevicesByMO(tenant, groupMO,
+                    new ArrayList<>(), false);
+            for (Device d : members == null ? List.<Device>of() : members) {
+                covered.add(d.getId());
+            }
+        }
+        return covered;
+    }
+
+    /**
+     * True if the device is also a member of another subscribed group (live, or per the group cache)
+     * or matches a configured type, in which case its dynamic subscription must stay.
      *
      * @throws RuntimeException if the type subscriptions cannot be read
      */
-    private boolean isStillCovered(String tenant, String leavingGroupId, ManagedObjectRepresentation childMO) {
+    private boolean isStillCovered(String tenant, String leavingGroupId, ManagedObjectRepresentation childMO,
+            Set<String> coveredByOtherGroups) {
         String childId = childMO.getId().getValue();
+        if (coveredByOtherGroups.contains(childId)) {
+            return true;
+        }
         for (String otherGroupId : groupCacheManager.getCache().keySet()) {
             if (!otherGroupId.equals(leavingGroupId)
                     && groupCacheManager.getSubscribedDevices(otherGroupId).contains(childId)) {

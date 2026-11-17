@@ -148,6 +148,66 @@ class NotificationSubscriptionServiceTest {
                 argThat(m -> "inC".equals(idOf(m))), any());
     }
 
+    @Test
+    void deleteGroupSubscription_typeReadFails_leavesEverythingSubscribed() {
+        Device groupA = device("A");
+        stubGroups(groupA);
+        stubMo("plain", null);
+        stubMembers("A", device("plain"));
+        when(subscriber.getSubscriptionsByDeviceType("t1")).thenThrow(new IllegalStateException("503"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> service.deleteGroupSubscription("t1", mo("A", null)));
+
+        // Aborted before changing anything: no unsubscribe on the strength of an empty view
+        verify(subscriber, never()).unsubscribeByDeviceGroup(any(), any());
+        verify(subscriber, never()).unsubscribeDeviceAndDisconnect(any(), any(), any());
+    }
+
+    @Test
+    void updateDeviceSubscription_removalFails_isReportedAndTheOthersAreStillRemoved() {
+        stubMo("d1", null);
+        stubMo("d2", null);
+        when(subscriber.getSubscriptionsDevices("t1", null, Utils.STATIC_DEVICE_SUBSCRIPTION))
+                .thenReturn(NotificationSubscriptionResponse.builder()
+                        .devices(new ArrayList<>(List.of(device("d1"), device("d2")))).build());
+        org.mockito.Mockito.doThrow(new RuntimeException("503")).when(subscriber)
+                .unsubscribeDeviceAndDisconnect(eq("t1"), argThat(m -> "d1".equals(idOf(m))), any());
+
+        NotificationSubscriptionResponse response = service.updateDeviceSubscription("t1",
+                request(), Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        assertEquals(NotificationSubscriptionResponse.SubscriptionStatus.ERROR, response.getStatus());
+        assertEquals(List.of("d1"), response.getFailedDeviceIds());
+        verify(subscriber).unsubscribeDeviceAndDisconnect(eq("t1"), argThat(m -> "d2".equals(idOf(m))), any());
+    }
+
+    @Test
+    void updateGroupSubscription_groupWatcherCannotBeCreated_isReportedAsError() {
+        Device groupB = device("B");
+        stubGroups();
+        stubMo("B", null);
+        stubMembers("B");
+        when(subscriber.subscribeByDeviceGroup(eq("t1"), argThat(m -> "B".equals(idOf(m)))))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
+
+        NotificationSubscriptionResponse response = service.updateGroupSubscription("t1", request(groupB));
+
+        assertEquals(NotificationSubscriptionResponse.SubscriptionStatus.ERROR, response.getStatus());
+        assertEquals(List.of("B"), response.getFailedDeviceIds());
+    }
+
+    @Test
+    void createDeviceSubscription_onlyMissingDevices_isAnErrorNotAnEmptyActive() {
+        when(c8yAgent.getManagedObjectForId("t1", "ghost", false)).thenReturn(null);
+
+        NotificationSubscriptionResponse response = service.createDeviceSubscription("t1",
+                request(device("ghost")), Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        assertEquals(NotificationSubscriptionResponse.SubscriptionStatus.ERROR, response.getStatus());
+        assertEquals(List.of("ghost"), response.getFailedDeviceIds());
+    }
+
     // ---- awaiting the asynchronous subscribe futures ------------------------------------
 
     @Test

@@ -21,12 +21,14 @@
 
 package dynamic.mapper.notification;
 
+import java.util.List;
 import java.util.concurrent.Future;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.device.Device;
 
 /**
  * What the Notification 2.0 WebSocket clients and subscription tasks may call on
@@ -52,4 +54,11 @@ public interface NotificationClientOperations {
     int deleteSubscriptionsForDevice(String tenant, String deviceId, String subscriptionName);
 
     NotificationSubscriptionResponse getSubscriptionsByDeviceType(String tenant);
+
+    /** The subscribed device groups (as devices carrying the group's id and name). */
+    NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant);
+
+    /** The devices below a managed object: the device and its child devices, or all devices of a group. */
+    List<Device> findAllRelatedDevicesByMO(String tenant, ManagedObjectRepresentation mor, List<Device> devices,
+            boolean isChildDevice);
 }

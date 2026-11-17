@@ -53,6 +53,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
 /**
  * Manages subscription CRUD operations.
  */
@@ -125,6 +126,16 @@ public class SubscriptionManager {
 
     // tenant:type of backfill jobs currently running, so the same type isn't scanned twice concurrently
     private final Set<String> resyncsInFlight = ConcurrentHashMap.newKeySet();
+
+    // Serializes the delete-then-create swap of the tenant's type-filter subscription: two
+    // concurrent updates would both delete, then collide on a 409 for the create.
+    private final Map<String, ReentrantLock> typeConfigLocks = new ConcurrentHashMap<>();
+
+    // Pauses between attempts to restore the previous type subscription (package-private for tests)
+    long[] typeRestorePausesMs = { 0, 500, 2000 };
+
+    // How long a background job (prune, resync) may trust its view of the configured types
+    private static final long TYPE_VIEW_TTL_MS = 2000;
 
     // Number of submitted-but-unsettled device subscribes a resync keeps before waiting for them
     private static final int RESYNC_SETTLE_CHUNK = 500;
@@ -330,7 +341,7 @@ public class SubscriptionManager {
                                 new NotificationSubscriptionFilter()
                                         .bySubscription(subscriptionName)
                                         .byContext("mo"))
-                        .get().allPages().iterator();
+                        .get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
                 while (it.hasNext()) {
                     ids.add(it.next().getSource().getId().getValue());
                 }
@@ -417,18 +428,23 @@ public class SubscriptionManager {
         });
     }
 
+    /**
+     * All subscriptions matching {@code filter}, read fully BEFORE any is deleted. Deleting while
+     * the paged iterator is still advancing shifts the page offsets, so every other page would be
+     * skipped and those subscriptions would survive.
+     */
+    private List<NotificationSubscriptionRepresentation> readAllSubscriptions(NotificationSubscriptionFilter filter) {
+        List<NotificationSubscriptionRepresentation> all = new ArrayList<>();
+        subscriptionAPI.getSubscriptionsByFilter(filter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().forEach(all::add);
+        return all;
+    }
+
     public void unsubscribeAllMOForInventoryCacheUpdates(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(
-                                new NotificationSubscriptionFilter()
-                                        .bySubscription(Utils.CACHE_INVENTORY_SUBSCRIPTION))
-                        .get().allPages().iterator();
-
                 int deletedCount = 0;
-                while (subIt.hasNext()) {
-                    NotificationSubscriptionRepresentation nsr = subIt.next();
+                for (NotificationSubscriptionRepresentation nsr : readAllSubscriptions(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.CACHE_INVENTORY_SUBSCRIPTION))) {
                     subscriptionAPI.delete(nsr);
                     deletedCount++;
                 }
@@ -454,6 +470,14 @@ public class SubscriptionManager {
                 int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, subscription);
                 log.info("{} - Deleted {} subscriptions for device {}", tenant, deletedCount, deviceId);
 
+                // The user removed the static selection while a dynamic subscription still covers the
+                // device (so there was no static subscription to delete): forget the shadowed one,
+                // otherwise removing the dynamic subscription later would resurrect it.
+                boolean onlyMarkerRemoved = false;
+                if (Utils.STATIC_DEVICE_SUBSCRIPTION.equals(subscription)) {
+                    onlyMarkerRemoved = shadowedStatic.remove(tenant + ":" + deviceId) && deletedCount == 0;
+                }
+
                 // The dynamic subscription had replaced an explicit static one: bring it back.
                 boolean restoringStatic = false;
                 if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)
@@ -470,11 +494,17 @@ public class SubscriptionManager {
                     connectionManager.disconnectDeviceSubscribers(tenant);
                 }
 
-                // Deactivate push connectivity
-                mqttPushManager.deactivatePushConnectivityForDevice(tenant, mor);
+                // Deactivate push connectivity, unless the static subscription was just restored (that
+                // activated it again) or only a held-back static selection was removed while a dynamic
+                // subscription still covers the device
+                if (!restoringStatic && !onlyMarkerRemoved) {
+                    mqttPushManager.deactivatePushConnectivityForDevice(tenant, mor);
+                }
 
             } catch (Exception e) {
+                // Propagate: swallowing made PUT/DELETE report success while the subscription remained
                 log.error("{} - Error unsubscribing device {}: {}", tenant, deviceId, e.getMessage(), e);
+                throw new RuntimeException("Failed to unsubscribe device " + deviceId + ": " + e.getMessage(), e);
             }
         });
     }
@@ -498,6 +528,7 @@ public class SubscriptionManager {
 
             } catch (Exception e) {
                 log.error("{} - Error unsubscribing group {}: {}", tenant, groupId, e.getMessage(), e);
+                throw new RuntimeException("Failed to unsubscribe group " + groupId + ": " + e.getMessage(), e);
             }
         });
     }
@@ -507,23 +538,13 @@ public class SubscriptionManager {
 
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                Iterator<NotificationSubscriptionRepresentation> staticIt = subscriptionAPI
-                    .getSubscriptionsByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION))
-                    .get().allPages().iterator();
                 int deletedCount = 0;
-                while (staticIt.hasNext()) {
-                    subscriptionAPI.delete(staticIt.next());
-                    deletedCount++;
-                }
-
-                Iterator<NotificationSubscriptionRepresentation> dynamicIt = subscriptionAPI
-                    .getSubscriptionsByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION))
-                    .get().allPages().iterator();
-                while (dynamicIt.hasNext()) {
-                    subscriptionAPI.delete(dynamicIt.next());
-                    deletedCount++;
+                for (String bucket : List.of(Utils.STATIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIPTION)) {
+                    for (NotificationSubscriptionRepresentation nsr : readAllSubscriptions(
+                            new NotificationSubscriptionFilter().bySubscription(bucket))) {
+                        subscriptionAPI.delete(nsr);
+                        deletedCount++;
+                    }
                 }
                 shadowedStatic.removeIf(k -> k.startsWith(tenant + ":"));
                 log.info("{} - Successfully unsubscribed {} devices", tenant, deletedCount);
@@ -534,12 +555,42 @@ public class SubscriptionManager {
     }
 
     public NotificationSubscriptionResponse updateSubscriptionByType(String tenant, List<String> types) {
+        ReentrantLock lock = typeConfigLocks.computeIfAbsent(tenant, t -> new ReentrantLock());
+        lock.lock();
+        try {
+            return updateSubscriptionByTypeLocked(tenant, types);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private NotificationSubscriptionResponse updateSubscriptionByTypeLocked(String tenant, List<String> types) {
         return subscriptionsService.callForTenant(tenant, () -> {
             try {
                 NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
                 String existingTypeFilter = null;
                 if (existing != null && existing.getSubscriptionFilter() != null) {
                     existingTypeFilter = existing.getSubscriptionFilter().getTypeFilter();
+                }
+
+                // Unchanged selection: nothing to do. createChangedTypeFilter() returns null for
+                // "no change", which must not be mistaken for "no types" (that would delete the
+                // subscription when the same list is saved again).
+                Set<String> requestedTypes = types == null ? Set.of() : new HashSet<>(types);
+                Set<String> currentTypes = Utils.parseTypesFromFilter(existingTypeFilter);
+                if (requestedTypes.equals(currentTypes)) {
+                    NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder unchanged = NotificationSubscriptionResponse
+                            .builder()
+                            .subscriptionName(Utils.MANAGEMENT_SUBSCRIPTION)
+                            .types(new ArrayList<>(currentTypes));
+                    if (existing != null && !currentTypes.isEmpty()) {
+                        unchanged.subscriptionId(existing.getId().getValue())
+                                .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
+                    } else {
+                        unchanged.status(NotificationSubscriptionResponse.SubscriptionStatus.INACTIVE);
+                    }
+                    log.info("{} - Type selection unchanged, nothing to update", tenant);
+                    return unchanged.build();
                 }
 
                 String newTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
@@ -565,14 +616,7 @@ public class SubscriptionManager {
                         // The old subscription is already gone: restore it so a failed update
                         // doesn't leave the tenant with no type subscription at all.
                         if (existing != null && existingTypeFilter != null && !existingTypeFilter.isBlank()) {
-                            try {
-                                createTypeSubscription(existingTypeFilter);
-                                log.warn("{} - Restored previous type subscription after failed update", tenant);
-                            } catch (RuntimeException restoreFailure) {
-                                log.error("{} - Could not restore previous type subscription: {}",
-                                        tenant, restoreFailure.getMessage(), restoreFailure);
-                                createFailure.addSuppressed(restoreFailure);
-                            }
+                            restorePreviousTypeSubscription(tenant, existingTypeFilter, createFailure);
                         }
                         throw createFailure;
                     }
@@ -603,6 +647,65 @@ public class SubscriptionManager {
                 throw new RuntimeException("Failed to update type subscription: " + e.getMessage(), e);
             }
         });
+    }
+
+    /**
+     * Re-creates the previous type filter after a failed swap. The create that just failed is
+     * usually a transient platform problem, so one immediate attempt would mostly fail too:
+     * retry a few times with a growing pause before giving up (the tenant would have no type
+     * subscription until the next update).
+     */
+    private void restorePreviousTypeSubscription(String tenant, String previousFilter, RuntimeException cause) {
+        long[] pausesMs = typeRestorePausesMs;
+        for (int attempt = 0; attempt < pausesMs.length; attempt++) {
+            try {
+                if (pausesMs[attempt] > 0) {
+                    Thread.sleep(pausesMs[attempt]);
+                }
+                createTypeSubscription(previousFilter);
+                log.warn("{} - Restored previous type subscription after failed update", tenant);
+                return;
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                cause.addSuppressed(ie);
+                return;
+            } catch (RuntimeException restoreFailure) {
+                log.error("{} - Could not restore previous type subscription (attempt {}/{}): {}",
+                        tenant, attempt + 1, pausesMs.length, restoreFailure.getMessage(), restoreFailure);
+                cause.addSuppressed(restoreFailure);
+            }
+        }
+    }
+
+    /**
+     * A short-lived view of the currently configured types for background jobs. A prune or resync
+     * can run for minutes while the user changes the selection again; without re-reading, a prune
+     * would unsubscribe devices of a type that was added back, and a resync would keep subscribing
+     * devices of a type that was removed.
+     */
+    private final class ConfiguredTypesView {
+        private final String tenant;
+        private Set<String> types = Set.of();
+        private long readAt = Long.MIN_VALUE;
+
+        ConfiguredTypesView(String tenant) {
+            this.tenant = tenant;
+        }
+
+        /** @throws RuntimeException if the filter cannot be read: callers must not assume "no types" */
+        synchronized boolean contains(String type) {
+            long now = System.nanoTime() / 1_000_000;
+            if (readAt == Long.MIN_VALUE || now - readAt > TYPE_VIEW_TTL_MS) {
+                NotificationSubscriptionRepresentation existing = subscriptionsService.callForTenant(tenant,
+                        SubscriptionManager.this::findExistingTypeSubscription);
+                String filter = existing != null && existing.getSubscriptionFilter() != null
+                        ? existing.getSubscriptionFilter().getTypeFilter()
+                        : null;
+                types = Utils.parseTypesFromFilter(filter);
+                readAt = now;
+            }
+            return types.contains(type);
+        }
     }
 
     /**
@@ -676,7 +779,13 @@ public class SubscriptionManager {
 
                 List<PendingSubscribe> pending = new ArrayList<>();
                 try {
+                    ConfiguredTypesView configured = new ConfiguredTypesView(tenant);
                     c8yAgent.forEachManagedObjectByType(tenant, type, false, mor -> {
+                        // The type may have been removed while this run is going: stop instead of
+                        // creating subscriptions nothing would ever prune again.
+                        if (!configured.contains(type)) {
+                            throw new IllegalStateException("type '" + type + "' was removed from the type subscription");
+                        }
                         String deviceId = mor.getId().getValue();
                         if (alreadyDynamic.contains(deviceId)) {
                             skipped.incrementAndGet();
@@ -779,11 +888,23 @@ public class SubscriptionManager {
                 }
 
                 AtomicInteger pruned = new AtomicInteger();
+                ConfiguredTypesView configured = new ConfiguredTypesView(tenant);
                 for (String type : removedTypes) {
                     serviceRegistry.getC8yAgent().forEachManagedObjectByType(tenant, type, false, mor -> {
+                        // Added back while this prune runs: its devices are wanted again.
+                        // (a failed re-read aborts the prune: never unsubscribe on a guess)
+                        if (configured.contains(type)) {
+                            return;
+                        }
                         if (!groupCovered.contains(mor.getId().getValue())) {
-                            unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
-                            pruned.incrementAndGet();
+                            try {
+                                unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                                pruned.incrementAndGet();
+                            } catch (RuntimeException e) {
+                                // one failing device must not stop the prune of the others
+                                log.warn("{} - Prune: could not unsubscribe device {}: {}", tenant,
+                                        mor.getId().getValue(), e.getMessage());
+                            }
                         }
                     });
                 }
@@ -876,17 +997,12 @@ public class SubscriptionManager {
             GId id = new GId();
             id.setValue(deviceId);
 
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                    .getSubscriptionsByFilter(
-                            new NotificationSubscriptionFilter()
-                                    .bySubscription(subscriptionName)
-                                    .bySource(id)
-                                    .byContext("mo"))
-                    .get().allPages().iterator();
-
             int deletedCount = 0;
-            while (subIt.hasNext()) {
-                NotificationSubscriptionRepresentation sub = subIt.next();
+            for (NotificationSubscriptionRepresentation sub : readAllSubscriptions(
+                    new NotificationSubscriptionFilter()
+                            .bySubscription(subscriptionName)
+                            .bySource(id)
+                            .byContext("mo"))) {
                 subscriptionAPI.delete(sub);
                 deletedCount++;
             }
@@ -1004,6 +1120,10 @@ public class SubscriptionManager {
         if (Utils.STATIC_DEVICE_SUBSCRIPTION.equals(requestedSubscription)) {
             // Static is lowest priority: skip if a dynamic subscription already exists
             if (hasDynamic) {
+                // The explicit selection is kept as a marker, not dropped: it is listed with the
+                // static devices (so the user sees and can remove it), and when the dynamic
+                // subscription goes away it is created as the static subscription it was meant to be.
+                shadowedStatic.add(tenant + ":" + deviceId);
                 logDeduplicationEvent(tenant, deviceId,
                         Utils.STATIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                 return true;
@@ -1078,11 +1198,40 @@ public class SubscriptionManager {
         return mor != null && mor.getId() != null;
     }
 
+    /**
+     * Devices whose explicit static selection is held back because a dynamic subscription covers
+     * them. They count as selected static devices: the full static list includes them, so the user
+     * sees them and can remove them, and removing the dynamic subscription turns them into real
+     * static subscriptions. A device that no longer exists drops out.
+     */
+    public List<dynamic.mapper.model.device.Device> shadowedStaticDevices(String tenant) {
+        List<dynamic.mapper.model.device.Device> devices = new ArrayList<>();
+        String prefix = tenant + ":";
+        for (String key : List.copyOf(shadowedStatic)) {
+            if (!key.startsWith(prefix)) {
+                continue;
+            }
+            String deviceId = key.substring(prefix.length());
+            ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent().getManagedObjectForId(tenant, deviceId, false);
+            if (mor == null) {
+                shadowedStatic.remove(key);
+                continue;
+            }
+            dynamic.mapper.model.device.Device device = new dynamic.mapper.model.device.Device();
+            device.setId(deviceId);
+            device.setName(mor.getName());
+            device.setType(mor.getType());
+            devices.add(device);
+        }
+        return devices;
+    }
+
     /** Drops tenant-scoped bookkeeping on tenant removal. */
     public void removeTenant(String tenant) {
         String prefix = tenant + ":";
         shadowedStatic.removeIf(k -> k.startsWith(prefix));
         resyncsInFlight.removeIf(k -> k.startsWith(prefix));
+        typeConfigLocks.remove(tenant);
         processingDevices.removeIf(k -> k.startsWith(prefix));
     }
 }

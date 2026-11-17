@@ -143,7 +143,6 @@ class TenantRemovalImplementationsTest {
         order.verify(tokenManager).removeTenant(TENANT); // must come after both: they read the tokens
         verify(connectionManager).removeTenant(TENANT);
         verify(subscriptionManager).removeTenant(TENANT);
-        verify(discovery).removeTenant(TENANT);
     }
 
     @Test

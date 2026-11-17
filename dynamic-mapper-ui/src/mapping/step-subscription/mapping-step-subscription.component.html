@@ -54,7 +54,7 @@
     <!-- Dynamic -->
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionMode" [selected]="selection().mode === 'dynamic'" (onSelect)="$event && setMode('dynamic')"
-        [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic'"></c8y-li-radio>
+        [disabled]="!ready || !canEdit" [attr.data-cy]="dataCyPrefix() + '-subscription-dynamic'"></c8y-li-radio>
       <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Dynamic</strong>
@@ -82,7 +82,7 @@
                 <span class="text-muted text-12 m-l-8">{{ removedTypes }} {{ 'removed' | translate }}</span>
                 }
                 <button class="btn-help btn-help--sm m-l-4" [attr.aria-label]="'Help' | translate" popover="{{
-                  'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+                  'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed, the dynamic subscriptions of its devices are removed too, unless a selected group still covers them.'
                     | translate }}" placement="bottom" triggers="focus" type="button"></button>
               </div>
               @if (expanded.types) {
@@ -134,7 +134,7 @@
     <!-- Static -->
     <c8y-li role="listitem">
       <c8y-li-radio name="subscriptionMode" [selected]="selection().mode === 'static'" (onSelect)="$event && setMode('static')"
-        [disabled]="!ready" [attr.data-cy]="dataCyPrefix() + '-subscription-static'"></c8y-li-radio>
+        [disabled]="!ready || !canEdit" [attr.data-cy]="dataCyPrefix() + '-subscription-static'"></c8y-li-radio>
       <c8y-li-icon icon="c8y-device"></c8y-li-icon>
       <c8y-li-body>
         <strong translate>Static</strong>

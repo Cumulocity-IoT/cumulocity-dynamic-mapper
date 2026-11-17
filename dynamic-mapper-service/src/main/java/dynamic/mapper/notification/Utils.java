@@ -125,6 +125,13 @@ public class Utils {
     public static final String WEBSOCKET_PATH = "/notification2/consumer/?token=";
 
     /**
+     * Page size for scans that read ALL subscriptions of a kind (listing, search, resync pre-fetch,
+     * bulk delete). The platform maximum: the SDK default is a handful of items per page, which
+     * made a tenant with thousands of subscriptions cost thousands of requests.
+     */
+    public static final int FULL_SCAN_PAGE_SIZE = 2000;
+
+    /**
      * Outbound feed for individually/explicitly selected devices (data-plane,
      * mo context). See the class Javadoc.
      */

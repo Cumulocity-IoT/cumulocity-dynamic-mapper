@@ -387,6 +387,47 @@ class TokenManagerTest {
         verify(tokenApi, never()).refresh(any());
     }
 
+    private void runRefreshCycle() throws Exception {
+        java.lang.reflect.Method m = TokenManager.class.getDeclaredMethod("refreshTokensSafely");
+        m.setAccessible(true);
+        m.invoke(tokenManager);
+    }
+
+    private void setExecutor(java.util.concurrent.ScheduledExecutorService executor) throws Exception {
+        java.lang.reflect.Field f = TokenManager.class.getDeclaredField("tokenRefreshExecutor");
+        f.setAccessible(true);
+        f.set(tokenManager, executor);
+    }
+
+    @Test
+    void refreshCycle_withFailedRefresh_isRetriedSoonInsteadOfAfterTheNextRegularCycle() throws Exception {
+        tokenManager.storeDeviceToken("t1", "conn", "old");
+        org.mockito.Mockito.doAnswer(inv -> {
+            ((Runnable) inv.getArgument(0)).run();
+            return null;
+        }).when(subscriptionsService).runForEachTenant(any());
+        org.mockito.Mockito.when(subscriptionsService.getTenant()).thenReturn("t1");
+        org.mockito.Mockito.when(tokenApi.refresh(any())).thenThrow(new RuntimeException("platform 503"));
+        java.util.concurrent.ScheduledExecutorService executor =
+                org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
+        setExecutor(executor);
+
+        runRefreshCycle();
+        runRefreshCycle(); // a retry is already pending: no second one is queued
+
+        org.mockito.Mockito.verify(executor, org.mockito.Mockito.times(1)).schedule(
+                any(Runnable.class), org.mockito.ArgumentMatchers.eq(15L),
+                org.mockito.ArgumentMatchers.eq(java.util.concurrent.TimeUnit.MINUTES));
+    }
+
+    @Test
+    void refreshCycle_neverThrows_soTheScheduledTaskKeepsRunning() throws Exception {
+        org.mockito.Mockito.doThrow(new IllegalStateException("tenant lookup failed"))
+                .when(subscriptionsService).runForEachTenant(any());
+
+        runRefreshCycle(); // would end the scheduleAtFixedRate series if it propagated
+    }
+
     @Test
     void cleanup_shutsDownScheduler() throws Exception {
         tokenManager.startTokenRefreshScheduler("t1");

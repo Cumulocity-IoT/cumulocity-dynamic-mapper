@@ -68,7 +68,10 @@ public class NotificationSubscriptionRequest {
         """
     )
     @Valid
-    @Size(max = 1000, message = "Cannot subscribe to more than 1000 devices at once")
+    // The desired-state PUT endpoints carry the COMPLETE selection, so this is a cap on the whole
+    // selection, not on one request's delta: a lower cap makes any change impossible to save
+    // once a tenant has more selected devices than that.
+    @Size(max = 10000, message = "Cannot subscribe to more than 10000 devices at once")
     private List<Device> devices;
 
     @Schema(

@@ -22,7 +22,7 @@ import { TestBed } from '@angular/core/testing';
 import { AlertService } from '@c8y/ngx-components';
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { SubscriptionService } from './subscription.service';
-import { SubscriptionSelectionService } from './subscription-selection.service';
+import { rebaseById, rebaseStrings, SubscriptionSelectionService } from './subscription-selection.service';
 import { emptySelection, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
 
 describe('SubscriptionSelectionService', () => {
@@ -152,11 +152,68 @@ describe('SubscriptionSelectionService', () => {
       expect(subs.resyncTypeSubscription).not.toHaveBeenCalled();
     });
 
-    it('warns when the server changed while the mapping was open, and still writes the selection', async () => {
+    it('rebases the change onto what the server has now instead of replacing it', async () => {
+      // somebody else added 'zzz' and device 'dX' while the mapping was open
       subs.getSubscriptionByDeviceType.and.resolveTo({ types: ['a', 'zzz'] } as any);
-      await service.apply(select({ mode: 'dynamic', types: ['b'] }));
-      expect(alerts.warning).toHaveBeenCalledWith(jasmine.stringContaining('changed elsewhere'));
-      expect(subs.updateSubscriptionByDeviceType).toHaveBeenCalled();
+      subs.getSubscriptionDevice.and.resolveTo({ devices: [{ id: 'd1' }, { id: 'dX' }] } as any);
+
+      await service.apply(select({ mode: 'static', types: ['b'], devices: [{ id: 'd2' }] as any }));
+
+      // the user removed 'a' and added 'b'; 'zzz' stays
+      expect(subs.updateSubscriptionByDeviceType).toHaveBeenCalledOnceWith({ api: 'ALL', types: ['zzz', 'b'] });
+      // the user removed d1 and added d2; dX stays
+      expect(subs.updateSubscriptionDevice).toHaveBeenCalledOnceWith(
+        { api: 'ALL', devices: [{ id: 'dX' }, { id: 'd2' }] as any }, 'STATIC');
+      expect(alerts.info).toHaveBeenCalledWith(jasmine.stringContaining('changed elsewhere'));
+    });
+
+    it('writes nothing when the current subscriptions cannot be read', async () => {
+      subs.getSubscriptionByDeviceType.and.rejectWith(new Error('503'));
+      const result = await service.apply(select({ mode: 'dynamic', types: ['b'] }));
+
+      expect(result).toEqual({ applied: false, failed: true });
+      expect(subs.updateSubscriptionByDeviceType).not.toHaveBeenCalled();
+      expect(alerts.warning).toHaveBeenCalledWith(jasmine.stringContaining('503'));
+    });
+
+    it('treats an ERROR response as a failed write and keeps the baseline for the retry', async () => {
+      subs.updateSubscriptionDevice.and.resolveTo({ status: 'ERROR', failedDeviceIds: ['d2'] } as any);
+      const selection = select({ mode: 'static', devices: [{ id: 'd2' }] as any });
+
+      const result = await service.apply(selection);
+
+      expect(result.failed).toBe(true);
+      expect(alerts.warning).toHaveBeenCalledWith(jasmine.stringContaining('d2'));
+      expect(alerts.add).not.toHaveBeenCalled();
+      expect(selection.baseline!.devices).toEqual([{ id: 'd1' }] as any); // still to be written
+    });
+
+    it('keeps a failed resync ticked and runs it again on retry', async () => {
+      subs.resyncTypeSubscription.and.rejectWith(new Error('conflict'));
+      const selection = select({ mode: 'dynamic', types: ['a', 'b'], resyncTypes: ['b'] });
+      await service.apply(selection);
+      expect(selection.resyncTypes).toEqual(['b']);
+
+      subs.resyncTypeSubscription.and.resolveTo();
+      subs.updateSubscriptionByDeviceType.calls.reset();
+      const retry = await service.apply(selection);
+
+      expect(subs.updateSubscriptionByDeviceType).not.toHaveBeenCalled();
+      expect(subs.resyncTypeSubscription).toHaveBeenCalledTimes(2);
+      expect(retry.failed).toBe(false);
+      expect(selection.resyncTypes).toEqual([]);
+    });
+  });
+
+  describe('rebase helpers', () => {
+    it('rebaseStrings applies additions and removals on top of the current list', () => {
+      expect(rebaseStrings(['a', 'x'], ['a', 'b'], ['b', 'c'])).toEqual(['x', 'c']);
+      expect(rebaseStrings([], ['a'], ['a'])).toEqual([]);
+    });
+
+    it('rebaseById does not duplicate an entry somebody else added as well', () => {
+      expect(rebaseById([{ id: '1' }, { id: '2' }], [{ id: '1' }], [{ id: '1' }, { id: '2' }]))
+        .toEqual([{ id: '1' }, { id: '2' }]);
     });
   });
 });

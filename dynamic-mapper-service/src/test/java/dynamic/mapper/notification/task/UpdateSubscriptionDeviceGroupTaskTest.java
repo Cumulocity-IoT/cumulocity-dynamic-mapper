@@ -170,6 +170,77 @@ class UpdateSubscriptionDeviceGroupTaskTest {
         verify(notificationSubscriber, never()).unsubscribeDeviceAndDisconnect(eq(TENANT), any(), any());
     }
 
+    /** A sub-group added to a selected group must subscribe the devices below it, not the group object. */
+    @Test
+    void call_addedSubGroup_subscribesItsDevicesNotTheGroupObject() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Collections.emptySet());
+        ManagedObjectRepresentation subGroup = group("sub-1");
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq("sub-1"), anyBoolean())).thenReturn(subGroup);
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_A), anyBoolean())).thenReturn(device(DEVICE_A));
+        dynamic.mapper.model.device.Device inSub = new dynamic.mapper.model.device.Device();
+        inSub.setId(DEVICE_A);
+        when(notificationSubscriber.findAllRelatedDevicesByMO(eq(TENANT), eq(subGroup), any(), eq(false)))
+                .thenReturn(List.of(inSub));
+
+        SubscriptionUpdateResult result = task(message(GROUP_ID, List.of("sub-1"))).call();
+
+        verify(notificationSubscriber).subscribeDeviceAndConnect(
+                eq(TENANT), argThat(m -> DEVICE_A.equals(m.getId().getValue())), eq(API.ALL),
+                eq(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
+        verify(notificationSubscriber, never()).subscribeDeviceAndConnect(
+                eq(TENANT), argThat(m -> "sub-1".equals(m.getId().getValue())), any(), any());
+        assertEquals(1, result.getAddedCount());
+    }
+
+    /** A member whose subscribe failed must stay unknown to the cache so the next delta retries it. */
+    @Test
+    void call_failedSubscribe_isNotRecordedInCacheAndIsRetried() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Collections.emptySet());
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_A), anyBoolean())).thenReturn(device(DEVICE_A));
+        when(notificationSubscriber.subscribeDeviceAndConnect(eq(TENANT), any(), any(API.class), any()))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
+
+        SubscriptionUpdateResult first = task(message(GROUP_ID, List.of(DEVICE_A))).call();
+
+        assertEquals(1, first.getFailedCount());
+        assertEquals(Set.of(), groupCacheManager.getSubscribedDevices(GROUP_ID));
+
+        // next notification (same membership): the device is added again
+        when(notificationSubscriber.subscribeDeviceAndConnect(eq(TENANT), any(), any(API.class), any()))
+                .thenReturn(CompletableFuture.completedFuture(new NotificationSubscriptionRepresentation()));
+        SubscriptionUpdateResult second = task(message(GROUP_ID, List.of(DEVICE_A))).call();
+
+        assertEquals(1, second.getAddedCount());
+        assertEquals(Set.of(DEVICE_A), groupCacheManager.getSubscribedDevices(GROUP_ID));
+    }
+
+    /** Coverage by another group is read live: its cache entry may be expired or empty. */
+    @Test
+    void call_removedMember_coveredByOtherGroupNotInCache_keepsSubscription() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Set.of(DEVICE_A));
+        // group-2 is subscribed but its cache entry does not know device-a
+        ManagedObjectRepresentation group2 = group("group-2");
+        dynamic.mapper.model.device.Device g2 = new dynamic.mapper.model.device.Device();
+        g2.setId("group-2");
+        when(notificationSubscriber.getSubscriptionsByDeviceGroup(TENANT)).thenReturn(
+                NotificationSubscriptionResponse.builder().devices(List.of(g2)).build());
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq("group-2"), anyBoolean())).thenReturn(group2);
+        dynamic.mapper.model.device.Device inG2 = new dynamic.mapper.model.device.Device();
+        inG2.setId(DEVICE_A);
+        when(notificationSubscriber.findAllRelatedDevicesByMO(eq(TENANT), eq(group2), any(), eq(false)))
+                .thenReturn(List.of(inG2));
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_A), anyBoolean())).thenReturn(device(DEVICE_A));
+        when(notificationSubscriber.getSubscriptionsByDeviceType(TENANT))
+                .thenReturn(NotificationSubscriptionResponse.builder().types(List.of()).build());
+
+        task(message(GROUP_ID, List.of())).call();
+
+        verify(notificationSubscriber, never()).unsubscribeDeviceAndDisconnect(eq(TENANT), any(), any());
+    }
+
     // ------------------------------------------------------------------
     // Cache-miss re-sync path
     // ------------------------------------------------------------------

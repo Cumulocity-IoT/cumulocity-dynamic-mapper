@@ -123,6 +123,48 @@ class MappingSubscriptionManagerTest {
         assertEquals(1, manager.getSubscriptionCountsView().get("shared/topic").intValue());
     }
 
+    private static Mapping outbound(String identifier) {
+        return Mapping.builder()
+                .id(identifier)
+                .identifier(identifier)
+                .mappingTopic("out/" + identifier)
+                .direction(Direction.OUTBOUND)
+                .active(true)
+                .qos(Qos.AT_LEAST_ONCE)
+                .build();
+    }
+
+    /**
+     * Readers take no lock: while the outbound set is replaced they must always see a complete set,
+     * never an empty one (a notification then found no mapping and was acknowledged unmapped).
+     */
+    @Test
+    void updateSubscriptionsOutbound_readersNeverSeeAnEmptySetWhileItIsReplaced() throws Exception {
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1",
+                new RecordingCallback());
+        List<Mapping> mappings = List.of(outbound("o1"), outbound("o2"), outbound("o3"));
+        manager.updateSubscriptionsOutbound(mappings, mapping -> true);
+
+        java.util.concurrent.atomic.AtomicBoolean stop = new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicInteger emptyReads = new java.util.concurrent.atomic.AtomicInteger();
+        Thread reader = new Thread(() -> {
+            while (!stop.get()) {
+                if (manager.getEffectiveMappingsOutbound().isEmpty()) {
+                    emptyReads.incrementAndGet();
+                }
+            }
+        });
+        reader.start();
+        for (int i = 0; i < 20000; i++) {
+            manager.updateSubscriptionsOutbound(mappings, mapping -> true);
+        }
+        stop.set(true);
+        reader.join(5000);
+
+        assertEquals(0, emptyReads.get(), "a reader saw the outbound set empty during a replace");
+        assertEquals(Set.of("o1", "o2", "o3"), manager.getEffectiveMappingsOutbound().keySet());
+    }
+
     @Test
     void addSubscriptionInbound_isIdempotentForSameMapping() throws Exception {
         RecordingCallback callback = new RecordingCallback();

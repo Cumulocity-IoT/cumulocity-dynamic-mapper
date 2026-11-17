@@ -58,6 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -253,6 +254,40 @@ class SubscriptionManagerTest {
     }
 
     @Test
+    void updateSubscriptionByType_sameTypes_isNoOpAndKeepsSubscription() {
+        NotificationSubscriptionRepresentation existing = stubNsr("existing");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'cBy_A' or 'cBy_B'");
+        existing.setSubscriptionFilter(filter);
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+
+        var response = subscriptionManager.updateSubscriptionByType("t1", List.of("cBy_B", "cBy_A"));
+
+        verify(subscriptionAPI, never()).delete(any(NotificationSubscriptionRepresentation.class));
+        verify(subscriptionAPI, never()).subscribe(any());
+        assertEquals(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE, response.getStatus());
+        assertEquals(2, response.getTypes().size());
+    }
+
+    @Test
+    void updateSubscriptionByType_emptyList_deletesExistingSubscription() {
+        NotificationSubscriptionRepresentation existing = stubNsr("existing");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'cBy_A'");
+        existing.setSubscriptionFilter(filter);
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+
+        var response = subscriptionManager.updateSubscriptionByType("t1", List.of());
+
+        verify(subscriptionAPI, times(1)).delete(existing);
+        assertEquals(NotificationSubscriptionResponse.SubscriptionStatus.INACTIVE, response.getStatus());
+    }
+
+    @Test
     void updateSubscriptionByType_createAndRestoreFail_stillThrowsOriginalFailure() {
         NotificationSubscriptionRepresentation existing = stubNsr("existing");
         existing.setContext("tenant");
@@ -263,11 +298,13 @@ class SubscriptionManagerTest {
         NotificationSubscriptionCollection existingCol = singletonCollection(existing);
         when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
         when(subscriptionAPI.subscribe(any())).thenThrow(new SDKException(500, "C8Y unavailable"));
+        subscriptionManager.typeRestorePausesMs = new long[] { 0, 0, 0 };
 
         assertThrows(RuntimeException.class,
                 () -> subscriptionManager.updateSubscriptionByType("t1", List.of("cBy_NewType")));
 
-        verify(subscriptionAPI, times(2)).subscribe(any());
+        // the failed create, then three attempts to restore the previous filter
+        verify(subscriptionAPI, times(4)).subscribe(any());
     }
 
     // -------------------------------------------------------------------------
@@ -708,6 +745,149 @@ class SubscriptionManagerTest {
         verify(connectionManager, never()).disconnect("t1");
     }
 
+    /**
+     * A paged API whose offsets shift when an item is deleted (as on the platform): deleting while
+     * the iterator advances would skip every other page, so some subscriptions would survive.
+     */
+    @Test
+    void unsubscribeAllDevices_deletesEveryPageEvenThoughDeletionShiftsOffsets() {
+        List<NotificationSubscriptionRepresentation> backing = new java.util.ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            backing.add(stubNsr("sub-" + i));
+        }
+        int pageSize = 2;
+        // lazy iterator: every page is fetched when reached, from the CURRENT backing list
+        Iterable<NotificationSubscriptionRepresentation> pagedView = () -> new java.util.Iterator<>() {
+            int page = 0;
+            List<NotificationSubscriptionRepresentation> current = java.util.Collections.emptyList();
+            int idx = 0;
+
+            private boolean fill() {
+                while (idx >= current.size()) {
+                    int from = page * pageSize;
+                    if (from >= backing.size()) {
+                        return false;
+                    }
+                    current = new java.util.ArrayList<>(backing.subList(from, Math.min(from + pageSize, backing.size())));
+                    page++;
+                    idx = 0;
+                }
+                return true;
+            }
+
+            @Override
+            public boolean hasNext() {
+                return fill();
+            }
+
+            @Override
+            public NotificationSubscriptionRepresentation next() {
+                fill();
+                return current.get(idx++);
+            }
+        };
+        PagedNotificationSubscriptionCollectionRepresentation paged =
+                mock(PagedNotificationSubscriptionCollectionRepresentation.class);
+        when(paged.allPages()).thenAnswer(inv -> pagedView);
+        NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
+        org.mockito.Mockito.lenient().when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get(org.mockito.ArgumentMatchers.anyInt())).thenReturn(paged);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            // the bucket filter is irrelevant for this test: static yields all, dynamic yields none
+            return backing.isEmpty() ? emptyCollection() : col;
+        });
+        doAnswer(inv -> {
+            backing.remove(inv.<NotificationSubscriptionRepresentation>getArgument(0));
+            return null;
+        }).when(subscriptionAPI).delete(any(NotificationSubscriptionRepresentation.class));
+
+        subscriptionManager.unsubscribeAllDevices("t1");
+
+        assertEquals(0, backing.size(), "subscriptions skipped by delete-while-paging: " + backing.size());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unsubscribeDeviceAndDisconnect_staticRemoved_forgetsTheShadowedStaticSelection() throws Exception {
+        NotificationSubscriptionCollection none = emptyCollection();
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(none);
+        java.lang.reflect.Field f = SubscriptionManager.class.getDeclaredField("shadowedStatic");
+        f.setAccessible(true);
+        Set<String> shadowed = (Set<String>) f.get(subscriptionManager);
+        shadowed.add("t1:device-1"); // a dynamic subscription had replaced the static one
+        shadowed.add("t1:device-2");
+
+        subscriptionManager.unsubscribeDeviceAndDisconnect("t1", morWithId("device-1"),
+                Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        // removing the dynamic subscription later must not bring the removed static one back
+        assertEquals(Set.of("t1:device-2"), shadowed);
+    }
+
+    @Test
+    void staticSelectionSkippedUnderDynamic_isRemembered_listedAsStatic_andForgottenWhenDropped() throws Exception {
+        // a dynamic (and, for this crude mock, any) subscription exists for the device
+        NotificationSubscriptionCollection covered = singletonCollection(stubNsr("dyn"));
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(covered);
+        C8YAgent agent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(agent);
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        mor.setName("Pump 1");
+        mor.setType("cBy_Pump");
+        when(agent.getManagedObjectForId("t1", "device-1", false)).thenReturn(mor);
+
+        var skipped = subscriptionManager.subscribeDeviceAndConnect("t1", mor, API.ALL,
+                Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        assertEquals(null, skipped.get(5, TimeUnit.SECONDS), "skipped by deduplication");
+        verify(subscriptionAPI, never()).subscribe(any());
+        // the explicit selection is not lost: it is part of the static selection
+        var held = subscriptionManager.shadowedStaticDevices("t1");
+        assertEquals(1, held.size());
+        assertEquals("device-1", held.get(0).getId());
+        assertEquals("Pump 1", held.get(0).getName());
+        assertEquals("cBy_Pump", held.get(0).getType());
+
+        // ... and the user can remove it: the dynamic subscription (and push) stay untouched
+        NotificationSubscriptionCollection none = emptyCollection();
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(none);
+        subscriptionManager.unsubscribeDeviceAndDisconnect("t1", mor, Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        assertEquals(0, subscriptionManager.shadowedStaticDevices("t1").size());
+        verify(mqttPushManager, never()).deactivatePushConnectivityForDevice(any(), any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shadowedStaticDevices_dropsADeviceThatNoLongerExists() throws Exception {
+        C8YAgent agent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(agent);
+        when(agent.getManagedObjectForId("t1", "gone", false)).thenReturn(null);
+        java.lang.reflect.Field f = SubscriptionManager.class.getDeclaredField("shadowedStatic");
+        f.setAccessible(true);
+        Set<String> shadowed = (Set<String>) f.get(subscriptionManager);
+        shadowed.add("t1:gone");
+
+        assertEquals(0, subscriptionManager.shadowedStaticDevices("t1").size());
+        assertEquals(Set.of(), shadowed);
+    }
+
+    @Test
+    void unsubscribeDeviceAndDisconnect_deleteFails_propagatesInsteadOfReportingSuccess() {
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenThrow(new SDKException(503, "unavailable"));
+
+        assertThrows(RuntimeException.class, () -> subscriptionManager.unsubscribeDeviceAndDisconnect(
+                "t1", morWithId("device-1"), Utils.STATIC_DEVICE_SUBSCRIPTION));
+    }
+
+    @Test
+    void unsubscribeByDeviceGroup_deleteFails_propagatesInsteadOfReportingSuccess() {
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenThrow(new SDKException(503, "unavailable"));
+
+        assertThrows(RuntimeException.class,
+                () -> subscriptionManager.unsubscribeByDeviceGroup("t1", morWithId("group-1")));
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -791,7 +971,11 @@ class SubscriptionManagerTest {
         existing.setSubscriptionFilter(filter);
         NotificationSubscriptionCollection existingCol = singletonCollection(existing);
         when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
-        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("new"));
+        // after the swap the live filter only holds the kept type (the prune re-reads it)
+        when(subscriptionAPI.subscribe(any())).thenAnswer(inv -> {
+            filter.setTypeFilter("'KeepType'");
+            return stubNsr("new");
+        });
 
         C8YAgent agent = mock(C8YAgent.class);
         when(serviceRegistry.getC8yAgent()).thenReturn(agent);
@@ -821,6 +1005,34 @@ class SubscriptionManagerTest {
                 org.mockito.ArgumentMatchers.argThat(m -> "covered".equals(m.getId().getValue())));
     }
 
+    @Test
+    void updateSubscriptionByType_removedTypeAddedBackDuringPrune_isNotPruned() {
+        NotificationSubscriptionRepresentation existing = stubNsr("existing");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'OldType' or 'KeepType'");
+        existing.setSubscriptionFilter(filter);
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("new"));
+
+        C8YAgent agent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(agent);
+        when(queryService.getSubscriptionsByDeviceGroup("t1")).thenReturn(
+                dynamic.mapper.notification.NotificationSubscriptionResponse.builder()
+                        .devices(List.of()).build());
+        // the live filter still holds OldType when the prune looks (it was added back meanwhile)
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> c = inv.getArgument(3);
+            c.accept(morWithId("wanted-again"));
+            return null;
+        }).when(agent).forEachManagedObjectByType(eq("t1"), eq("OldType"), eq(false), any());
+
+        subscriptionManager.updateSubscriptionByType("t1", List.of("KeepType"));
+
+        verify(mqttPushManager, after(500).never()).deactivatePushConnectivityForDevice(eq("t1"), any());
+    }
+
     private ManagedObjectRepresentation morWithId(String id) {
         ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
         mor.setId(GId.asGId(id));
@@ -844,7 +1056,8 @@ class SubscriptionManagerTest {
                 mock(PagedNotificationSubscriptionCollectionRepresentation.class);
         when(paged.allPages()).thenReturn(List.of(nsrs));
         NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
-        when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get(org.mockito.ArgumentMatchers.anyInt())).thenReturn(paged);
         return col;
     }
 
@@ -853,7 +1066,8 @@ class SubscriptionManagerTest {
                 mock(PagedNotificationSubscriptionCollectionRepresentation.class);
         when(paged.allPages()).thenReturn(List.of());
         NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
-        when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get(org.mockito.ArgumentMatchers.anyInt())).thenReturn(paged);
         return col;
     }
 
@@ -862,7 +1076,8 @@ class SubscriptionManagerTest {
                 mock(PagedNotificationSubscriptionCollectionRepresentation.class);
         when(paged.allPages()).thenReturn(List.of(nsr));
         NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
-        when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get()).thenReturn(paged);
+        org.mockito.Mockito.lenient().when(col.get(org.mockito.ArgumentMatchers.anyInt())).thenReturn(paged);
         return col;
     }
 

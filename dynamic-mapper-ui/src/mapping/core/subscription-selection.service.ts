@@ -23,7 +23,11 @@ import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { ALERT_INFO_TIMEOUT, API } from '../../shared';
-import { Device } from '../../shared/mapping/notification-subscription.model';
+import {
+  Device,
+  NotificationSubscriptionResponse,
+  SubscriptionStatus
+} from '../../shared/mapping/notification-subscription.model';
 import { SubscriptionService } from './subscription.service';
 import {
   addedTypes,
@@ -31,6 +35,7 @@ import {
   changedGroups,
   changedTypes,
   OutboundSubscriptionSelection,
+  pendingResyncTypes,
   SubscriptionBaseline
 } from '../step-subscription/outbound-subscription-selection.model';
 
@@ -69,17 +74,30 @@ export class SubscriptionSelectionService {
   }
 
   /**
-   * Writes what changed. A list that was written becomes the selection's baseline (the host's
-   * object is updated in place), so a retry after a partial failure writes only what is left.
-   * Each write is independent: a failure is reported and the others still
-   * run, so one rejected list does not discard the rest of the user's selection.
+   * Writes what changed. The write endpoints replace the whole list, so the user's change is
+   * rebased onto the CURRENT server lists (added and removed entries relative to the baseline the
+   * step loaded) instead of sending the possibly stale list the step shows: somebody else's
+   * subscriptions added meanwhile survive. If the current lists cannot be read nothing is written.
+   *
+   * A list that was written becomes the selection's baseline (the host's object is updated in
+   * place), so a retry after a partial failure writes only what is left. A resync that failed
+   * stays ticked in `resyncTypes` and is retried. Each write is independent: a failure is
+   * reported and the others still run, so one rejected list does not discard the rest.
    */
   async apply(selection: OutboundSubscriptionSelection): Promise<ApplySubscriptionResult> {
     const result: ApplySubscriptionResult = { applied: false, failed: false };
     const typesChanged = changedTypes(selection);
     const groupsChanged = changedGroups(selection);
     const devicesChanged = changedDevices(selection);
-    if (!typesChanged && !groupsChanged && !devicesChanged) return result;
+    // Only types that are new in this selection can be resynced, and only the ones ticked. Prune
+    // the ticks now: once the type is written it is no longer "added", and a resync that fails
+    // must stay ticked so a retry runs it again.
+    if (typesChanged) {
+      const added = addedTypes(selection);
+      selection.resyncTypes = selection.resyncTypes.filter(t => added.includes(t));
+    }
+    const resyncPending = pendingResyncTypes(selection);
+    if (!typesChanged && !groupsChanged && !devicesChanged && resyncPending.length === 0) return result;
     // Without a loaded baseline nothing here can be diffed or recorded; the step never allows editing then.
     selection.baseline ??= { available: true, types: [], groups: [], devices: [] };
 
@@ -92,46 +110,78 @@ export class SubscriptionSelectionService {
     };
 
     // Subscriptions are tenant-wide and the Subscription outbound page can change them while the
-    // editor is open. Say so instead of silently replacing somebody else's change.
-    await this.warnIfChangedMeanwhile(selection);
-
-    if (typesChanged) {
+    // editor is open: rebase onto what is on the server now.
+    let current: SubscriptionBaseline | undefined;
+    if (typesChanged || groupsChanged || devicesChanged) {
       try {
-        await this.subscriptionService.updateSubscriptionByDeviceType({ api: API.ALL.name, types: selection.types! });
-        result.applied = true;
-        // Only types that are new in this selection can be resynced, and only the ones ticked.
-        const resync = addedTypes(selection).filter(type => selection.resyncTypes.includes(type));
-        // Written: a retry (the editor stays open after a partial failure) must not rewrite or resync it.
-        selection.baseline = { ...selection.baseline!, types: [...selection.types!] };
-        // One after another: each call starts a background rescan of the inventory.
-        for (const type of resync) {
-          try {
-            await this.subscriptionService.resyncTypeSubscription(type);
-          } catch (error) {
-            fail(error);
-          }
-        }
+        current = await this.loadBaseline();
+        if (!current.available) throw new Error('Outbound mapping is disabled');
       } catch (error) {
         fail(error);
+        return result;
+      }
+    }
+    const before = selection.baseline;
+    if (current && this.differsFrom(current, before, typesChanged, groupsChanged, devicesChanged)) {
+      this.alertService.info(
+        gettext('The subscriptions were changed elsewhere while this mapping was open. Your changes were applied on top of them.')
+      );
+    }
+
+    let typesFailed = false;
+    if (typesChanged) {
+      try {
+        const types = rebaseStrings(current!.types, before.types, selection.types!);
+        this.assertWritten(
+          await this.subscriptionService.updateSubscriptionByDeviceType({ api: API.ALL.name, types })
+        );
+        result.applied = true;
+        // Written: a retry must not rewrite it. The ticked resyncs stay in resyncTypes until done.
+        selection.baseline = { ...selection.baseline!, types: [...types] };
+        selection.types = [...types];
+      } catch (error) {
+        typesFailed = true;
+        fail(error);
+      }
+    }
+    // After a successful type write, or on a retry where only the resync is left. Never after a failed write.
+    if (!typesFailed) {
+      // One after another: each call starts a background rescan of the inventory.
+      for (const type of resyncPending.filter(t => (selection.types ?? []).includes(t))) {
+        try {
+          await this.subscriptionService.resyncTypeSubscription(type);
+          result.applied = true;
+          selection.resyncTypes = selection.resyncTypes.filter(t => t !== type);
+        } catch (error) {
+          fail(error);
+        }
       }
     }
     if (groupsChanged) {
       try {
-        await this.subscriptionService.updateSubscriptionByDeviceGroup({ api: API.ALL.name, devices: selection.groups! });
+        const groups = rebaseById(current!.groups, before.groups, selection.groups!);
+        this.assertWritten(
+          await this.subscriptionService.updateSubscriptionByDeviceGroup({ api: API.ALL.name, devices: groups })
+        );
         result.applied = true;
-        selection.baseline = { ...selection.baseline!, groups: [...selection.groups!] };
+        selection.baseline = { ...selection.baseline!, groups: [...groups] };
+        selection.groups = [...groups];
       } catch (error) {
         fail(error);
       }
     }
     if (devicesChanged) {
       try {
-        await this.subscriptionService.updateSubscriptionDevice(
-          { api: API.ALL.name, devices: selection.devices! as Device[] },
-          this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
+        const devices = rebaseById(current!.devices, before.devices, selection.devices!);
+        this.assertWritten(
+          await this.subscriptionService.updateSubscriptionDevice(
+            { api: API.ALL.name, devices: devices as Device[] },
+            this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
+          )
         );
         result.applied = true;
-        selection.baseline = { ...selection.baseline!, devices: [...selection.devices!] };
+        selection.baseline = { ...selection.baseline!, devices: [...devices] };
+        selection.devices = [...devices];
       } catch (error) {
         fail(error);
       }
@@ -147,25 +197,46 @@ export class SubscriptionSelectionService {
     return result;
   }
 
-  private async warnIfChangedMeanwhile(selection: OutboundSubscriptionSelection): Promise<void> {
-    if (!selection.baseline) return;
-    try {
-      const current = await this.loadBaseline();
-      const differs =
-        (changedTypes(selection) && !sameSet(current.types, selection.baseline.types)) ||
-        (changedGroups(selection) && !sameSet(current.groups.map(g => g.id), selection.baseline.groups.map(g => g.id))) ||
-        (changedDevices(selection) && !sameSet(current.devices.map(d => d.id), selection.baseline.devices.map(d => d.id)));
-      if (differs) {
-        this.alertService.warning(
-          gettext('The subscriptions were changed elsewhere while this mapping was open. Your selection replaces them.')
-        );
-      }
-    } catch {
-      // Advisory only: the write below reports its own failure.
-    }
+  /** A write that came back ERROR (devices that could not be subscribed) is a failure, not a success. */
+  private assertWritten(response: NotificationSubscriptionResponse | null | undefined): void {
+    if (response?.status !== SubscriptionStatus.ERROR) return;
+    const failed = response.failedDeviceIds?.length
+      ? ` (${response.failedDeviceIds.length}: ${response.failedDeviceIds.join(', ')})`
+      : '';
+    throw new Error(this.translateService.instant(gettext('Some subscriptions could not be created')) + failed);
+  }
+
+  private differsFrom(
+    current: SubscriptionBaseline,
+    before: SubscriptionBaseline,
+    types: boolean,
+    groups: boolean,
+    devices: boolean
+  ): boolean {
+    return (
+      (types && !sameStrings(current.types, before.types)) ||
+      (groups && !sameStrings(current.groups.map(g => g.id), before.groups.map(g => g.id))) ||
+      (devices && !sameStrings(current.devices.map(d => d.id), before.devices.map(d => d.id)))
+    );
   }
 }
 
-function sameSet(a: string[], b: string[]): boolean {
+function sameStrings(a: string[], b: string[]): boolean {
   return a.length === b.length && b.every(x => a.includes(x));
+}
+
+/** current - (before - wanted) + (wanted - before): the user's additions and removals on top of `current`. */
+export function rebaseStrings(current: string[], before: string[], wanted: string[]): string[] {
+  const removed = new Set(before.filter(x => !wanted.includes(x)));
+  const added = wanted.filter(x => !before.includes(x));
+  return [...new Set([...current.filter(x => !removed.has(x)), ...added])];
+}
+
+export function rebaseById<T extends { id: string }>(current: T[], before: T[], wanted: T[]): T[] {
+  const wantedIds = new Set(wanted.map(d => d.id));
+  const beforeIds = new Set(before.map(d => d.id));
+  const removed = new Set([...beforeIds].filter(id => !wantedIds.has(id)));
+  const kept = current.filter(d => !removed.has(d.id));
+  const keptIds = new Set(kept.map(d => d.id));
+  return [...kept, ...wanted.filter(d => !beforeIds.has(d.id) && !keptIds.has(d.id))];
 }

@@ -47,7 +47,7 @@
   }
   @if (path == 'dynamic') {
 <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use \'Resync existing devices\' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+      'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use \'Resync existing devices\' for those. When a type is removed, the dynamic subscriptions of its devices are removed too, unless a selected group still covers them.'
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }
@@ -131,11 +131,14 @@
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
       [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
   'Create your first subscription for a device.' | translate
-" [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
-        (click)="onDefineSubscription1()" data-cy="dm-subscription-empty-manage">
-        <i c8yIcon="subscription"></i>
-        {{ 'Manage subscriptions' | translate }}
-      </button>
+" [horizontal]="true">
+      @if (path == 'static') {
+        <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
+          (click)="onDefineSubscription1()" data-cy="dm-subscription-empty-manage">
+          <i c8yIcon="subscription"></i>
+          {{ 'Manage subscriptions' | translate }}
+        </button>
+      }
     </c8y-ui-empty-state>
   </c8y-data-grid>
 </div>

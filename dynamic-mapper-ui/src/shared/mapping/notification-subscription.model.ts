@@ -30,6 +30,8 @@ export interface Device {
   type?: string;
   /** Names of device groups this device belongs to */
   groups?: string[];
+  /** Ids of the same groups; names are not unique, so compare these to tell groups apart */
+  groupIds?: string[];
 }
 
 /**

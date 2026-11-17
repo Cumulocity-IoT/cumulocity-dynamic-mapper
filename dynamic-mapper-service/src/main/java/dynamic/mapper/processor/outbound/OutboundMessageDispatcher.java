@@ -116,7 +116,8 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, linked to connector: {}",
                 tenant, connectorClient.getConnectorName());
         if (connectorClient.getTenant() != null) {
-            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(),
+                    connectorClient.getConnectorIdentifier(), 200);
         }
     }
 
@@ -180,9 +181,11 @@ public class OutboundMessageDispatcher implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket connection closed", connectorClient.getTenant());
         if (reason != null && reason.contains("401"))
-            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(),
+                    connectorClient.getConnectorIdentifier(), 401);
         else
-            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), null);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(),
+                    connectorClient.getConnectorIdentifier(), null);
     }
 
     @Override

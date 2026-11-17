@@ -133,6 +133,81 @@ Types that dropped out are pruned in the background: devices of those types are 
 dynamic bucket unless a selected group still covers them. New devices arrive as inventory CREATE
 notifications and `UpdateSubscriptionDeviceTypeTask` subscribes each with API `ALL`.
 
+**Type update details.** An unchanged type list is a no-op (answers `ACTIVE` with the current types); only an
+empty list deletes the subscription. The delete-then-create swap runs under a per-tenant lock, and a failed create
+retries the restore of the previous filter three times. The background prune and the resync re-read the configured
+types (cached for 2 s) so a type removed or added back while they run is respected: a prune skips devices of a
+re-added type, and a resync stops (reported as incomplete) when its type was removed.
+
+**Reads must not fail silently.** The reads that desired-state writes depend on (devices, groups, types) throw when
+the platform call fails, instead of returning an empty result that would look like "nothing is covered". `GET`
+endpoints answer 500 then. `deleteGroupSubscription` reads the remaining groups and types before it changes
+anything.
+
+**Group notifications.** `UpdateSubscriptionDeviceGroupTask` expands a sub-group added to or removed from a selected
+group into its devices, waits for the asynchronous subscribes, and records only handled members in the group cache,
+so a failed add or remove is retried by the next delta. "Still covered by another group" is read live, with the cache
+as a fast path. Notifications of one group are processed one at a time.
+
+**Failed device WebSockets.** A device WebSocket whose connect failed is remembered and retried by the 60 s
+reconnect cycle. Clients closed on purpose (no subscriptions left, broker connection down) are not retried.
+
+**Write failures are reported.** Unsubscribing a device or a group no longer swallows errors: `DELETE` answers 500, and
+in the desired-state updates the devices that could not be removed (and groups whose watcher could not be created)
+are listed in `failedDeviceIds` with status `ERROR`, while the remaining devices are still processed. Reading
+subscriptions never deletes anything; a device that cannot be resolved is left out of the listing, and stale entries
+are dropped when a selection is saved. Bulk deletes read all subscriptions before deleting the first, because the
+platform's page offsets shift as entries are removed. The device list of a request is capped at 10,000 entries, as it
+carries the whole selection.
+
+**Request validation.** The `subscription` parameter of the device endpoints (`GET`, `PUT`, `DELETE /subscription`)
+accepts only the static and the dynamic bucket; anything else is a 400, so the management and cache subscriptions
+cannot be changed through them. `POST /subscription` lists requested devices that do not exist in `failedDeviceIds`
+(status `ERROR`). A 400 or 404 raised inside an endpoint is passed on, not turned into a 500.
+
+**Outbound mapping set.** `MappingSubscriptionManager.updateSubscriptionsOutbound` builds the new set and swaps it in
+atomically; readers take no lock, so a notification never sees an empty set during a reload.
+
+**Device WebSocket tokens.** The 401 state of a device WebSocket is kept per connector (the tenant-level status is
+a summary: 401 if any connector is unauthorized). A connector with an expired token gets a new one on the next
+reconnect cycle even while another connector is healthy. Tokens are refreshed every 12 h; a cycle with failed
+refreshes is retried after 15 minutes, and an exception can no longer end the schedule.
+
+**Large tenants.** Scans that read all subscriptions (listing, search, resync pre-fetch, bulk delete) use the
+platform's maximum page size of 2,000 instead of the SDK default.
+
+**Static selection under a dynamic subscription.** An explicit static selection for a device that a dynamic
+subscription already covers is held back, not dropped (`shadowedStatic`). It is part of the full static list (the
+"manage subscriptions" drawer and the desired-state diff read it), so the user sees it and removes it like any other
+static device; removing it forgets the marker and leaves the dynamic subscription and push connectivity untouched.
+When the dynamic subscription is removed later, the held-back device becomes a real static subscription. The paged
+static grid shows only real subscriptions, so a held-back device appears in the drawer but not in the grid. The
+marker is held in memory: after a restart the selection is gone, and the device is simply no longer in the static
+list.
+
+**Groups of a device.** Subscribed devices carry `groups` (names) and `groupIds`. The "Subscription by" column on
+the dynamic tab matches on the ids, so two groups with the same name are told apart; names are only the fallback for
+an answer without ids. Only direct parents are listed: a device in a sub-group of a subscribed group is covered by
+the subscription but shown as "Dynamic".
+
+**New devices of a selected type.** The CREATE notification is acknowledged only once the device is subscribed.
+`UpdateSubscriptionDeviceTypeTask` waits for the subscribe and tries up to three times, with pauses of 1 s and 5 s.
+- *Done, or failed for good* (the platform rejected the request with a 4xx other than 408 and 429, or the arguments
+  are invalid): the notification is acknowledged. A redelivery would only repeat the failure.
+- *Transient failure that outlived the retries* (a 5xx, a timeout, a failed lookup): the notification is not
+  acknowledged, so Cumulocity delivers it again. The WebSocket client's existing poison-pill limit bounds the
+  redeliveries. Not acknowledging reconnects the management WebSocket, as it does for outbound messages.
+- Every failure that outlives the retries is also written as a service event (type `d11r_subscriptionEvent`,
+  severity error, with device, type and error), so it is not only in the log. A resync remains the fallback.
+
+The management client does this by returning a result whose future completes when the task is done: normally to
+acknowledge, exceptionally not to. `CustomWebSocketClient` applies its usual rule to it.
+
+**Known limits.**
+- Group notifications (UPDATE) are still acknowledged before their task runs. A failed add or remove is kept in the
+  group cache and retried by the next notification of that group, but is not redelivered. Redelivering an older
+  group state could undo a newer one, so this needs ordering guarantees first.
+
 **Deduplication.** `SubscriptionManager.checkAndHandleDeduplication` enforces the rule "dynamic outranks
 static". Requesting static while a dynamic subscription exists is skipped. Requesting dynamic while a
 static one exists deletes the static one first and remembers it in `shadowedStatic`; if the dynamic create

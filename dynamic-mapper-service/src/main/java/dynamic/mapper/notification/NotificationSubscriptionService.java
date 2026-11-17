@@ -58,6 +58,7 @@ public class NotificationSubscriptionService {
         // Keyed by id so devices reachable from several requested roots are subscribed once.
         Map<String, Device> allChildDevices = new LinkedHashMap<>();
         Map<String, Future<?>> pending = new LinkedHashMap<>();
+        List<String> missingRoots = new ArrayList<>();
 
         for (Device device : request.getDevices()) {
             ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
@@ -85,10 +86,13 @@ public class NotificationSubscriptionService {
                 }
             } else {
                 log.warn("{} - Device with id {} does not exist", tenant, device.getId());
+                missingRoots.add(device.getId());
             }
         }
 
-        SubscribeOutcome outcome = awaitSubscriptions(tenant, pending);
+        // A requested device that does not exist is a failure of the request, not a silent skip:
+        // otherwise a request for only missing devices answered ACTIVE with an empty list.
+        SubscribeOutcome outcome = awaitSubscriptions(tenant, pending).withFailures(missingRoots);
         return NotificationSubscriptionResponse.builder()
                 .api(request.getApi())
                 .subscriptionName(request.getSubscriptionName())
@@ -113,9 +117,9 @@ public class NotificationSubscriptionService {
         Map<String, Future<?>> pending = processDeviceAdditions(tenant, toAdd, request.getApi(), subscription);
 
         // Process removals
-        processDeviceRemovals(tenant, toRemove, subscription);
+        List<String> removalFailures = processDeviceRemovals(tenant, toRemove, subscription);
 
-        SubscribeOutcome outcome = awaitSubscriptions(tenant, pending);
+        SubscribeOutcome outcome = awaitSubscriptions(tenant, pending).withFailures(removalFailures);
         return NotificationSubscriptionResponse.builder()
                 .api(request.getApi())
                 .subscriptionName(request.getSubscriptionName())
@@ -153,6 +157,7 @@ public class NotificationSubscriptionService {
             // Unsubscribe removed groups FIRST so a device moving from a removed group to an added
             // one is not subscribed and then immediately unsubscribed again. Devices that remain
             // covered by a desired group or a configured type are left alone.
+            List<String> removalFailures = new ArrayList<>();
             if (!toBeRemovedGroups.isEmpty()) {
                 Set<String> protectedIds = deviceIdsCoveredByGroups(tenant, request.getDevices());
                 Set<String> configuredTypes = configuredTypes(tenant);
@@ -160,7 +165,7 @@ public class NotificationSubscriptionService {
                     ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                     if (groupMor != null) {
                         notificationSubscriber.unsubscribeByDeviceGroup(tenant, groupMor);
-                        unsubscribeGroupDevices(tenant, groupMor, protectedIds, configuredTypes);
+                        unsubscribeGroupDevices(tenant, groupMor, protectedIds, configuredTypes, removalFailures);
                     } else {
                         log.warn("{} - Could not unsubscribe group with id {}. DeviceGroup does not exist!", tenant,
                                 group.getId());
@@ -181,8 +186,9 @@ public class NotificationSubscriptionService {
             for (Device group : toBeCreatedGroups) {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                 if (groupMor != null) {
-                    // add subscription for deviceGroup
-                    notificationSubscriber.subscribeByDeviceGroup(tenant, groupMor);
+                    // add subscription for deviceGroup; awaited below, because a group whose watcher
+                    // could not be created never delivers devices that join it later
+                    pending.put(group.getId(), notificationSubscriber.subscribeByDeviceGroup(tenant, groupMor));
                     try {
                         allChildDevices = notificationSubscriber
                                 .findAllRelatedDevicesByMO(tenant, groupMor, allChildDevices, false);
@@ -215,7 +221,7 @@ public class NotificationSubscriptionService {
                 }
             }
 
-            SubscribeOutcome outcome = awaitSubscriptions(tenant, pending);
+            SubscribeOutcome outcome = awaitSubscriptions(tenant, pending).withFailures(removalFailures);
 
             // Get all currently subscribed device groups to return
             NotificationSubscriptionResponse updatedSubscription = notificationSubscriber
@@ -233,19 +239,27 @@ public class NotificationSubscriptionService {
     }
 
     public void deleteGroupSubscription(String tenant, ManagedObjectRepresentation groupMor) {
-        // Remove group subscription
-        notificationSubscriber.unsubscribeByDeviceGroup(tenant, groupMor);
-
-        // Devices still covered by another subscribed group or a configured type keep their subscription
+        // Devices still covered by another subscribed group or a configured type keep their
+        // subscription. Read this BEFORE touching anything: if the reads fail we abort with the
+        // subscription intact instead of unsubscribing devices on the strength of an empty view.
         String deletedId = groupMor.getId().getValue();
         List<Device> remainingGroups = new ArrayList<>(notificationSubscriber
                 .getSubscriptionsByDeviceGroup(tenant).getDevices());
         remainingGroups.removeIf(g -> deletedId.equals(g.getId()));
+        Set<String> protectedIds = deviceIdsCoveredByGroups(tenant, remainingGroups);
+        Set<String> configuredTypes = configuredTypes(tenant);
 
-        int unsubscribed = unsubscribeGroupDevices(tenant, groupMor,
-                deviceIdsCoveredByGroups(tenant, remainingGroups), configuredTypes(tenant));
+        // Remove group subscription
+        notificationSubscriber.unsubscribeByDeviceGroup(tenant, groupMor);
+
+        List<String> failed = new ArrayList<>();
+        int unsubscribed = unsubscribeGroupDevices(tenant, groupMor, protectedIds, configuredTypes, failed);
 
         log.info("{} - Successfully unsubscribed {} devices from group {}", tenant, unsubscribed, deletedId);
+        if (!failed.isEmpty()) {
+            throw new IllegalStateException("Group " + deletedId + " was removed, but the subscriptions of "
+                    + failed.size() + " device(s) could not be removed: " + failed);
+        }
     }
 
     /** Ids of all devices reachable from the given groups. */
@@ -275,7 +289,7 @@ public class NotificationSubscriptionService {
 
     /** Unsubscribes the group's devices from the dynamic bucket, skipping still-covered ones. */
     private int unsubscribeGroupDevices(String tenant, ManagedObjectRepresentation groupMor,
-            Set<String> protectedIds, Set<String> configuredTypes) {
+            Set<String> protectedIds, Set<String> configuredTypes, List<String> failed) {
         int count = 0;
         List<Device> devices = notificationSubscriber
                 .findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false);
@@ -287,9 +301,15 @@ public class NotificationSubscriptionService {
             if (deviceMor == null || configuredTypes.contains(deviceMor.getType())) {
                 continue;
             }
-            notificationSubscriber
-                    .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
-            count++;
+            try {
+                notificationSubscriber
+                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                count++;
+            } catch (Exception e) {
+                log.warn("{} - Could not unsubscribe device {} of group {}: {}", tenant, device.getId(),
+                        groupMor.getId().getValue(), e.getMessage());
+                failed.add(device.getId());
+            }
         }
         return count;
     }
@@ -299,6 +319,15 @@ public class NotificationSubscriptionService {
 
     /** Result of waiting for the asynchronous subscribe tasks of one request. */
     private record SubscribeOutcome(List<String> failedDeviceIds, boolean timedOut) {
+        SubscribeOutcome withFailures(List<String> more) {
+            if (more == null || more.isEmpty()) {
+                return this;
+            }
+            List<String> all = new ArrayList<>(failedDeviceIds);
+            all.addAll(more);
+            return new SubscribeOutcome(all, timedOut);
+        }
+
         NotificationSubscriptionResponse.SubscriptionStatus status() {
             if (!failedDeviceIds.isEmpty()) {
                 return NotificationSubscriptionResponse.SubscriptionStatus.ERROR;
@@ -370,20 +399,28 @@ public class NotificationSubscriptionService {
         return pending;
     }
 
-    private void processDeviceRemovals(String tenant, List<Device> devices, String subscription) {
+    /** @return ids of the devices whose subscription could not be removed (the others were removed) */
+    private List<String> processDeviceRemovals(String tenant, List<Device> devices, String subscription) {
+        List<String> failed = new ArrayList<>();
         for (Device device : devices) {
-            ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId(), false);
-            if (mor != null) {
-                notificationSubscriber
-                        .unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
-            } else {
-                // Device was deleted in Cumulocity: drop the stale subscription by id.
-                int deleted = notificationSubscriber
-                        .deleteSubscriptionsForDevice(tenant, device.getId(), subscription);
-                log.info("{} - Device {} not found, deleted {} stale subscription(s)",
-                        tenant, device.getId(), deleted);
+            try {
+                ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
+                        .getManagedObjectForId(tenant, device.getId(), false);
+                if (mor != null) {
+                    notificationSubscriber
+                            .unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
+                } else {
+                    // Device was deleted in Cumulocity: drop the stale subscription by id.
+                    int deleted = notificationSubscriber
+                            .deleteSubscriptionsForDevice(tenant, device.getId(), subscription);
+                    log.info("{} - Device {} not found, deleted {} stale subscription(s)",
+                            tenant, device.getId(), deleted);
+                }
+            } catch (Exception e) {
+                log.warn("{} - Could not remove subscription of device {}: {}", tenant, device.getId(), e.getMessage());
+                failed.add(device.getId());
             }
         }
+        return failed;
     }
 }

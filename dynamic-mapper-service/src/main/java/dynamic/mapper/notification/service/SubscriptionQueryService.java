@@ -98,7 +98,7 @@ public class SubscriptionQueryService {
             List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(finalFilter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 while (subIt.hasNext()) {
                     // L7: byContext("mo") filter already guarantees context; check removed
@@ -136,7 +136,7 @@ public class SubscriptionQueryService {
             List<NotificationSubscriptionRepresentation> managementSubList = new ArrayList<>();
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(finalFilter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 while (subIt.hasNext()) {
                     // L7: byContext("mo") filter already guarantees context; check removed
@@ -164,7 +164,7 @@ public class SubscriptionQueryService {
         return virtualThreadPool.submit(() -> subscriptionsService.callForTenant(tenant, () -> {
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(filter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(filter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 // L7: byContext("tenant") filter already guarantees context; return first match
                 if (subIt.hasNext()) {
@@ -208,14 +208,18 @@ public class SubscriptionQueryService {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(finalFilter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 while (subIt.hasNext()) {
                     // L7: byContext("mo") filter already guarantees context; check removed
                     processDeviceSubscription(tenant, subIt.next(), devices, responseBuilder);
                 }
             } catch (Exception e) {
-                log.error("{} - Error getting device subscriptions: {}", tenant, e.getMessage(), e);
+                // Must propagate: an empty result would be indistinguishable from "nothing
+                // subscribed", and callers that apply desired-state changes would then
+                // unsubscribe devices that other selections still cover.
+                log.error("{} - Error reading device subscriptions: {}", tenant, e.getMessage(), e);
+                throw new IllegalStateException("Failed reading device subscriptions: " + e.getMessage(), e);
             }
         });
 
@@ -295,7 +299,11 @@ public class SubscriptionQueryService {
                 }
                 statsRef.set(page.getPageStatistics());
             } catch (Exception e) {
-                log.error("{} - Error getting paged device subscriptions: {}", tenant, e.getMessage(), e);
+                // Must propagate: an empty result would be indistinguishable from "nothing
+                // subscribed", and callers that apply desired-state changes would then
+                // unsubscribe devices that other selections still cover.
+                log.error("{} - Error reading a page of device subscriptions: {}", tenant, e.getMessage(), e);
+                throw new IllegalStateException("Failed reading a page of device subscriptions: " + e.getMessage(), e);
             }
         });
 
@@ -344,13 +352,17 @@ public class SubscriptionQueryService {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(filter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(filter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 while (subIt.hasNext()) {
                     processDeviceSubscription(tenant, subIt.next(), allDevices, responseBuilder);
                 }
             } catch (Exception e) {
+                // Must propagate: an empty result would be indistinguishable from "nothing
+                // subscribed", and callers that apply desired-state changes would then
+                // unsubscribe devices that other selections still cover.
                 log.error("{} - Error searching device subscriptions: {}", tenant, e.getMessage(), e);
+                throw new IllegalStateException("Failed searching device subscriptions: " + e.getMessage(), e);
             }
         });
 
@@ -434,14 +446,18 @@ public class SubscriptionQueryService {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                        .getSubscriptionsByFilter(filter).get().allPages().iterator();
+                        .getSubscriptionsByFilter(filter).get(Utils.FULL_SCAN_PAGE_SIZE).allPages().iterator();
 
                 while (subIt.hasNext()) {
                     // L7: byContext("mo") filter already guarantees context; check removed
                     processDeviceSubscription(tenant, subIt.next(), devices, responseBuilder);
                 }
             } catch (Exception e) {
-                log.error("{} - Error getting group subscriptions: {}", tenant, e.getMessage(), e);
+                // Must propagate: an empty result would be indistinguishable from "nothing
+                // subscribed", and callers that apply desired-state changes would then
+                // unsubscribe devices that other selections still cover.
+                log.error("{} - Error reading group subscriptions: {}", tenant, e.getMessage(), e);
+                throw new IllegalStateException("Failed reading group subscriptions: " + e.getMessage(), e);
             }
         });
 
@@ -500,11 +516,11 @@ public class SubscriptionQueryService {
                         .build();
             }
         } catch (Exception e) {
+            // Must propagate (not an empty ERROR response): writers read the configured types to
+            // decide which devices stay covered, and a client re-committing "the full set" after
+            // this read would clear the selection.
             log.error("{} - Error retrieving type subscriptions: {}", tenant, e.getMessage(), e);
-            response = NotificationSubscriptionResponse.builder()
-                    .types(new ArrayList<>())
-                    .status(NotificationSubscriptionResponse.SubscriptionStatus.ERROR)
-                    .build();
+            throw new IllegalStateException("Failed to read type subscriptions: " + e.getMessage(), e);
         }
 
         return response;
@@ -539,23 +555,20 @@ public class SubscriptionQueryService {
                             .map(ref -> ref.getManagedObject().getName())
                             .collect(Collectors.toList());
                     device.setGroups(groups);
+                    device.setGroupIds(mor.getAssetParents().getReferences().stream()
+                            .filter(ref -> ref.getManagedObject() != null
+                                    && ref.getManagedObject().getId() != null)
+                            .map(ref -> ref.getManagedObject().getId().getValue())
+                            .collect(Collectors.toList()));
                 }
             } else {
-                log.warn("{} - Device {} in subscription does not exist; scheduling async cleanup of stale subscription {}",
+                // Read path: never delete here. getManagedObjectForId answers null for ANY SDK
+                // failure (a 503 or a timeout as well as a 404), so deleting on null would let one
+                // flaky lookup remove a live subscription from a GET that needs no write role.
+                // Stale entries are dropped by the write paths (a saved selection removes devices
+                // that no longer exist by id). The device is just left out of this listing.
+                log.warn("{} - Device {} of subscription {} could not be resolved; leaving it out of the listing",
                         tenant, device.getId(), nsr.getId().getValue());
-                // M10: don't mutate state inside a read path — schedule the deletion asynchronously
-                final NotificationSubscriptionRepresentation staleNsr = nsr;
-                final String deviceIdForLog = device.getId();
-                virtualThreadPool.submit(() -> {
-                    try {
-                        subscriptionsService.runForTenant(tenant, () -> subscriptionAPI.delete(staleNsr));
-                        log.info("{} - Deleted stale subscription {} for non-existent device {}",
-                                tenant, staleNsr.getId().getValue(), deviceIdForLog);
-                    } catch (Exception deleteEx) {
-                        log.warn("{} - Failed to delete stale subscription {} for device {}: {}",
-                                tenant, staleNsr.getId().getValue(), deviceIdForLog, deleteEx.getMessage());
-                    }
-                });
                 return;
             }
         } catch (Exception e) {

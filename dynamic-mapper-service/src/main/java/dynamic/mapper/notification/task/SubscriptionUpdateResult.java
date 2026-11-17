@@ -42,12 +42,18 @@ public class SubscriptionUpdateResult {
     private final Set<String> removedSubscriptions;
     private final Map<String, String> failedOperations; // deviceId -> error message
     private final Exception error;
+    /**
+     * The work failed in a way a later attempt may fix (platform 5xx, timeout). The caller must then not
+     * acknowledge the notification that triggered it, so that Cumulocity delivers it again.
+     */
+    private final boolean retryable;
 
     private SubscriptionUpdateResult(Builder builder) {
         this.addedSubscriptions = Collections.unmodifiableMap(builder.addedSubscriptions);
         this.removedSubscriptions = Collections.unmodifiableSet(builder.removedSubscriptions);
         this.failedOperations = Collections.unmodifiableMap(builder.failedOperations);
         this.error = builder.error;
+        this.retryable = builder.retryable;
     }
 
     public int getAddedCount() {
@@ -89,6 +95,7 @@ public class SubscriptionUpdateResult {
         private final Set<String> removedSubscriptions = new HashSet<>();
         private final Map<String, String> failedOperations = new HashMap<>();
         private Exception error;
+        private boolean retryable;
 
         public Builder addSubscription(String deviceId, Future<NotificationSubscriptionRepresentation> future) {
             addedSubscriptions.put(deviceId, future);
@@ -102,6 +109,11 @@ public class SubscriptionUpdateResult {
 
         public Builder addFailed(String deviceId, String errorMessage) {
             failedOperations.put(deviceId, errorMessage);
+            return this;
+        }
+
+        public Builder retryable(boolean retryable) {
+            this.retryable = retryable;
             return this;
         }
 

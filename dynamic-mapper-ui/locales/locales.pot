@@ -1294,6 +1294,9 @@ msgstr ""
 msgid "GraalVM engine rotation threshold"
 msgstr ""
 
+msgid "Group"
+msgstr ""
+
 msgid "Groups"
 msgstr ""
 
@@ -1431,6 +1434,9 @@ msgid "Inbound"
 msgstr ""
 
 msgid "Inbound (Smart Function JavaScript)"
+msgstr ""
+
+msgid "Incomplete ({{detail}})"
 msgstr ""
 
 msgid "Info"
@@ -1936,6 +1942,9 @@ msgstr ""
 msgid "No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use \"Live Test\" to get actual responses."
 msgstr ""
 
+msgid "No result reported (service restarted?)"
+msgstr ""
+
 msgid "No source template"
 msgstr ""
 
@@ -1993,6 +2002,9 @@ msgstr ""
 msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Ask an administrator to add them under Configuration > Service Configuration > Fragments from inventory to cache."
 msgstr ""
 
+msgid "Not synced yet"
+msgstr ""
+
 msgid "Note"
 msgstr ""
 
@@ -2029,6 +2041,9 @@ msgid ""
 "                    Each new or updated mapping code counts once per Engine lifetime; re-executing the same code is a\n"
 "                    cache hit and does not count. Lower values release memory sooner but re-warm all mappings more\n"
 "                    often. Default: 1000."
+msgstr ""
+
+msgid "OK ({{detail}})"
 msgstr ""
 
 msgid "Only one MultiLevel wildcard \"#\" is allowed."
@@ -2380,6 +2395,9 @@ msgstr ""
 msgid "Run a Live Test on an inbound mapping to create a test device."
 msgstr ""
 
+msgid "Running…"
+msgstr ""
+
 msgid "Runs the mapping without writing anything to your tenant"
 msgstr ""
 
@@ -2623,6 +2641,9 @@ msgstr ""
 msgid "SmartFunction AI Agent"
 msgstr ""
 
+msgid "Some subscriptions could not be created"
+msgstr ""
+
 msgid "Some subscriptions could not be created: {{count}} device(s) failed. Check Service Events for details."
 msgstr ""
 
@@ -2656,10 +2677,10 @@ msgstr ""
 msgid "Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices."
 msgstr ""
 
-msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use 'Resync existing devices' for those. When a type is removed, the dynamic subscriptions of its devices are removed too, unless a selected group still covers them."
 msgstr ""
 
-msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed the existing subscriptions resulting from this type are NOT deleted."
+msgid "Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward. Devices of a newly added type that already existed beforehand are NOT picked up automatically; select the option below to also subscribe them. When a type is removed, the dynamic subscriptions of its devices are removed too, unless a selected group still covers them."
 msgstr ""
 
 msgid "Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead."
@@ -2952,7 +2973,7 @@ msgstr ""
 msgid "The source returns an array. Create one request per element?"
 msgstr ""
 
-msgid "The subscriptions were changed elsewhere while this mapping was open. Your selection replaces them."
+msgid "The subscriptions were changed elsewhere while this mapping was open. Your changes were applied on top of them."
 msgstr ""
 
 msgid "The subscriptions were not updated because the mapping could not be deployed. Save again to retry."
@@ -3319,9 +3340,6 @@ msgstr ""
 msgid "e.g. c8y_MQTTDevice"
 msgstr ""
 
-msgid "e.g. placeholder"
-msgstr ""
-
 msgid "e.g. sensors/#  or  devices/+/data"
 msgstr ""
 
@@ -3448,6 +3466,9 @@ msgstr ""
 msgid "{{count}} more requests sent; see \"Show Next Test Result\"."
 msgstr ""
 
+msgid "{{count}} subscribed before failure: {{error}}"
+msgstr ""
+
 msgid "{{count}} test devices deleted."
 msgstr ""
 
@@ -3464,6 +3485,9 @@ msgid "{{name}} (handled as {{level}})"
 msgstr ""
 
 msgid "{{name}} has no unpublished changes."
+msgstr ""
+
+msgid "{{subscribed}} subscribed, {{failed}} failed"
 msgstr ""
 
 msgid "{{title}} with agent:"

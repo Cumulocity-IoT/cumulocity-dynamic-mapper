@@ -100,6 +100,8 @@ public class NotificationSubscriptionController {
             log.info("{} - Successfully created subscription for {} devices", tenant,
                     response.getDevices() != null ? response.getDevices().size() : 0);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error creating subscription: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -123,12 +125,15 @@ public class NotificationSubscriptionController {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        validateDeviceBucket(subscription);
         validateDeviceListPresent(request.getDevices());
 
         try {
             NotificationSubscriptionResponse response = subscriptionService.updateDeviceSubscription(tenant, request, subscription);
             log.info("{} - Successfully updated {} subscription", tenant, subscription);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error updating subscription: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -151,6 +156,7 @@ public class NotificationSubscriptionController {
             @RequestParam(value = "search", required = false) String search) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        validateDeviceBucket(subscription);
 
         try {
             // Paging is opt-in: only when a pageSize is supplied. Without it the full list is
@@ -163,6 +169,8 @@ public class NotificationSubscriptionController {
                             .getSubscriptionsDevices(tenant, null, subscription,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error retrieving subscriptions: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -175,6 +183,7 @@ public class NotificationSubscriptionController {
     public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId, @RequestParam("subscription") String subscription) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        validateDeviceBucket(subscription);
 
         try {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId, false);
@@ -187,6 +196,8 @@ public class NotificationSubscriptionController {
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error deleting subscription for device {}: {}", tenant, deviceId, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -208,6 +219,8 @@ public class NotificationSubscriptionController {
             NotificationSubscriptionResponse response = subscriptionService.updateGroupSubscription(tenant, request);
             log.info("{} - Successfully updated group subscription", tenant);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error updating group subscription: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -233,6 +246,8 @@ public class NotificationSubscriptionController {
                             .getSubscriptionsByDeviceGroup(tenant,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error retrieving group subscriptions: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -257,6 +272,8 @@ public class NotificationSubscriptionController {
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error deleting group subscription {}: {}", tenant, groupId, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -273,6 +290,8 @@ public class NotificationSubscriptionController {
             NotificationSubscriptionResponse response = notificationSubscriber
                     .getSubscriptionsByDeviceType(tenant);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error retrieving type subscriptions: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -287,6 +306,10 @@ public class NotificationSubscriptionController {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        // Desired-state endpoint: an empty list clears the selection, a missing one is rejected.
+        if (request.getTypes() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type list is required");
+        }
 
         try {
             // Ensure management WebSocket is up — it drives type-based device discovery.
@@ -297,6 +320,8 @@ public class NotificationSubscriptionController {
             NotificationSubscriptionResponse response = notificationSubscriber.updateSubscriptionByType(tenant, request.getTypes());
             log.info("{} - Successfully updated type subscription", tenant);
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error updating type subscription: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -347,6 +372,8 @@ public class NotificationSubscriptionController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        } catch (ResponseStatusException e) {
+            throw e; // a deliberate 4xx must not become a 500
         } catch (Exception e) {
             log.error("{} - Error resyncing type subscription for {}: {}", tenant, type, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -365,6 +392,20 @@ public class NotificationSubscriptionController {
     }
 
     /** Desired-state endpoints: an empty list is valid (clear all), a missing one is not. */
+    /**
+     * The device endpoints address the static or the dynamic bucket only. The name is otherwise
+     * passed straight to the subscription API, which would let a caller with the Create role
+     * delete the management (group/type watcher) or cache subscriptions through them.
+     */
+    private void validateDeviceBucket(String subscription) {
+        if (!Utils.STATIC_DEVICE_SUBSCRIPTION.equals(subscription)
+                && !Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Unknown subscription '" + subscription + "'; use " + Utils.STATIC_DEVICE_SUBSCRIPTION
+                            + " or " + Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+        }
+    }
+
     private void validateDeviceListPresent(List<Device> devices) {
         if (devices == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Device list is required");

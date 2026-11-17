@@ -29,7 +29,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -121,13 +120,6 @@ class DeviceDiscoveryServiceTest {
         return group;
     }
 
-    @SuppressWarnings("unchecked")
-    private Set<String> readProcessingDevices() throws Exception {
-        Field field = DeviceDiscoveryService.class.getDeclaredField("processingDevices");
-        field.setAccessible(true);
-        return (Set<String>) field.get(deviceDiscoveryService);
-    }
-
     // === Tests ===
 
     @Test
@@ -214,11 +206,6 @@ class DeviceDiscoveryServiceTest {
         boolean bHasDevice = resultB.stream().anyMatch(d -> DEVICE_ID_1.equals(d.getId()));
         assertTrue(aHasDevice, "L10 fixed: tenantA must find device-1 (no cross-tenant collision)");
         assertTrue(bHasDevice, "L10 fixed: tenantB must find device-1 (no cross-tenant collision)");
-
-        // The circuit-breaker set must be fully drained after both tasks complete.
-        Set<String> processing = readProcessingDevices();
-        assertTrue(processing.isEmpty(),
-                "processingDevices must be empty after both tasks complete, was: " + processing);
     }
 
     /**
@@ -241,10 +228,6 @@ class DeviceDiscoveryServiceTest {
                 "L10 fixed: tenantA must find device-1");
         assertTrue(resultB.stream().anyMatch(d -> DEVICE_ID_1.equals(d.getId())),
                 "L10 fixed: tenantB must find device-1 independently");
-
-        // Set must be drained — no stale composite keys
-        assertTrue(readProcessingDevices().isEmpty(),
-                "processingDevices must be empty after sequential calls");
     }
 
     @Test
@@ -262,17 +245,52 @@ class DeviceDiscoveryServiceTest {
         return device;
     }
 
+    /**
+     * Two threads traversing groups that share a device at the same time must both find it. With a
+     * traversal-wide shared cycle guard the second thread saw the device as "in progress" and
+     * dropped it from its result.
+     */
     @Test
-    @SuppressWarnings("unchecked")
-    void removeTenantDropsOnlyThatTenantsInFlightMarkers() throws Exception {
-        Field f = DeviceDiscoveryService.class.getDeclaredField("processingDevices");
-        f.setAccessible(true);
-        Set<String> set = (Set<String>) f.get(deviceDiscoveryService);
-        set.add("t1:100");
-        set.add("t2:100");
+    void findAllRelatedDevices_concurrentTraversalsOfSharedDevice_bothFindIt() throws Exception {
+        ManagedObjectRepresentation group = buildGroup(GROUP_ID, DEVICE_ID_1);
+        CyclicBarrier inside = new CyclicBarrier(2);
+        // Both threads resolve the shared child at the same moment, i.e. while each one's
+        // traversal of that device is in progress.
+        lenient().when(c8yAgent.getManagedObjectForId(eq(TENANT_A), eq(DEVICE_ID_1), eq(false)))
+                .thenAnswer(invocation -> {
+                    try {
+                        inside.await(5, TimeUnit.SECONDS);
+                    } catch (Exception ignored) {
+                        // single-threaded callers: do not block
+                    }
+                    return buildDevice(DEVICE_ID_1);
+                });
 
-        deviceDiscoveryService.removeTenant("t1");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var f1 = executor.submit(() -> deviceDiscoveryService.findAllRelatedDevicesByMO(
+                    TENANT_A, group, new ArrayList<>(), false));
+            var f2 = executor.submit(() -> deviceDiscoveryService.findAllRelatedDevicesByMO(
+                    TENANT_A, group, new ArrayList<>(), false));
+            assertEquals(1, f1.get(10, TimeUnit.SECONDS).size());
+            assertEquals(1, f2.get(10, TimeUnit.SECONDS).size());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
 
-        assertEquals(Set.of("t2:100"), set);
+    @Test
+    void findAllRelatedDevices_cyclicGroups_terminates() {
+        // group A contains group B, group B contains group A
+        ManagedObjectRepresentation a = buildGroup("gA", "gB");
+        ManagedObjectRepresentation b = buildGroup("gB", "gA", DEVICE_ID_1);
+        lenient().when(c8yAgent.getManagedObjectForId(eq(TENANT_A), eq("gB"), eq(false))).thenReturn(b);
+        lenient().when(c8yAgent.getManagedObjectForId(eq(TENANT_A), eq("gA"), eq(false))).thenReturn(a);
+        lenient().when(c8yAgent.getManagedObjectForId(eq(TENANT_A), eq(DEVICE_ID_1), eq(false)))
+                .thenReturn(buildDevice(DEVICE_ID_1));
+
+        List<Device> result = deviceDiscoveryService.findAllRelatedDevicesByMO(TENANT_A, a, new ArrayList<>(), false);
+
+        assertEquals(1, result.size());
     }
 }

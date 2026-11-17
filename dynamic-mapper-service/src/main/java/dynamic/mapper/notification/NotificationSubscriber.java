@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -145,7 +146,6 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
         connectionManager.removeTenant(tenant);
         tokenManager.removeTenant(tenant);
         subscriptionManager.removeTenant(tenant);
-        deviceDiscoveryService.removeTenant(tenant);
     }
 
     // === Device Subscription Methods ===
@@ -255,7 +255,20 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
 
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
             String deviceSubscription) {
-        return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription);
+        NotificationSubscriptionResponse response = queryService
+                .getSubscriptionsDevices(tenant, deviceId, deviceSubscription);
+        if (deviceId == null && Utils.STATIC_DEVICE_SUBSCRIPTION.equals(deviceSubscription)) {
+            // The complete static selection includes the devices held back by a dynamic subscription
+            List<Device> devices = new ArrayList<>(
+                    response.getDevices() == null ? List.<Device>of() : response.getDevices());
+            for (Device held : subscriptionManager.shadowedStaticDevices(tenant)) {
+                if (!devices.contains(held)) {
+                    devices.add(held);
+                }
+            }
+            response.setDevices(devices);
+        }
+        return response;
     }
 
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
@@ -297,6 +310,10 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
 
     public void setDeviceConnectionStatus(String tenant, Integer status) {
         connectionManager.setDeviceConnectionStatus(tenant, status);
+    }
+
+    public void setDeviceConnectionStatus(String tenant, String connectorId, Integer status) {
+        connectionManager.setDeviceConnectionStatus(tenant, connectorId, status);
     }
 
     public Integer getDeviceConnectionStatus(String tenant) {

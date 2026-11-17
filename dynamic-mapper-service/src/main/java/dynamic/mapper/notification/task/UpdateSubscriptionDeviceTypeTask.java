@@ -34,6 +34,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import com.cumulocity.sdk.client.SDKException;
+import dynamic.mapper.model.status.LoggingEventType;
+import org.joda.time.DateTime;
+
 
 /**
  * Task to subscribe a newly created device based on type filters.
@@ -80,35 +85,127 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
         log.info("{} - Processing new device {} (name: {}, type: {})",
                 tenant, deviceId, deviceName, typeInfo.getType());
 
+        // Create ManagedObject representation for new device
+        ManagedObjectRepresentation newMO = createManagedObjectRepresentation(deviceId, deviceName, typeInfo);
+
+        Exception last = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                // Subscribe the device with API.ALL to receive all notifications for this device
+                Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
+                        .subscribeDeviceAndConnect(tenant, newMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                // Wait for it: the subscribe runs asynchronously, and the notification may only be
+                // acknowledged once the device is really subscribed (null = already covered, also fine)
+                future.get(SUBSCRIBE_WAIT_SECONDS, TimeUnit.SECONDS);
+
+                // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                log.debug("{} - Pre-populating inventory cache for new device {} of type {}",
+                        tenant, deviceId, typeInfo.getType());
+                serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, deviceId, false);
+
+                log.info("{} - Successfully subscribed new device {} of type {}",
+                        tenant, deviceId, typeInfo.getType());
+                return SubscriptionUpdateResult.builder()
+                        .addSubscription(deviceId, future)
+                        .build();
+
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                last = ie;
+                break;
+            } catch (Exception e) {
+                last = e;
+                if (isPermanent(e)) {
+                    break;
+                }
+                log.warn("{} - Subscribing new device {} failed (attempt {}/{}): {}",
+                        tenant, deviceId, attempt, MAX_ATTEMPTS, rootMessage(e));
+                if (attempt < MAX_ATTEMPTS && !pause(attempt)) {
+                    break;
+                }
+            }
+        }
+
+        boolean retryable = last != null && !isPermanent(last) && !(last instanceof InterruptedException);
+        log.error("{} - Failed to subscribe new device {} of type {}: {} ({})",
+                tenant, deviceId, typeInfo.getType(), rootMessage(last),
+                retryable ? "transient, the notification is not acknowledged" : "permanent");
+        reportFailure(tenant, deviceId, typeInfo.getType(), last, retryable);
+
+        return SubscriptionUpdateResult.builder()
+                .addFailed(deviceId, rootMessage(last))
+                .withError(last)
+                .retryable(retryable)
+                .build();
+    }
+
+    /** Attempts per notification, with {@link #retryPausesMs} between them. */
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long SUBSCRIBE_WAIT_SECONDS = 30;
+
+    /** Pauses before the 2nd and the 3rd attempt. */
+    long[] retryPausesMs = { 1000, 5000 };
+
+    /** Replaces the pauses between attempts (tests use none). */
+    public void setRetryPausesMs(long[] pausesMs) {
+        this.retryPausesMs = pausesMs;
+    }
+
+    /** @return false if interrupted while pausing */
+    private boolean pause(int afterAttempt) {
+        long ms = retryPausesMs[Math.min(afterAttempt - 1, retryPausesMs.length - 1)];
         try {
-            // Create ManagedObject representation for new device
-            ManagedObjectRepresentation newMO = createManagedObjectRepresentation(
-                    deviceId, deviceName, typeInfo);
+            Thread.sleep(ms);
+            return true;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
 
-            // Subscribe the device with API.ALL to receive all notifications for this device
-            Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
-                    .subscribeDeviceAndConnect(tenant, newMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+    /**
+     * A failure no later attempt can fix: the platform rejected the request itself (a 4xx other than
+     * "timeout" and "too many requests"), or the arguments are invalid. Retrying would only repeat it, so
+     * the notification is acknowledged instead of being redelivered until the poison-pill limit.
+     */
+    static boolean isPermanent(Throwable failure) {
+        for (Throwable t = failure; t != null; t = t.getCause()) {
+            if (t instanceof SDKException sdk) {
+                int status = sdk.getHttpStatus();
+                return status >= 400 && status < 500 && status != 408 && status != 429;
+            }
+            if (t instanceof IllegalArgumentException) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
+    }
 
-            // Pre-populate inventory cache for this device to ensure inventory filters work correctly
-            log.debug("{} - Pre-populating inventory cache for new device {} of type {}",
-                    tenant, deviceId, typeInfo.getType());
-            serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, deviceId, false);
+    private static String rootMessage(Throwable t) {
+        Throwable root = t;
+        while (root != null && root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root == null ? "unknown error" : String.valueOf(root.getMessage());
+    }
 
-            log.info("{} - Successfully subscribed new device {} of type {}",
-                    tenant, deviceId, typeInfo.getType());
-
-            return SubscriptionUpdateResult.builder()
-                    .addSubscription(deviceId, future)
-                    .build();
-
+    /** A failure that outlived the retries is not left to the log: it becomes a service event. */
+    private void reportFailure(String tenant, String deviceId, String type, Exception failure, boolean retryable) {
+        try {
+            java.util.Map<String, String> props = new java.util.HashMap<>();
+            props.put("deviceId", deviceId);
+            props.put("type", type);
+            props.put("error", rootMessage(failure));
+            props.put("retryable", String.valueOf(retryable));
+            serviceRegistry.getC8yAgent().createLoggingEvent(
+                    String.format("Could not subscribe new device %s of type %s: %s", deviceId, type,
+                            rootMessage(failure)),
+                    LoggingEventType.SUBSCRIPTION_EVENT_TYPE, "error", DateTime.now(), tenant, props);
         } catch (Exception e) {
-            log.error("{} - Failed to subscribe new device {} of type {}: {}",
-                    tenant, deviceId, typeInfo.getType(), e.getMessage(), e);
-
-            return SubscriptionUpdateResult.builder()
-                    .addFailed(deviceId, e.getMessage())
-                    .withError(e)
-                    .build();
+            log.warn("{} - Could not report the failed subscription of device {}: {}", tenant, deviceId, e.getMessage());
         }
     }
 

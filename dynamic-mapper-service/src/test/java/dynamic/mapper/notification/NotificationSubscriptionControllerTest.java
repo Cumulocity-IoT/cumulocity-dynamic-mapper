@@ -84,6 +84,33 @@ class NotificationSubscriptionControllerTest {
     }
 
     @Test
+    void updateTypeSubscription_missingTypeList_is400() {
+        NotificationSubscriptionRequest request = new NotificationSubscriptionRequest();
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> controller.updateTypeSubscription(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+    }
+
+    @Test
+    void deviceEndpoints_rejectBucketsThatAreNotStaticOrDynamic() {
+        NotificationSubscriptionRequest request = new NotificationSubscriptionRequest();
+        request.setApi(API.ALL);
+        request.setDevices(new java.util.ArrayList<>());
+
+        for (String bucket : new String[] { Utils.MANAGEMENT_SUBSCRIPTION, Utils.CACHE_INVENTORY_SUBSCRIPTION }) {
+            assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                    () -> controller.updateSubscription(request, bucket)).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                    () -> controller.deleteSubscription("d1", bucket)).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                    () -> controller.getSubscriptions(bucket, null, null, true, null)).getStatusCode());
+        }
+        verifyNoInteractions(subscriptionService);
+    }
+
+    @Test
     void updateGroupSubscription_missingDeviceList_is400() {
         NotificationSubscriptionRequest request = new NotificationSubscriptionRequest();
         request.setApi(API.ALL);

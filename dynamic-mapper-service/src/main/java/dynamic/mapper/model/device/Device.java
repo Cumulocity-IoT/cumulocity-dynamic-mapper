@@ -42,7 +42,15 @@ public class Device {
 
     private String type;
 
+    /** Names of the groups the device is a direct child of. */
     private List<String> groups = new ArrayList<>();
+
+    /**
+     * Ids of the same groups. Names are not unique, so anything that has to tell groups apart
+     * (e.g. "is this device covered by a subscribed group") must use the ids. Not part of
+     * {@link #equals(Object)}: a device is identified by its id alone.
+     */
+    private List<String> groupIds = new ArrayList<>();
 
 
 

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild, effect, input, untracked } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild, effect, input, untracked, inject } from '@angular/core';
 import {
   ActionControl,
   Column,
@@ -28,6 +28,7 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { EventService, IEvent } from '@c8y/client';
+import { TranslateService } from '@ngx-translate/core';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { SharedService } from '../../../shared';
 
@@ -52,7 +53,6 @@ interface ResyncState {
 /** Backend component fragment name for BACKFILL_SUBSCRIPTION_EVENT_TYPE events (see LoggingEventType.java). */
 const BACKFILL_EVENT_TYPE = 'd11r_backfillSubscriptionEvent';
 const BACKFILL_FRAGMENT = 'd11r_subscription';
-const NOT_SYNCED_YET = 'Not synced yet';
 /** Events fetched per page, newest first; paging stops as soon as every listed type is resolved. */
 const EVENT_PAGE_SIZE = 500;
 const MAX_EVENT_PAGES = 10;
@@ -82,6 +82,8 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
 
   @Output() cancel = new EventEmitter<void>();
   @Output() resync = new EventEmitter<string>();
+
+  private readonly translateService = inject(TranslateService);
 
   constructor(
     private readonly eventService: EventService,
@@ -153,6 +155,8 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
       type: 'RESYNC',
       text: gettext('Resync existing devices'),
       icon: 'refresh',
+      // Hidden while a run is in progress: a second request is rejected as a conflict anyway
+      showIf: (item: DeviceTypeRow) => !this.isRunning(item.type),
       callback: (item: DeviceTypeRow) => this.requestResync(item.type)
     }
   ];
@@ -168,6 +172,12 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
 
   clickedCancel() {
     this.cancel.emit();
+  }
+
+  /** A run that started and reported no result yet. A very old one is a job lost to a restart. */
+  private isRunning(type: string): boolean {
+    const state = this.states[type];
+    return !!state && state.outcome === 'RUNNING' && Date.now() - new Date(state.time).getTime() <= STALE_RUNNING_MS;
   }
 
   private requestResync(type: string): void {
@@ -187,7 +197,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
       return;
     }
     this.pollTimer = setTimeout(async () => {
-      await this.loadSyncStates();
+      await this.loadSyncStates(true);
       for (const [type, w] of [...this.watched]) {
         const state = this.states[type];
         const sinceMs = w.since - 2000; // tolerate clock skew between browser and backend
@@ -206,9 +216,10 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
    * Derives per-type resync state from BACKFILL_SUBSCRIPTION_EVENT_TYPE Service Events. Events are
    * read newest first, page by page, until every listed type has both its latest event and its latest
    * completed run (or the page budget is used up) — so a rarely resynced type isn't pushed out of a
-   * single fixed-size page by busier ones.
+   * single fixed-size page by busier ones. A `quick` load (the poll after a request, every few seconds)
+   * reads the newest page only and merges it into what is known: it only has to see new events.
    */
-  private async loadSyncStates(): Promise<void> {
+  private async loadSyncStates(quick = false): Promise<void> {
     try {
       const agentId = await this.sharedService.getDynamicMappingServiceAgent();
       const types = new Set(this.typeListInternal);
@@ -241,9 +252,11 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
               time: event.time,
               outcome: completed ? 'FINISHED' : incomplete ? 'INCOMPLETE' : 'RUNNING',
               detail: completed
-                ? `${fragment.subscribed} subscribed, ${fragment.failed} failed`
+                ? this.translateService.instant(gettext('{{subscribed}} subscribed, {{failed}} failed'),
+                    { subscribed: fragment.subscribed, failed: fragment.failed })
                 : incomplete
-                  ? `${fragment.subscribedBeforeFailure} subscribed before failure: ${fragment.error}`
+                  ? this.translateService.instant(gettext('{{count}} subscribed before failure: {{error}}'),
+                      { count: fragment.subscribedBeforeFailure, error: fragment.error })
                   : undefined,
               lastCompletedTime: completed ? event.time : undefined
             };
@@ -254,12 +267,22 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
             resolved.add(type);
           }
         }
-        if (resolved.size >= types.size || !page.paging?.nextPage) {
+        if (quick || resolved.size >= types.size || !page.paging?.nextPage) {
           break;
         }
         page = await page.paging.next();
       }
-      this.states = latest;
+      if (quick) {
+        // keep what the first page does not show: the last completed run of each type
+        const merged = { ...this.states };
+        for (const [type, state] of Object.entries(latest)) {
+          state.lastCompletedTime ??= this.states[type]?.lastCompletedTime;
+          merged[type] = state;
+        }
+        this.states = merged;
+      } else {
+        this.states = latest;
+      }
     } catch (error) {
       console.error('Failed to load resync status for type subscriptions:', error);
       this.states = {};
@@ -272,16 +295,17 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
     if (!state) {
       return '';
     }
+    const t = (key: string, params?: Record<string, unknown>) => this.translateService.instant(key, params);
     switch (state.outcome) {
       case 'RUNNING':
         // A job lost to a service restart never reports a result; don't show "Running" forever
         return Date.now() - new Date(state.time).getTime() > STALE_RUNNING_MS
-          ? 'No result reported (service restarted?)'
-          : 'Running…';
+          ? t(gettext('No result reported (service restarted?)'))
+          : t(gettext('Running…'));
       case 'INCOMPLETE':
-        return `Incomplete (${state.detail})`;
+        return t(gettext('Incomplete ({{detail}})'), { detail: state.detail });
       default:
-        return `OK (${state.detail})`;
+        return t(gettext('OK ({{detail}})'), { detail: state.detail });
     }
   }
 
@@ -291,7 +315,9 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
       return {
         id: type,
         type,
-        lastSyncTime: completed ? new Date(completed).toLocaleString() : NOT_SYNCED_YET,
+        lastSyncTime: completed
+          ? new Date(completed).toLocaleString()
+          : this.translateService.instant(gettext('Not synced yet')),
         status: this.statusText(type)
       };
     });

@@ -456,6 +456,54 @@ class NotificationConnectionManagerTest {
         assertFalse(((Set<String>) getField("pausedConnectors")).contains(TENANT + "|connA"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void aDeviceWebSocketWhoseConnectFailedIsRetriedByTheReconnectCycle() throws Exception {
+        when(queryService.getNotificationSubscriptionForDevices(eq(TENANT), any(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+        ((Set<String>) getField("failedDeviceConnects")).add(TENANT + "|connA|static");
+
+        manager.retryFailedDeviceConnects(TENANT);
+
+        verify(queryService).getNotificationSubscriptionForDevices(TENANT, null,
+                dynamic.mapper.notification.Utils.STATIC_DEVICE_SUBSCRIPTION);
+        verify(queryService, org.mockito.Mockito.never()).getNotificationSubscriptionForDevices(TENANT, null,
+                dynamic.mapper.notification.Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void closingTheDeviceClientsOnPurposeForgetsFailedConnects() throws Exception {
+        ((Set<String>) getField("failedDeviceConnects")).add(TENANT + "|connA|static");
+        ((Set<String>) getField("failedDeviceConnects")).add("t2|connA|static");
+
+        manager.disconnectDeviceSubscribers(TENANT);
+        manager.retryFailedDeviceConnects(TENANT);
+
+        org.mockito.Mockito.verifyNoInteractions(queryService);
+        assertEquals(Set.of("t2|connA|static"), getField("failedDeviceConnects"));
+    }
+
+    @Test
+    void aHealthyConnectorDoesNotHideAnotherConnectorsExpiredToken() throws Exception {
+        manager.setDeviceConnectionStatus(TENANT, "connA", 401);
+        manager.setDeviceConnectionStatus(TENANT, "connB", 200); // would overwrite a tenant-wide value
+
+        Method unauthorized = NotificationConnectionManager.class.getDeclaredMethod("isUnauthorized", String.class,
+                String.class);
+        unauthorized.setAccessible(true);
+
+        assertTrue((Boolean) unauthorized.invoke(manager, TENANT, "connA"));
+        assertFalse((Boolean) unauthorized.invoke(manager, TENANT, "connB"));
+        assertEquals(401, manager.getDeviceConnectionStatus(TENANT), "summary: some connector needs a new token");
+
+        manager.setDeviceConnectionStatus(TENANT, "connA", 200);
+        assertEquals(200, manager.getDeviceConnectionStatus(TENANT));
+        manager.setDeviceConnectionStatus(TENANT, "connA", null);
+        manager.setDeviceConnectionStatus(TENANT, "connB", null);
+        assertEquals(null, manager.getDeviceConnectionStatus(TENANT));
+    }
+
     // ------------------------------------------------------------------
     // Reflection helpers
     // ------------------------------------------------------------------
