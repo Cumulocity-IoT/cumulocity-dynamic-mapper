@@ -253,3 +253,10 @@ d11r-mapping-mapping-grid .table.table-data-grid .cdk-column-actions .btn-dot {
   pointer-events: none;
   opacity: 0.6;
 }
+
+/* The label row above the template editors in the Templates, Transformation and Testing steps. The Templates
+   step has buttons in it (btn-xs, 22px), the others only a label or a help icon: without a common height the
+   editors start a few pixels apart from step to step. */
+.d11r-editor-label-row {
+  min-height: 26px;
+}

@@ -51,6 +51,7 @@
     </div>
 
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-general" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      [disabled]="filterInventoryBlocked" [attr.title]="filterInventoryBlocked ? (filterInventoryHint | translate) : null"
       (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
@@ -158,9 +159,10 @@
     </div>
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-test" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
-      [disabled]="( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)"
+      [disabled]="( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || filterInventoryBlocked"
       [attr.title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)
-        ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : null"
+        ? ('Requires the Mapping Admin or Mapping Create role.' | translate)
+        : filterInventoryBlocked ? (filterInventoryHint | translate) : null"
       [labels]="labelsFinal">
     </c8y-stepper-buttons>
   </cdk-step>

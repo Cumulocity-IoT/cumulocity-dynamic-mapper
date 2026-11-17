@@ -30,6 +30,9 @@ import { MappingPersistence } from '../../shared/mapping/stepper.model';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { isConnectorSelectionEmpty, stringToBase64, hasMappingContentChanged, MappingContentSnapshot, reduceSourceTemplate, stripTemplateMetadataTags } from '../../shared/mapping/util';
 
+/** Raised by the caller of a blocked commit; removed again once a later save succeeds. */
+const NO_CONNECTOR_MESSAGE = gettext('Select at least one connector before saving.');
+
 /**
  * Saves a mapping from either editor: precondition checks, encoding the working templates and
  * code back onto the mapping, the draft or create write, the deployment write and the refresh.
@@ -68,7 +71,7 @@ export class MappingCommitService {
             return {
                 status: 'blocked',
                 blocker: CommitBlocker.NO_CONNECTOR,
-                message: gettext('Select at least one connector before saving.')
+                message: NO_CONNECTOR_MESSAGE
             };
         }
 
@@ -83,7 +86,8 @@ export class MappingCommitService {
                 forms.propertyFormly.get('mappingTopic')?.markAsTouched();
                 return { status: 'blocked', blocker: CommitBlocker.MAPPING_TOPIC };
             }
-            if (forms.propertyFormly.invalid) {
+            // Still evaluating the inventory filter: not invalid yet, but not known to be fine either.
+            if (forms.propertyFormly.invalid || forms.propertyFormly.get('filterInventory')?.pending) {
                 forms.propertyFormly.markAllAsTouched();
                 return { status: 'blocked', blocker: CommitBlocker.PROPERTY_FORM };
             }
@@ -185,6 +189,12 @@ export class MappingCommitService {
             const outcome = await this.injector.get(SubscriptionSelectionService).apply(selection);
             subscriptionFailed = outcome.failed;
         }
+
+        // The save went through, so the warning of an earlier, refused attempt no longer applies.
+        // Copied first: remove() changes the list being walked.
+        [...this.alertService.state]
+            .filter(alert => alert.text === NO_CONNECTOR_MESSAGE)
+            .forEach(alert => this.alertService.remove(alert));
 
         return { status: 'saved', contentChanged, deploymentChanged, deploymentFailed, ...(subscriptionFailed ? { subscriptionFailed } : {}), persisted };
     }

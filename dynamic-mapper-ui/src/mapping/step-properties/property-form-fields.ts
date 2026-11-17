@@ -20,7 +20,7 @@
 import { FormGroup } from '@angular/forms';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { debounceTime, distinctUntilChanged, Observable, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Observable, takeUntil, tap } from 'rxjs';
 import { API, Direction, Mapping, Qos, QOS_OPTIONS } from '../../shared';
 import { ExecutionFilterMode } from './execution-filter.model';
 import { deriveSampleTopicFromTopic, topicsHaveSameStructure } from '../../shared/mapping/util';
@@ -253,8 +253,12 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
                 void host.refreshFilterInventoryWarning(host.model.filterInventory);
               }
               field.formControl.valueChanges.pipe(
+                // Until the evaluation below has run, nobody knows whether the filter is fine: the control is
+                // pending, which holds back the stepper's Next, Save and the commit (a stale "valid" would let
+                // them through during the debounce). No distinctUntilChanged(): typing a character and deleting
+                // it again within the debounce would skip the evaluation and leave the control pending.
+                tap(() => field.formControl.markAsPending({ emitEvent: false })),
                 debounceTime(1500),
-                distinctUntilChanged(),
                 takeUntil(host.destroy$)
               ).subscribe(path => {
                 host.updateFilterInventoryExpressionResult(path);

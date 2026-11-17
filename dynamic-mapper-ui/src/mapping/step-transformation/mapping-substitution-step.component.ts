@@ -631,8 +631,15 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.lastEvaluatedPath = { source: '', target: '' };
     this.sourceLinked = false;
     this.targetLinked = false;
-    this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
-    this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
+    // With the event: the JSONata input shows a new control value in its editor only when the control
+    // announces it, so a silent reset left the old text standing in the field. The evaluation behind the
+    // field ignores '' (lastEvaluatedPath above), so the announcement costs nothing.
+    for (const key of ['pathSource', 'pathTarget']) {
+      const control = this.substitutionFormly.get(key);
+      control?.setValue('');
+      control?.markAsPristine();
+      control?.markAsUntouched();
+    }
     this.editorSourceStepSubstitution()?.clearSelection();
     this.editorTargetStepSubstitution()?.clearSelection();
   }

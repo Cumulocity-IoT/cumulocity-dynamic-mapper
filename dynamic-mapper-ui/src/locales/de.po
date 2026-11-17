@@ -181,6 +181,9 @@ msgstr ""
 msgid "Add substitution"
 msgstr "Substitution hinzufügen"
 
+msgid "Add to inventory cache"
+msgstr ""
+
 msgid "Add your first extension by clicking below."
 msgstr ""
 
@@ -188,6 +191,9 @@ msgid "Added new code template."
 msgstr ""
 
 msgid "Added sample mappings for {{direction}}"
+msgstr ""
+
+msgid "Added to the inventory cache. Devices that are already cached get it when their cache entry is refreshed."
 msgstr ""
 
 msgid "advanced setting(s) hidden. Enable \"Expert settings\" to show them."
@@ -1125,6 +1131,9 @@ msgstr ""
 msgid "Failed to update test mapping"
 msgstr ""
 
+msgid "Failed to update the inventory cache."
+msgstr ""
+
 msgid "Feature changes in release 6.4.0"
 msgstr ""
 
@@ -1857,10 +1866,16 @@ msgstr ""
 msgid "No versions yet."
 msgstr ""
 
-msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Add it under Configuration > Service Configuration > Fragments from inventory to cache."
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it."
 msgstr ""
 
-msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Add them under Configuration > Service Configuration > Fragments from inventory to cache."
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Ask an administrator to add it under Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them."
+msgstr ""
+
+msgid "Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Ask an administrator to add them under Configuration > Service Configuration > Fragments from inventory to cache."
 msgstr ""
 
 msgid "Not Known"
@@ -2272,6 +2287,9 @@ msgid "Saved, but activating the mapping failed"
 msgstr ""
 
 msgid "Saved, but activating the version failed"
+msgstr ""
+
+msgid "Saving is disabled: the inventory filter must return a boolean result."
 msgstr ""
 
 msgid "Scroll to top"
@@ -2709,6 +2727,9 @@ msgid "The filter expression must return of boolean type"
 msgstr ""
 
 msgid "The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = \"lora-device-type\"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache."
+msgstr ""
+
+msgid "The inventory filter must be valid and return a boolean result."
 msgstr ""
 
 msgid "The list shows only lines written while the selected mapping processed a payload. Connector lines belong to no mapping."

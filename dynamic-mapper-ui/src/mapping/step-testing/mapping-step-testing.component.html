@@ -22,49 +22,48 @@
 <div class="fit-h d-col">
   <!-- Scrollable content area -->
   <div class="flex-grow overflow-auto">
-    <div class="card-block p-b-0">
-      <div class="d-grid grid__col--6-6 gap-4">
-        <div class="column-right-border p-r-2">
-          <div class="form-group  m-b-0">
-            <div style="display: flex">
-              <label>{{ sourceSystem | translate }} {{ 'Payload' | translate }}&nbsp;</label>
-            </div>
-            <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
-              [data]="sourceTemplate" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
-            </d11r-mapping-json-editor>
-          </div>
+    <div class="card-block p-t-0 p-b-0">
+      <!-- Label row in its own grid row, as in the Templates and Transformation steps: both cells are always
+           the same height and the editors start at the same place. -->
+      <div class="d-grid grid__col--6-6 gap-4 m-b-4 d11r-editor-label-row">
+        <div class="p-r-2 d-flex j-c-between a-i-center">
+          <label class="m-b-0">{{ sourceSystem | translate }} {{ 'Payload' | translate }}</label>
         </div>
-        <div class="column-left-border p-l-2">
-          <div class="form-group  m-b-0">
-            <div style="display: flex">
-              <label>{{ targetSystem | translate }} {{ 'Request' | translate }}&nbsp;</label>
-              @if ((selectedResult$ | async) >= 0) {
-              <ng-container class="m-r-8">
-                <div class="m-l-auto">
-                  @if (currentApi) {
-                  <span class="tag tag--success m-b-4">{{ currentApi }}</span>
-                  }
-                  @if (currentPublishTopic) {
-                  <span class="tag tag--info m-b-4">{{ currentPublishTopic }}</span>
-                  }
-                  @if (generatedKey) {
-                  <span class="tag tag--default m-b-4" data-cy="dm-mapping-test-key"
-                    title="{{ 'Broker message key produced by this mapping, e.g. the Kafka record key' | translate }}"
-                    [textContent]="'key: {{key}}' | translate: { key: generatedKey }"></span>
-                  }
-                </div>
-                <div>
-                  <span class="badge badge-success" data-cy="dm-mapping-test-result-index">{{
-                    (selectedResult$ | async) + 1
-                    }}</span>
-                </div>
-              </ng-container>
+        <div class="p-l-2 d-flex j-c-between a-i-center">
+          <label class="m-b-0">{{ targetSystem | translate }} {{ 'Request' | translate }}</label>
+          @if ((selectedResult$ | async) >= 0) {
+          <div class="d-flex a-i-center g-8">
+            <div class="d-flex a-i-center g-8">
+              @if (currentApi) {
+              <span class="tag tag--success m-b-0">{{ currentApi }}</span>
+              }
+              @if (currentPublishTopic) {
+              <span class="tag tag--info m-b-0">{{ currentPublishTopic }}</span>
+              }
+              @if (generatedKey) {
+              <span class="tag tag--default m-b-0" data-cy="dm-mapping-test-key"
+                title="{{ 'Broker message key produced by this mapping, e.g. the Kafka record key' | translate }}"
+                [textContent]="'key: {{key}}' | translate: { key: generatedKey }"></span>
               }
             </div>
-            <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
-              [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
-            </d11r-mapping-json-editor>
+            <span class="badge badge-success" data-cy="dm-mapping-test-result-index">{{
+              (selectedResult$ | async) + 1
+              }}</span>
           </div>
+          }
+        </div>
+      </div>
+      <!-- Editor row -->
+      <div class="d-grid grid__col--6-6 gap-4">
+        <div class="column-right-border p-r-2">
+          <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
+            [data]="sourceTemplate" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
+          </d11r-mapping-json-editor>
+        </div>
+        <div class="column-left-border p-l-2">
+          <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
+            [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
+          </d11r-mapping-json-editor>
         </div>
       </div>
       @if (mapping().direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping())) {

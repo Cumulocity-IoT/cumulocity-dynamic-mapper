@@ -20,13 +20,13 @@
 -->
 
 <div class="inner-scroll fit-h">
-  <div class="card-block p-b-0">
+  <div class="card-block p-t-0 p-b-0">
     <div [formGroup]="templateForm()">
       <ng-template #popupMetadataTemplateHelp>
         <div [innerHtml]="metadataHelpText"></div>
       </ng-template>
       <!-- Label row: both cells are in the same CSS grid row, so they are always the same height -->
-      <div class="d-grid grid__col--6-6 gap-4 m-b-4">
+      <div class="d-grid grid__col--6-6 gap-4 m-b-4 d11r-editor-label-row">
         <div class="p-r-2 d-flex j-c-between a-i-center">
           <label class="m-b-0" [textContent]="'Source Template - {{system}}' | translate: { system: sourceSystem() }"></label>
           <div>

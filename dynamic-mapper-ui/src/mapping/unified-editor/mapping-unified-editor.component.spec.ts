@@ -541,6 +541,44 @@ describe('MappingUnifiedEditorComponent', () => {
    * here is the unified editor's OWN responsibility: assembling the request, and turning each
    * result status into navigation, an alert, or a tab.
    */
+  describe('saveDisabled and the inventory filter', () => {
+    beforeEach(() => {
+      component.mapping = buildMapping();
+      component.stepperConfiguration = buildConfig({ allowTemplateExpansion: false });
+      component.feature = { userHasMappingAdminRole: true } as any;
+      component.propertyFormly.addControl('filterInventory', new FormControl(''));
+    });
+
+    it('is enabled while the filter is fine', () => {
+      expect(component.saveDisabled).toBeFalse();
+    });
+
+    it('is disabled while the filter is flagged invalid or not boolean, and enabled again once fixed', () => {
+      const control = component.propertyFormly.get('filterInventory')!;
+
+      control.setErrors({ validationError: { message: 'The filter expression must return of boolean type' } });
+      expect(component.saveDisabled).toBeTrue();
+
+      control.setErrors(null);
+      expect(component.saveDisabled).toBeFalse();
+    });
+
+    it('is disabled while the filter is still being evaluated', () => {
+      const control = component.propertyFormly.get('filterInventory')!;
+
+      control.markAsPending({ emitEvent: false });
+      expect(component.saveDisabled).toBeTrue();
+
+      control.updateValueAndValidity({ emitEvent: false });
+      expect(component.saveDisabled).toBeFalse();
+    });
+
+    it('is not disabled by other form errors, which the commit reports and jumps to', () => {
+      component.propertyFormly.get('filterInventory')!.setErrors({ required: true });
+      expect(component.saveDisabled).toBeFalse();
+    });
+  });
+
   describe('onCommitButton', () => {
     function commitResolvesTo(result: CommitResult): void {
       mockCommitService.commitMapping.and.resolveTo(result);

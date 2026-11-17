@@ -222,6 +222,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    // The user left the step within the debounce: the pending evaluation would never run, and the control
+    // would stay pending for good. Resolve it now, so Save and Next see the real outcome.
+    if (this.propertyFormly()?.get('filterInventory')?.pending) {
+      void this.updateFilterInventoryExpressionResult(this.model.filterInventory ?? '');
+    }
   }
 
   private renderFilterInventoryResult(): string {
@@ -262,6 +267,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         );
       this.model.filterInventory = path;
       this.commitModel();
+      // Evaluated and fine: leave the pending state and drop an earlier validation error.
+      this.propertyFormly().get('filterInventory')?.updateValueAndValidity({ emitEvent: false });
       await this.refreshFilterInventoryWarning(path);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
@@ -306,22 +313,59 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       uncached = [];
     }
     this.filterInventoryUncached = uncached;
+    this.filterInventoryExpression = expression;
     const field = this.filterInventoryField;
     if (field?.props) {
-      field.props['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
+      const canAdd = !!this.feature?.userHasMappingAdminRole;
+      field.props['warning'] = uncached.length ? this.uncachedWarningText(uncached, canAdd) : undefined;
+      // Changing the cache list takes the admin role (the backend checks it too).
+      field.props['warningAction'] = uncached.length && canAdd
+        ? {
+            label: this.translateService.instant(gettext('Add to inventory cache')),
+            run: () => this.addUncachedToInventoryCache()
+          }
+        : undefined;
       field.options?.detectChanges?.(field);
     }
     this.cdr.markForCheck();
   }
 
-  private uncachedWarningText(attributes: string[]): string {
-    const message =
-      attributes.length === 1
+  /** The expression the warning was last computed for, to recompute it after the cache list changed. */
+  private filterInventoryExpression = '';
+
+  /** Adds the uncached attributes of the filter to the inventory cache list, keeping what is listed already. */
+  async addUncachedToInventoryCache(): Promise<void> {
+    const attributes = [...this.filterInventoryUncached];
+    if (!attributes.length) return;
+    try {
+      const configuration = await this.sharedService.getServiceConfiguration();
+      const fragments = Array.from(new Set([...(configuration?.inventoryFragmentsToCache ?? []), ...attributes]));
+      const response = await this.sharedService.updateServiceConfiguration({ inventoryFragmentsToCache: fragments });
+      if (!(response.status >= 200 && response.status < 300)) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      this.alertService.success(
+        gettext('Added to the inventory cache. Devices that are already cached get it when their cache entry is refreshed.')
+      );
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to update the inventory cache.'), String(error));
+    }
+    await this.refreshFilterInventoryWarning(this.filterInventoryExpression);
+  }
+
+  /** With the button beside it (admins) the text only states the effect; without it, it names the settings page. */
+  private uncachedWarningText(attributes: string[], canAdd: boolean): string {
+    const single = attributes.length === 1;
+    const message = canAdd
+      ? single
+        ? gettext('Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it.')
+        : gettext('Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them.')
+      : single
         ? gettext(
-            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Add it under Configuration > Service Configuration > Fragments from inventory to cache.'
+            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have it. Ask an administrator to add it under Configuration > Service Configuration > Fragments from inventory to cache.'
           )
         : gettext(
-            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Add them under Configuration > Service Configuration > Fragments from inventory to cache.'
+            'Not in the inventory cache: {{attributes}}. The filter evaluates as if the device did not have them. Ask an administrator to add them under Configuration > Service Configuration > Fragments from inventory to cache.'
           );
     return this.translateService.instant(message, { attributes: attributes.join(', ') });
   }

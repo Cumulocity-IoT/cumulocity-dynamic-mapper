@@ -197,13 +197,36 @@ export class JsonEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
+    // A read-only tree selects the clicked key or value alone, drawn as a small gray patch. Make it the whole
+    // line, as a selection made from outside (setSelectionToPath) is, so a picked node looks the same however
+    // it was picked. Nothing can be edited there, so nothing is lost. The multi selection reports the path.
+    if (this.options()?.['readOnly'] && (isKeySelection(selection) || isValueSelection(selection)) && selection.path.length > 0) {
+      const path = selection.path;
+      queueMicrotask(() => {
+        if (!this.editor) return;
+        const pathString = stringifyJSONPathCustom(path);
+        // The library does not call onSelect for a select() made from code (setSelectionToPath reports the
+        // path itself, for the same reason), so report it here. If a library version does call it, that
+        // second report is dropped.
+        this.reportedByConversion = pathString;
+        this.editor.select(createMultiSelection(path, path));
+        this.pathChanged.emit(pathString);
+        setTimeout(() => (this.reportedByConversion = undefined));
+      });
+      return;
+    }
     const path = isKeySelection(selection) || isValueSelection(selection)
       ? selection.path
       : isMultiSelection(selection) ? selection.anchorPath : undefined;
     if (path && path[0] !== NO_SELECTION_KEY) {
-      this.pathChanged.emit(stringifyJSONPathCustom(path));
+      const pathString = stringifyJSONPathCustom(path);
+      if (pathString === this.reportedByConversion) return;
+      this.pathChanged.emit(pathString);
     }
   }
+
+  /** The path onSelect() just reported itself while turning a click into a whole-line selection. */
+  private reportedByConversion?: string;
 
   setSchema(schema: JSONSchema) {
     if (this.editor) {

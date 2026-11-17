@@ -236,6 +236,18 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
   get filterFormlyFields(): FormlyFieldConfig[] { return this.filterFormlyFieldsState(); }
   set filterFormlyFields(value: FormlyFieldConfig[]) { this.filterFormlyFieldsState.set(value); }
   propertyFormly = new FormGroup({});
+
+  /**
+   * The inventory filter is invalid, or does not return a boolean, or is still being evaluated. The General
+   * settings step flags the field while the user types; the form outlives the step, so this also holds
+   * after a tab switch.
+   */
+  readonly filterInventoryHint = gettext('The inventory filter must be valid and return a boolean result.');
+
+  get filterInventoryBlocked(): boolean {
+    const control = this.propertyFormly.get('filterInventory');
+    return !!control && (control.pending || control.hasError('validationError'));
+  }
   isGenerateSubstitutionOpen = false;
 
   codeTemplateDecoded?: CodeTemplate;

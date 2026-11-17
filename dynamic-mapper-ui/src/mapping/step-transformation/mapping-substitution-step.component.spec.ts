@@ -157,6 +157,36 @@ describe('MappingSubstitutionStepComponent first source node', () => {
   });
 });
 
+describe('MappingSubstitutionStepComponent new substitution resets the fields', () => {
+  it('clears both expression controls with a value event, so the editors show the empty text', () => {
+    const step: any = Object.create(MappingSubstitutionStepComponent.prototype);
+    const controls: Record<string, jasmine.SpyObj<any>> = {
+      pathSource: jasmine.createSpyObj('source', ['setValue', 'markAsPristine', 'markAsUntouched']),
+      pathTarget: jasmine.createSpyObj('target', ['setValue', 'markAsPristine', 'markAsUntouched'])
+    };
+    step.substitutionFormly = { get: (key: string) => controls[key] };
+    step.stepperConfiguration = () => ({});
+    step.selectedSubstitution = 2;
+    step.sourceLinked = true;
+    step.targetLinked = true;
+    step.splitView = () => undefined;
+    step.editorSourceStepSubstitution = () => undefined;
+    step.editorTargetStepSubstitution = () => undefined;
+
+    step.cancelEditSubstitution();
+
+    for (const control of Object.values(controls)) {
+      expect(control.setValue).toHaveBeenCalledWith('');
+      expect(control.markAsPristine).toHaveBeenCalled();
+      expect(control.markAsUntouched).toHaveBeenCalled();
+    }
+    expect(step.selectedSubstitution).toBe(-1);
+    expect(step.lastEvaluatedPath).toEqual({ source: '', target: '' });
+    expect(step.sourceLinked).toBeFalse();
+    expect(step.substitutionModel.pathSource).toBe('');
+  });
+});
+
 describe('MappingSubstitutionStepComponent substitution changes', () => {
   const sub = (pathSource: string, pathTarget: string): Substitution => ({
     pathSource, pathTarget, repairStrategy: RepairStrategy.DEFAULT, expandArray: false

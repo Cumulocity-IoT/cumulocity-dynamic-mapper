@@ -333,7 +333,19 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     return (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole)
       || !!this.stepperConfiguration.readOnly
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated mappings are read-only
-      || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
+      || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
+      || this.filterInventoryInvalid;
+  }
+
+  /**
+   * The inventory filter is evaluated while the user types, and the General settings step flags the
+   * field when the expression is invalid or does not return a boolean. That flag lives in the form,
+   * which outlives the step when the user switches tabs, so Save stays disabled until it is fixed.
+   */
+  readonly filterInventorySaveHint = gettext('Saving is disabled: the inventory filter must return a boolean result.');
+
+  get filterInventoryInvalid(): boolean {
+    return this.filterInventoryBlocked;
   }
 
   /**

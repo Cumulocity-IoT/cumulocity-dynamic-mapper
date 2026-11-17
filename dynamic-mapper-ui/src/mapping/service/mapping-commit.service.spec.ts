@@ -332,6 +332,42 @@ describe('MappingCommitService', () => {
       });
     });
 
+    describe('the warning of a refused save', () => {
+      it('is removed once a later save succeeds, and other alerts stay', async () => {
+        const stale = { type: 'warning', text: 'Select at least one connector before saving.' } as any;
+        const other = { type: 'warning', text: 'Something else' } as any;
+        (Object.getOwnPropertyDescriptor(mockAlertService, 'state')!.get as jasmine.Spy).and.returnValue([stale, other]);
+
+        expectSaved(await service.commitMapping(makeRequest()));
+
+        expect(mockAlertService.remove).toHaveBeenCalledWith(stale);
+        expect(mockAlertService.remove).not.toHaveBeenCalledWith(other);
+      });
+
+      it('stays while the save is still refused', async () => {
+        const stale = { type: 'warning', text: 'Select at least one connector before saving.' } as any;
+        (Object.getOwnPropertyDescriptor(mockAlertService, 'state')!.get as jasmine.Spy).and.returnValue([stale]);
+
+        await service.commitMapping(makeRequest({ deploymentMapEntry: makeDeployment([]) }));
+
+        expect(mockAlertService.remove).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('inventory filter still being evaluated', () => {
+      it('blocks the commit as a property form problem, writing nothing', async () => {
+        const propertyFormly = new FormGroup({ filterInventory: new FormControl('type = "a"') });
+        propertyFormly.get('filterInventory')!.markAsPending({ emitEvent: false });
+
+        const result = await service.commitMapping(makeRequest({
+          forms: { propertyFormly, templateForm: new FormGroup({}), validateExtensionSelection: false }
+        } as any));
+
+        expect(result).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.PROPERTY_FORM }));
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+      });
+    });
+
     describe('preconditions block before anything is written', () => {
       it('blocks on NO_CONNECTOR when the deployment selects none', async () => {
         const result = await service.commitMapping(makeRequest({ deploymentMapEntry: makeDeployment([]) }));

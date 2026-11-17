@@ -174,6 +174,47 @@ describe('JsonEditorComponent', () => {
     });
   });
 
+  describe('selecting a node by click', () => {
+    it('turns the key or value selection of a read-only tree into the whole line, reporting the path once', async () => {
+      create({ readOnly: true });
+      const select = spyOn((component as any).editor, 'select').and.callThrough();
+      const paths: string[] = [];
+      component.pathChanged.subscribe(p => paths.push(p));
+
+      (component as any).onSelect({ type: 'value', path: ['a', 'b'] });
+      expect(paths).toEqual([]);
+      await Promise.resolve();
+
+      expect(select).toHaveBeenCalledTimes(1);
+      expect((select.calls.mostRecent().args[0] as any).type).toBe('multi');
+      expect(paths).toEqual(['a.b']);
+    });
+
+    it('reports the path once even if the library also reports the selection made from code', async () => {
+      create({ readOnly: true });
+      const paths: string[] = [];
+      component.pathChanged.subscribe(p => paths.push(p));
+      spyOn((component as any).editor, 'select').and.callFake((selection: any) => (component as any).onSelect(selection));
+
+      (component as any).onSelect({ type: 'value', path: ['a', 'b'] });
+      await Promise.resolve();
+
+      expect(paths).toEqual(['a.b']);
+    });
+
+    it('leaves the selection of an editable tree alone, so the node can still be edited', () => {
+      create({});
+      const select = spyOn((component as any).editor, 'select').and.callThrough();
+      const paths: string[] = [];
+      component.pathChanged.subscribe(p => paths.push(p));
+
+      (component as any).onSelect({ type: 'value', path: ['a', 'b'] });
+
+      expect(select).not.toHaveBeenCalled();
+      expect(paths).toEqual(['a.b']);
+    });
+  });
+
   it('does not pass removeModes to the library', () => {
     create({ readOnly: true, removeModes: ['text'] });
     expect((component as any).libraryProps()).toEqual({ readOnly: true });

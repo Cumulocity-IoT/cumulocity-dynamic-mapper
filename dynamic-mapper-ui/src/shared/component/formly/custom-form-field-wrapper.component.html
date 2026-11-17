@@ -65,6 +65,11 @@
     @if (props['warning']) {
         <div class="help-block text-warning" role="alert" data-cy="dm-formly-field-warning">
             <i c8yIcon="warning" class="m-r-4"></i>{{ props['warning'] }}
+            <!-- Optional fix for the warning: { label, run }. Shown only when the field sets it. -->
+            @if (props['warningAction']; as action) {
+                <button type="button" class="btn btn-default btn-xs m-l-8" data-cy="dm-formly-field-warning-action"
+                    (click)="action.run()">{{ action.label }}</button>
+            }
         </div>
     }
     @if (props['customMessage'] | async) {

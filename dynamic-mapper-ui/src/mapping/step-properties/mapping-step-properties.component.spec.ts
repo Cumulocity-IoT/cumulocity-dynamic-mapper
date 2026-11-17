@@ -84,7 +84,8 @@ describe('MappingStepPropertiesComponent', () => {
   let mockConnectorConfigurationService: jasmine.SpyObj<ConnectorConfigurationService>;
 
   beforeEach(() => {
-    mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', ['getFeatures', 'getServiceConfiguration']);
+    mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', ['getFeatures', 'getServiceConfiguration', 'updateServiceConfiguration']);
+    mockSharedService.updateServiceConfiguration.and.resolveTo({ status: 201 } as any);
     mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true } as any);
     mockSharedService.getServiceConfiguration.and.resolveTo({ inventoryFragmentsToCache: ['type'] } as any);
 
@@ -92,7 +93,7 @@ describe('MappingStepPropertiesComponent', () => {
 
     mockStepperService = jasmine.createSpyObj<MappingStepperService>('MappingStepperService', ['raiseAlert', 'notifyMappingPropertyChanged']);
 
-    mockAlertService = jasmine.createSpyObj<AlertService>('AlertService', ['clearAll', 'add', 'remove']);
+    mockAlertService = jasmine.createSpyObj<AlertService>('AlertService', ['clearAll', 'add', 'remove', 'success', 'danger']);
     Object.defineProperty(mockAlertService, 'state', { value: [] });
 
     mockConnectorConfigurationService = jasmine.createSpyObj<ConnectorConfigurationService>(
@@ -310,6 +311,48 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.filterInventoryUncached).toEqual(['c8y_Hardware']);
       expect(field.props.warning).toContain('Not in the inventory cache: c8y_Hardware');
       expect(field.options.detectChanges).toHaveBeenCalledWith(field);
+    });
+
+    it('offers an admin to add the uncached attributes to the cache, keeping the listed ones', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+      (component as any).feature = { userHasMappingAdminRole: true };
+
+      await component.updateFilterInventoryExpressionResult('type = "a" and c8y_Hardware.model = "x"');
+      expect(field.props.warningAction).toBeDefined();
+
+      expect(field.props.warning).not.toContain('Configuration >');
+
+      await field.props.warningAction.run();
+
+      expect(mockSharedService.updateServiceConfiguration)
+        .toHaveBeenCalledWith({ inventoryFragmentsToCache: ['type', 'c8y_Hardware'] });
+      expect(mockAlertService.success).toHaveBeenCalled();
+    });
+
+    it('offers no cache action without the admin role', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+      (component as any).feature = { userHasMappingAdminRole: false };
+
+      await component.updateFilterInventoryExpressionResult('c8y_Hardware.model = "x"');
+
+      expect(field.props.warning).toContain('Ask an administrator');
+      expect(field.props.warningAction).toBeUndefined();
+    });
+
+    it('reports a failed cache update and leaves the warning in place', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      mockSharedService.updateServiceConfiguration.and.resolveTo({ status: 403 } as any);
+      const { component, field } = await componentWithField();
+      (component as any).feature = { userHasMappingAdminRole: true };
+
+      await component.updateFilterInventoryExpressionResult('c8y_Hardware.model = "x"');
+      await field.props.warningAction.run();
+
+      expect(mockAlertService.danger).toHaveBeenCalled();
+      expect(mockAlertService.success).not.toHaveBeenCalled();
+      expect(component.filterInventoryUncached).toEqual(['c8y_Hardware']);
     });
 
     it('does not warn when every attribute is cached', async () => {
