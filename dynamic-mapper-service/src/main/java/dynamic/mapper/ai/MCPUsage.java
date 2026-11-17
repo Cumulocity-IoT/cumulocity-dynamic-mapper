@@ -27,5 +27,6 @@ import lombok.Data;
 public class MCPUsage
 {
     private String serverName;
-    private String[] tools;
+    // The AI Agent Manager returns tools as plain names or as objects, so accept any element type
+    private Object[] tools;
 }
