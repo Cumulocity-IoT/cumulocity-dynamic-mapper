@@ -1377,6 +1377,14 @@ export type OutboundMessageByType = {
     cumulocityType: T;
     /** Internal Cumulocity device ID of the originating device, if available. */
     sourceId?: string;
+    /** The mapping's publish topic, as resolved for this message. */
+    topic?: string;
+    /** ISO-8601 timestamp of when the runtime processed this event. */
+    time?: string;
+    /** Always absent outbound — the runtime passes `null`. See {@link OutboundMessage}. */
+    clientId?: never;
+    transportId?: never;
+    transportFields?: never;
   };
 };
 

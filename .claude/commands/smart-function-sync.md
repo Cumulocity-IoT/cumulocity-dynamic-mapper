@@ -9,7 +9,7 @@ Audit the Smart Function API surface to verify that the Java source and TypeScri
 Read these files in full:
 
 - `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/DataPrepContext.java`
-- `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/SmartFunctionContext.java`
+- `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/SmartFunctionContext.java`
 - `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/InputMessage.java`
 
 Extract:
