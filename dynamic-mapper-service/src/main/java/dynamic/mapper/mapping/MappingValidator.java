@@ -251,14 +251,18 @@ public class MappingValidator {
             // Validate inbound mapping topic
             errors.addAll(validateMappingTopic(mapping.getMappingTopic()));
 
-            // Validate mapping topic and sample consistency
-            if (mapping.getMappingTopicSample() != null && !mapping.getMappingTopicSample().isEmpty()) {
+            // Validate mapping topic and sample consistency. Without a topic there is nothing to compare
+            // the sample with (and splitting a null topic would throw).
+            if (mapping.getMappingTopic() != null
+                    && mapping.getMappingTopicSample() != null && !mapping.getMappingTopicSample().isEmpty()) {
                 errors.addAll(validateMappingTopicAndSampleConsistency(
                         mapping.getMappingTopic(),
                         mapping.getMappingTopicSample()));
             }
         } else {
-            // Validate outbound publish topics
+            // Validate outbound publish topics: the same wildcard rules as for a mapping topic
+            // (the UI applies them to both), then the comparison with the sample.
+            errors.addAll(validateMappingTopic(mapping.getPublishTopic()));
             if (mapping.getPublishTopic() != null && mapping.getPublishTopicSample() != null) {
                 errors.addAll(validatePublishTopicAndSampleConsistency(
                         mapping.getPublishTopic(),
@@ -347,15 +351,20 @@ public class MappingValidator {
     }
 
     /**
-     * Validates that publish topic and sample have the same structure
+     * Validates that publish topic and sample have the same structure.
+     *
+     * <p>Unlike a mapping topic, a trailing {@code #} is not "any number of levels" here: at runtime the topic
+     * levels are substituted one by one, so {@code #} (like {@code +}) stands for exactly one level and the
+     * level count must match. Levels are counted as in the UI (leading slash is a level, trailing slashes
+     * are ignored), so both agree on what is valid.
      */
     public List<ValidationError> validatePublishTopicAndSampleConsistency(
             @NotNull String publishTopic, @NotNull String publishTopicSample) {
 
         List<ValidationError> errors = new ArrayList<>();
 
-        String[] topicParts = Mapping.splitTopicIncludingSeparatorAsArray(publishTopic);
-        String[] sampleParts = Mapping.splitTopicIncludingSeparatorAsArray(publishTopicSample);
+        String[] topicParts = Mapping.splitTopicExcludingSeparatorAsArray(publishTopic, false);
+        String[] sampleParts = Mapping.splitTopicExcludingSeparatorAsArray(publishTopicSample, false);
 
         // Check same number of levels
         if (topicParts.length != sampleParts.length) {

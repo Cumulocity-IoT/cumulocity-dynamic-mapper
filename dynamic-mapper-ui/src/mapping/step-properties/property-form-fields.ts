@@ -176,7 +176,8 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
             change: () => {
               const newTopic = host.form.get('publishTopic').value;
               const sampleControl = host.form.get('publishTopicSample');
-              if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
+              // A trailing "#" of a publish topic is one level at runtime, not any number of levels.
+              if (topicsHaveSameStructure(newTopic, sampleControl.value, false)) {
                 return;
               }
               sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
@@ -196,7 +197,7 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
             placeholder: 'e.g. device/110',
             disabled: host.isFieldDisabled,
             description: gettext(
-              'The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
+              'The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. A trailing <code>#</code> matches any number of further levels, so the sample may be longer. This helps to identify the relevant positions in the substitutions'
             ),
             required: true
           },
@@ -212,7 +213,7 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
             placeholder: 'e.g. device/110',
             disabled: host.isFieldDisabled,
             description: gettext(
-              'The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions'
+              'The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> or <code>#</code> in the publish topic are replaced with concrete runtime values, one level each. This helps to identify the relevant positions in the substitutions'
             ),
             required: true
           },

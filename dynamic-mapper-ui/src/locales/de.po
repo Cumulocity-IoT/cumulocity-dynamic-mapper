@@ -2801,7 +2801,7 @@ msgstr ""
 msgid "The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally."
 msgstr ""
 
-msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgid "The mapping topic sample must have the same structure and number of levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. A trailing <code>#</code> matches any number of further levels, so the sample may be longer. This helps to identify the relevant positions in the substitutions"
 msgstr ""
 
 msgid "The mapping was saved, but updating the subscriptions failed:"
@@ -2828,7 +2828,7 @@ msgstr ""
 msgid "The processing timeout must be greater than the CPU time limit."
 msgstr ""
 
-msgid "The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions"
+msgid "The publish topic sample must have the same structure and number of levels as the publish topic. Wildcards, i.e. <code>+</code> or <code>#</code> in the publish topic are replaced with concrete runtime values, one level each. This helps to identify the relevant positions in the substitutions"
 msgstr ""
 
 msgid "The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name"

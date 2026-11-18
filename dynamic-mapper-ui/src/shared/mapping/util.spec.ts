@@ -29,6 +29,8 @@ import {
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
   checkTopicsInboundAreValid,
+  checkTopicsOutboundAreValid,
+  topicsHaveSameStructure,
   stripTemplateMetadataTags,
   translateValidationErrorCode,
   buildBackendErrorMessage,
@@ -884,5 +886,38 @@ describe('applyCodeTemplateSample', () => {
 
     expect(mapping.sourceTemplate).toBe('{}');
     expect(mapping.mappingTopicSample).toBe('');
+  });
+});
+
+describe('topicsHaveSameStructure', () => {
+  it('lets a trailing # of a mapping topic match any number of further levels', () => {
+    expect(topicsHaveSameStructure('a/#', 'a/x/y/z')).toBeTrue();
+    expect(topicsHaveSameStructure('a/b/#', 'a/b')).toBeTrue();
+    expect(topicsHaveSameStructure('a/b/#', 'a')).toBeFalse();
+  });
+
+  it('treats a trailing # of a publish topic as exactly one level', () => {
+    expect(topicsHaveSameStructure('a/#', 'a/x', false)).toBeTrue();
+    expect(topicsHaveSameStructure('a/#', 'a/x/y', false)).toBeFalse();
+  });
+
+  it('compares the fixed levels and the level count', () => {
+    expect(topicsHaveSameStructure('a/+/c', 'a/1/c')).toBeTrue();
+    expect(topicsHaveSameStructure('a/+/c', 'a/1/d')).toBeFalse();
+    expect(topicsHaveSameStructure('a/+/c', 'a/1')).toBeFalse();
+  });
+});
+
+describe('checkTopicsOutboundAreValid agrees with topicsHaveSameStructure for a trailing #', () => {
+  const group = (topic: string, sample: string) =>
+    new FormGroup({ publishTopic: new FormControl(topic), publishTopicSample: new FormControl(sample) });
+
+  it('rejects a longer sample, which topicsHaveSameStructure no longer keeps', () => {
+    expect(topicsHaveSameStructure('a/#', 'a/x/y', false)).toBeFalse();
+    expect(checkTopicsOutboundAreValid(group('a/#', 'a/x/y'))).not.toBeNull();
+  });
+
+  it('accepts a sample with one level for the #', () => {
+    expect(checkTopicsOutboundAreValid(group('a/#', 'a/x'))).toBeNull();
   });
 });

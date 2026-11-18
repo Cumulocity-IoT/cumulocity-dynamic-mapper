@@ -21,6 +21,8 @@
 
 package dynamic.mapper.mapping;
 
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.validation.ValidationError;
 import org.junit.jupiter.api.Test;
 
@@ -94,5 +96,64 @@ class MappingValidatorTopicSampleTest {
         assertFalse(errors.isEmpty());
         assertTrue(errors.contains(
                 ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name));
+    }
+
+    // ── outbound: publish topic and sample (must agree with checkTopicsOutboundAreValid in the UI) ──
+
+    private List<ValidationError> outbound(String topic, String sample) {
+        return validator.validateTopics(Mapping.builder()
+                .direction(Direction.OUTBOUND).publishTopic(topic).publishTopicSample(sample).build());
+    }
+
+    private List<ValidationError> inbound(String topic, String sample) {
+        return validator.validateTopics(Mapping.builder()
+                .direction(Direction.INBOUND).mappingTopic(topic).mappingTopicSample(sample).build());
+    }
+
+    @Test
+    void publishTrailingHashIsOneLevel() {
+        assertTrue(outbound("/event/events/#", "/event/events/C9BAE59F").isEmpty());
+        assertTrue(outbound("a/#", "a/+").isEmpty());
+        assertFalse(outbound("a/#", "a/x/y").isEmpty());
+        assertFalse(outbound("a/#", "a").isEmpty());
+    }
+
+    @Test
+    void publishPlusAndFixedLevels() {
+        assertTrue(outbound("a/+/c", "a/1/c").isEmpty());
+        assertTrue(outbound("a/+/c", "a/1/d").contains(
+                ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name));
+        assertTrue(outbound("a/b", "a/b/c").contains(
+                ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name));
+    }
+
+    @Test
+    void publishTrailingSlashIsIgnoredLikeInTheUi() {
+        assertTrue(outbound("a/b/", "a/b").isEmpty());
+        assertTrue(outbound("a/b", "a/b/").isEmpty());
+    }
+
+    @Test
+    void publishLeadingSlashIsALevel() {
+        assertTrue(outbound("/a/b", "/x1/b").contains(
+                ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name));
+        assertFalse(outbound("/a/b", "a/b").isEmpty());
+    }
+
+    @Test
+    void publishTopicWildcardRulesAreEnforced() {
+        assertTrue(outbound("a/#/b", "a/x/b").contains(ValidationError.Multi_Level_Wildcard_Only_At_End));
+        assertTrue(outbound("a/#/#", "a/x/y").contains(ValidationError.Only_One_Multi_Level_Wildcard));
+    }
+
+    @Test
+    void publishEmptySampleIsRejected() {
+        assertFalse(outbound("a/b", "").isEmpty());
+        assertFalse(outbound("a/b/c", "").isEmpty());
+    }
+
+    @Test
+    void inboundWithoutTopicDoesNotThrow() {
+        assertTrue(inbound(null, "a/b").isEmpty());
     }
 }
