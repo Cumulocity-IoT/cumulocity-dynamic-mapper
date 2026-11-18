@@ -179,6 +179,12 @@ public class MappingService implements TenantScoped {
      * Creates a new mapping
      */
     public Mapping createMapping(String tenant, Mapping mapping) {
+        // Exports strip id/identifier and only the UI importer re-assigns one. Imports through
+        // REST/CLI/scripts arrive without an identifier; persisting that yields a mapping that
+        // cannot be deployed, edited (null route segment) or subscribed.
+        if (mapping.getIdentifier() == null || mapping.getIdentifier().isBlank()) {
+            mapping.setIdentifier(dynamic.mapper.util.Utils.createCustomUuid());
+        }
         // Validate using the validator
         List<ValidationIssue> issues = mappingValidator.validate(tenant, mapping, null);
         if (!issues.isEmpty()) {

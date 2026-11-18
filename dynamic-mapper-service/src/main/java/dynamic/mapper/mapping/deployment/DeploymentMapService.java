@@ -311,6 +311,10 @@ public class DeploymentMapService {
      * @return true if the connector is in the mapping's deployment list; false otherwise
      */
     public boolean isConnectorDeployed(String tenant, String mappingIdentifier, String connectorIdentifier) {
+        // A mapping without an identifier can never be deployed; ConcurrentHashMap.get(null) would throw.
+        if (mappingIdentifier == null || connectorIdentifier == null) {
+            return false;
+        }
         List<String> connectors = getOrCreateDeploymentMap(tenant).get(mappingIdentifier);
         return connectors != null && connectors.contains(connectorIdentifier);
     }

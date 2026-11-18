@@ -315,6 +315,20 @@ public class MappingRepository {
 
             Migration migration = migrateMapping(tenant, mapping, mo);
 
+            // Self-heal: a stored mapping without an identifier can be neither opened in the editor
+            // (null route segment) nor deployed to a connector. Assign one; persisting it reuses the
+            // migration mechanism, so the identifier survives the next load.
+            if (mapping.getIdentifier() == null || mapping.getIdentifier().isBlank()) {
+                mapping.setIdentifier(dynamic.mapper.util.Utils.createCustomUuid());
+                log.warn("{} - Mapping {} [{}] had no identifier; assigned {}", tenant, mapping.getName(), moId(mo),
+                        mapping.getIdentifier());
+                if (migration == null) {
+                    migration = new Migration(String.format(
+                            "Mapping %s [%s] had no identifier; a new one was assigned", mapping.getName(), moId(mo)),
+                            MigrationNotice.OPERATION_EVENT);
+                }
+            }
+
             if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
                 log.warn("{} - Mapping {} has no mappingTopic, skipping", tenant, mapping.getId());
                 return LoadResult.exclude(mapping, mo, migration, null);

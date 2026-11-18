@@ -18,12 +18,14 @@
  * @authors Christof Strack
  */
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
-import { CoreModule, EventRealtimeService, Pagination, RealtimeButtonComponent, RealtimeSubjectService } from '@c8y/ngx-components';
+import { AlertService, CoreModule, EventRealtimeService, Pagination, RealtimeButtonComponent, RealtimeSubjectService } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { saveAs } from 'file-saver';
+import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { filter } from 'rxjs/operators';
@@ -58,6 +60,9 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     private sharedService: SharedService,
     private fb: FormBuilder,
     private route: ActivatedRoute,
+    private alertService: AlertService,
+    private confirmationService: ConfirmationModalService,
+    private cdr: ChangeDetectorRef,
     realtimeSubjectService: RealtimeSubjectService
   ) {
     this.eventRealtimeService = new EventRealtimeService(realtimeSubjectService);
@@ -380,6 +385,37 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     const json = JSON.stringify(data, undefined, 2);
     const blob = new Blob([json], { type: 'application/json' });
     saveAs(blob, `mo-mapping-${moId}.json`);
+  }
+
+  /** Managed objects deleted from this view; their delete button is hidden. */
+  readonly deletedMoIds = new Set<string>();
+
+  /**
+   * True for events about a mapping that was NOT loaded (e.g. retired type). Only those may be
+   * deleted here: a loaded mapping (such as an auto-migrated one) must go through the mapping
+   * grid so caches and subscriptions are cleaned up.
+   */
+  isDeletableMapping(event: IEvent): boolean {
+    const moId = this.extractManagedObjectId(event);
+    return !!moId && !this.deletedMoIds.has(moId) && /was not loaded/.test(event?.text ?? '');
+  }
+
+  /**
+   * Deletes the managed object directly: the backend DELETE /mapping/{id} only finds mappings it
+   * can load, so it cannot remove a retired one.
+   */
+  async deleteMapping(event: IEvent): Promise<void> {
+    const moId = this.extractManagedObjectId(event);
+    if (!moId) return;
+    if (!(await this.confirmationService.confirmDeletion('mapping'))) return;
+    try {
+      await this.inventoryService.delete(moId);
+      this.deletedMoIds.add(moId);
+      this.alertService.success(gettext('Mapping deleted.'));
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to delete mapping'), error as any);
+    }
+    this.cdr.markForCheck();
   }
 
   private onDateChange(field: 'dateFrom' | 'dateTo', date: Date): void {

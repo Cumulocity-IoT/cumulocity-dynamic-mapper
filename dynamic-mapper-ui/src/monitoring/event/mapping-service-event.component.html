@@ -181,6 +181,12 @@
                 (click)="downloadMappingMo(event)" translate>
                 <i c8yIcon="download-archive"></i> Download MO
               </button>
+              @if (isDeletableMapping(event)) {
+              <button class="btn btn-xs btn-danger m-l-8" title="{{ 'Delete the mapping that could not be loaded' | translate }}"
+                (click)="deleteMapping(event)" translate>
+                <i c8yIcon="delete"></i> Delete mapping
+              </button>
+              }
               }
             </div>
             <div class="col-md-2">

@@ -64,6 +64,9 @@ msgstr ""
 msgid "{{title}} with agent:"
 msgstr ""
 
+msgid "<i c8yicon=\"delete\"></i> Delete mapping"
+msgstr ""
+
 msgid "<i c8yicon=\"download-archive\"></i> Download mapping"
 msgstr ""
 
@@ -669,6 +672,9 @@ msgstr ""
 msgid "Delete substitution"
 msgstr ""
 
+msgid "Delete the mapping that could not be loaded"
+msgstr ""
+
 msgid "Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them."
 msgstr ""
 
@@ -997,6 +1003,9 @@ msgid "Failed to delete code template"
 msgstr ""
 
 msgid "Failed to delete Java Extension"
+msgstr ""
+
+msgid "Failed to delete mapping"
 msgstr ""
 
 msgid "Failed to delete mapping {{name}}:"
@@ -1585,6 +1594,9 @@ msgid "Mapping and transformation type"
 msgstr ""
 
 msgid "Mapping could only activate partially. It failed for the following connectors: {{connectors}}"
+msgstr ""
+
+msgid "Mapping deleted."
 msgstr ""
 
 msgid "Mapping filter uses the collected log; the platform log can only be filtered within the loaded window."

@@ -126,8 +126,8 @@ public class Mapping implements Serializable {
     @NotNull
     private String id = "id";
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Generated identifier for the mapping", example = "l19zjk")
-    @NotNull
+    // Not required on input: exports omit it, and createMapping generates one when it is missing.
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Generated identifier for the mapping; assigned on creation when omitted", example = "l19zjk")
     private String identifier;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Display name for the mapping", example = "Temperature Sensor Data Mapping")
