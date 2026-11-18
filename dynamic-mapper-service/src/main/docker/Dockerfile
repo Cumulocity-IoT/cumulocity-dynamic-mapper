@@ -1,6 +1,7 @@
 
 FROM alpine:3 as base
-RUN apk add  --no-cache openjdk@package.java-version@
+# Fail the build if the patched JDK is unavailable instead of shipping a vulnerable runtime
+RUN apk add --no-cache "openjdk@package.java-version@>=25.0.5.1"
 RUN jlink \
 --module-path /opt/java/jmods \
 --add-modules java.se,java.base,java.compiler,java.desktop,java.instrument,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,jdk.jfr,jdk.management,jdk.unsupported,jdk.crypto.ec \
