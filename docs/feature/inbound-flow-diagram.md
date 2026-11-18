@@ -28,7 +28,6 @@ flowchart TD
         ign1 -- yes --> consolidation
         ign1 -- no --> branch{"Branch by type"}
 
-        branch -- "PROTOBUF_INTERNAL" --> pb["InternalProtobufProcessor"]
         branch -- "EXTENSION_JAVA" --> ext["ExtensibleInboundProcessor"]
         branch -- "JSONata or default" --> js["JSONataInboundProcessor"]
         branch -- "SMART_FUNCTION" --> flow["FlowInboundProcessor\nrun JavaScript onMessage"]
@@ -63,7 +62,7 @@ Notes:
   and failed ones.
 - After `FlowResultInboundProcessor` there is no further ignore check; the context goes straight
   to `SendInboundProcessor`.
-- `InternalProtobufProcessor` and `JSONataInboundProcessor` are likewise followed directly by
+- `JSONataInboundProcessor` is likewise followed directly by
   `SubstitutionResultInboundProcessor`; the ignore check comes after it (`filterInventory`).
 - The router does not stop after an error recorded by deserialization or enrichment; later
   processors detect the failed state themselves (see the trap in

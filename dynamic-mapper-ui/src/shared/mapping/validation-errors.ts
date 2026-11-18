@@ -87,6 +87,10 @@ export const ValidationFormlyError = {
     message:
       gettext('At least one substitution has an empty source or target path. Both must be set.')
   },
+  Retired_Mapping_Type_Or_Transformation_Type: {
+    message:
+      gettext('This mapping uses a type that is no longer supported (PROTOBUF_INTERNAL or SUBSTITUTION_AS_CODE). Use Any Payload with a Smart Function or a Java extension, or a Smart Function.')
+  },
   Substitution_Expand_Array_Not_Supported_For_Outbound: {
     message:
       gettext('At least one substitution of this outbound mapping has "Expand as array" set. Outbound mappings produce exactly one message, so switch it off.')

@@ -27,7 +27,7 @@ import {
   ViewEncapsulation,
   viewChild
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType, JsonValue } from '../../shared';
+import { Mapping, Substitution, MappingType, SharedService, isSmartFunction, TransformationType, JsonValue } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -228,7 +228,7 @@ export class AiPromptComponent implements OnInit {
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
-    return isSubstitutionsAsCode(this.mapping);
+    return isSmartFunction(this.mapping);
   }
 
   async ngOnInit(): Promise<void> {

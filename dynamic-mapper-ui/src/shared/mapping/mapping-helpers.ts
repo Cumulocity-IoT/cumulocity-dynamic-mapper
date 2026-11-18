@@ -27,7 +27,7 @@ export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
 
 export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
   let pss;
-  if (isSubstitutionsAsCode(mapping)) {
+  if (isSmartFunction(mapping)) {
     pss = [getGenericDeviceIdentifier(mapping)];
   } else {
     pss = mapping.substitutions
@@ -109,8 +109,7 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
   }
 }
 
-export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  return mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
-    mapping.transformationType === TransformationType.SMART_FUNCTION;
+/** True for the transformation that is JavaScript code returning complete payloads. */
+export function isSmartFunction(mapping: Mapping): boolean {
+  return mapping.transformationType === TransformationType.SMART_FUNCTION;
 }

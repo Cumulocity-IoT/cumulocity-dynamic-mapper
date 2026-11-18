@@ -287,8 +287,7 @@ The editor is where D-8 actually happens. Whether a mapping is active or not, th
 configures the editor with `persistence: 'draft'`, and **Save** calls `saveDraft` rather than
 `PUT /mapping/{id}` (`MappingStepperService.commitMapping`), and only when the content actually
 changed. (`persistence: 'create'` is the stepper's — new and copied mappings are created, not
-drafted.) The configuration is also `readOnly` for deprecated `SUBSTITUTION_AS_CODE` mappings and
-for users without a manage role (`mappingEditResolver`). The success alert tells the user the edit is
+drafted.) The configuration is also `readOnly` for users without a manage role (`mappingEditResolver`). The success alert tells the user the edit is
 a draft and must be published + activated to take effect. The editor deliberately does
 **not** stamp `lastUpdate` itself, because that value is the optimistic-concurrency token
 that has to be echoed back unchanged.

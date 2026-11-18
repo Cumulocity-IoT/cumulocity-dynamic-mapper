@@ -683,18 +683,8 @@ export class MappingStepperService {
             codeTemplates, stepperConfiguration.direction, mapping.transformationType
         );
 
-        // Both help texts branch on SUBSTITUTION_AS_CODE vs. Smart Function for every caller —
-        // previously only the unified editor did this (the stepper hardcoded the Smart Function
-        // text), so a legacy SUBSTITUTION_AS_CODE mapping edited via the stepper showed the wrong
-        // help text. Fixed as part of this consolidation; see Phase 4 of the plan referenced above.
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
-        const isDeprecatedSubstitutionAsCode = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
-        const codeEditorHelp = isDeprecatedSubstitutionAsCode
-            ? gettext('JavaScript for creating substitutions...')
-            : gettext('JavaScript for creating complete payloads as Smart Functions.');
-        const codeEditorLabel = isDeprecatedSubstitutionAsCode
-            ? gettext('JavaScript callback for creating substitutions')
-            : gettext('JavaScript callback for Smart functions');
+        const codeEditorHelp = gettext('JavaScript for creating complete payloads as Smart Functions.');
+        const codeEditorLabel = gettext('JavaScript callback for Smart functions');
 
         const schemaSource = getSchema(mapping.targetAPI, mapping.direction, false, false);
         const schemaTarget = getSchema(mapping.targetAPI, mapping.direction, true, false);

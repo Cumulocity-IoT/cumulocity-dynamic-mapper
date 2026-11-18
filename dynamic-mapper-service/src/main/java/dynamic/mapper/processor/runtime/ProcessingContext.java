@@ -443,8 +443,7 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.getExtension() != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || mapping.isTransformationAsCode()) {
+        if (mapping.getExtension() != null || mapping.isTransformationAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
@@ -459,8 +458,7 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     public List<String> getPathsTargetForDeviceIdentifiers() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.getExtension() != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || mapping.isTransformationAsCode()) {
+        if (mapping.getExtension() != null || mapping.isTransformationAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();

@@ -29,12 +29,11 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 
 import dynamic.mapper.processor.extension.internal.InternalCustomAlarmOuter;
 import dynamic.mapper.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
-import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter.InternalCustomMeasurement;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Standalone MQTT test client that publishes Protobuf-encoded measurement and
- * alarm messages using the project's internal proto schemas.
+ * Standalone MQTT test client that publishes a Protobuf-encoded alarm message
+ * using the project's internal proto schema (handled by the InternalCustomAlarm Java extension).
  *
  * <h3>Environment variables</h3>
  * <pre>
@@ -105,37 +104,7 @@ public class ProtobufMqttTestClient {
         Mqtt3BlockingClient sampleClient = builder.buildBlocking();
 
         ProtobufMqttTestClient client = new ProtobufMqttTestClient(sampleClient);
-        client.testSendMeasurement();
         client.testSendAlarm();
-    }
-
-    // ── Measurement ────────────────────────────────────────────────────────
-
-    private void testSendMeasurement() {
-        String topic = "protobuf/measurement";
-        log.info("Connecting to {}://{}:{}", brokerSsl ? "ssl" : "tcp", brokerHost, brokerPort);
-        testClient.connect();
-
-        log.info("Publishing message on topic: {}", topic);
-
-        InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
-                .setExternalIdType("c8y_Serial")
-                .setExternalId("berlin_01")
-                .setUnit("C")
-                .setTimestamp(System.currentTimeMillis())
-                .setMeasurementType("c8y_GenericMeasurement")
-                .setValue(99.7F)
-                .build();
-
-        Mqtt3AsyncClient asyncClient = testClient.toAsync();
-        asyncClient.publishWith()
-                .topic(topic).qos(MqttQos.AT_LEAST_ONCE)
-                .payload(proto.toByteArray())
-                .send();
-
-        log.info("Message published");
-        testClient.disconnect();
-        log.info("Disconnected");
     }
 
     // ── Alarm ──────────────────────────────────────────────────────────────

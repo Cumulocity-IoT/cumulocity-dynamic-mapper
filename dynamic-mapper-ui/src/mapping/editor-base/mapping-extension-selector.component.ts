@@ -28,8 +28,7 @@ import { Mapping } from '../../shared';
 /**
  * Extension name / event / parameter selectors for the Select Templates step (stepper) and tab
  * (unified editor). One instance is rendered per side (source / target); the host decides via
- * {@link showSelectors} which side carries them. Also renders the PROTOBUF_INTERNAL note, which
- * replaces the template editor when the payload structure comes from the Protobuf schema.
+ * {@link showSelectors} which side carries them.
  *
  * `dataCyPrefix` keeps the data-cy attributes distinct per host (e2e selectors).
  */
@@ -45,7 +44,6 @@ export class MappingExtensionSelectorComponent {
   readonly side = input<'source' | 'target'>('source');
   readonly mapping = input.required<Mapping>();
   readonly showSelectors = input(false);
-  readonly showInternalNote = input(false);
   readonly isLoading = input(false);
   readonly hasParameter = input(false);
   readonly extensionItems = input<string[]>([]);

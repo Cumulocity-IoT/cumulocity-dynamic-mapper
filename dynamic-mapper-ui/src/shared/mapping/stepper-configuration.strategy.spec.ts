@@ -279,8 +279,8 @@ describe('StepperConfigurationResolver', () => {
       };
 
       const context: StepperConfigurationContext = {
-        mappingType: MappingType.PROTOBUF_INTERNAL,
-        transformationType: TransformationType.DEFAULT,
+        mappingType: MappingType.JSON,
+        transformationType: TransformationType.JSONATA,
         direction: Direction.INBOUND,
         persistence: 'create',
         substitutionsAsCode: false

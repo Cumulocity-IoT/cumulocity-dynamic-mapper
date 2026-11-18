@@ -117,15 +117,6 @@ describe('MappingCodeEditorSectionComponent', () => {
     fixture.detectChanges();
     expect(el().querySelectorAll('.btn-help--sm').length).toBe(0);
   });
-
-  it('shows the Protobuf note only when asked', () => {
-    fixture.detectChanges();
-    expect(el().textContent).not.toContain('No template to edit');
-
-    fixture.componentRef.setInput('showInternalNote', true);
-    fixture.detectChanges();
-    expect(el().textContent).toContain('No template to edit');
-  });
 });
 
 describe('MappingCodeEditorSectionComponent bound by a parent', () => {

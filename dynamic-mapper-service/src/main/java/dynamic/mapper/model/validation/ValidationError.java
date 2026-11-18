@@ -47,5 +47,6 @@ public enum ValidationError {
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type,
   Substitution_Source_Expression_Must_Be_Valid_JSONata,
   Substitution_Paths_Must_Not_Be_Empty,
-  Substitution_Expand_Array_Not_Supported_For_Outbound
+  Substitution_Expand_Array_Not_Supported_For_Outbound,
+  Retired_Mapping_Type_Or_Transformation_Type
 }

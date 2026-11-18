@@ -104,8 +104,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly EXPERT_MODE_EXCLUDED_TYPES: MappingType[] = [
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still shown for not-yet-migrated mappings
     MappingType.EXTENSION_JAVA,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    MappingType.PROTOBUF_INTERNAL,
   ];
 
   private readonly CODE_TEMPLATE_TYPES: TransformationType[] = [
@@ -437,7 +435,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (!option?.value) return false;
 
     const supported = this.getSupportedTransformationTypes(option.value);
-    // A single supported type (e.g. PROTOBUF_INTERNAL → DEFAULT) is auto-selected by
+    // A single supported type (e.g. SPARKPLUGB → SMART_FUNCTION) is auto-selected by
     // updateTransformationTypeOptions() and has nothing for the user to choose — hide the
     // selector rather than showing a forced, un-actionable dropdown.
     return supported.length > 1;

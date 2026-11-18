@@ -54,7 +54,6 @@ import dynamic.mapper.processor.inbound.processor.ExtensibleResultInboundProcess
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
@@ -116,7 +115,7 @@ class RouterMappingLogScopeTest {
         when(deserialization.process(any(), any(), any(), any(), anyBoolean())).thenThrow(new IllegalStateException("boom"));
         InboundMessageRouter router = new InboundMessageRouter(mock(ConnectorRegistry.class), mock(ExecutorService.class),
                 mock(ExtensibleInboundProcessor.class), mock(ExtensibleResultInboundProcessor.class),
-                mock(InternalProtobufProcessor.class), mock(EnrichmentInboundProcessor.class), mock(FlowInboundProcessor.class),
+                mock(EnrichmentInboundProcessor.class), mock(FlowInboundProcessor.class),
                 mock(SubstitutionResultInboundProcessor.class), deserialization, mock(JSONataInboundProcessor.class),
                 mock(FlowResultInboundProcessor.class), mock(FilterInboundProcessor.class), mock(SendInboundProcessor.class),
                 mock(ConsolidationProcessor.class));

@@ -19,7 +19,7 @@
  */
 import {
   getGenericDeviceIdentifier,
-  isSubstitutionsAsCode,
+  isSmartFunction,
   Mapping,
   SAMPLE_TEMPLATES_C8Y
 } from '../../shared';
@@ -54,7 +54,7 @@ export function buildReviewMessage(mapping: Mapping): string {
   const direction = mapping.direction ?? 'INBOUND';
   const targetAPI = mapping.targetAPI ?? '';
 
-  if (isSubstitutionsAsCode(mapping)) {
+  if (isSmartFunction(mapping)) {
     return `Review the existing ${direction} Smart Function` +
       (targetAPI ? ` (target: ${targetAPI})` : '') +
       " and suggest improvements.\n";
@@ -68,7 +68,7 @@ export function buildGenerateMessage(mapping: Mapping): string {
   const direction = mapping.direction ?? 'INBOUND';
   const targetAPI = mapping.targetAPI ?? '';
 
-  if (isSubstitutionsAsCode(mapping)) {
+  if (isSmartFunction(mapping)) {
     const isOutbound = direction === 'OUTBOUND';
     // Outbound Smart Functions never have a fixed targetTemplate — it is always "{}" by design,
     // because the function body itself defines whatever message structure the target broker/

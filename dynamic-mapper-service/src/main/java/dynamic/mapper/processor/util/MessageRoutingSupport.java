@@ -83,20 +83,6 @@ public abstract class MessageRoutingSupport {
     }
 
     /**
-     * Check if this is extension processing
-     */
-    protected boolean isInternalProtobuf(ProcessingContext<?> context) {
-        try {
-            return context != null &&
-                    context.getMapping() != null &&
-                    (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
-        } catch (Exception e) {
-            log.warn("Error checking extension: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Check if the mapping uses flow function transformation
      */
     protected boolean isFlowFunction(ProcessingContext<?> context) {

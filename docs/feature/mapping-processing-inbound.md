@@ -46,10 +46,10 @@ the mappings the tenant configured.
 | Entry point | [`InboundMessageDispatcher`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageDispatcher.java) | Implements `GenericMessageCallback`; every connector calls `onMessage()` (live) or `onTestMessage()` (Dry Run / Live Test) with a `ConnectorMessage`. |
 | Router | [`InboundMessageRouter`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageRouter.java) | Keeps only the valid mappings (active and deployed on the originating connector), then calls the processor beans below, in order, for each of them — inline for one mapping, one virtual thread per mapping for several. |
 | Deserialize | [`DeserializationInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/DeserializationInboundProcessor.java) | Picks a `PayloadDeserializer` by `MappingType` and builds the `ProcessingContext` (carrying an error instead of throwing when deserialization fails). |
-| Enrich | [`EnrichmentInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/EnrichmentInboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Counts the message on the mapping status (`messagesReceived`). For JSONata and internal-protobuf mappings with a JSON object payload it injects `_TOPIC_LEVEL_` (and `_CONTEXT_DATA_`, only when the broker message has a key or the mapping creates attachments). For `SMART_FUNCTION` mappings with `code` it borrows a pooled GraalVM context, loads the persisted Smart Function state (a throw-away copy for test runs) and builds the read-only config. `EXTENSION_JAVA` mappings get neither payload injection nor a GraalVM context. |
+| Enrich | [`EnrichmentInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/EnrichmentInboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Counts the message on the mapping status (`messagesReceived`). For JSONata mappings with a JSON object payload it injects `_TOPIC_LEVEL_` (and `_CONTEXT_DATA_`, only when the broker message has a key or the mapping creates attachments). For `SMART_FUNCTION` mappings with `code` it borrows a pooled GraalVM context, loads the persisted Smart Function state (a throw-away copy for test runs) and builds the read-only config. `EXTENSION_JAVA` mappings get neither payload injection nor a GraalVM context. |
 | Filter | [`FilterInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/FilterInboundProcessor.java) | Evaluates `mapping.getFilterMapping()` (a JSONata boolean expression) against the deserialized payload; inbound-only, no equivalent on the outbound route. |
-| Transform (dispatch) | `InboundMessageRouter.processSingleInboundMapping()` if/else chain (predicates in [`MessageRoutingSupport`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/MessageRoutingSupport.java)) | Calls one of `processInternalProtobuf` / `processExtension` / `processJSONataExtraction` / `processFlowFunction` based on `mapping.getMappingType()`/`getTransformationType()`; unmatched types log a warning and fall back to JSONata. |
-| Substitute | [`SubstitutionResultInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java) | Applies cached `SubstituteValue`s to `targetTemplate`, resolves `_IDENTITY_.*` (except for the INVENTORY API, where `SendInboundProcessor` resolves it), builds one `DynamicMapperRequest` per device (cardinality), evaluates `filterInventory`. Used by the JSONata and internal-protobuf branches; Smart Function and extension results are turned into requests by `FlowResultInboundProcessor` and `ExtensibleResultInboundProcessor`. |
+| Transform (dispatch) | `InboundMessageRouter.processSingleInboundMapping()` if/else chain (predicates in [`MessageRoutingSupport`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/MessageRoutingSupport.java)) | Calls one of `processExtension` / `processJSONataExtraction` / `processFlowFunction` based on `mapping.getMappingType()`/`getTransformationType()`; unmatched types log a warning and fall back to JSONata. |
+| Substitute | [`SubstitutionResultInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java) | Applies cached `SubstituteValue`s to `targetTemplate`, resolves `_IDENTITY_.*` (except for the INVENTORY API, where `SendInboundProcessor` resolves it), builds one `DynamicMapperRequest` per device (cardinality), evaluates `filterInventory`. Used by the JSONata branch; Smart Function and extension results are turned into requests by `FlowResultInboundProcessor` and `ExtensibleResultInboundProcessor`. |
 | Send | [`SendInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SendInboundProcessor.java) | Resolves external IDs to C8Y source IDs, upserts devices, calls `C8YAgent.createMEAO` (only when the context has `sendPayload` set, so a Dry Run builds requests without sending them), merges multiple MEASUREMENT requests into one bulk request, creates processing alarms (skipped for test runs), handles SparkPlug B birth/active-state bookkeeping. |
 | Cleanup | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Called before every terminal return of a single mapping's pipeline: clears the mapping's consecutive-failure streak on a clean run, books the outcome (processed / filtered / failed) on the mapping status, and closes the context's GraalVM resources (idempotent — the one point every mapping passes through, including early exits). Status updates are skipped for test runs (`affectsMappingStatus()`). The name is historical. |
 
@@ -231,17 +231,14 @@ used by the inbound and outbound routers). Its method chain is:
 - `processSingleInboundMapping()` — the common prefix for every mapping: Deserialization →
   Enrichment → Filter. If `shouldIgnoreFurtherProcessing` is set after that, it calls
   `ConsolidationProcessor` and returns. Otherwise it branches on the first matching predicate:
-  1. `processInternalProtobuf` (`MappingType.PROTOBUF_INTERNAL`)
-  2. `processExtension` (`TransformationType.EXTENSION_JAVA` and an extension configured)
-  3. `processJSONataExtraction` (JSONata, default, or no transformation type)
-  4. `processFlowFunction` (`TransformationType.SMART_FUNCTION`)
-  5. anything else logs a warning and falls back to `processJSONataExtraction`.
-- The four branch methods each end with `ConsolidationProcessor`. They check
+  1. `processExtension` (`TransformationType.EXTENSION_JAVA` and an extension configured)
+  2. `processJSONataExtraction` (JSONata, default, or no transformation type)
+  3. `processFlowFunction` (`TransformationType.SMART_FUNCTION`)
+  4. anything else logs a warning and falls back to `processJSONataExtraction`.
+- The three branch methods each end with `ConsolidationProcessor`. They check
   `shouldIgnoreFurtherProcessing` only at the points listed below (consolidating and returning
   early when set); the processor after `FlowResultInboundProcessor`, and the substitution
-  processor after the JSONata or protobuf extraction, always run:
-  - `processInternalProtobuf`: `InternalProtobufProcessor` → `SubstitutionResultInboundProcessor` →
-    (ignore check) → `SendInboundProcessor`
+  processor after the JSONata extraction, always run:
   - `processExtension`: `ExtensibleInboundProcessor` → (ignore check) →
     `ExtensibleResultInboundProcessor` → (ignore check) → `SendInboundProcessor`
   - `processJSONataExtraction`: `JSONataInboundProcessor` → `SubstitutionResultInboundProcessor` →
@@ -312,7 +309,7 @@ on `ConsolidationProcessor`, which does this on every pipeline exit).
 Runs once, right after enrichment, only for inbound. It evaluates `mapping.getFilterMapping()`
 (a JSONata boolean expression) against the deserialized payload
 ([`FilterInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/FilterInboundProcessor.java)).
-Mappings with a raw `byte[]` payload (`ANY_PAYLOAD`, `PROTOBUF_INTERNAL`) skip this filter, since
+Mappings with a raw `byte[]` payload (`ANY_PAYLOAD`) skip this filter, since
 JSONata cannot evaluate raw bytes; an extension can still set `ignoreFurtherProcessing` itself.
 A falsy result, or an expression that fails to evaluate, both set
 `context.setIgnoreFurtherProcessing(true)` (with a warning on the context) — filter evaluation errors fail closed (the
@@ -325,21 +322,20 @@ filters.
 
 ### Transformation dispatch
 
-The four transformation paths are documented individually — this page only covers how the
+The three transformation paths are documented individually — this page only covers how the
 router selects and sequences them:
 
 - [`transformation-jsonata.md`](transformation-jsonata.md) — JSONata substitutions (default).
 - [`transformation-smart-functions.md`](transformation-smart-functions.md) — GraalVM-sandboxed JavaScript (`TransformationType.SMART_FUNCTION`).
 - [`transformation-java-extensions.md`](transformation-java-extensions.md) — Java `ProcessorExtensionInbound<O>` plugins (`TransformationType.EXTENSION_JAVA`).
 
-`MappingType.PROTOBUF_INTERNAL` is handled by `InternalProtobufProcessor` (using
-`BytePayloadDeserializer`) directly in the router (`processInternalProtobuf`) and is not one of the three
-pluggable transformation types above. `MappingType.SPARKPLUGB` is a separate mapping
+`MappingType.PROTOBUF_INTERNAL` and `TransformationType.SUBSTITUTION_AS_CODE` are retired: such a
+mapping is not loaded (`MappingRepository` reports it in the service events) and cannot be created,
+updated or activated (`validateNotRetired`). Protobuf payloads are decoded with `ANY_PAYLOAD` and a
+Smart Function or a Java extension. `MappingType.SPARKPLUGB` is a separate mapping
 type with its own dedicated codec (`SparkPlugBDeserializer`/`SparkPlugBSerializer`,
 forced `SMART_FUNCTION` transformation per [mapping-validation.md](mapping-validation.md)
-rule 4) — despite Sparkplug B also being protobuf-encoded on the wire, it is not routed
-through `InternalProtobufProcessor`/`PROTOBUF_INTERNAL` and the two should not be
-conflated.
+rule 4) — it also decodes a protobuf payload, with its own codec.
 
 ### Substitution and identity resolution
 

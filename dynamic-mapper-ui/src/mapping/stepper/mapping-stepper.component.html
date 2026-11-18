@@ -100,7 +100,7 @@
         @if (stepperViewModel?.showExtensionSelectors) {
         <ng-container extensionSource>
           <d11r-mapping-extension-selector side="source" dataCyPrefix="dm-mapping-stepper" [form]="templateForm" [mapping]="mapping"
-            [showSelectors]="stepperViewModel?.showExtensionSelectorsSource" [showInternalNote]="stepperViewModel?.showInternalExtensionNote"
+            [showSelectors]="stepperViewModel?.showExtensionSelectorsSource"
             [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
             [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
         </ng-container>
@@ -108,7 +108,7 @@
         @if (stepperViewModel?.showExtensionSelectors) {
         <ng-container extensionTarget>
           <d11r-mapping-extension-selector side="target" dataCyPrefix="dm-mapping-stepper" [form]="templateForm" [mapping]="mapping"
-            [showSelectors]="stepperViewModel?.showExtensionSelectorsTarget" [showInternalNote]="stepperViewModel?.showInternalExtensionNote"
+            [showSelectors]="stepperViewModel?.showExtensionSelectorsTarget"
             [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
             [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
         </ng-container>
@@ -138,7 +138,7 @@
             [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event" (replaceCode)="onSelectCodeTemplate()"
             (createTemplate)="onCreateCodeTemplate()" [aiButtonLabel]="aiButtonLabel" [aiGenerationDisabled]="aiGenerationDisabled"
             [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" (generate)="openGenerateSubstitutionDrawer()"
-            [showInternalNote]="stepperViewModel?.showInternalExtensionNote" (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>
+            (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>
         </ng-container>
         }
       </d11r-mapping-transformation-step>

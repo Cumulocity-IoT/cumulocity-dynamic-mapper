@@ -37,7 +37,7 @@ import {
   Direction,
   ExtensionEntry,
   Feature,
-  isSubstitutionsAsCode,
+  isSmartFunction,
   Mapping,
   MappingEnriched,
   MappingType,
@@ -286,12 +286,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
   }
 
-  private isDeprecatedMapping(row: unknown): boolean {
-    const item = row as MappingEnriched;
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- detecting the legacy type is the whole point of this check
-    return item.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
-  }
-
   private setupActionControls() {
     this.actionControls.push(
       {
@@ -299,27 +293,20 @@ export class MappingComponent implements OnInit, OnDestroy {
         // to the running configuration until published and activated.
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item),
+        showIf: item => this.canManageMappings,
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: item => !this.canManageMappings && !this.isDeprecatedMapping(item)
-      },
-      {
-        type: 'VIEW_DEPRECATED',
-        text: gettext('View (deprecated)'),
-        icon: 'eye',
-        callback: this.updateMapping.bind(this),
-        showIf: item => this.isDeprecatedMapping(item)
+        showIf: () => !this.canManageMappings
       },
       {
         text: gettext('Duplicate'),
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
-        showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item)
+        showIf: () => this.canManageMappings
       },
       {
         // Only offered when there is actually something to publish. Publishing otherwise lives
@@ -330,14 +317,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'upload',
         callback: this.publishDraft.bind(this),
         showIf: item => !!item['mapping']['draftDirty'] && this.canManageMappings
-          && !this.isDeprecatedMapping(item)
       },
       {
         text: gettext('Versions'),
         type: 'VERSIONS',
         icon: 'list',
-        callback: this.openVersions.bind(this),
-        showIf: item => !this.isDeprecatedMapping(item)
+        callback: this.openVersions.bind(this)
       },
       {
         type: BuiltInActionType.Delete,
@@ -349,14 +334,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: gettext('Enable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => !item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
+        showIf: item => !item['mapping']['debug'] && this.canManageMappings
       },
       {
         type: 'DISABLE_DEBUG',
         text: gettext('Disable debugging'),
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
+        showIf: item => item['mapping']['debug'] && this.canManageMappings
       },
       {
         type: 'EXPORT',
@@ -529,7 +514,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.transformationType,
       mapping.direction,
       'create',
-      isSubstitutionsAsCode(mapping),
+      isSmartFunction(mapping),
       true
     );
     // create deep copy of existing mapping, in case user cancels changes

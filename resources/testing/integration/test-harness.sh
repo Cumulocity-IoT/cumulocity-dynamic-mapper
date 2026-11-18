@@ -1040,9 +1040,9 @@ dm_normalize_mapping_payload() {   # <json_body>
 
     _normalized="$_raw"
 
-    # Backward compatibility: BINARY was removed, use PROTOBUF_INTERNAL.
+    # Backward compatibility: BINARY was removed, use ANY_PAYLOAD (PROTOBUF_INTERNAL is retired too).
     _normalized=$(printf '%s' "$_normalized" | jq -c '
-        if .mappingType == "BINARY" then .mappingType = "PROTOBUF_INTERNAL" else . end
+        if .mappingType == "BINARY" or .mappingType == "PROTOBUF_INTERNAL" then .mappingType = "ANY_PAYLOAD" else . end
     ' 2>/dev/null || printf '%s' "$_normalized")
 
     # Backward compatibility: processorExtensionName -> extension object.

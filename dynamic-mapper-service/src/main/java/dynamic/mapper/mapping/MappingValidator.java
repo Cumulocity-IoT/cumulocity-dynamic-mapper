@@ -79,6 +79,7 @@ public class MappingValidator {
             issues.addAll(validateSubstitutionExpressions(mapping));
 
             List<ValidationError> errors = new ArrayList<>();
+            errors.addAll(validateNotRetired(mapping));
             errors.addAll(validateSubstitutions(mapping));
             errors.addAll(validateTransformationType(mapping));
             errors.addAll(validateTopics(mapping));
@@ -95,6 +96,16 @@ public class MappingValidator {
 
             return issues;
         });
+    }
+
+    /**
+     * Rejects the retired types, so a mapping that the loader would refuse to load cannot be
+     * created, updated or activated through the API either.
+     */
+    public List<ValidationError> validateNotRetired(Mapping mapping) {
+        return Mapping.isRetired(mapping)
+                ? List.of(ValidationError.Retired_Mapping_Type_Or_Transformation_Type)
+                : List.of();
     }
 
     private Collection<? extends ValidationError> validateTransformationType(Mapping mapping) {
@@ -122,8 +133,7 @@ public class MappingValidator {
                 .count();
 
         // Skip device identifier validation for certain mapping types and conditions
-        boolean skipDeviceIdentifierValidation = mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
-                mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
+        boolean skipDeviceIdentifierValidation = mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION;
@@ -410,7 +420,6 @@ public class MappingValidator {
 
         // Validate target template (skip for certain mapping types)
         boolean skipTargetValidation = mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
-                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getMappingType() == MappingType.SPARKPLUGB;
 

@@ -79,7 +79,6 @@ import dynamic.mapper.processor.inbound.processor.ExtensibleResultInboundProcess
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
@@ -166,7 +165,6 @@ class MessageDeduplicationIntegrationTest {
                 virtualThreadPool,
                 mock(ExtensibleInboundProcessor.class),
                 mock(ExtensibleResultInboundProcessor.class),
-                mock(InternalProtobufProcessor.class),
                 new EnrichmentInboundProcessor(serviceRegistry, mappingService, mock(FlowStateStore.class)),
                 mock(FlowInboundProcessor.class),
                 new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null, null),

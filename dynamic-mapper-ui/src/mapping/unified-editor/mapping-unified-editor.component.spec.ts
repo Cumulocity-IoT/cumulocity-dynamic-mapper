@@ -346,14 +346,6 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
     });
 
-    it('opens on the General-settings tab for a PROTOBUF_INTERNAL mapping', async () => {
-      activatedRoute.snapshot.data['mappingEdit'].mapping = buildMapping({
-        mappingType: MappingType.PROTOBUF_INTERNAL
-      });
-      await initEditor(component);
-      expect(component.currentStepIndex).toBe(TAB_GENERAL_SETTINGS);
-    });
-
     // The real bootstrap logic (view model, systems, schemas, read-only gating, code-editor help
     // text, ...) moved into MappingStepperService.initializeEditorSession() (Phase 4) and is unit
     // tested directly there (mapping-commit.service.spec.ts). These tests only verify the
@@ -467,11 +459,6 @@ describe('MappingUnifiedEditorComponent', () => {
       });
     });
 
-    it('hides the Testing tab for deprecated SUBSTITUTION_AS_CODE mappings', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
-      component.stepperConfiguration = buildConfig();
-      expect(component.isTabVisible(TAB_TEST_MAPPING)).toBe(false);
-    });
   });
 
   // configurationToYaml/yamlToConfiguration moved to mapping/shared/util.ts (shared with

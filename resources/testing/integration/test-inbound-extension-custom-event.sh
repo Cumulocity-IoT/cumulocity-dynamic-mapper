@@ -53,7 +53,7 @@ MAPPING_JSON=$(jq -cn \
       mappingTopicSample: ("dmtest/ext/event/" + $extId),
       targetAPI: "EVENT",
       direction: "INBOUND",
-      mappingType: "PROTOBUF_INTERNAL",
+      mappingType: "ANY_PAYLOAD",
       transformationType: "EXTENSION_JAVA",
       extension: $extension,
       sourceTemplate: "{}",

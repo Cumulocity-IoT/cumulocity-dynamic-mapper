@@ -77,7 +77,6 @@ A Cumulocity web plugin providing a full UI for:
 | `JSON` | Standard JSON payload (default) |
 | `FLAT_FILE` | Delimited flat-file payloads |
 | `HEX` | Raw hexadecimal byte payloads |
-| `PROTOBUF_INTERNAL` | Protobuf-encoded payloads |
 | `SPARKPLUGB` | SparkPlug B payloads over MQTT |
 | `ANY_PAYLOAD` | Generic binary/text, processed entirely by an extension or Smart Function |
 | `CODE_BASED` | Payload handled by a code-based (JavaScript) transformation *(legacy — creation disabled since v6.2, superseded by Smart Functions)* |

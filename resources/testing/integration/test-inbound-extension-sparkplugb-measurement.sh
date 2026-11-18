@@ -53,7 +53,7 @@ MAPPING_JSON=$(jq -cn \
       mappingTopicSample: ("spBv1.0/group1/NDATA/edgenode1/" + $extId),
       targetAPI: "MEASUREMENT",
       direction: "INBOUND",
-      mappingType: "PROTOBUF_INTERNAL",
+      mappingType: "ANY_PAYLOAD",
       transformationType: "EXTENSION_JAVA",
       extension: $extension,
       sourceTemplate: "{}",

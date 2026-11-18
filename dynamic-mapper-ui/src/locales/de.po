@@ -684,9 +684,6 @@ msgstr ""
 msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
 msgstr ""
 
-msgid "Deprecated mapping type"
-msgstr ""
-
 msgid "Details & logs"
 msgstr ""
 
@@ -1387,9 +1384,6 @@ msgstr ""
 msgid "Java Extension"
 msgstr ""
 
-msgid "JavaScript callback for creating substitutions"
-msgstr ""
-
 msgid "JavaScript callback for Smart functions"
 msgstr ""
 
@@ -1400,9 +1394,6 @@ msgid "JavaScript engine (advanced)"
 msgstr ""
 
 msgid "JavaScript for creating complete payloads as Smart Functions."
-msgstr ""
-
-msgid "JavaScript for creating substitutions..."
 msgstr ""
 
 msgid "JSONata"
@@ -1610,9 +1601,6 @@ msgid "Mapping handles payloads in JSON format."
 msgstr ""
 
 msgid "Mapping name"
-msgstr ""
-
-msgid "Mapping parses payloads in PROTOBUF format by an internal extension."
 msgstr ""
 
 msgid "Mapping processing failures and errors"
@@ -1858,9 +1846,6 @@ msgid "No substitutions yet"
 msgstr ""
 
 msgid "No target template"
-msgstr ""
-
-msgid "No template to edit — the payload structure comes from the Protobuf schema in the selected extension."
 msgstr ""
 
 msgid "No test devices exist."
@@ -2882,7 +2867,7 @@ msgstr ""
 msgid "This mapping has unpublished draft changes"
 msgstr ""
 
-msgid "This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>."
+msgid "This mapping uses a type that is no longer supported (PROTOBUF_INTERNAL or SUBSTITUTION_AS_CODE). Use Any Payload with a Smart Function or a Java extension, or a Smart Function."
 msgstr ""
 
 msgid "This payload format requires the Smart Function transformation type."
@@ -3024,9 +3009,6 @@ msgid "Versioning mappings"
 msgstr ""
 
 msgid "Versions of"
-msgstr ""
-
-msgid "View (deprecated)"
 msgstr ""
 
 msgid "View Code"

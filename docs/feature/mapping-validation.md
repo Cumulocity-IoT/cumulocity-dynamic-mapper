@@ -92,6 +92,15 @@ single joined toast that closed the editor and discarded the work.
 
 ### Rules that apply to both directions
 
+#### 0. Retired types are rejected
+
+`MappingType.PROTOBUF_INTERNAL` and `TransformationType.SUBSTITUTION_AS_CODE` are no longer supported
+(`validateNotRetired`, error code `Retired_Mapping_Type_Or_Transformation_Type`). A mapping of such a
+type that already exists is not loaded at all: `MappingRepository` skips it and reports it once per
+managed object in the service events, naming the mapping and its managed object. Create a replacement
+(`ANY_PAYLOAD` with a Smart Function or a Java extension for Protobuf; a Smart Function for
+Substitution as Code), then delete the old managed object.
+
 #### 1. Source/target templates must be valid JSON
 
 - `sourceTemplate` must always parse as valid JSON. "Valid" is the lenient `org.json`
@@ -99,8 +108,8 @@ single joined toast that closed the editor and discarded the work.
   after the first value (`{"a":1} garbage`) and a bare word or number (`not json at all`, `42`).
   Unclosed objects and arrays, and empty or `null` templates, are rejected.
 - `targetTemplate` must parse as valid JSON **unless** the mapping is
-  `TransformationType.EXTENSION_JAVA`, or `MappingType` is `PROTOBUF_INTERNAL`,
-  `ANY_PAYLOAD`, or `SPARKPLUGB` (these produce/consume non-JSON or externally-defined
+  `TransformationType.EXTENSION_JAVA`, or `MappingType` is
+  `ANY_PAYLOAD` or `SPARKPLUGB` (these produce/consume non-JSON or externally-defined
   shapes, so the check is skipped).
 
 | Error code | Example (fails) | Example (passes) |
@@ -147,8 +156,8 @@ for OUTBOUND: `pathSource`) contains the token `_IDENTITY_.externalId` or
 `_IDENTITY_.c8ySourceId` as a whole word (`Mapping.definesDeviceIdentifier`; a longer name that
 merely starts with the token does not count).
 
-This check is **skipped entirely** when `mappingType` is `PROTOBUF_INTERNAL`,
-`ANY_PAYLOAD`, or `SPARKPLUGB`, or when `transformationType` is `EXTENSION_JAVA` or
+This check is **skipped entirely** when `mappingType` is
+`ANY_PAYLOAD` or `SPARKPLUGB`, or when `transformationType` is `EXTENSION_JAVA` or
 `SMART_FUNCTION` — those either resolve identity themselves in code, or have no
 substitution list to check.
 

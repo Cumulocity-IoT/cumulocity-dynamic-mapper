@@ -49,8 +49,6 @@ export const MappingTypeLabels = {
   [MappingType.JSON]: 'JSON Payload',
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload (deprecated — use Any Payload)',
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
   [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
@@ -79,7 +77,6 @@ const BASE_STEPPER_CONFIGURATION: StepperConfiguration = {
   allowDefiningSubstitutions: true,
   showProcessorExtensionsSource: false,
   showProcessorExtensionsTarget: false,
-  showProcessorExtensionsInternal: false,
   allowTestTransformation: true,
   allowTestSending: true,
   allowTemplateExpansion: false,
@@ -153,26 +150,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     },
     // HEX uses same config as JSON (no overrides needed)
     stepperConfiguration: createStepperConfig({})
-  },
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-  [MappingType.PROTOBUF_INTERNAL]: {
-    // Deprecated: not offered when creating a mapping, but still rendered for existing ones.
-    enabled: false,
-    description: gettext('Mapping parses payloads in PROTOBUF format by an internal extension.'),
-    transformationTypes: {
-      // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      [Direction.INBOUND]: [TransformationType.DEFAULT],
-      // Direction not supported
-      [Direction.OUTBOUND]: [],
-    },
-    // PROTOBUF has significant differences: only specify what changes from base
-    stepperConfiguration: createStepperConfig({
-      ...CODE_DRIVEN_STEPPER_CONFIGURATION,
-      showProcessorExtensionsInternal: true,
-      allowTestTransformation: false,
-      allowTestSending: false
-    })
   },
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: {

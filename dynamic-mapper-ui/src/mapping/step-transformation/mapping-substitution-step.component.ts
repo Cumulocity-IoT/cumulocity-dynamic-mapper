@@ -55,7 +55,7 @@ import {
   Mapping,
   StepperConfiguration,
   Feature,
-  isSubstitutionsAsCode,
+  isSmartFunction,
   JsonSchema,
   RepairStrategy,
   Substitution,
@@ -726,7 +726,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     try {
       const resultOf = await drawer.instance.result;
 
-      if (isSubstitutionsAsCode(this.mapping())) {
+      if (isSmartFunction(this.mapping())) {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
         } else {

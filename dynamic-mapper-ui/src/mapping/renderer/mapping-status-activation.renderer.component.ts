@@ -24,7 +24,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
+import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService } from '../../shared';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
@@ -72,11 +72,6 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   ) {}
 
   get canEdit(): boolean {
-    const mapping = this.context.item?.['mapping'];
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are read-only; this is the check that enforces it
-    if (mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
-      return false;
-    }
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 

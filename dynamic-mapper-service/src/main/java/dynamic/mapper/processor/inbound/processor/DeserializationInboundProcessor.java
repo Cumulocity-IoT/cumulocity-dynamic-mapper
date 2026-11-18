@@ -58,7 +58,6 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         deserializers.put(MappingType.JSON, new JSONPayloadDeserializer());
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
-        deserializers.put(MappingType.PROTOBUF_INTERNAL, new BytePayloadDeserializer());
         deserializers.put(MappingType.ANY_PAYLOAD, new BytePayloadDeserializer());
         // SparkPlugBDeserializer is a Spring bean (needs C8YAgent); registered here now that
         // it is provided via constructor injection.
@@ -73,8 +72,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     @SuppressWarnings("unchecked")
     public ProcessingContext<?> process(String tenant, Mapping mapping, ConnectorMessage connectorMessage,
             ServiceConfiguration serviceConfiguration, Boolean testing) throws Exception {
-        if (MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())) {
+        if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())) {
             ProcessingContext<byte[]> context = createProcessingContextAsByteArray(tenant, mapping, connectorMessage,
                     serviceConfiguration, testing);
 

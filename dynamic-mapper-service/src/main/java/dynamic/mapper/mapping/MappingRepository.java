@@ -89,6 +89,11 @@ public class MappingRepository {
             }
             mapping.setId(mappingMO.getId());
 
+            if (Mapping.isRetired(mapping)) {
+                log.debug("{} - {}", tenant, retiredMappingMessage(mapping, mappingMO.getId()));
+                return Optional.empty();
+            }
+
             log.debug("{} - Found mapping: {}", tenant, mapping.getId());
             return Optional.of(mapping);
 
@@ -140,6 +145,10 @@ public class MappingRepository {
      * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
     public Mapping prepareForCreate(String tenant, Mapping mapping) {
+        if (Mapping.isRetired(mapping)) {
+            throw new IllegalArgumentException(String.format(
+                    "Tenant %s - mapping %s uses a retired mapping type or transformation type", tenant, mapping.getName()));
+        }
         // Normalize deprecated mappingType/transformationType combinations in memory
         // before persisting. The MO is not yet known, so no notification is emitted.
         migrateMapping(tenant, mapping, null);
@@ -159,6 +168,10 @@ public class MappingRepository {
      */
     public Mapping prepareForUpdate(String tenant, Mapping mapping,
             boolean allowUpdateWhenActive, boolean ignoreValidation) {
+        if (Mapping.isRetired(mapping)) {
+            throw new IllegalArgumentException(String.format(
+                    "Tenant %s - mapping %s uses a retired mapping type or transformation type", tenant, mapping.getName()));
+        }
         // Validation happens in service layer
         if (!allowUpdateWhenActive && mapping.getActive()) {
             throw new IllegalStateException(
@@ -228,19 +241,6 @@ public class MappingRepository {
                     moId), MigrationNotice.LOADING_ERROR);
         }
 
-        // Deactivate mappings using the removed SUBSTITUTION_AS_CODE transformation type.
-        // These are read-only (export/delete only) in the UI and can no longer be processed,
-        // so an active flag on one is stale/unsafe and must be cleared on load.
-        if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())
-                && Boolean.TRUE.equals(mapping.getActive())) {
-            log.info("{} - Deactivating mapping {} ({}): uses removed SUBSTITUTION_AS_CODE transformation type",
-                    tenant, moId, mapping.getName());
-            mapping.setActive(false);
-            return new Migration(String.format(
-                    "Mapping %s [%s] was automatically deactivated: transformationType SUBSTITUTION_AS_CODE is no longer supported",
-                    mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
-        }
-
         // Migrate legacy mappings without transformationType, or using the deprecated DEFAULT
         // transformation, to JSONATA. DEFAULT and JSONATA are processed by the identical
         // extraction path (see DynamicMapperBaseRoutes#isJSONataExtraction), so this is a
@@ -300,6 +300,18 @@ public class MappingRepository {
                 return LoadResult.skip(mo, null);
             }
             mapping.setId(mappingMO.getId());
+
+            // Retired types are neither migrated nor loaded: they would only be processed by the
+            // JSONata fallback and fail for every message. The service events name them instead.
+            if (Mapping.isRetired(mapping)) {
+                String errorMsg = retiredMappingMessage(mapping, moId(mo));
+                if (reportedLoadingWarnings.add(tenant + ":" + moId(mo))) {
+                    log.warn("{} - {}", tenant, errorMsg);
+                    return LoadResult.exclude(mapping, mo, null, errorMsg);
+                }
+                log.debug("{} - {}", tenant, errorMsg);
+                return LoadResult.exclude(mapping, mo, null, null);
+            }
 
             Migration migration = migrateMapping(tenant, mapping, mo);
 
@@ -362,6 +374,17 @@ public class MappingRepository {
 
     private static String moId(ManagedObjectRepresentation mo) {
         return mo != null && mo.getId() != null ? mo.getId().getValue() : "unknown";
+    }
+
+    @SuppressWarnings({"deprecation", "removal"})
+    private static String retiredMappingMessage(Mapping mapping, String moId) {
+        String what = MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                ? "mappingType PROTOBUF_INTERNAL (use ANY_PAYLOAD with a Smart Function or a Java extension)"
+                : "transformationType SUBSTITUTION_AS_CODE (use a Smart Function)";
+        return String.format(
+                "Mapping %s [%s] was not loaded: %s is no longer supported. Recreate it with the replacement, "
+                        + "then delete the old mapping (managed object %s).",
+                mapping.getName(), mapping.getIdentifier(), what, moId);
     }
 
     /** How a migration announces itself once persisted. */

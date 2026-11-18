@@ -26,7 +26,7 @@ import java.io.IOException;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 
-/** Keeps the broker payload as raw bytes (ANY_PAYLOAD, PROTOBUF_INTERNAL). */
+/** Keeps the broker payload as raw bytes (ANY_PAYLOAD). */
 public class BytePayloadDeserializer implements PayloadDeserializer<byte[]> {
 
     @Override

@@ -54,7 +54,6 @@ export interface StepperViewModel {
   /**
    * Show internal extension note
    */
-  readonly showInternalExtensionNote: boolean;
 
   /**
    * Show filter controls and expression
@@ -91,15 +90,13 @@ export interface StepperViewModel {
 export function createStepperViewModel(config: StepperConfiguration): StepperViewModel {
   const showExtensionSelectorsSource = config.showProcessorExtensionsSource || false;
   const showExtensionSelectorsTarget = config.showProcessorExtensionsTarget || false;
-  const showInternalExtensionNote = config.showProcessorExtensionsInternal || false;
 
   const showExtensionSelectors =
-    showExtensionSelectorsSource || showExtensionSelectorsTarget || showInternalExtensionNote;
+    showExtensionSelectorsSource || showExtensionSelectorsTarget;
 
   const showTargetContent =
     config.showEditorTarget ||
     showExtensionSelectorsTarget ||
-    showInternalExtensionNote ||
     false;
 
   return {
@@ -110,7 +107,6 @@ export function createStepperViewModel(config: StepperConfiguration): StepperVie
     showExtensionSelectors,
     showExtensionSelectorsSource,
     showExtensionSelectorsTarget,
-    showInternalExtensionNote,
     showFilterControls: config.showFilterExpression !== false,
     showCodeEditorSection: config.showCodeEditor || false,
     showTargetContent,

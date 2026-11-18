@@ -42,7 +42,7 @@ public class JavaScriptConsole {
         this.mapping = mapping;
     }
 
-    /** Used by SUBSTITUTION_AS_CODE — routes messages directly to a log list or any Consumer. */
+    /** Routes messages directly to a log list or any Consumer. */
     public JavaScriptConsole(Consumer<String> logSink, String tenant, Mapping mapping) {
         this.logSink = logSink;
         this.tenant = tenant;

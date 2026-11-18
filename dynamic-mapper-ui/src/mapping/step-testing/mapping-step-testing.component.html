@@ -66,10 +66,10 @@
           </d11r-mapping-json-editor>
         </div>
       </div>
-      @if (mapping().direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping())) {
+      @if (mapping().direction !== Direction.OUTBOUND && !isSmartFunction(mapping())) {
       <hr />
       }
-      @if (mapping().direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping())) {
+      @if (mapping().direction !== Direction.OUTBOUND && !isSmartFunction(mapping())) {
       <!-- Collapsible response header -->
       <div class="d-flex a-i-center p-t-4 p-b-4">
         <button type="button" class="btn-clean d-flex a-i-center" data-cy="dm-mapping-test-response-toggle"
@@ -162,7 +162,7 @@
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-transform" (click)="onTestTransformation()"
         [title]="dryRunTitle | translate"
         [disabled]="!stepperConfiguration().allowTestTransformation || (testingModel.results.length > 0) || isLoading">
-        @if (runningTest === 'dryRun' && !isSubstitutionsAsCode(mapping()) && !requiresRawPayload()) {
+        @if (runningTest === 'dryRun' && !isSmartFunction(mapping()) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
         {{ 'Dry Run' | translate }}
@@ -184,7 +184,7 @@
       <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send"
         [disabled]="disableTestSending() || isLoading" (click)="onSendTest()"
         [title]="(liveTestDisabledReason ?? liveTestTitle) | translate">
-        @if (runningTest === 'liveTest' && !isSubstitutionsAsCode(mapping()) && !requiresRawPayload()) {
+        @if (runningTest === 'liveTest' && !isSmartFunction(mapping()) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
         {{ 'Live Test' | translate }}

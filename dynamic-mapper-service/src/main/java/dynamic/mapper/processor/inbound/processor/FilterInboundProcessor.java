@@ -107,7 +107,7 @@ public class FilterInboundProcessor extends BaseProcessor {
         if (mappingFilter != null && !mappingFilter.isBlank()) {
             Object payloadObjectNode = context.getPayload();
 
-            // Byte-payload mapping types (ANY_PAYLOAD, PROTOBUF_INTERNAL) intentionally leave the
+            // Byte-payload mapping types (ANY_PAYLOAD) intentionally leave the
             // payload undeserialized here - parsing is done later by the extension/protobuf processor
             // itself. JSONata cannot evaluate a raw byte[] (it only accepts JSON values/Map/List), so
             // filtering against it would always throw and fail the message closed. Skip filtering in

@@ -281,17 +281,17 @@ class MappingScenarioIntegrationTest {
     }
 
     @Test
-    void testMapping14_ProtobufInternal() {
-        // Given - Sample 14: PROTOBUF_INTERNAL mapping
+    void testMapping14_ProtobufInternalIsRetired() {
+        // Given - Sample 14: PROTOBUF_INTERNAL mapping, a retired type that is no longer loaded
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 14");
         assertNotNull(mapping, "Mapping - 14 should exist");
 
         // Then - Verify protobuf configuration
         assertEquals("protobuf/measurement", mapping.getMappingTopic());
         assertEquals(MappingType.PROTOBUF_INTERNAL, mapping.getMappingType());
-        assertEquals(API.MEASUREMENT, mapping.getTargetAPI());
+        assertTrue(Mapping.isRetired(mapping));
 
-        log.info("✅ Mapping 14 - PROTOBUF_INTERNAL validated");
+        log.info("✅ Mapping 14 - PROTOBUF_INTERNAL recognised as retired");
     }
 
     @Test

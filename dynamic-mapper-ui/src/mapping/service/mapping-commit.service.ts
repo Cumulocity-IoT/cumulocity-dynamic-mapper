@@ -22,7 +22,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSubstitutionsAsCode, JsonValue, Mapping, StepperConfiguration } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ALERT_SUCCESS_TIMEOUT, DeploymentMapEntry, Direction, isSmartFunction, JsonValue, Mapping, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionSelectionService } from '../core/subscription-selection.service';
 import { hasPendingSubscriptionChanges, OutboundSubscriptionSelection } from '../step-subscription/outbound-subscription-selection.model';
@@ -93,8 +93,6 @@ export class MappingCommitService {
             }
 
             // Only validate extensionName/eventName when the user-visible selectors are shown.
-            // The caller's flag also covers showInternalExtensionNote (PROTOBUF_INTERNAL), where
-            // no selectors are rendered and the form controls are always null.
             if (forms.validateExtensionSelection) {
                 const extensionName = forms.templateForm.get('extensionName');
                 const eventName = forms.templateForm.get('eventName');
@@ -237,7 +235,7 @@ export class MappingCommitService {
             mapping.code = stringToBase64(stripTemplateMetadataTags(mappingCode));
         }
 
-        if (isSubstitutionsAsCode(mapping) && (!mapping.code || mapping.code === null || mapping.code === '')) {
+        if (isSmartFunction(mapping) && (!mapping.code || mapping.code === null || mapping.code === '')) {
             return { error: 'Internal error in editor. Try again!' };
         }
 

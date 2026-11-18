@@ -295,7 +295,6 @@ export interface StepperConfiguration {
   showEditorTarget?: boolean;
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsTarget?: boolean;
-  showProcessorExtensionsInternal?: boolean;
   showCodeEditor?: boolean;
   showFilterExpression?: boolean;
   /** How Save persists the mapping; see {@link MappingPersistence}. */
@@ -346,11 +345,9 @@ export interface AdditionalSample {
 
 export enum TransformationType {
   /** @deprecated Legacy substitution engine, superseded by JSONata. Kept for backward compatibility
-   *  with existing mappings and as the only supported transformation for Protobuf (internal) payloads.
+   *  with existing mappings.
    *  New mappings should use {@link TransformationType.JSONATA} instead. */
   DEFAULT = 'DEFAULT',
-  /** @deprecated removed in 6.3.0 — existing mappings are read-only and can only be exported or deleted. */
-  SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
   EXTENSION_JAVA = 'EXTENSION_JAVA',
@@ -379,11 +376,6 @@ export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
   HEX = 'HEX',
-  /** @deprecated Use ANY_PAYLOAD with TransformationType.SMART_FUNCTION or EXTENSION_JAVA
-   *  instead, which decode Protobuf against your own schema rather than the hardcoded internal
-   *  parser. Retained for display of not-yet-migrated mappings only: its sole supported
-   *  transformation is the deprecated TransformationType.DEFAULT. */
-  PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   /** @deprecated Use ANY_PAYLOAD with TransformationType.EXTENSION_JAVA instead.
    *  Retained for display of not-yet-migrated mappings only. */
   EXTENSION_JAVA = 'EXTENSION_JAVA',

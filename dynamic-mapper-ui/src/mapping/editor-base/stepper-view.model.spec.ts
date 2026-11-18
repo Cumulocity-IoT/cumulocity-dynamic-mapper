@@ -40,7 +40,6 @@ describe('createStepperViewModel', () => {
       expect(vm.showExtensionSelectors).toBe(false);
       expect(vm.showExtensionSelectorsSource).toBe(false);
       expect(vm.showExtensionSelectorsTarget).toBe(false);
-      expect(vm.showInternalExtensionNote).toBe(false);
       expect(vm.showCodeEditorSection).toBe(false);
       expect(vm.showTargetContent).toBe(false);
     });
@@ -92,26 +91,21 @@ describe('createStepperViewModel', () => {
   });
 
   describe('extension selectors', () => {
-    it('reflects source/target/internal flags individually', () => {
+    it('reflects the source and target flags individually', () => {
       const vm = createStepperViewModel({
         showProcessorExtensionsSource: true,
-        showProcessorExtensionsTarget: false,
-        showProcessorExtensionsInternal: false
+        showProcessorExtensionsTarget: false
       });
       expect(vm.showExtensionSelectorsSource).toBe(true);
       expect(vm.showExtensionSelectorsTarget).toBe(false);
-      expect(vm.showInternalExtensionNote).toBe(false);
     });
 
-    it('showExtensionSelectors is the OR of source, target and internal', () => {
+    it('showExtensionSelectors is the OR of source and target', () => {
       expect(
         createStepperViewModel({ showProcessorExtensionsSource: true }).showExtensionSelectors
       ).toBe(true);
       expect(
         createStepperViewModel({ showProcessorExtensionsTarget: true }).showExtensionSelectors
-      ).toBe(true);
-      expect(
-        createStepperViewModel({ showProcessorExtensionsInternal: true }).showExtensionSelectors
       ).toBe(true);
       expect(createStepperViewModel({}).showExtensionSelectors).toBe(false);
     });
@@ -127,13 +121,7 @@ describe('createStepperViewModel', () => {
       expect(vm.showTargetContent).toBe(true);
     });
 
-    it('is true when the internal extension note is shown', () => {
-      expect(
-        createStepperViewModel({ showProcessorExtensionsInternal: true }).showTargetContent
-      ).toBe(true);
-    });
-
-    it('is false when no target editor, target extensions, or internal note are configured', () => {
+    it('is false when no target editor or target extensions are configured', () => {
       // Source-only extensions must NOT light up target content.
       const vm = createStepperViewModel({ showProcessorExtensionsSource: true });
       expect(vm.showTargetContent).toBe(false);

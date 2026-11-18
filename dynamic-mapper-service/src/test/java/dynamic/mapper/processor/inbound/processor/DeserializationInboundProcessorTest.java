@@ -108,7 +108,6 @@ class DeserializationInboundProcessorTest {
                 // Provide valid hex data
                 when(connectorMessage.getPayload()).thenReturn("48656c6c6f".getBytes());
                 break;
-            case PROTOBUF_INTERNAL:
             case ANY_PAYLOAD:
                 // Provide valid byte array for byte-based processing
                 when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
@@ -124,22 +123,6 @@ class DeserializationInboundProcessorTest {
         // Given
         mapping.setMappingType(MappingType.JSON);
         setupValidPayload(MappingType.JSON);
-
-        DeserializationInboundProcessor processor = newProcessor();
-
-        // When
-        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
-
-        // Then
-        assertNotNull(context);
-        assertFalse(context.hasError());
-    }
-
-    @Test
-    void testProcessProtobufInternalMappingTypeSuccess() throws Exception {
-        // Given
-        mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
-        setupValidPayload(MappingType.PROTOBUF_INTERNAL);
 
         DeserializationInboundProcessor processor = newProcessor();
 
@@ -280,7 +263,6 @@ class DeserializationInboundProcessorTest {
                 MappingType.JSON,
                 MappingType.FLAT_FILE,
                 MappingType.HEX,
-                MappingType.PROTOBUF_INTERNAL,
             MappingType.valueOf("EXTENSION_JAVA"),
         };
 

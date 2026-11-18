@@ -108,12 +108,12 @@ class DeserializationInboundProcessorErrorHandlingTest {
     @Test
     void testByteArrayDeserializationIOExceptionHandling() throws Exception {
         // Given
-        mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
+        mapping.setMappingType(MappingType.ANY_PAYLOAD);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // Use reflection to replace the deserializer with a mock that throws
         // IOException
-        replaceDeserializerWithMock(MappingType.PROTOBUF_INTERNAL);
+        replaceDeserializerWithMock(MappingType.ANY_PAYLOAD);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
                 .thenThrow(new IOException("Test IO Exception"));
         // When

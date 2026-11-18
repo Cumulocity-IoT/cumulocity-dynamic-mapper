@@ -82,8 +82,4 @@ describe('mappingEditResolver', () => {
     expect(data.stepperConfiguration.readOnly).toBe(true);
   });
 
-  it('is read-only for a deprecated SUBSTITUTION_AS_CODE mapping, whatever the role', async () => {
-    const data = await resolve(buildMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE }), { userHasMappingAdminRole: true });
-    expect(data.stepperConfiguration.readOnly).toBe(true);
-  });
 });

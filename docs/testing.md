@@ -27,8 +27,6 @@ Coverage matrix: payload formats × transformation types × direction.
 | FLAT_FILE | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
 | HEX | Inbound | ✅ | ✅ | ⬜ | ⬜ |
 | HEX | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
-| PROTOBUF_INTERNAL | Inbound | ✅ | n/a | n/a | ✅ |
-| PROTOBUF_INTERNAL | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
 | SPARKPLUGB | Inbound | n/a | n/a | ⬜ | n/a |
 | SPARKPLUGB | Outbound | n/a | n/a | ✅ | n/a |
 | ANY_PAYLOAD | Inbound | n/a | n/a | ⬜ | ⬜ |
@@ -196,7 +194,7 @@ These start at the dispatcher entry point (`InboundMessageDispatcher.onMessage()
 | `testMapping09_ConditionalFragmentCreation` | JSONata conditional |
 | `testMapping10_HexPayloadType` | HEX format |
 | `testMapping12_HexWithSubstitutions` | HEX + substitutions |
-| `testMapping14_ProtobufInternal` | PROTOBUF_INTERNAL format |
+| `testMapping14_ProtobufInternalIsRetired` | PROTOBUF_INTERNAL is recognised as retired (not loaded) |
 | `testMapping15_ExtensionJava` | Java extension processor |
 
 ### 1.5 Connector Unit Tests
@@ -266,7 +264,7 @@ All under `notification/`.
 ### 1.6 Gaps in Backend Tests
 
 > **Not supported** (rejected by `MappingTypeDescriptionMap` — `directionSupported: false`):
-> HEX outbound, FLAT_FILE outbound, PROTOBUF_INTERNAL outbound, ANY_PAYLOAD outbound.
+> HEX outbound, FLAT_FILE outbound, ANY_PAYLOAD outbound.
 > These combinations do not exist and must **not** be tested.
 
 Previously tracked gaps — ANY_PAYLOAD inbound, Sparkplug B inbound, GraalVM sandbox security,

@@ -39,7 +39,6 @@ import {
   StepperConfiguration,
   TransformationType,
   MappingTypeLabels,
-  MappingType,
   MappingStatus,
   NODE2
 } from '../../shared';
@@ -223,8 +222,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
-    this.currentStepIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
+    this.currentStepIndex = this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? this.TAB_GENERAL_SETTINGS
       : this.TAB_DEFINE_TRANSFORMATION;
 
@@ -298,11 +296,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
    * The last tab (Testing) is always visible.
    */
   isTabVisible(tabIndex: number): boolean {
-    // Deprecated SUBSTITUTION_AS_CODE mappings: hide Testing tab (can't be processed)
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    if (this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === this.TAB_TEST_MAPPING) {
-      return false;
-    }
     // The configuration numbers the sections without the outbound-only Subscription tab.
     const skip = this.layout.fromBase(this.stepperConfiguration?.advanceFromStepToEndStep);
     if (skip == null) return true;
@@ -372,8 +365,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   get saveDisabled(): boolean {
     return (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole)
       || !!this.stepperConfiguration.readOnly
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated mappings are read-only
-      || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
       || this.filterInventoryInvalid;
   }
 
@@ -410,8 +401,6 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       forms: {
         propertyFormly: this.propertyFormly,
         templateForm: this.templateForm,
-        // showExtensionSelectors also covers showInternalExtensionNote (PROTOBUF_INTERNAL), where
-        // no selectors are rendered and the form controls are always null.
         validateExtensionSelection:
           this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget
       }

@@ -46,7 +46,7 @@ import {
   MappingType,
   StepperConfiguration,
   Template,
-  isSubstitutionsAsCode
+  isSmartFunction
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { TestingService } from '../core/testing.service';
@@ -97,7 +97,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // Template helpers
   readonly Direction = Direction;
   readonly MappingType = MappingType;
-  readonly isSubstitutionsAsCode = isSubstitutionsAsCode;
+  readonly isSmartFunction = isSmartFunction;
 
   // Editor configurations
   readonly editorOptionsDefault = {

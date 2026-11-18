@@ -659,13 +659,6 @@ describe('MappingStepperService', () => {
       expect(result.codeEditorLabel).toContain('Smart functions');
     });
 
-    it('sets code-editor help/label for deprecated SUBSTITUTION_AS_CODE mappings', async () => {
-      const mapping = makeMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
-      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
-      expect(result.codeEditorLabel).toContain('creating substitutions');
-      expect(result.codeEditorHelp).toContain('creating substitutions');
-    });
-
     it('reports editorTemplatesReadOnly=false when the user has admin or create role', async () => {
       mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true, userHasMappingCreateRole: false } as any);
       const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), new Subject(), callbacks());

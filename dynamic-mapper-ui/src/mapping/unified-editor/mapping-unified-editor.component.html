@@ -61,15 +61,6 @@
   <!-- Tab content – only the active tab is rendered (@if); tab components are destroyed on switch, so state lives on this component and is synced in onTabSelected() -->
   <div class="card-block flex-grow overflow-auto">
 
-    <!-- Deprecation notice for legacy SUBSTITUTION_AS_CODE mappings -->
-    @if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
-    <div class="alert alert-warning m-16" style="max-width: none;" data-cy="dm-unified-editor-deprecated-status">
-      <strong translate>Deprecated mapping type</strong>
-      &nbsp;
-      <span translate>This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>.</span>
-    </div>
-    }
-
     <!-- Tab 0: Connector -->
     @if (currentStepIndex === TAB_CONNECTOR && isTabVisible(TAB_CONNECTOR)) {
     <d11r-mapping-connector [showHeader]="true" [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
@@ -115,7 +106,7 @@
       @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionSource>
         <d11r-mapping-extension-selector side="source" dataCyPrefix="dm-unified-editor" [form]="templateForm" [mapping]="mapping"
-            [showSelectors]="stepperViewModel.showExtensionSelectorsSource" [showInternalNote]="stepperViewModel.showInternalExtensionNote"
+            [showSelectors]="stepperViewModel.showExtensionSelectorsSource"
             [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
             [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
       </ng-container>
@@ -123,7 +114,7 @@
       @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionTarget>
         <d11r-mapping-extension-selector side="target" dataCyPrefix="dm-unified-editor" [form]="templateForm" [mapping]="mapping"
-            [showSelectors]="stepperViewModel.showExtensionSelectorsTarget" [showInternalNote]="stepperViewModel.showInternalExtensionNote"
+            [showSelectors]="stepperViewModel.showExtensionSelectorsTarget"
             [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
             [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
       </ng-container>
@@ -148,7 +139,7 @@
             [templateId]="templateId" [codeTemplateItems]="codeTemplateItems" (templateSelected)="templateId = $event" (replaceCode)="onSelectCodeTemplate()"
             (createTemplate)="onCreateCodeTemplate()" [aiButtonLabel]="aiButtonLabel" [aiGenerationDisabled]="aiGenerationDisabled"
             [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" (generate)="openGenerateSubstitutionDrawer()"
-            [showEditor]="templatesInitialized" [showInternalNote]="stepperViewModel?.showInternalExtensionNote" (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>
+            [showEditor]="templatesInitialized" (editorInit)="registerCompletionProvider()"></d11r-mapping-code-editor-section>
       </ng-container>
       }
     </d11r-mapping-transformation-step>
@@ -197,7 +188,7 @@
         [isDisabled]="saveDisabled">
         <button type="button" class="btn btn-primary" (click)="onCommitButton(saveAndActivate)"
           [disabled]="saveDisabled"
-          [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : filterInventoryInvalid ? (filterInventorySaveHint | translate) : ''"
+          [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : filterInventoryInvalid ? (filterInventorySaveHint | translate) : ''"
           data-cy="dm-unified-editor-save">
           {{ saveButtonText | translate }}
         </button>

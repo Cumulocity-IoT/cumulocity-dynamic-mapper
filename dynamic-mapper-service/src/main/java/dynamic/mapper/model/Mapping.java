@@ -473,7 +473,7 @@ public class Mapping implements Serializable {
         }
 
         if (!mapping.getTransformationType().equals(TransformationType.EXTENSION_JAVA)
-                && !mapping.getMappingType().equals(MappingType.PROTOBUF_INTERNAL)) {
+                ) {
             try {
                 if (mapping.targetTemplate.startsWith("{"))
                     new JSONObject(mapping.targetTemplate);
@@ -503,6 +503,18 @@ public class Mapping implements Serializable {
                 .filter(sub -> mapping.definesDeviceIdentifier(sub))
                 .toList();
         return mp;
+    }
+
+    /**
+     * Mapping types and transformation types that are no longer supported: such a mapping is not
+     * loaded (the loader reports it in the service events) and cannot be saved. The constants only
+     * remain so that stored mappings can still be parsed and named in that report.
+     */
+    @SuppressWarnings({"deprecation", "removal"})
+    public static boolean isRetired(Mapping mapping) {
+        return mapping != null
+                && (MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                        || TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType()));
     }
 
     @JsonIgnore

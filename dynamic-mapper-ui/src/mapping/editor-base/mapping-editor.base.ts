@@ -35,7 +35,7 @@ import {
   Direction,
   Extension,
   Feature,
-  isSubstitutionsAsCode,
+  isSmartFunction,
   JsonSchema,
   Mapping,
   StepperConfiguration,
@@ -641,7 +641,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
    * still be generated (the AI gets the base64 sample from the mapping).
    */
   get aiGenerationDisabled(): boolean {
-    const needsSourceEditor = !isSubstitutionsAsCode(this.mapping);
+    const needsSourceEditor = !isSmartFunction(this.mapping);
     return !!this.stepperViewModel?.config.readOnly
       || !this.aiAgentDeployed
       || (needsSourceEditor && !this.stepperViewModel?.config.showEditorSource);
@@ -688,7 +688,7 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     try {
       const result = await drawer.instance.result;
 
-      if (isSubstitutionsAsCode(this.mapping)) {
+      if (isSmartFunction(this.mapping)) {
         if (typeof result === 'string' && result.trim()) {
           this.mappingCode = result;
 

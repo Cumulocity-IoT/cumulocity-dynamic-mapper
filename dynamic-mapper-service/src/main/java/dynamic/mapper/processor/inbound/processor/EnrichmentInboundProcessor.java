@@ -139,7 +139,7 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     tenant);
             // _TOPIC_LEVEL_/_CONTEXT_DATA_ are injected into the payload itself, which is only
             // possible for a JSON object. A top-level JSON array/scalar, or a byte[] payload
-            // (PROTOBUF_INTERNAL/ANY_PAYLOAD), has nowhere to carry them — so a broker message key
+            // (ANY_PAYLOAD), has nowhere to carry them — so a broker message key
             // is silently unavailable to the expression. Surface it, but only when a key actually
             // exists, to avoid warning on every message of an unkeyed stream.
             if (context.getKey() != null) {

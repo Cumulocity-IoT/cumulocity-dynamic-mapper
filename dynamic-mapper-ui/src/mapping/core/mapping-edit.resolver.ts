@@ -23,12 +23,11 @@ import { ResolveFn } from '@angular/router';
 import {
   DeploymentMapEntry,
   Direction,
-  isSubstitutionsAsCode,
+  isSmartFunction,
   Mapping,
   MappingTypeDescriptionMap,
   SharedService,
-  StepperConfiguration,
-  TransformationType
+  StepperConfiguration
 } from '../../shared';
 import {
   StepperConfigurationContext,
@@ -70,13 +69,9 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     editable.version = mapping.version;
   }
 
-  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only), and so is
-  // every mapping for a user without a manage role. Active mappings are not read-only: editing
-  // them saves to a draft and never changes the running configuration until the draft is
+  // A mapping is read-only for a user without a manage role. Active mappings are not read-only:
+  // editing them saves to a draft and never changes the running configuration until the draft is
   // published and activated.
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  const isDeprecated = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
-
   const canManage = !!(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole);
 
   const context: StepperConfigurationContext = {
@@ -85,8 +80,8 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     direction,
     // Every edit of an existing mapping goes to its draft, whether or not it is active.
     persistence: 'draft',
-    readOnly: isDeprecated || !canManage,
-    substitutionsAsCode: isSubstitutionsAsCode(editable),
+    readOnly: !canManage,
+    substitutionsAsCode: isSmartFunction(editable),
     hasDeployedConnector: deploymentMapEntry.connectors.length > 0
   };
 

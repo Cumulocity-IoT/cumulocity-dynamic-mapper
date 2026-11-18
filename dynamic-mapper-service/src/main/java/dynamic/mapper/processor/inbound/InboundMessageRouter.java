@@ -42,7 +42,6 @@ import dynamic.mapper.processor.inbound.processor.ExtensibleResultInboundProcess
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
@@ -68,7 +67,6 @@ public class InboundMessageRouter extends MessageRoutingSupport {
 
     private final ExtensibleResultInboundProcessor extensibleResultInboundProcessor;
 
-    private final InternalProtobufProcessor internalProtobufProcessor;
 
     private final EnrichmentInboundProcessor enrichmentProcessor;
 
@@ -93,7 +91,6 @@ public class InboundMessageRouter extends MessageRoutingSupport {
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
             ExtensibleInboundProcessor extensibleProcessor,
             ExtensibleResultInboundProcessor extensibleResultInboundProcessor,
-            InternalProtobufProcessor internalProtobufProcessor,
             EnrichmentInboundProcessor enrichmentProcessor,
             FlowInboundProcessor flowInboundProcessor,
             SubstitutionResultInboundProcessor substitutionInboundProcessor,
@@ -107,7 +104,6 @@ public class InboundMessageRouter extends MessageRoutingSupport {
         this.virtualThreadPool = virtualThreadPool;
         this.extensibleProcessor = extensibleProcessor;
         this.extensibleResultInboundProcessor = extensibleResultInboundProcessor;
-        this.internalProtobufProcessor = internalProtobufProcessor;
         this.enrichmentProcessor = enrichmentProcessor;
         this.flowInboundProcessor = flowInboundProcessor;
         this.substitutionInboundProcessor = substitutionInboundProcessor;
@@ -239,9 +235,7 @@ public class InboundMessageRouter extends MessageRoutingSupport {
             }
 
             // 1. Branch based on processing type
-            if (isInternalProtobuf(context)) {
-                processInternalProtobuf((ProcessingContext<byte[]>) context);
-            } else if (isExtension(context)) {
+            if (isExtension(context)) {
                 processExtension((ProcessingContext<byte[]>) context);
             } else if (isJSONataExtraction(context)) {
                 processJSONataExtraction(context);
@@ -295,19 +289,6 @@ public class InboundMessageRouter extends MessageRoutingSupport {
         extensibleResultInboundProcessor.process(context);
         if (shouldIgnoreFurtherProcessing(context)) {
             log.debug("{} - inbound message filtered after extension result processing", context.getTenant());
-            consolidationProcessor.process(context);
-            return;
-        }
-        inboundSendProcessor.process((ProcessingContext<Object>) (ProcessingContext<?>) context);
-        consolidationProcessor.process(context);
-    }
-
-    /** 1f. Internal protobuf processing route. */
-    private void processInternalProtobuf(ProcessingContext<byte[]> context) throws Exception {
-        internalProtobufProcessor.process(context);
-        substitutionInboundProcessor.process((ProcessingContext<Object>) (ProcessingContext<?>) context);
-        if (shouldIgnoreFurtherProcessing(context)) {
-            log.debug("{} - inbound message filtered after internal-protobuf extraction", context.getTenant());
             consolidationProcessor.process(context);
             return;
         }

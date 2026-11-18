@@ -75,7 +75,7 @@ MAPPING_JSON=$(jq -cn \
       identifier: $identifier,
             targetAPI: "ALARM",
       direction: "OUTBOUND",
-      mappingType: "PROTOBUF_INTERNAL",
+      mappingType: "ANY_PAYLOAD",
       transformationType: "EXTENSION_JAVA",
       filterMapping: "true",
       extension: $extension,

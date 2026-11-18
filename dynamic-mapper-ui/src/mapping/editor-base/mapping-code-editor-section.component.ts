@@ -53,7 +53,6 @@ export class MappingCodeEditorSectionComponent {
   readonly aiCapabilitiesDisabled = input(false);
   /** False while the host's templates are still loading, so the editor is not created too early. */
   readonly showEditor = input(true);
-  readonly showInternalNote = input(false);
   readonly dataCyPrefix = input('dm-mapping-stepper');
 
   @Output() codeChange = new EventEmitter<string>();
