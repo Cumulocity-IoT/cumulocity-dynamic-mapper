@@ -62,6 +62,16 @@ export class MappingValidationError extends Error {
   }
 }
 
+/**
+ * The answer of `POST /mapping/validate`: what a save would be rejected for, as data. Mirrors
+ * `dynamic.mapper.model.validation.MappingValidationResult`.
+ */
+export interface BackendValidationResult {
+  valid: boolean;
+  errors: string[];
+  details?: ValidationIssue[];
+}
+
 /** The error body the backend returns for a rejected mapping or request. */
 export interface BackendErrorBody {
   errors?: string[];

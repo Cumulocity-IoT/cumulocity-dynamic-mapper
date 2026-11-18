@@ -29,7 +29,7 @@ package dynamic.mapper.model.validation;
  * {@code validateMappingTopic}, {@code validateMappingTopicAndSampleConsistency},
  * {@code validatePublishTopicAndSampleConsistency}, {@code validateSubstitutions},
  * {@code validateJSONTemplates}, {@code validateTransformationType}, {@code validateExtension},
- * {@code validateMappingTypeConstraints}.
+ * {@code validateMappingTypeConstraints}, {@code validateFilterExpressions}, {@code validateNotRetired}.
  */
 public enum ValidationError {
   Only_One_Multi_Level_Wildcard,
@@ -48,5 +48,6 @@ public enum ValidationError {
   Substitution_Source_Expression_Must_Be_Valid_JSONata,
   Substitution_Paths_Must_Not_Be_Empty,
   Substitution_Expand_Array_Not_Supported_For_Outbound,
-  Retired_Mapping_Type_Or_Transformation_Type
+  Retired_Mapping_Type_Or_Transformation_Type,
+  Filter_Expression_Must_Be_Valid_JSONata
 }

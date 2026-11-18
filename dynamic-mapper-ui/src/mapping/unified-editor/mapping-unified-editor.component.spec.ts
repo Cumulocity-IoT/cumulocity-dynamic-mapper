@@ -245,7 +245,8 @@ describe('MappingUnifiedEditorComponent', () => {
       'createMapping',
       'refreshMappings',
       'reloadMappings',
-      'updateDefinedDeploymentMapEntry'
+      'updateDefinedDeploymentMapEntry',
+      'validateMapping'
     ]);
     mockMappingService.reloadMappings.and.resolveTo();
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
@@ -720,6 +721,73 @@ describe('MappingUnifiedEditorComponent', () => {
 
       expect(mockBottomDrawerService.openDrawer).toHaveBeenCalled();
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    describe('Check on server', () => {
+      beforeEach(() => {
+        mockCommitService.encodeMappingForCommit.and.callFake((mapping: Mapping) => ({ mapping, contentChanged: true }));
+      });
+
+      it('saves nothing and reports success when the server finds no problems', async () => {
+        mockMappingService.validateMapping.and.resolveTo({ valid: true, errors: [] });
+
+        await component.onCheckOnServer();
+
+        expect(mockMappingService.validateMapping).toHaveBeenCalled();
+        expect(mockAlertService.success).toHaveBeenCalled();
+        expect(mockCommitService.commitMapping).not.toHaveBeenCalled();
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+        expect(mockBottomDrawerService.openDrawer).not.toHaveBeenCalled();
+      });
+
+      it('validates a copy: the editor mapping is not changed by the encoding', async () => {
+        mockCommitService.encodeMappingForCommit.and.callFake((mapping: Mapping) => {
+          mapping.sourceTemplate = '{"encoded":true}';
+          return { mapping, contentChanged: true };
+        });
+        mockMappingService.validateMapping.and.resolveTo({ valid: true, errors: [] });
+        const before = component.mapping.sourceTemplate;
+
+        await component.onCheckOnServer();
+
+        expect(component.mapping.sourceTemplate).toBe(before);
+        expect(mockMappingService.validateMapping.calls.mostRecent().args[0].sourceTemplate).toBe('{"encoded":true}');
+      });
+
+      it('opens the validation drawer with the codes and details of a failed check', async () => {
+        mockMappingService.validateMapping.and.resolveTo({
+          valid: false,
+          errors: ['Substitution_Paths_Must_Not_Be_Empty'],
+          details: [{ code: 'Substitution_Paths_Must_Not_Be_Empty', index: 1 }]
+        });
+        mockBottomDrawerService.openDrawer.and.returnValue({
+          instance: { result: Promise.resolve({ action: 'close' }) }
+        } as any);
+
+        await component.onCheckOnServer();
+
+        const state = mockBottomDrawerService.openDrawer.calls.mostRecent().args[1] as any;
+        expect(state.initialState.errors).toEqual(['Substitution_Paths_Must_Not_Be_Empty']);
+        expect(state.initialState.issues).toEqual([{ code: 'Substitution_Paths_Must_Not_Be_Empty', index: 1 }]);
+        expect(mockAlertService.success).not.toHaveBeenCalled();
+      });
+
+      it('warns instead of calling the server when the mapping cannot be encoded', async () => {
+        mockCommitService.encodeMappingForCommit.and.returnValue({ error: 'Internal error in editor. Try again!' });
+
+        await component.onCheckOnServer();
+
+        expect(mockMappingService.validateMapping).not.toHaveBeenCalled();
+        expect(mockStepperService.raiseAlert).toHaveBeenCalledWith({ type: 'warning', text: 'Internal error in editor. Try again!' });
+      });
+
+      it('reports a failing request as an error alert', async () => {
+        mockMappingService.validateMapping.and.rejectWith(new Error('network down'));
+
+        await component.onCheckOnServer();
+
+        expect(mockAlertService.danger).toHaveBeenCalled();
+      });
     });
 
     it('stays open and raises no further alert on a failed save', async () => {

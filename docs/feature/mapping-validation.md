@@ -47,6 +47,22 @@ specific reason, rather than failing later on every message.
 
 If you bypass the UI (e.g. call the REST API directly), only the two backend layers apply.
 
+#### Checking without saving: `POST /mapping/validate`
+
+`POST /mapping/validate` (roles `ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`) runs
+`MappingValidator.validate()` on the mapping in the body and persists nothing. The answer is always
+200: `{ "valid": false, "errors": [codes], "details": [ValidationIssue] }`, with the same codes and
+details that a rejected save returns as a 422. It applies the rules in this document that only the
+backend knows (expression syntax, empty paths, `expandArray` outbound, array templates, extension
+required, mapping type constraints, retired types), so an API client, an import or a CI job can check a
+mapping before posting it. A mapping without a substitution list is validated like one with an empty
+list. Bean Validation is not applied (no `@Valid`), because a mapping under construction may lack
+required fields; the checks above report what they can.
+
+In the editor, **Save menu → Check on server** assembles the mapping exactly as a save does (templates
+and code encoded, on a copy, so the editor state is untouched), calls this endpoint, and shows the
+result in the same drawer a rejected save opens, with *Go to problem* for substitution issues.
+
 `MappingValidator.validate()` collects **all** applicable errors in one pass — it does not
 stop at the first failure — so an API response can list several violations at once.
 
@@ -218,6 +234,22 @@ generation drawer instead (see
 - a duplicate `pathTarget` (last writer wins);
 - an identity substitution using the token that does not match `useExternalId` (both tokens
   are accepted downstream).
+
+#### Filters must be valid JSONata
+
+The execution filter (`filterMapping`) and the inventory filter (`filterInventory`) must parse as JSONata
+(`validateFilterExpressions`, error code `Filter_Expression_Must_Be_Valid_JSONata`, with `field` set to
+the property that failed, plus the expression and the parser's message). A filter that does not parse never
+matches: the evaluators treat an expression they cannot evaluate as "no match", so the mapping would drop
+every message without any error. The check makes the same `jsonata(...)` call as the evaluators, so it cannot
+reject a filter that works today. An empty or blank filter means no filtering and is accepted.
+
+Only the syntax is checked. Whether the filter returns a boolean depends on the message it is evaluated
+against and stays a UI aid: the filter fields show the evaluated result and flag a non-boolean one.
+
+| Error code | Fails | Passes |
+|---|---|---|
+| `Filter_Expression_Must_Be_Valid_JSONata` | `filterMapping: "type ="`, `filterInventory: "has("` | `"type = 'c8y_Event'"`, `"$exists(c8y_Temperature)"`, `""` |
 
 ---
 

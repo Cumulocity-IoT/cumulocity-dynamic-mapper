@@ -87,6 +87,10 @@ export const ValidationFormlyError = {
     message:
       gettext('At least one substitution has an empty source or target path. Both must be set.')
   },
+  Filter_Expression_Must_Be_Valid_JSONata: {
+    message:
+      gettext('The execution filter or the inventory filter is not valid JSONata. A filter that does not parse never matches, so the mapping would drop every message.')
+  },
   Retired_Mapping_Type_Or_Transformation_Type: {
     message:
       gettext('This mapping uses a type that is no longer supported (PROTOBUF_INTERNAL or SUBSTITUTION_AS_CODE). Use Any Payload with a Smart Function or a Java extension, or a Smart Function.')

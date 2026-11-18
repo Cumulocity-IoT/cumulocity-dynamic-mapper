@@ -77,6 +77,7 @@ public class MappingValidator {
             // Checks that can say which element failed contribute issues directly; the rest
             // contribute a bare code, wrapped here so every failure has the same shape.
             issues.addAll(validateSubstitutionExpressions(mapping));
+            issues.addAll(validateFilterExpressions(mapping));
 
             List<ValidationError> errors = new ArrayList<>();
             errors.addAll(validateNotRetired(mapping));
@@ -128,7 +129,9 @@ public class MappingValidator {
     public List<ValidationError> validateSubstitutions(Mapping mapping) {
         List<ValidationError> errors = new ArrayList<>();
 
-        long deviceIdentifierCount = Arrays.stream(mapping.getSubstitutions())
+        // A mapping from the editor can arrive without a substitution list; that is not a crash.
+        Substitution[] substitutions = mapping.getSubstitutions() == null ? new Substitution[0] : mapping.getSubstitutions();
+        long deviceIdentifierCount = Arrays.stream(substitutions)
                 .filter(mapping::definesDeviceIdentifier)
                 .count();
 
@@ -245,6 +248,35 @@ public class MappingValidator {
         }
 
         return issues;
+    }
+
+    /**
+     * Rejects a mapping filter that is not valid JSONata: the execution filter ({@code filterMapping}) and the
+     * inventory filter ({@code filterInventory}).
+     *
+     * <p>A filter that does not parse never works, and it fails closed: the evaluators treat an expression
+     * they cannot evaluate as "does not match", so the mapping silently drops every message. It is the same
+     * {@link com.dashjoin.jsonata.Jsonata#jsonata(String)} call the evaluators make, so a filter rejected here
+     * could never have matched. Only the syntax is checked; whether the result is a boolean depends on the
+     * message and is shown in the editor. An empty filter is fine (no filtering).
+     */
+    public List<ValidationIssue> validateFilterExpressions(Mapping mapping) {
+        List<ValidationIssue> issues = new ArrayList<>();
+        addFilterIssue(issues, "filterMapping", mapping.getFilterMapping());
+        addFilterIssue(issues, "filterInventory", mapping.getFilterInventory());
+        return issues;
+    }
+
+    private static void addFilterIssue(List<ValidationIssue> issues, String field, String expression) {
+        if (expression == null || expression.isBlank()) {
+            return;
+        }
+        try {
+            jsonata(expression);
+        } catch (Exception e) {
+            issues.add(new ValidationIssue(
+                    ValidationError.Filter_Expression_Must_Be_Valid_JSONata, field, null, expression, e.getMessage()));
+        }
     }
 
     private static String substitutionField(int index, String property) {

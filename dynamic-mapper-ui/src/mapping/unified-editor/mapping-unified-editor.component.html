@@ -200,6 +200,8 @@
         <ul class="dropdown-menu" *dropdownMenu>
           <li><button type="button" class="dropdown-item" (click)="saveAndActivate = false" data-cy="dm-unified-editor-save-only">{{ 'Save' | translate }}</button></li>
           <li><button type="button" class="dropdown-item" (click)="saveAndActivate = true" data-cy="dm-unified-editor-save-activate">{{ 'Save & Activate' | translate }}</button></li>
+          <li class="divider"></li>
+          <li><button type="button" class="dropdown-item" (click)="onCheckOnServer()" data-cy="dm-unified-editor-check" [title]="'Runs the server validation without saving' | translate">{{ 'Check on server' | translate }}</button></li>
         </ul>
       </div>
     </div>

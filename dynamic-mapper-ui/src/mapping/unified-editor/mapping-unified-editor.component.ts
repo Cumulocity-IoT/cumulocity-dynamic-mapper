@@ -57,6 +57,7 @@ import {
 import { gettext } from '@c8y/ngx-components/gettext';
 import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent, ROUTE_MAPPINGS_INBOUND, ROUTE_MAPPINGS_OUTBOUND } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
+import { buildBackendErrorMessage } from '../../shared/mapping/validation.util';
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
@@ -486,6 +487,34 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       }
     } catch (error) {
       this.alertService.danger(gettext('Saved, but activating the mapping failed'), (error as Error).message);
+    }
+  }
+
+  /**
+   * Asks the server whether it would accept the mapping as it is now, without saving anything.
+   * The mapping is assembled exactly as a save does (templates and code encoded), on a copy, so the
+   * editor's own state is untouched. Problems open the same drawer a rejected save does.
+   */
+  async onCheckOnServer(): Promise<void> {
+    this.updateTemplatesInEditors();
+    const copy = { ...this.mapping } as Mapping;
+    const encoded = this.commitService.encodeMappingForCommit(
+      copy, this.sourceTemplate, this.targetTemplate, this.mappingCode, this.initialContentSnapshot,
+      this.stepperConfiguration.allowTemplateExpansion, this.stepperConfiguration.persistence);
+    if ('error' in encoded) {
+      this.raiseAlert({ type: 'warning', text: encoded.error });
+      return;
+    }
+    try {
+      const result = await this.mappingService.validateMapping(encoded.mapping);
+      if (result.valid) {
+        this.alertService.success(this.translateService.instant(gettext('The server check found no problems.')));
+        return;
+      }
+      const message = buildBackendErrorMessage(result, '', text => this.translateService.instant(text));
+      await this.showValidationIssues(new MappingValidationError(message, result.errors, result.details ?? []));
+    } catch (error) {
+      this.alertService.danger(this.translateService.instant(gettext('Could not run the server check')), (error as Error).message);
     }
   }
 

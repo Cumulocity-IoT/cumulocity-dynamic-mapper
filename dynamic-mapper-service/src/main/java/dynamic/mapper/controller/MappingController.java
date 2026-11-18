@@ -49,6 +49,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.version.MappingVersion;
 import dynamic.mapper.model.version.MappingVersionCount;
+import dynamic.mapper.model.validation.MappingValidationResult;
 import dynamic.mapper.model.validation.ValidationErrorResponse;
 import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
@@ -230,6 +231,41 @@ public class MappingController {
                 HttpStatus.INTERNAL_SERVER_ERROR, 
                 "Failed to retrieve mapping: " + e.getMessage()
             );
+        }
+    }
+
+    // ========== VALIDATE Endpoint ==========
+
+    @Operation(
+        summary = "Validate a mapping without saving it",
+        description = """
+        Runs the validation that create and update apply and returns the result, without persisting anything.
+        A mapping that fails validation is still answered with 200: the body says whether it is valid and
+        lists the error codes and, where the rule can tell, which element failed and why.
+
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Validation result",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = MappingValidationResult.class))
+        ),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @PostMapping(value = "/validate", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MappingValidationResult> validateMapping(@RequestBody Mapping mapping) {
+        String tenant = getTenant();
+        try {
+            return ResponseEntity.ok(MappingValidationResult.of(mappingService.validateMapping(tenant, mapping)));
+        } catch (Exception e) {
+            log.error("{} - Failed to validate mapping", tenant, e);
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to validate mapping: " + e.getMessage(), e);
         }
     }
 

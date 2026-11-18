@@ -72,7 +72,7 @@ import {
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { buildBackendErrorMessage } from '../../shared/mapping/util';
-import { toBackendError } from '../../shared/mapping/mapping-validation-error';
+import { BackendValidationResult, toBackendError } from '../../shared/mapping/mapping-validation-error';
 
 @Injectable({
   providedIn: 'root'
@@ -195,6 +195,25 @@ export class MappingService {
     if (!response.ok) throw new Error(response.statusText);
     this.refreshAfterMutation(direction);
     return response.text();
+  }
+
+  /**
+   * Asks the server whether it would accept the mapping, without saving it. The same rules as a save,
+   * including those only the backend knows (expression syntax, empty paths, retired types, ...).
+   */
+  async validateMapping(mapping: Mapping): Promise<BackendValidationResult> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}/validate`, {
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(mapping),
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(buildBackendErrorMessage(error, this.translateService.instant(gettext('Could not validate mapping')), (t) => this.translateService.instant(t)));
+    }
+    return response.json();
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {

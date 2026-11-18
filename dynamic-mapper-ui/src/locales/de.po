@@ -387,6 +387,9 @@ msgstr ""
 msgid "Chart processed"
 msgstr ""
 
+msgid "Check on server"
+msgstr ""
+
 msgid "check Service Events"
 msgstr ""
 
@@ -534,10 +537,16 @@ msgstr ""
 msgid "Could not open the AI assistant: {{message}}"
 msgstr ""
 
+msgid "Could not run the server check"
+msgstr ""
+
 msgid "Could not save acceptance. The notice may appear again next time."
 msgstr ""
 
 msgid "Could not upload the *.jar file. Please check your connection and try again."
+msgstr ""
+
+msgid "Could not validate mapping"
 msgstr ""
 
 msgid "Could not verify AI agent availability — proceeding with manual entry only."
@@ -2271,6 +2280,9 @@ msgstr ""
 msgid "Runs the mapping without writing anything to your tenant"
 msgstr ""
 
+msgid "Runs the server validation without saving"
+msgstr ""
+
 msgid "Runtime statistic of this mapping since the last reset"
 msgstr ""
 
@@ -2741,6 +2753,9 @@ msgstr ""
 msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
 msgstr ""
 
+msgid "The execution filter or the inventory filter is not valid JSONata. A filter that does not parse never matches, so the mapping would drop every message."
+msgstr ""
+
 msgid "The extension {{extensionName}} with event {{eventName}} is not loaded..."
 msgstr ""
 
@@ -2823,6 +2838,9 @@ msgid "The referenced device does not exist and createNonExistingDevice is disab
 msgstr ""
 
 msgid "The selected code template was not found. Reload the page and try again."
+msgstr ""
+
+msgid "The server check found no problems."
 msgstr ""
 
 msgid "the session is active, but the broker rejected the subscribe request, so no messages will arrive:"

@@ -168,6 +168,14 @@ public class MappingService implements TenantScoped {
     // ========== Mapping CRUD Operations ==========
 
     /**
+     * Runs the same validation as create and update would, without persisting anything. Lets the editor
+     * show the backend-only rules (expression syntax, empty paths, retired types, ...) before the user saves.
+     */
+    public List<ValidationIssue> validateMapping(String tenant, Mapping mapping) {
+        return mappingValidator.validate(tenant, mapping, mapping.getId());
+    }
+
+    /**
      * Creates a new mapping
      */
     public Mapping createMapping(String tenant, Mapping mapping) {
