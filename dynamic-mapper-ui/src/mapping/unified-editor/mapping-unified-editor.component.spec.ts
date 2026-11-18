@@ -27,6 +27,7 @@ import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
+import { MonitoringService } from '../../monitoring/shared/monitoring.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingUnifiedEditorComponent } from './mapping-unified-editor.component';
 import { EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
@@ -297,6 +298,14 @@ describe('MappingUnifiedEditorComponent', () => {
         { provide: ActivatedRoute, useValue: activatedRoute },
         { provide: Location, useValue: jasmine.createSpyObj('Location', ['back', 'path']) },
         { provide: GlobalContextService, useValue: mockGlobalContextService },
+        {
+          provide: MonitoringService,
+          useValue: {
+            getMappingStatus: () => of([]),
+            startMonitoring: () => Promise.resolve(),
+            stopMonitoring: () => undefined
+          }
+        },
         // MappingPublishService injects SubscriptionService, whose real constructor takes a
         // FetchClient the test injector cannot provide (NG0201), so a spy is enough.
         { provide: SubscriptionService, useValue: mockSubscriptionService },

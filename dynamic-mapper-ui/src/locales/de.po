@@ -2286,6 +2286,9 @@ msgstr ""
 msgid "Runs the mapping without writing anything to your tenant"
 msgstr ""
 
+msgid "Runtime statistic of this mapping since the last reset"
+msgstr ""
+
 msgid "Save & Activate"
 msgstr ""
 
@@ -2741,6 +2744,9 @@ msgstr ""
 msgid "The complete log of the selected microservice instance, including the lines of every tenant that shares it."
 msgstr ""
 
+msgid "The Cumulocity API that receives the result: Alarm, Event, Measurement, Inventory, or Operation. <code>Custom</code> is for Smart Functions that call a Cumulocity microservice REST endpoint (<code>/service/...</code>) instead of a standard API."
+msgstr ""
+
 msgid "The current subscriptions could not be loaded. Subscriptions cannot be changed here. Use the Subscription outbound page instead."
 msgstr ""
 
@@ -2999,7 +3005,7 @@ msgstr ""
 msgid "Use the Collected log switch to search by mapping over the whole stored range."
 msgstr ""
 
-msgid "Used as a filter to select which mappings apply when a notification arrives."
+msgid "Used as a filter to select which mappings apply when a notification arrives. <code>Custom</code> selects notifications that belong to none of the standard Cumulocity APIs."
 msgstr ""
 
 msgid "UTC"
@@ -3030,6 +3036,9 @@ msgid "View configuration"
 msgstr ""
 
 msgid "View connector"
+msgstr ""
+
+msgid "View statistics"
 msgstr ""
 
 msgid "Waiting for messages on <code>{{ sessionTopic }}</code>…"

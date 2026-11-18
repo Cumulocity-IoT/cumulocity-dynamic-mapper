@@ -30,15 +30,18 @@ import {
 import { CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { MonitoringService } from '../../monitoring/shared/monitoring.service';
 import {
   DeploymentMapEntry,
   Mapping,
   StepperConfiguration,
   TransformationType,
   MappingTypeLabels,
-  MappingType
+  MappingType,
+  MappingStatus,
+  NODE2
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
@@ -103,6 +106,7 @@ const STEP_FOR_BLOCKER: Partial<Record<CommitBlocker, StepId>> = {
   imports: [
     CoreModule,
     CommonModule,
+    RouterLink,
     TabComponent,
     TabsOutletComponent,
     BsDropdownModule,
@@ -148,6 +152,36 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly globalContextService = inject(GlobalContextService);
+  private readonly monitoringService = inject(MonitoringService);
+  private statusSubscription?: Subscription;
+  private monitoringStarted = false;
+
+  /** Runtime statistic of this mapping; undefined until the service reports one (a new mapping has none). */
+  readonly mappingStatus = signal<MappingStatus | undefined>(undefined);
+
+  /** Link to the Statistic page of this mapping's direction. */
+  get statisticRoute(): string {
+    const dir = this.stepperConfiguration.direction === this.Direction.INBOUND ? 'inbound' : 'outbound';
+    return `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/${dir}`;
+  }
+
+  /** Read-only: the editor never starts the shared stream for a mapping that cannot have statistics yet. */
+  private async startStatusWatch(): Promise<void> {
+    const identifier = this.mapping?.identifier;
+    if (!identifier) {
+      return;
+    }
+    this.statusSubscription = this.monitoringService.getMappingStatus().subscribe((statuses) => {
+      this.mappingStatus.set((statuses ?? []).find((st) => st.identifier === identifier));
+    });
+    try {
+      this.monitoringStarted = true;
+      await this.monitoringService.startMonitoring();
+    } catch (e) {
+      // The summary is a convenience: the editor works without it.
+      console.warn('Mapping statistic unavailable', e);
+    }
+  }
 
   readonly MappingTypeLabels = MappingTypeLabels;
 
@@ -245,10 +279,16 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     // Validate substitutions with initial tab index
     this.refreshSubstitutionValidity();
+
+    void this.startStatusWatch();
   }
 
   override ngOnDestroy(): void {
     this.globalContextService.unregister('mapping-unified-editor');
+    this.statusSubscription?.unsubscribe();
+    if (this.monitoringStarted) {
+      this.monitoringService.stopMonitoring();
+    }
     super.ngOnDestroy();
   }
 

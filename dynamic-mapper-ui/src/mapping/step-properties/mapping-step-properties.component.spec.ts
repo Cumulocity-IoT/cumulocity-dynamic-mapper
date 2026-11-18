@@ -237,6 +237,45 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.model.filterMapping).toBe("type = 'b'");
     });
 
+    describe('custom filter validation', () => {
+      async function withControl(expression: string) {
+        const component = await outboundComponent(expression);
+        const { FormControl } = await import('@angular/forms');
+        component.propertyFormly().addControl('filterMapping', new FormControl(expression));
+        component.model.executionFilterMode = 'custom';
+        return component;
+      }
+
+      it('reports a non-boolean result under the field', async () => {
+        const component = await withControl("type = 'a'");
+        (mockStepperService as any).evaluateFilterExpression = jasmine.createSpy().and.resolveTo({
+          resultType: 'String', result: '"x"', valid: false, message: 'must be boolean'
+        });
+        await component.validateCustomFilter('type');
+        expect(component.propertyFormly().get('filterMapping')?.errors)
+          .toEqual({ validationError: { message: 'must be boolean' } });
+      });
+
+      it('reports a syntax error under the field', async () => {
+        const component = await withControl("type = 'a'");
+        (mockStepperService as any).evaluateFilterExpression = jasmine.createSpy().and.rejectWith(new Error('bad syntax'));
+        await component.validateCustomFilter('type = (');
+        expect(component.propertyFormly().get('filterMapping')?.errors)
+          .toEqual({ validationError: { message: 'bad syntax' } });
+      });
+
+      it('clears an earlier error once the expression is boolean', async () => {
+        const component = await withControl("type = 'a'");
+        const control = component.propertyFormly().get('filterMapping')!;
+        control.setErrors({ validationError: { message: 'old' } });
+        (mockStepperService as any).evaluateFilterExpression = jasmine.createSpy().and.resolveTo({
+          resultType: 'Boolean', result: 'true', valid: true
+        });
+        await component.validateCustomFilter("type = 'a'");
+        expect(control.errors).toBeNull();
+      });
+    });
+
     it('ignores the custom field outside the custom option', async () => {
       const component = await outboundComponent("type = 'lora'");
       const emitted: unknown[] = [];

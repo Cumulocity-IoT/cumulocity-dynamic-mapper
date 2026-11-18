@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { DatePipe } from '@c8y/ngx-components';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateStub } from '../../../shared/testing/translate-stub';
 import { TypeResyncComponent } from './type-resync.component';
@@ -37,7 +38,7 @@ describe('TypeResyncComponent (status polling)', () => {
     list = jasmine.createSpy('list');
     const eventService = { list } as any;
     const sharedService = { getDynamicMappingServiceAgent: () => Promise.resolve('agent-1') } as any;
-    TestBed.configureTestingModule({ providers: [provideTranslateStub()] });
+    TestBed.configureTestingModule({ providers: [provideTranslateStub(), { provide: DatePipe, useValue: { transform: (v: unknown) => new Date(v as number).toLocaleString() } }] });
     // Built in an injection context (the constructor registers an effect) and never rendered
     component = TestBed.runInInjectionContext(() => new TypeResyncComponent(eventService, sharedService));
     component.typeListInternal = ['a', 'b'];

@@ -25,7 +25,8 @@ import {
   CoreModule,
   DataGridComponent,
   DisplayOptions,
-  Pagination
+  Pagination,
+  DatePipe
 } from '@c8y/ngx-components';
 import { EventService, IEvent } from '@c8y/client';
 import { TranslateService } from '@ngx-translate/core';
@@ -72,7 +73,7 @@ import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  providers: [...provideGridPersistence('type-resync')],
+  providers: [...provideGridPersistence('type-resync'), DatePipe],
   imports: [CoreModule]
 })
 export class TypeResyncComponent implements OnInit, OnDestroy {
@@ -84,6 +85,8 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
   @Output() resync = new EventEmitter<string>();
 
   private readonly translateService = inject(TranslateService);
+  /** c8yDate: formats by the user's date preferences, unlike Date#toLocaleString (browser locale). */
+  private readonly datePipe = inject(DatePipe);
 
   constructor(
     private readonly eventService: EventService,
@@ -337,7 +340,7 @@ export class TypeResyncComponent implements OnInit, OnDestroy {
         id: type,
         type,
         lastSyncTime: completed
-          ? new Date(completed).toLocaleString()
+          ? this.datePipe.transform(completed, 'medium')
           : this.translateService.instant(gettext('Not synced yet')),
         status: this.statusText(type)
       };

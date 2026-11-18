@@ -26,7 +26,8 @@ import {
   CommonModule,
   CoreModule,
   Pagination,
-  PopoverConfirmComponent
+  PopoverConfirmComponent,
+  DatePipe
 } from '@c8y/ngx-components';
 import { confirmWithPopover } from '../../shared/component/popover-confirm';
 import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
@@ -61,13 +62,15 @@ import { TranslateService } from '@ngx-translate/core';
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  providers: [...provideGridPersistence('monitoring-statistic-v2')],
+  providers: [...provideGridPersistence('monitoring-statistic-v2'), DatePipe],
   imports: [CoreModule, CommonModule]
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
   // Modern Angular dependency injection
   private readonly router = inject(Router);
   private readonly translateService = inject(TranslateService);
+  /** c8yDate: formats by the user's date preferences, unlike Date#toLocaleString (browser locale). */
+  private readonly datePipe = inject(DatePipe);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -338,7 +341,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     requestsDisplay: string;
     processingTimeDisplay: string;
   } {
-    const when = (ms?: number) => (ms ? new Date(ms).toLocaleString() : '');
+    const when = (ms?: number) => (ms ? (this.datePipe.transform(ms, 'medium') ?? '') : '');
     const received = status.messagesReceived ?? 0;
     const errors = status.errors ?? 0;
     // errors can exceed received (the catch-all row counts failures raised before a message

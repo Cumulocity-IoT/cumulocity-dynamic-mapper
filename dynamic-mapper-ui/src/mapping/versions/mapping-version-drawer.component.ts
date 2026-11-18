@@ -25,7 +25,8 @@ import {
   Column,
   ColumnDataType,
   CoreModule,
-  Pagination
+  Pagination,
+  DatePipe
 } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
@@ -107,7 +108,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  providers: [...provideGridPersistence('mapping-versions')],
+  providers: [...provideGridPersistence('mapping-versions'), DatePipe],
   imports: [CoreModule, SharedModule]
 })
 export class MappingVersionDrawerComponent implements OnInit {
@@ -130,6 +131,8 @@ export class MappingVersionDrawerComponent implements OnInit {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
   private readonly translateService = inject(TranslateService);
+  /** c8yDate: formats by the user's date preferences, unlike Date#toLocaleString (browser locale). */
+  private readonly datePipe = inject(DatePipe);
   private readonly bsModalService = inject(BsModalService);
   private readonly publishService = inject(MappingPublishService);
 
@@ -178,7 +181,7 @@ export class MappingVersionDrawerComponent implements OnInit {
             versionDisplay: v.version ? `v${v.version}` : '—',
             state,
             note: v.note || '',
-            updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
+            updatedDisplay: v.createdAt ? this.datePipe.transform(v.createdAt, 'medium') : '—',
             createdBy: v.createdBy || '—',
             isDraft: false,
             // A pre-versioning mapping is listed as an unpersisted entry (no id): there is no
@@ -201,7 +204,7 @@ export class MappingVersionDrawerComponent implements OnInit {
           versionDisplay: '—',
           state: 'draft',
           note: draftNote,
-          updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
+          updatedDisplay: draft.lastUpdate ? this.datePipe.transform(draft.lastUpdate, 'medium') : '—',
           createdBy: '—',
           isDraft: true,
           onNoteChange: undefined

@@ -165,7 +165,7 @@
 
     <c8y-list-group>
       <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
-        {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
+        {{ event.time | c8yDate: 'medium' }}
         <c8y-li role="listitem">
           <div class="d-flex">
             <div class="col-md-6">

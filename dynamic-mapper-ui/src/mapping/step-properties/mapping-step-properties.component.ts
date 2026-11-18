@@ -51,6 +51,8 @@ import {
   Qos,
   qosLabel,
   JsonValue,
+  Template,
+  SAMPLE_TEMPLATES_C8Y,
   QOS_OPTIONS,
   SharedService,
   StepperConfiguration
@@ -210,6 +212,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       onTargetAPIChanged: targetAPI => self.onTargetAPIChanged(targetAPI),
       onExecutionFilterChanged: () => self.onExecutionFilterChanged(),
       onCustomFilterEdited: expression => self.onCustomFilterEdited(expression),
+      validateCustomFilter: expression => self.validateCustomFilter(expression),
       commitModel: () => self.commitModel(),
       notifyMappingPropertyChanged: mapping => self.stepperService.notifyMappingPropertyChanged(mapping),
       describeQos: qos => self.describeQos(qos as Qos)
@@ -518,11 +521,55 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   onCustomFilterEdited(expression: string | undefined): void {
     if (this.model.executionFilterMode !== 'custom') return;
     const value = expression ?? '';
-    if (value === (this.mapping().filterMapping ?? '')) return;
-    this.model.filterMapping = value;
-    this.knownFilterMapping = value;
-    this.propertiesChange.emit({ filterMapping: value });
-    this.commitModel();
+    if (value !== (this.mapping().filterMapping ?? '')) {
+      this.model.filterMapping = value;
+      this.knownFilterMapping = value;
+      this.propertiesChange.emit({ filterMapping: value });
+      this.commitModel();
+    }
+    void this.validateCustomFilter(value);
+  }
+
+  /**
+   * Evaluates the custom expression against the source template, like the Templates step does, and reports
+   * a syntax error or a non-boolean result under the field. Without it the mistake only shows up on the
+   * Templates tab (or when the mapping silently never matches).
+   */
+  async validateCustomFilter(expression: string | undefined): Promise<void> {
+    const control = this.propertyFormly()?.get('filterMapping');
+    if (!control) return;
+    if (this.model.executionFilterMode !== 'custom' || !expression?.trim()) {
+      control.setErrors(null);
+      return;
+    }
+    try {
+      const template = this.sourceTemplateForFilter();
+      const result = await this.stepperService.evaluateFilterExpression(template, expression);
+      if (result.valid) {
+        control.setErrors(null);
+      } else {
+        control.setErrors({ validationError: { message: result.message } });
+        control.markAsTouched();
+      }
+    } catch (error) {
+      control.setErrors({ validationError: { message: (error as Error).message } });
+      control.markAsTouched();
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** The message the filter runs against: the mapping's source template, else the sample of the source API. */
+  private sourceTemplateForFilter(): Template | undefined {
+    const stored = this.mapping()?.sourceTemplate;
+    if (stored) {
+      try {
+        return JSON.parse(stored) as Template;
+      } catch {
+        // fall through to the sample
+      }
+    }
+    const sample = SAMPLE_TEMPLATES_C8Y[this.model.targetAPI ?? this.mapping()?.targetAPI];
+    return sample ? (JSON.parse(sample) as Template) : undefined;
   }
 
   /** Emits the properties that differ from the host's mapping. Also called on every form change. */

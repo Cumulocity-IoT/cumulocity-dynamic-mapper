@@ -22,7 +22,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideTranslateStub } from '../../shared/testing/translate-stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerRef, DatePipe } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { MappingVersionDrawerComponent } from './mapping-version-drawer.component';
@@ -96,6 +96,7 @@ describe('MappingVersionDrawerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MappingVersionDrawerComponent],
       providers: [
+        { provide: DatePipe, useValue: { transform: (v: unknown) => new Date(v as number).toLocaleString() } },
         { provide: MappingService, useValue: mockMappingService },
         { provide: SubscriptionService, useValue: jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']) },
         { provide: AlertService, useValue: mockAlertService },

@@ -54,6 +54,7 @@ export interface PropertyFieldsHost {
   onTargetAPIChanged(targetAPI: string): void;
   onExecutionFilterChanged(): void;
   onCustomFilterEdited(expression: string | undefined): void;
+  validateCustomFilter(expression: string | undefined): Promise<void>;
   commitModel(): void;
   notifyMappingPropertyChanged(mapping: Mapping): void;
   describeQos(qos: unknown): string;
@@ -302,8 +303,12 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
           props: {
             label: isInbound ? gettext('Target API') : gettext('Source API'),
             description: isOutbound
-              ? gettext('Used as a filter to select which mappings apply when a notification arrives.')
-              : undefined,
+              ? gettext(
+                  'Used as a filter to select which mappings apply when a notification arrives. <code>Custom</code> selects notifications that belong to none of the standard Cumulocity APIs.'
+                )
+              : gettext(
+                  'The Cumulocity API that receives the result: Alarm, Event, Measurement, Inventory, or Operation. <code>Custom</code> is for Smart Functions that call a Cumulocity microservice REST endpoint (<code>/service/...</code>) instead of a standard API.'
+                ),
             options: Object.keys(API)
               .filter((key) => key !== API.ALL.name)
               .map((key) => {
@@ -378,6 +383,9 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
           },
           hooks: {
             onInit: (field: FormlyFieldConfig) => {
+              // A saved mapping opens with its expression: check it now, not only after the first edit.
+              // Deferred: the control joins the form after this hook.
+              setTimeout(() => void host.validateCustomFilter(field.formControl.value));
               field.formControl.valueChanges.pipe(
                 debounceTime(500),
                 distinctUntilChanged(),

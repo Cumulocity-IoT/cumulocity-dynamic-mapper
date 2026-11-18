@@ -2404,6 +2404,9 @@ msgstr ""
 msgid "Runs the mapping without writing anything to your tenant"
 msgstr ""
 
+msgid "Runtime statistic of this mapping since the last reset"
+msgstr ""
+
 msgid "Save"
 msgstr ""
 
@@ -2886,6 +2889,9 @@ msgstr ""
 msgid "Text"
 msgstr ""
 
+msgid "The Cumulocity API that receives the result: Alarm, Event, Measurement, Inventory, or Operation. <code>Custom</code> is for Smart Functions that call a Cumulocity microservice REST endpoint (<code>/service/...</code>) instead of a standard API."
+msgstr ""
+
 msgid "The Dynamic Mapper service did not answer (HTTP {{status}}). Check that it is running and try again."
 msgstr ""
 
@@ -3159,7 +3165,7 @@ msgstr ""
 msgid "Use the captured payload directly as the source template when creating or editing a mapping."
 msgstr ""
 
-msgid "Used as a filter to select which mappings apply when a notification arrives."
+msgid "Used as a filter to select which mappings apply when a notification arrives. <code>Custom</code> selects notifications that belong to none of the standard Cumulocity APIs."
 msgstr ""
 
 msgid "Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results."
@@ -3199,6 +3205,9 @@ msgid "View configuration"
 msgstr ""
 
 msgid "View connector"
+msgstr ""
+
+msgid "View statistics"
 msgstr ""
 
 msgid "Waiting for messages on <code>{{ sessionTopic }}</code>…"
