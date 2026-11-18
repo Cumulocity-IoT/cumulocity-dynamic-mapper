@@ -22,8 +22,6 @@ import { FormControl, FormGroup } from '@angular/forms';
 import {
   applyCodeTemplateSample,
   deriveSampleTopicFromTopic,
-  isFilterOutboundUnique,
-  isMappingTopicUnique,
   isWildcardTopic,
   normalizeTopic,
   splitTopicExcludingSeparator,
@@ -205,70 +203,6 @@ describe('isWildcardTopic', () => {
 
   it('should return false for empty string', () => {
     expect(isWildcardTopic('')).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// isMappingTopicUnique
-// ---------------------------------------------------------------------------
-
-describe('isMappingTopicUnique', () => {
-  it('should return true when there are no other mappings', () => {
-    const mapping = makeMapping({ mappingTopic: 'a/b/c' });
-    expect(isMappingTopicUnique(mapping, [])).toBe(true);
-  });
-
-  it('should return true when topic does not overlap with others', () => {
-    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b/c' });
-    const others = [makeMapping({ id: '2', mappingTopic: 'x/y/z' })];
-    expect(isMappingTopicUnique(mapping, others)).toBe(true);
-  });
-
-  it('should return true when the only overlap is with itself', () => {
-    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b' });
-    const others = [makeMapping({ id: '1', mappingTopic: 'a/b' })];
-    expect(isMappingTopicUnique(mapping, others)).toBe(true);
-  });
-
-  it('should return false when another mapping has a prefix overlap', () => {
-    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b' });
-    const others = [makeMapping({ id: '2', mappingTopic: 'a/b/c' })];
-    expect(isMappingTopicUnique(mapping, others)).toBe(false);
-  });
-
-  it('should return false when this mapping is a prefix of another', () => {
-    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b/c' });
-    const others = [makeMapping({ id: '2', mappingTopic: 'a/b' })];
-    expect(isMappingTopicUnique(mapping, others)).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// isFilterOutboundUnique
-// ---------------------------------------------------------------------------
-
-describe('isFilterOutboundUnique', () => {
-  it('should return true when there are no other mappings', () => {
-    const mapping = makeMapping({ filterMapping: 'filter1' });
-    expect(isFilterOutboundUnique(mapping, [])).toBe(true);
-  });
-
-  it('should return true when filter does not match any other mapping', () => {
-    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
-    const others = [makeMapping({ id: '2', filterMapping: 'filterB' })];
-    expect(isFilterOutboundUnique(mapping, others)).toBe(true);
-  });
-
-  it('should return true when matching mapping is itself', () => {
-    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
-    const others = [makeMapping({ id: '1', filterMapping: 'filterA' })];
-    expect(isFilterOutboundUnique(mapping, others)).toBe(true);
-  });
-
-  it('should return false when another mapping has the same filter', () => {
-    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
-    const others = [makeMapping({ id: '2', filterMapping: 'filterA' })];
-    expect(isFilterOutboundUnique(mapping, others)).toBe(false);
   });
 });
 

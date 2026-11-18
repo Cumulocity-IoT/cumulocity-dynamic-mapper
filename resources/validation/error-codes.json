@@ -1,0 +1,22 @@
+{
+  "_comment": "Error codes shared by ValidationError (backend) and ValidationFormlyError (UI); both tests compare against this list.",
+  "codes": [
+    "Only_One_Multi_Level_Wildcard",
+    "Multi_Level_Wildcard_Only_At_End",
+    "Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used",
+    "One_Substitution_Defining_Device_Identifier_Must_Be_Used",
+    "Target_Template_Must_Be_Valid_JSON",
+    "Source_Template_Must_Be_Valid_JSON",
+    "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+    "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name",
+    "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+    "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name",
+    "Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function",
+    "Extension_Must_Be_Defined_For_Extension_Java_Mapping",
+    "Unparsed_MappingType_Requires_Smart_Function_Transformation_Type",
+    "Substitution_Source_Expression_Must_Be_Valid_JSONata",
+    "Substitution_Paths_Must_Not_Be_Empty",
+    "Substitution_Expand_Array_Not_Supported_For_Outbound",
+    "Retired_Mapping_Type_Or_Transformation_Type"
+  ]
+}

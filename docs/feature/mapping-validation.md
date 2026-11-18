@@ -50,6 +50,19 @@ If you bypass the UI (e.g. call the REST API directly), only the two backend lay
 `MappingValidator.validate()` collects **all** applicable errors in one pass — it does not
 stop at the first failure — so an API response can list several violations at once.
 
+### Keeping the UI and the backend in sync
+
+The UI checks topics and samples while the user types, the backend repeats the checks on save, so
+the two implementations must agree. Two shared files in [`resources/validation/`](../../resources/validation)
+keep them honest:
+
+- `topic-cases.json`: inbound and outbound topic and sample pairs, each marked valid or invalid with the
+  error code the result must contain. The backend runs it in `MappingValidatorSharedCasesTest`, the UI in
+  `topic-validation-cases.spec.ts`. To change a rule, change the case file first; both builds then fail until
+  both validators follow.
+- `error-codes.json`: the error codes. `ValidationError` (backend) and `ValidationFormlyError` (UI) are each
+  compared with this list, so a code added on one side only fails a test.
+
 ### Error detail
 
 The 422 body carries both a flat list of codes and, where the rule could identify what failed,

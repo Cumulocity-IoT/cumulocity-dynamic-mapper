@@ -1,0 +1,174 @@
+{
+  "_comment": "Shared by the backend (MappingValidatorSharedCasesTest) and the UI (topic-validation-cases.spec.ts). Add a case here and both validators must agree. 'error' is an error code the result must contain.",
+  "inbound": [
+    {
+      "topic": "plant1/+/+",
+      "sample": "plant1/line2/m7",
+      "valid": true,
+      "why": "+ matches one level each"
+    },
+    {
+      "topic": "plant1/+/+",
+      "sample": "plant1/+/+",
+      "valid": true,
+      "why": "a literal + in the sample is accepted (what the UI derives)"
+    },
+    {
+      "topic": "device/+",
+      "sample": "device/110",
+      "valid": true
+    },
+    {
+      "topic": "a/#",
+      "sample": "a/x/y/z",
+      "valid": true,
+      "why": "trailing # matches any number of further levels"
+    },
+    {
+      "topic": "a/#",
+      "sample": "a",
+      "valid": true,
+      "why": "# also matches zero levels"
+    },
+    {
+      "topic": "a/b/c",
+      "sample": "a/b/c/",
+      "valid": true,
+      "why": "a trailing slash is ignored"
+    },
+    {
+      "topic": "/a/b",
+      "sample": "/x/b",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name",
+      "why": "fixed level differs"
+    },
+    {
+      "topic": "a/b/c",
+      "sample": "a/b",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name"
+    },
+    {
+      "topic": "a/+/c",
+      "sample": "a/1/c/d",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+      "why": "without # the count must match exactly"
+    },
+    {
+      "topic": "a/b/#",
+      "sample": "a",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+      "why": "sample shorter than the fixed part"
+    },
+    {
+      "topic": "/a/b",
+      "sample": "a/b",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+      "why": "the leading slash is a level"
+    },
+    {
+      "topic": "A/b",
+      "sample": "a/b",
+      "valid": false,
+      "error": "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name",
+      "why": "fixed levels are case sensitive"
+    },
+    {
+      "topic": "a/#/b",
+      "sample": "a/x/b",
+      "valid": false,
+      "error": "Multi_Level_Wildcard_Only_At_End",
+      "why": "# only at the end"
+    },
+    {
+      "topic": "a/#/#",
+      "sample": "a/x/y",
+      "valid": false,
+      "error": "Only_One_Multi_Level_Wildcard",
+      "why": "only one #"
+    }
+  ],
+  "outbound": [
+    {
+      "topic": "/event/events/#",
+      "sample": "/event/events/C9BAE59F",
+      "valid": true,
+      "why": "# is exactly one level"
+    },
+    {
+      "topic": "measurements/+",
+      "sample": "measurements/110",
+      "valid": true
+    },
+    {
+      "topic": "a/+/c",
+      "sample": "a/1/c",
+      "valid": true
+    },
+    {
+      "topic": "a/#",
+      "sample": "a/+",
+      "valid": true
+    },
+    {
+      "topic": "a/b/",
+      "sample": "a/b",
+      "valid": true,
+      "why": "a trailing slash is ignored"
+    },
+    {
+      "topic": "a/#",
+      "sample": "a/x/y",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+      "why": "# is one level, not any number"
+    },
+    {
+      "topic": "a/#",
+      "sample": "a",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name"
+    },
+    {
+      "topic": "a/+/c",
+      "sample": "a/1/d",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+    },
+    {
+      "topic": "a/b",
+      "sample": "a/b/c",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name"
+    },
+    {
+      "topic": "/a/b",
+      "sample": "a/b",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name",
+      "why": "the leading slash is a level"
+    },
+    {
+      "topic": "/a/b",
+      "sample": "/x1/b",
+      "valid": false,
+      "error": "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+    },
+    {
+      "topic": "a/#/b",
+      "sample": "a/x/b",
+      "valid": false,
+      "error": "Multi_Level_Wildcard_Only_At_End"
+    },
+    {
+      "topic": "a/#/#",
+      "sample": "a/x/y",
+      "valid": false,
+      "error": "Only_One_Multi_Level_Wildcard"
+    }
+  ]
+}

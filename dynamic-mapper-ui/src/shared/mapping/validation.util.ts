@@ -28,31 +28,6 @@ import { TOPIC_WILDCARD_MULTI, TOPIC_WILDCARD_SINGLE } from './util-constants';
 
 // ─── Mapping validators ───────────────────────────────────────────────────────
 
-export function isMappingTopicUnique(
-  mapping: Mapping,
-  mappings: Mapping[]
-): boolean {
-  const result = mappings.every((m) => {
-    return (
-      (!mapping.mappingTopic.startsWith(m.mappingTopic) &&
-        !m.mappingTopic.startsWith(mapping.mappingTopic)) ||
-      mapping.id == m.id
-    );
-  });
-  return result;
-}
-
-export function isFilterOutboundUnique(
-  mapping: Mapping,
-  mappings: Mapping[]
-): boolean {
-  let result = true;
-  result = mappings.every((m) => {
-    return mapping.filterMapping != m.filterMapping || mapping.id == m.id;
-  });
-  return result;
-}
-
 // ─── Backend error-code translation ────────────────────────────────────────────
 
 /**
