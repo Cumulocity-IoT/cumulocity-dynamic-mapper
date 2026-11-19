@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, OnDestroy, ViewChild, ViewEncapsulation, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
-import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
+import { ApplicationService, IApplication } from '@c8y/client';
 import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { Subject, Subscription } from 'rxjs';
@@ -50,9 +50,12 @@ export class AddExtensionComponent implements OnDestroy {
   private readonly isAppCreatedState = signal<boolean>(false);
   get isAppCreated(): boolean { return this.isAppCreatedState(); }
   set isAppCreated(value: boolean) { this.isAppCreatedState.set(value); }
-  private readonly appState = signal<Partial<IManagedObject> | null>(null);
-  get app(): Partial<IManagedObject> | null { return this.appState(); }
-  set app(value: Partial<IManagedObject> | null) { this.appState.set(value); }
+  private readonly extensionNameState = signal<string | null>(null);
+  /** The name the extension is registered under, and that mappings refer to: the file name without ".jar". */
+  get extensionName(): string | null { return this.extensionNameState(); }
+  set extensionName(value: string | null) { this.extensionNameState.set(value); }
+  /** Replace the file of an existing extension with the same name; set before the file is chosen. */
+  overwrite = false;
   progress$: Subject<number> = new Subject<number>();
   private readonly errorMessageState = signal<string | null>(null);
   get errorMessage(): string | null { return this.errorMessageState(); }
@@ -85,12 +88,13 @@ export class AddExtensionComponent implements OnDestroy {
 
   async onFile(file: File): Promise<void> {
     this.resetUploadState();
-    const nameUpload = this.extractFileName(file.name);
+    this.extensionName = this.extractFileName(file.name);
 
     try {
-      this.app = this.createAppObject(nameUpload);
-      const progress$ = this.extensionService.uploadProcessorExtensionWithProgress$(file, this.app);
-      this.isAppCreated = true;
+      const progress$ = this.extensionService.uploadProcessorExtensionWithProgress$(file, {
+        name: this.extensionName,
+        overwrite: this.overwrite
+      });
 
       this.uploadSubscription = progress$.subscribe({
         next: (uploadProgress) => {
@@ -114,21 +118,12 @@ export class AddExtensionComponent implements OnDestroy {
     return fullName.split('.').slice(0, -1).join('.');
   }
 
-  private createAppObject(name: string): Partial<IManagedObject> {
-    return {
-      d11r_processorExtension: {
-        name,
-        external: true
-      },
-      name
-    };
-  }
-
   private handleUploadError(error: UploadError): void {
+    // Back to the drop area, where the error message is shown
+    this.isAppCreated = false;
     this.isLoading = false;
     this.progress$.next(0);
-    this.extensionService.cancelProcessorExtensionCreation(this.app);
-    this.app = null;
+    this.extensionName = null;
     this.dropAreaComponent()?.onDelete();
 
     this.errorMessage = this.extractErrorMessage(error);
@@ -152,6 +147,8 @@ export class AddExtensionComponent implements OnDestroy {
   }
 
   private handleUploadComplete(): void {
+    // Only now is the upload done: the success view must not appear while it runs or after it failed
+    this.isAppCreated = true;
     this.isLoading = false;
     this.progress$.next(100);
     this.alertService.success(this.successText);
@@ -174,13 +171,10 @@ export class AddExtensionComponent implements OnDestroy {
     this.closeSubject.complete();
   }
 
+  /** Unsubscribing aborts a running upload; the backend registers an extension only after it received the whole file. */
   private cancelFileUpload() {
     this.uploadCanceled = true;
-    const appToCancel = this.app;
-    this.app = null;
-    if (appToCancel) {
-      this.extensionService.cancelProcessorExtensionCreation(appToCancel);
-    }
+    this.uploadSubscription?.unsubscribe();
   }
 
 }

@@ -26,6 +26,13 @@ for example a raw device command such as `AT+GTUPD=…$` or a binary protocol me
   `OperationToTextCommand`, and the sample mappings *OUT-17 Any Payload - operation as a raw text command* (Smart Function)
   and *OUT-18* (the same with the Java extension).
 
+### Upload Java extensions through the backend (new feature)
+
+`POST /extension` (Admin role) takes the extension JAR as a multipart form, checks it,
+  stores and registers it, loads it and rolls a new upload back if nothing loads; `overwrite=true` replaces an existing
+  extension. The UI now uses it instead of writing to the binary repository directly, and its dialog shows the extension name
+  and an *overwrite* option. The 50 MB limit is now also enforced by the service.
+
 ### Acknowledgement and retries (behaviour change)
 
 A message is now acknowledged only after the mapping pipeline settled it. One rule applies to every connector:

@@ -40,12 +40,23 @@
             }
           </c8y-messages>
         </c8y-form-group>
+        <label class="c8y-switch m-t-16" data-cy="dm-add-extension-overwrite">
+          <input type="checkbox" [(ngModel)]="overwrite" [disabled]="isLoading" />
+          <span></span>
+          <span>{{ 'Replace an existing extension with the same name' | translate }}</span>
+        </label>
       } @else {
         <div class="d-flex a-i-center j-c-center modal-success-area">
           <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
             type="success">
           </c8y-operation-result>
         </div>
+        @if (extensionName) {
+          <!-- Mappings refer to the extension by this name (the file name without ".jar") -->
+          <p class="text-center m-t-16" data-cy="dm-add-extension-name">
+            {{ 'Extension name' | translate }}: <strong>{{ extensionName }}</strong>
+          </p>
+        }
       }
     </div>
   </div>

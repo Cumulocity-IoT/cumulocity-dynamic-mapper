@@ -884,7 +884,7 @@ Build steps:
 1. Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` in `dynamic-mapper-extension`
 2. Register the class in `extension-external.properties`
 3. Build the JAR: `cd dynamic-mapper-extension && mvn package`
-4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI
+4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI, or with `POST /extension` (multipart form, field `file`; see [transformation-java-extensions.md](feature/transformation-java-extensions.md))
 5. Create a mapping with `transformationType: EXTENSION_JAVA` and select the uploaded extension and its registered event name in the Transformation section
 
 > **Note:** The `RepairStrategy.CREATE_IF_MISSING` strategy is available in inbound extensions. It creates a target node if it does not exist, which is useful for mappings that must adapt to payloads with dynamic or optional fields.

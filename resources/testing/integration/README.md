@@ -493,6 +493,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-type-subscription-removal` | Removing a type from `PUT /subscription/type` unsubscribes its devices in the background; devices still in a subscribed group keep theirs |
 | `test-outbound-subscription-persistence` | Subscription persistence after restart |
 | `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
+| `test-outbound-extension-anypayload` | Any Payload outbound with the `OperationToTextCommand` Java extension: an Operation becomes a raw text command (`AT+GTUPD=…$`); the broker receives the exact bytes (`mosquitto_sub -F %x`). Skipped when the extension is not deployed |
 
 ### Log save prompt before a restart
 

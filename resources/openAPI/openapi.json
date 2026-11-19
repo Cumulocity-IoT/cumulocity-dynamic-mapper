@@ -2944,6 +2944,77 @@
             "description" : "Internal server error"
           }
         }
+      },
+      "post" : {
+        "tags" : [
+          "Extension Controller"
+        ],
+        "summary" : "Upload a processor extension",
+        "description" : "Uploads the JAR of a processor extension, registers it under a name and loads it for the current tenant. The JAR must contain an extension-external.yaml that lists its extensions. If no extension can be loaded from the file, a new upload is rolled back. Mappings refer to the extension by its name.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.\n",
+        "operationId" : "uploadProcessorExtension",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "required" : [
+                  "file"
+                ],
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "description" : "The extension JAR",
+                    "format" : "binary"
+                  },
+                  "name" : {
+                    "type" : "string",
+                    "description" : "The name mappings refer to. Defaults to the file name without \".jar\".",
+                    "example" : "dynamic-mapper-extension"
+                  },
+                  "overwrite" : {
+                    "type" : "boolean",
+                    "description" : "Replace the file of an existing external extension with the same name",
+                    "default" : false
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Extension uploaded and loaded",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Extension"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid name, or the file is not a valid extension JAR"
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions to upload extensions"
+          },
+          "409" : {
+            "description" : "An extension with that name exists and overwrite was not set, or it is built in"
+          },
+          "413" : {
+            "description" : "The file is larger than 50 MB"
+          },
+          "422" : {
+            "description" : "The file was stored but no extension could be loaded from it; a new upload is rolled back"
+          },
+          "502" : {
+            "description" : "Cumulocity refused to store the file; the message carries its reason"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
       }
     },
     "/extension/{extensionName}" : {

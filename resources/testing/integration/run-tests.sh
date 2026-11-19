@@ -97,6 +97,7 @@ declare -a TESTS=(
     "extension|test-inbound-extension-custom-event|Extension: Protobuf → Event"
     "extension|test-inbound-extension-sparkplugb-measurement|Extension: Sparkplug B → Measurement"
     "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
+    "extension|test-outbound-extension-anypayload|Any Payload outbound Java extension: Operation → raw text command on the broker (exact bytes)"
     # ── Outbound (payload) ────────────────────────────────────────────────────
     "outbound|test-outbound-measurement|C8Y Measurement → MQTT broker"
     "outbound|test-outbound-event|C8Y Event → MQTT broker"

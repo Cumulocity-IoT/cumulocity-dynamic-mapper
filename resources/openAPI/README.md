@@ -51,6 +51,7 @@ All URIs are relative to */service/dynamic-mapper-service*
 | *ExtensionControllerApi* | [**deleteProcessorExtension**](Apis/ExtensionControllerApi.md#deleteProcessorExtension) | **DELETE** /extension/{extensionName} | Delete a processor extension |
 *ExtensionControllerApi* | [**getProcessorExtension**](Apis/ExtensionControllerApi.md#getProcessorExtension) | **GET** /extension/{extensionName} | Get a specific processor extension |
 *ExtensionControllerApi* | [**getProcessorExtensions**](Apis/ExtensionControllerApi.md#getProcessorExtensions) | **GET** /extension | Get all processor extensions |
+*ExtensionControllerApi* | [**uploadProcessorExtension**](Apis/ExtensionControllerApi.md#uploadProcessorExtension) | **POST** /extension | Upload a processor extension |
 | *HTTPConnectorControllerApi* | [**processGenericMessage**](Apis/HTTPConnectorControllerApi.md#processGenericMessage) | **POST** /httpConnector | Process HTTP connector message |
 *HTTPConnectorControllerApi* | [**processGenericMessage1**](Apis/HTTPConnectorControllerApi.md#processGenericMessage1) | **PUT** /httpConnector | Process HTTP connector message |
 *HTTPConnectorControllerApi* | [**processGenericMessage2**](Apis/HTTPConnectorControllerApi.md#processGenericMessage2) | **POST** /httpConnector/** | Process HTTP connector message |

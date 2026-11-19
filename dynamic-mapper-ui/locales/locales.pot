@@ -991,6 +991,9 @@ msgstr ""
 msgid "Extension is required"
 msgstr ""
 
+msgid "Extension name"
+msgstr ""
+
 msgid "Extension name is required."
 msgstr ""
 
@@ -2315,6 +2318,9 @@ msgid "Repair strategy"
 msgstr ""
 
 msgid "Repeated"
+msgstr ""
+
+msgid "Replace an existing extension with the same name"
 msgstr ""
 
 msgid "Replace code"

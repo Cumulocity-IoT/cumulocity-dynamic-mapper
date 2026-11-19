@@ -25,7 +25,7 @@ import { ExtensionService } from "../extension.service";
 /**
  * Errors surfaced by the *.jar processor-extension upload flow (see AddExtensionComponent).
  * `UPLOAD_FAILED` covers the only unstructured failure the upload can reject with — a
- * transport/network failure with no response body (`InventoryBinaryService.getXMLHttpResponse`
+ * transport/network failure with no response body (`ExtensionService.uploadProcessorExtensionWithProgress$`
  * rejects with the plain string 'Could not upload file.' in that case). A server-side rejection
  * that does carry a response body surfaces that body's own message instead of a static enum.
  */

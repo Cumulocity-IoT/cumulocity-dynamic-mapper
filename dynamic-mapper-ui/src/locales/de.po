@@ -942,6 +942,9 @@ msgstr ""
 msgid "Extension is required"
 msgstr ""
 
+msgid "Extension name"
+msgstr ""
+
 msgid "Extension Name"
 msgstr ""
 
@@ -2207,6 +2210,9 @@ msgstr ""
 
 msgid "Repeated"
 msgstr "Wiederholt"
+
+msgid "Replace an existing extension with the same name"
+msgstr ""
 
 msgid "Replace code"
 msgstr ""

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.core;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,6 +33,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -63,6 +67,15 @@ public class ExtensionManager implements TenantScoped {
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.yaml";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.yaml";
+
+    /** Largest JAR the upload accepts. */
+    public static final long MAX_EXTENSION_BYTES = 50L * 1024 * 1024;
+
+    /** The type of the binary's managed object: the content type of an extension JAR. */
+    static final String EXTENSION_CONTENT_TYPE = "application/java-archive";
+
+    /** The name an extension is registered under, and that mappings refer to. */
+    private static final Pattern EXTENSION_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,99}");
 
     private final BinariesApi binaryApi;
 
@@ -427,6 +440,107 @@ public class ExtensionManager implements TenantScoped {
 
             return extensionInboundRegistry.deleteExtension(tenant, extensionName);
         }
+    }
+
+    /**
+     * Upload an external extension: stores the JAR in the binary repository, registers it, loads it and returns the
+     * result. If the JAR holds no loadable extension, a new upload is rolled back so no unusable record stays behind.
+     *
+     * @param name      the name mappings refer to; letters, digits, dot, underscore and hyphen
+     * @param jar       the JAR file
+     * @param overwrite replace the file of an existing external extension of the same name; the previous file is not
+     *                  restored if the new one cannot be loaded
+     * @return the loaded extension
+     * @throws ExtensionUploadException the upload was rejected, see {@link ExtensionUploadException.Reason}
+     */
+    public Extension uploadProcessorExtension(String tenant, String name, byte[] jar, boolean overwrite)
+            throws ExtensionUploadException {
+        if (name == null || !EXTENSION_NAME.matcher(name).matches()) {
+            throw new ExtensionUploadException(ExtensionUploadException.Reason.INVALID,
+                    "The extension name must start with a letter or digit and contain only letters, digits, '.', '_' and '-' (at most 100 characters).");
+        }
+        if (jar == null || jar.length == 0) {
+            throw new ExtensionUploadException(ExtensionUploadException.Reason.INVALID, "The file is empty.");
+        }
+        if (jar.length > MAX_EXTENSION_BYTES) {
+            throw new ExtensionUploadException(ExtensionUploadException.Reason.TOO_LARGE,
+                    "The file is larger than " + (MAX_EXTENSION_BYTES / (1024 * 1024)) + " MB.");
+        }
+        requireExtensionManifest(jar);
+
+        synchronized (lockFor(tenant)) {
+            ManagedObjectRepresentation existing = findExternalExtension(name);
+            if (existing == null && extensionInboundRegistry.getExtension(tenant, name) != null) {
+                throw new ExtensionUploadException(ExtensionUploadException.Reason.NAME_TAKEN,
+                        "Extension " + name + " is built in and cannot be replaced.");
+            }
+            if (existing != null && !overwrite) {
+                throw new ExtensionUploadException(ExtensionUploadException.Reason.NAME_TAKEN,
+                        "Extension " + name + " already exists. Upload it with overwrite to replace it.");
+            }
+
+            ManagedObjectRepresentation stored = existing;
+            boolean created = existing == null;
+            if (created) {
+                ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
+                mo.setName(name);
+                // The binaries API refuses an object without both name and type; the type is the content type
+                mo.setType(EXTENSION_CONTENT_TYPE);
+                mo.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE, Map.of("name", name, "external", true));
+                stored = binaryApi.uploadFile(mo, jar);
+            } else {
+                binaryApi.replaceFile(existing.getId(), "application/octet-stream", new ByteArrayInputStream(jar));
+            }
+
+            loadProcessorExtensions(tenant);
+            Extension result = extensionInboundRegistry.getExtension(tenant, name);
+            if (result == null || result.getLoaded() == ExtensionStatus.NOT_LOADED) {
+                String reason = result != null && result.getMessage() != null ? result.getMessage()
+                        : "no extension could be loaded from the file";
+                if (created) {
+                    try {
+                        binaryApi.deleteFile(stored.getId());
+                    } catch (RuntimeException e) {
+                        log.warn("{} - Could not remove the rejected extension {}: {}", tenant, name, e.getMessage());
+                    }
+                    loadProcessorExtensions(tenant);
+                }
+                throw new ExtensionUploadException(ExtensionUploadException.Reason.NOT_LOADED,
+                        "Extension " + name + " could not be loaded: " + reason
+                                + (created ? "" : " (the previous file was already replaced)"));
+            }
+            log.info("{} - Uploaded extension {} ({} bytes, {})", tenant, name, jar.length,
+                    created ? "new" : "replaced");
+            return result;
+        }
+    }
+
+    /** The JAR must declare its extensions; a file without the manifest could never load, so refuse it up front. */
+    private static void requireExtensionManifest(byte[] jar) throws ExtensionUploadException {
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(jar))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (EXTENSION_EXTERNAL_FILE.equals(entry.getName())) {
+                    return;
+                }
+            }
+        } catch (IOException e) {
+            throw new ExtensionUploadException(ExtensionUploadException.Reason.INVALID,
+                    "The file is not a valid JAR: " + e.getMessage());
+        }
+        throw new ExtensionUploadException(ExtensionUploadException.Reason.INVALID,
+                "The file is not a valid extension JAR: it contains no " + EXTENSION_EXTERNAL_FILE + ".");
+    }
+
+    private ManagedObjectRepresentation findExternalExtension(String name) {
+        for (ManagedObjectRepresentation representation : extensionsComponent.get()) {
+            Object fragment = representation.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
+            if (fragment instanceof Map<?, ?> props && name.equals(props.get("name"))
+                    && Boolean.TRUE.equals(props.get("external"))) {
+                return representation;
+            }
+        }
+        return null;
     }
 
     /** Reload all extensions of the tenant from the binary repository; see {@link #loadProcessorExtensions}. */
