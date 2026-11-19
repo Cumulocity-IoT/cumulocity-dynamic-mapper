@@ -181,10 +181,7 @@ public class AMQPClient extends AConnectorClient {
 
                 @Override
                 public void handleRecoveryStarted(Recoverable recoverable) {
-                    boolean intentional;
-                    synchronized (disconnectionLock) {
-                        intentional = intentionalDisconnect || isDisconnecting;
-                    }
+                    boolean intentional = isDisconnectIntentional();
                     if (intentional) {
                         // disconnect() already reports DISCONNECTED itself. Guards against the same
                         // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
@@ -458,7 +455,7 @@ public class AMQPClient extends AConnectorClient {
         // Check connection health. Backed off like AMQTTClient's connectorSpecificHousekeeping():
         // without nextReconnectTimeMs gating this, a connector that's down for a long time would
         // spawn a new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
-        if (connection != null && !connection.isOpen() && shouldConnect() && !isConnecting) {
+        if (connection != null && !connection.isOpen() && shouldConnect() && !isConnectInProgress()) {
             long now = System.currentTimeMillis();
             if (now >= nextReconnectTimeMs) {
                 int attempt = reconnectAttempt.incrementAndGet();

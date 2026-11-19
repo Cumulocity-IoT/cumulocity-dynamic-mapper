@@ -67,6 +67,7 @@ declare -a TESTS=(
     "inbound|test-inbound-hex|HEX → EVENT"
     "inbound|test-inbound-http-connector|HTTP connector → MEASUREMENT"
     "inbound|test-inbound-implicit-device|Implicit device auto-creation"
+    "inbound|test-inbound-implicit-device-context-data|Implicit device: contextData applied to created device (#700)"
     "inbound|test-inbound-implicit-device-recreate-after-delete|Implicit device recreation after delete (inconsistent-cache regression)"
     "inbound|test-inbound-multilevel-wildcard|Multi-level wildcard # matches parent and deeper topics"
     "inbound|test-inbound-mapping-topic-change|Mapping topic change moves to the new topic"

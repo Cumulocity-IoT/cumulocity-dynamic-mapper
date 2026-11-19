@@ -436,6 +436,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-hex` | HEX → EVENT |
 | `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
 | `test-inbound-implicit-device` | Implicit device auto-creation |
+| `test-inbound-implicit-device-context-data` | Regression (#700): Smart Function `contextData` (`deviceName`, `deviceType`, `deviceFragments`) is applied to the auto-created device |
 | `test-inbound-implicit-device-recreate-after-delete` | Regression: an implicit device is recreated after the original is deleted from inventory (stale-cache bug) |
 | `test-inbound-multilevel-wildcard` | Regression: a mapping on `a/b/#` also matches the parent topic `a/b` (MQTT spec) as well as deeper topics |
 | `test-inbound-mapping-topic-change` | Regression: changing a mapping's topic (deactivate, PUT, reactivate) moves it in the resolver tree; the old topic stops producing data |

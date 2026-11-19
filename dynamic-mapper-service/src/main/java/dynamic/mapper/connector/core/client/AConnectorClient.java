@@ -21,8 +21,7 @@
 
 package dynamic.mapper.connector.core.client;
 
-import dynamic.mapper.util.TenantScheduledThreadPoolExecutor;
-import static java.util.Map.entry;
+
 
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
@@ -60,12 +59,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -83,7 +80,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public abstract class AConnectorClient {
 
     // Constants
-    protected static final int HOUSEKEEPING_INTERVAL_SECONDS = 30;
+    protected static final int HOUSEKEEPING_INTERVAL_SECONDS = ConnectorHousekeeping.INTERVAL_SECONDS;
     protected static final int WAIT_PERIOD_MS = 10000;
     protected static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
@@ -238,35 +235,27 @@ public abstract class AConnectorClient {
     @Getter
     protected ConnectionStateManager connectionStateManager;
 
-    // Synchronization primitives for connection management
-    protected final Object connectionLock = new Object();
+    // Tracks connect/disconnect in progress and whether a disconnect was ours (see ConnectionGuard)
+    private final ConnectionGuard connectionGuard = new ConnectionGuard(() -> tenant);
+
+    /**
+     * Guards the client references that subclasses null out on close (for example the MQTT client),
+     * so a close does not race with a listener that reads them.
+     */
     protected final Object disconnectionLock = new Object();
-    protected volatile boolean isConnecting = false;
-    protected volatile boolean isDisconnecting = false;
-    protected volatile boolean intentionalDisconnect = false;
 
-    // Lifecycle tasks. Access is guarded by lifecycleLock: submitInitialize()/submitConnect()/
-    // submitDisconnect()/reconnect() are each invoked from multiple, unsynchronized call sites
-    // (scheduled health checks, user-triggered operations, connection-lost callbacks) and must
-    // not race on the "check if done, else create" logic below.
-    private final Object lifecycleLock = new Object();
-    private volatile CompletableFuture<Void> initializeTask;
-    private volatile CompletableFuture<Void> connectTask;
-    private volatile CompletableFuture<Void> disconnectTask;
-    private volatile CompletableFuture<Void> reconnectTask;
-    private ScheduledThreadPoolExecutor housekeepingExecutor;
+    // Runs the initialize/connect/disconnect/reconnect tasks (single flight, connect and disconnect
+    // mutually exclusive). It reads the client's fields when a task starts, not when it is created.
+    private final ConnectorLifecycleExecutor lifecycle = new ConnectorLifecycleExecutor(this);
 
-    // Ensures connect() and disconnect() bodies never run concurrently with each other for a
-    // given connector instance. lifecycleLock (above) only dedupes overlapping submitConnect() vs
-    // submitConnect() (or submitDisconnect() vs submitDisconnect()) calls, but does nothing about
-    // a connectTask and a disconnectTask running at the same time on separate virtual threads.
-    // beginConnection()/beginDisconnection() don't close this gap either — they synchronize on
-    // two DIFFERENT locks (connectionLock vs disconnectionLock), so they never exclude each other,
-    // and three connectors (HttpClient, WebHook, TestClient) don't call them at all. A
-    // ReentrantLock (not `synchronized`) is used because it's held across the full connect()/
-    // disconnect() call — including blocking network I/O — and `synchronized` would pin the
-    // virtual thread's carrier thread for that entire duration.
-    private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
+    // The periodic housekeeping cycle; created in initializeManagers() since tenant is assigned later.
+    private ConnectorHousekeeping housekeeping;
+
+    /** The housekeeping executor, for tests that run or inspect the scheduled cycle. */
+    ScheduledThreadPoolExecutor housekeepingExecutor() {
+        return housekeeping == null ? null : housekeeping.executor();
+    }
+
     // Retries subscription work that failed for a transient reason; created together with the housekeeping executor
     private SubscriptionRetryScheduler retryScheduler;
     // Reports the connection lifecycle and the subscriptions to Cumulocity as events. Created on first use:
@@ -303,12 +292,7 @@ public abstract class AConnectorClient {
      * then release those resources.
      */
     public void close() {
-        connectDisconnectExecutionLock.lock();
-        try {
-            disconnect();
-        } finally {
-            connectDisconnectExecutionLock.unlock();
-        }
+        lifecycle.runExclusive(this::disconnect);
     }
 
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
@@ -445,15 +429,7 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the start of their connect() method
      */
     protected boolean beginConnection() {
-        synchronized (connectionLock) {
-            if (isConnecting) {
-                log.debug("{} - Connection already in progress", tenant);
-                return false;
-            }
-            isConnecting = true;
-            intentionalDisconnect = false;
-            return true;
-        }
+        return connectionGuard.beginConnection();
     }
 
     /**
@@ -461,11 +437,7 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their connect() method
      */
     protected void endConnection() {
-        log.debug("{} - Calling end connection...", tenant);
-        synchronized (connectionLock) {
-            log.debug("{} - Setting isConnecting to false...", tenant);
-            isConnecting = false;
-        }
+        connectionGuard.endConnection();
     }
 
     /**
@@ -473,15 +445,7 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the start of their disconnect() method
      */
     protected boolean beginDisconnection() {
-        synchronized (disconnectionLock) {
-            if (isDisconnecting) {
-                log.debug("{} - Disconnection already in progress", tenant);
-                return false;
-            }
-            isDisconnecting = true;
-            intentionalDisconnect = true;
-            return true;
-        }
+        return connectionGuard.beginDisconnection();
     }
 
     /**
@@ -489,11 +453,21 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their disconnect() method
      */
     protected void endDisconnection() {
-        log.debug("{} - Calling end disconnection...", tenant);
-        synchronized (disconnectionLock) {
-            log.debug("{} - Setting isDisconnecting to false...", tenant);
-            isDisconnecting = false;
-        }
+        connectionGuard.endDisconnection();
+    }
+
+    /** True while a {@code connect()} that went through {@link #beginConnection()} is running. */
+    protected boolean isConnectInProgress() {
+        return connectionGuard.isConnecting();
+    }
+
+    /**
+     * True if a connection loss is our own doing: a disconnect is running, or the last disconnect was
+     * requested by us and no connect has begun since. Connection-lost listeners use this to tell it from
+     * an unexpected drop.
+     */
+    protected boolean isDisconnectIntentional() {
+        return connectionGuard.isDisconnectIntentional();
     }
 
     /**
@@ -657,8 +631,8 @@ public abstract class AConnectorClient {
 
     /** Releases what construction allocated, for a client that was only used to test a connection. */
     public void discardProbe() {
-        if (housekeepingExecutor != null) {
-            housekeepingExecutor.shutdownNow();
+        if (housekeeping != null) {
+            housekeeping.discard();
         }
     }
 
@@ -710,13 +684,10 @@ public abstract class AConnectorClient {
                     connectorIdentifier);
         }
 
-        this.housekeepingExecutor = new TenantScheduledThreadPoolExecutor(tenant, 1, r -> {
-            Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
-            t.setDaemon(true);
-            return t;
-        });
+        this.housekeeping = new ConnectorHousekeeping(tenant, connectorName, connectorIdentifier,
+                this::performHousekeeping);
         this.retryScheduler = new SubscriptionRetryScheduler(tenant, connectorName, connectionStateManager,
-                () -> housekeepingExecutor, this::isConnected, this::doInitializeSubscriptionsAfterConnect,
+                () -> housekeeping.executor(), this::isConnected, this::doInitializeSubscriptionsAfterConnect,
                 this::reconcileSubscriptions);
     }
 
@@ -724,130 +695,29 @@ public abstract class AConnectorClient {
      * Submit initialization task
      */
     public CompletableFuture<Void> submitInitialize() {
-        synchronized (lifecycleLock) {
-            if (initializeTask == null || initializeTask.isDone()) {
-                log.debug("{} - Initializing connector: {}", tenant, connectorName);
-                initializeTask = CompletableFuture
-                        .runAsync(() -> {
-                            try {
-                                boolean success = initialize();
-                                if (!success) {
-                                    throw new ConnectorException("Initialization failed");
-                                }
-                                // Set status to CONFIGURED after successful initialization
-                                if (isConfigValid(connectorConfiguration)) {
-                                    connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
-                                }
-                                log.debug("{} - Connector initialized successfully", tenant);
-                            } catch (Exception e) {
-                                log.error("{} - Initialization failed: {}", tenant, e.getMessage(), e);
-                                connectionStateManager.updateStatusWithError(e);
-                                throw new CompletionException("Initialization failed for connector " + connectorName, e);
-                            }
-                        }, virtualThreadPool);
-            }
-            return initializeTask;
-        }
+        return lifecycle.submitInitialize();
     }
 
     /**
      * Submit connection task
      */
     public CompletableFuture<Void> submitConnect() {
-        loadConfiguration();
-
-        synchronized (lifecycleLock) {
-            if (connectTask == null || connectTask.isDone()) {
-                log.debug("{} - Connecting connector: {}", tenant, connectorName);
-                connectTask = CompletableFuture
-                        .runAsync(() -> {
-                            connectDisconnectExecutionLock.lock();
-                            try {
-                                connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
-                                connect();
-                                log.debug("{} - Connector connected successfully", tenant);
-                            } catch (Exception e) {
-                                log.error("{} - Connection failed: {}", tenant, e.getMessage(), e);
-                                connectionStateManager.updateStatusWithError(e);
-                                throw new CompletionException("Connection failed for connector " + connectorName, e);
-                            } finally {
-                                connectDisconnectExecutionLock.unlock();
-                            }
-                        }, virtualThreadPool);
-            }
-            return connectTask;
-        }
+        return lifecycle.submitConnect();
     }
 
     /**
-     * Submit disconnection task
+     * Submit disconnection task. Cancels a connect task that is still running.
      */
     public CompletableFuture<Void> submitDisconnect() {
-        synchronized (lifecycleLock) {
-            // Cancel ongoing connect task
-            if (connectTask != null && !connectTask.isDone()) {
-                log.debug("{} - Cancelling ongoing connection", tenant);
-                connectTask.cancel(true);
-            }
-
-            if (disconnectTask == null || disconnectTask.isDone()) {
-                log.debug("{} - Disconnecting connector: {}", tenant, connectorName);
-                // Set DISCONNECTING synchronously before the async task runs.
-                // This prevents a race where stopHousekeepingAndClose() → close() → disconnect()
-                // completes synchronously (setting DISCONNECTED) before the async task starts,
-                // causing the async task's updateStatus(DISCONNECTING) to overwrite DISCONNECTED.
-                connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-                disconnectTask = CompletableFuture
-                        .runAsync(() -> {
-                            connectDisconnectExecutionLock.lock();
-                            try {
-                                disconnect();
-                                connectionStateManager.setConnected(false);
-                                log.debug("{} - Connector disconnected successfully", tenant);
-                            } catch (Exception e) {
-                                log.error("{} - Disconnection failed: {}", tenant, e.getMessage(), e);
-                                connectionStateManager.updateStatusWithError(e);
-                                throw new CompletionException("Disconnection failed for connector " + connectorName, e);
-                            } finally {
-                                connectDisconnectExecutionLock.unlock();
-                            }
-                        }, virtualThreadPool);
-            }
-            return disconnectTask;
-        }
+        return lifecycle.submitDisconnect();
     }
 
     /**
      * Start housekeeping tasks.
-     * Idempotent: no-op if already scheduled (executor has pending tasks).
+     * Idempotent: no-op if already scheduled.
      */
     public void submitHousekeeping() {
-        if (!housekeepingExecutor.isShutdown() && housekeepingExecutor.getQueue().isEmpty()) {
-            log.debug("{} - Starting housekeeping for connector: {}", tenant, connectorName);
-            housekeepingExecutor.scheduleAtFixedRate(
-                    this::runHousekeeping,
-                    HOUSEKEEPING_INTERVAL_SECONDS,
-                    HOUSEKEEPING_INTERVAL_SECONDS,
-                    TimeUnit.SECONDS);
-        } else {
-            log.debug("{} - Housekeeping already scheduled, skipping", tenant);
-        }
-    }
-
-    /**
-     * Run housekeeping tasks
-     */
-    private void runHousekeeping() {
-        try {
-            performHousekeeping();
-        } catch (Exception e) {
-            if (housekeepingExecutor.isShutdown()) {
-                // Connector is being torn down (e.g. tenant unsubscribed): its resources may already be gone.
-                log.debug("{} - Housekeeping aborted during shutdown: {}", tenant, e.toString());
-            } else {
-                log.error("{} - Error during housekeeping: {}", tenant, e, e);
-            }
-        }
+        housekeeping.start();
     }
 
     /**
@@ -1491,51 +1361,15 @@ public abstract class AConnectorClient {
      * @return CompletableFuture for the reconnection sequence (never returns null)
      */
     public CompletableFuture<Void> reconnect() {
-        synchronized (lifecycleLock) {
-            if (reconnectTask != null && !reconnectTask.isDone()) {
-                log.debug("{} - Reconnection already in progress for {}, joining existing attempt",
-                        tenant, connectorName);
-                return reconnectTask;
-            }
-            log.info("{} - Starting reconnection sequence for {}", tenant, connectorName);
-            reconnectTask = CompletableFuture.runAsync(() -> {
-                try {
-                    submitDisconnect().get();
-                    submitInitialize().get();
-                    submitConnect().get();
-                    log.info("{} - Reconnection completed successfully for {}", tenant, connectorName);
-                } catch (java.util.concurrent.CancellationException e) {
-                    // A newer reconnect attempt cancelled this one — this is expected behaviour
-                    // when a CONNECT operation arrives while a previous reconnect is still in flight.
-                    log.debug("{} - Reconnection for {} was superseded by a newer reconnect request",
-                            tenant, connectorName);
-                } catch (Exception e) {
-                    log.error("{} - Reconnection failed for {}: {}", tenant, connectorName, e.getMessage(), e);
-                    connectionStateManager.updateStatusWithError(e);
-                    throw new CompletionException(e);
-                }
-            }, virtualThreadPool);
-            return reconnectTask;
-        }
+        return lifecycle.reconnect();
     }
 
     /**
      * Stop housekeeping and close
      */
     public void stopHousekeepingAndClose() {
-        if (housekeepingExecutor != null && !housekeepingExecutor.isShutdown()) {
-            List<Runnable> stoppedTasks = housekeepingExecutor.shutdownNow();
-            log.info("{} - Stopped {} housekeeping tasks", tenant, stoppedTasks.size());
-            // shutdownNow() only interrupts: a housekeeping run that is already executing keeps
-            // going. Wait for it, so callers (e.g. tenant unsubscribe) can safely remove the
-            // tenant's shared resources right after this returns.
-            try {
-                if (!housekeepingExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    log.warn("{} - Housekeeping still running after 5s for connector: {}", tenant, connectorName);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        if (housekeeping != null) {
+            housekeeping.stop();
         }
         if (connectionStateManager != null) {
             connectionStateManager.close();
@@ -1559,7 +1393,7 @@ public abstract class AConnectorClient {
         if (mappingSubscriptionManager != null) {
             mappingSubscriptionManager.clear();
         }
-        // housekeepingExecutor is shut down above, cancelling any pending retry task —
+        // the housekeeping executor is shut down above, cancelling any pending retry task —
         // reset the guard so a future reuse of this instance wouldn't be wedged with the
         // flag permanently stuck at true.
         if (retryScheduler != null) {

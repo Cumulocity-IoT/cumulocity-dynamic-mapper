@@ -233,9 +233,7 @@ class AConnectorClientReconcileRetryTest {
     }
 
     private static int housekeepingQueueSize(AConnectorClient connector) throws Exception {
-        Field f = AConnectorClient.class.getDeclaredField("housekeepingExecutor");
-        f.setAccessible(true);
-        ScheduledThreadPoolExecutor executor = (ScheduledThreadPoolExecutor) f.get(connector);
+        ScheduledThreadPoolExecutor executor = connector.housekeepingExecutor();
         return executor.getQueue().size();
     }
 
@@ -247,9 +245,7 @@ class AConnectorClientReconcileRetryTest {
      * removes it so it isn't also picked up later by the executor's own worker thread.
      */
     private static void runPendingHousekeepingTask(AConnectorClient connector) throws Exception {
-        Field f = AConnectorClient.class.getDeclaredField("housekeepingExecutor");
-        f.setAccessible(true);
-        ScheduledThreadPoolExecutor executor = (ScheduledThreadPoolExecutor) f.get(connector);
+        ScheduledThreadPoolExecutor executor = connector.housekeepingExecutor();
         Runnable task = executor.getQueue().peek();
         assertNotNull(task, "expected a pending retry task");
         executor.getQueue().remove(task);
