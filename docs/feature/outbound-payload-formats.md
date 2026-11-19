@@ -165,7 +165,8 @@ processor:
   "send the `payload` string". Outbound Any Payload must send the whole Cumulocity JSON object, so the check
   is direction-aware; without it a Dry Run would have sent only a `payload` property.
 - **Changing the contract.** Follow [changing-the-runtime-api.md](../changing-the-runtime-api.md): the Java
-  class first, then the TypeScript type, `npm run generate:editor-api`, then `smartfunction.md` and the AI prompt. The prompt needs the guidance as well as the declaration: when to
+  class first, then the TypeScript type, `npm run generate:editor-api`, then `smartfunction.md` and the AI prompt (`agents/smartfunction_agent.json` first: it is what the agent runs with; the
+  `.txt` mirrors it exactly and a test fails if they differ). The prompt needs the guidance as well as the declaration: when to
   return text or binary, that `msg.payload` of an outbound Any Payload mapping is an object, and an example.
   `SmartFunctionApiContractTest` fails if a field or an encoding is missing from the prompt.
 

@@ -97,7 +97,7 @@ matters — the same trap appears wherever a mirror is written by hand.
 | 2 | Mock context helpers | same file, `createMockRuntimeContext*` | Tests pass against an API that no longer matches |
 | 3 | JS code templates | `dynamic-mapper-service/src/main/resources/templates/*.js` | Users copy a template that throws — **now build-enforced, see §3.5** |
 | 4 | Java extension interfaces | `processor/extension/ProcessorExtension{Inbound,Outbound}.java` | Extension authors code against the wrong shape |
-| 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **now build-enforced, see §3.6** |
+| 5 | AI prompts | `dynamic-mapper-service/src/main/resources/agents/*.json` (what the agent runs with) and its mirror `prompts/*.txt` | The AI generates mappings using APIs that don't exist — **now build-enforced, see §3.6** |
 | 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work — **now build-enforced for the context API, see §3.6** |
 | 7 | Editor completion + hover | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` | Autocomplete offers phantom members — **now generated from surface 1, see §3.7** |
 | 8 | Repo documentation | `docs/**/*.md` | Contributors build on stale assumptions |
