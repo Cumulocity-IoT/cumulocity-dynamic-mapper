@@ -86,6 +86,31 @@ public class CodeTemplate implements Cloneable {
     public String sampleTopic;
 
     /**
+     * The topic pattern an OUTBOUND template publishes to (for example {@code command/+}), declared
+     * as {@code @publishTopic}. The UI uses it as the publish topic of a new mapping. Optional; not
+     * used for INBOUND templates.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String publishTopic;
+
+    /**
+     * The topic pattern an INBOUND template subscribes to (for example {@code sensors/+}), declared
+     * as {@code @mappingTopic}. The UI uses it as the mapping topic of a new mapping. Optional; not
+     * used for OUTBOUND templates.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String mappingTopic;
+
+    /**
+     * The execution filter an OUTBOUND template is written for (a JSONata expression such as
+     * {@code $exists(c8y_Command)} or {@code true}), declared as {@code @filterMapping}. The UI uses
+     * it as the "Filter execution mapping" of a new mapping, so the user does not start with an empty,
+     * required filter. Optional; not used for INBOUND templates.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String filterMapping;
+
+    /**
      * The direction this template applies to, derived from its {@link TemplateType} and serialized
      * for clients that group templates by direction.
      *

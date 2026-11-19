@@ -8,6 +8,7 @@
  *              as a child asset; missing groups are created automatically.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

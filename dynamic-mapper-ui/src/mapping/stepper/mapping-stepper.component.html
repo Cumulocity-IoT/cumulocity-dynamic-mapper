@@ -50,6 +50,11 @@
       </d11r-mapping-properties>
     </div>
 
+    @if (generalStepHint; as hint) {
+      <div class="text-center text-danger small p-t-8 p-b-0 fit-w bg-level-0" role="status" data-cy="dm-mapping-general-hint">
+        {{ hint | translate }}
+      </div>
+    }
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-general" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       [disabled]="filterInventoryBlocked" [attr.title]="filterInventoryBlocked ? (filterInventoryHint | translate) : null"
       (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" [labels]="labels">

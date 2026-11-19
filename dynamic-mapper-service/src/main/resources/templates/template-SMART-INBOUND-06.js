@@ -7,6 +7,7 @@
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
  * @sampleTopic testSmartInbound/child-sensor-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

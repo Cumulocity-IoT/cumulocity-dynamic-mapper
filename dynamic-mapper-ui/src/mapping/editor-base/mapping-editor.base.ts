@@ -21,7 +21,7 @@
 import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, Injector, Signal, computed, signal, viewChild } from '@angular/core';
 import { afterNextRenderInZone } from '../../shared/misc/after-render';
 import { MappingCodeEditorSectionComponent } from './mapping-code-editor-section.component';
-import { FormGroup } from '@angular/forms';
+import { AbstractControl, FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -243,6 +243,22 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
    * after a tab switch.
    */
   readonly filterInventoryHint = gettext('The inventory filter must be valid and return a boolean result.');
+
+  /**
+   * Why "Next" is disabled on the General settings step, in words, or null when nothing is missing. The
+   * required execution filter has no default, so without this the button is just greyed out.
+   */
+  get generalStepHint(): string | null {
+    const form = this.propertyFormly;
+    if (form.get('executionFilterMode')?.hasError('required')) {
+      return gettext('Select an execution filter to continue.');
+    }
+    if (form.get('executionFilterValue')?.hasError('required')) {
+      return gettext('Enter the type or fragment name of the execution filter to continue.');
+    }
+    const missing = Object.values(form.controls).some(control => (control as AbstractControl).hasError('required'));
+    return missing ? gettext('Fill in the required fields to continue.') : null;
+  }
 
   get filterInventoryBlocked(): boolean {
     const control = this.propertyFormly.get('filterInventory');

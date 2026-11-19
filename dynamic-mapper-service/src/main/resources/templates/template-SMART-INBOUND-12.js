@@ -8,6 +8,7 @@
  *              instead of creating a second one.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic testAlarm/sensor-berlin-01
+ * @mappingTopic testAlarm/+
  * @samplePayload
  *   {
  *     "code": "Overheat",

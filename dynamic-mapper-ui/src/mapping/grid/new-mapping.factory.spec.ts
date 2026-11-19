@@ -106,6 +106,22 @@ describe('buildNewMapping', () => {
       }
     });
 
+    it('OUTBOUND: a code template that declares @filterMapping starts the mapping with that filter', () => {
+      const codeTemplate = { code: 'function onMessage() {}', filterMapping: '$exists(c8y_Command)' } as any;
+      const { mapping } = buildNewMapping(
+        request({ direction: Direction.OUTBOUND, substitutionsAsCode: true, codeTemplate })
+      );
+      expect(mapping.filterMapping).toBe('$exists(c8y_Command)');
+    });
+
+    it('OUTBOUND: a code template without @filterMapping leaves the execution filter empty', () => {
+      const codeTemplate = { code: 'function onMessage() {}' } as any;
+      const { mapping } = buildNewMapping(
+        request({ direction: Direction.OUTBOUND, substitutionsAsCode: true, codeTemplate })
+      );
+      expect(mapping.filterMapping).toBe('');
+    });
+
     it('INBOUND: does not prefill an execution filter from the payload type', () => {
       const { mapping } = buildNewMapping(request({ preFill: preFill({ payload: '{"type":"x"}' }) }));
       expect(mapping.filterMapping).not.toBe("type = 'x'");

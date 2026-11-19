@@ -5,6 +5,7 @@
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
  * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

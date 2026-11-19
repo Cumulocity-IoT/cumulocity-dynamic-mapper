@@ -4,6 +4,7 @@
  * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

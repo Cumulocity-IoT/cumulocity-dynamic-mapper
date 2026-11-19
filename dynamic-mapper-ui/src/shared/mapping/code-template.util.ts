@@ -113,10 +113,15 @@ export function applyCodeTemplateSample(
   mappingType: MappingType,
   direction: Direction
 ): void {
-  if (!codeTemplate || mappingType !== MappingType.JSON) {
+  // OUTBOUND ANY_PAYLOAD also takes a JSON sample: its source is the Cumulocity message (JSON);
+  // only the published payload is raw. INBOUND ANY_PAYLOAD sources are raw bytes, so it is excluded.
+  const takesJsonSample =
+    mappingType === MappingType.JSON ||
+    (mappingType === MappingType.ANY_PAYLOAD && direction === Direction.OUTBOUND);
+  if (!codeTemplate || !takesJsonSample) {
     return;
   }
-  const { samplePayload, sampleTopic } = codeTemplate;
+  const { samplePayload, sampleTopic, publishTopic, mappingTopic, filterMapping } = codeTemplate;
   if (samplePayload) {
     mapping.sourceTemplate = samplePayload;
   }
@@ -126,5 +131,14 @@ export function applyCodeTemplateSample(
     } else {
       mapping.publishTopicSample = sampleTopic;
     }
+  }
+  if (mappingTopic && direction === Direction.INBOUND) {
+    mapping.mappingTopic = mappingTopic;
+  }
+  if (filterMapping && direction === Direction.OUTBOUND) {
+    mapping.filterMapping = filterMapping;
+  }
+  if (publishTopic && direction === Direction.OUTBOUND) {
+    mapping.publishTopic = publishTopic;
   }
 }

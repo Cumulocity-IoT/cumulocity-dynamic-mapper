@@ -8,6 +8,7 @@
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic testCustomRouting/sensor-berlin-01
+ * @mappingTopic testCustomRouting/+
  * @samplePayload
  *   {
  *     "externalId": "sensor-berlin-01",

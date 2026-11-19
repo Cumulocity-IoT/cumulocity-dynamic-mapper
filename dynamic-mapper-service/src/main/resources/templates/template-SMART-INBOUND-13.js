@@ -7,6 +7,7 @@
  *              Use it as a starting point for any simple binary device protocol.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic testBinary/sensor-berlin-01
+ * @mappingTopic testBinary/+
  *
  * Requires:
  *   MappingType  : ANY_PAYLOAD

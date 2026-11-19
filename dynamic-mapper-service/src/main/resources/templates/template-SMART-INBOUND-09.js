@@ -8,6 +8,7 @@
  *              The unit lookup table is an example - adapt it to your metric names.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic spBv1.0/factory-01/DDATA/edge-node-01/device-01
+ * @mappingTopic spBv1.0/+/DDATA/+/+
  * @samplePayload
  *   {
  *     "groupId": "factory-01",

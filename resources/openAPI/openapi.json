@@ -4046,6 +4046,15 @@
           "sampleTopic" : {
             "type" : "string"
           },
+          "publishTopic" : {
+            "type" : "string"
+          },
+          "mappingTopic" : {
+            "type" : "string"
+          },
+          "filterMapping" : {
+            "type" : "string"
+          },
           "direction" : {
             "type" : "string",
             "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ],

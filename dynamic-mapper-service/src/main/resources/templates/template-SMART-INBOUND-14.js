@@ -7,6 +7,7 @@
  *              counts every drop under Repeated.
  * @templateType INBOUND_SMART_FUNCTION
  * @sampleTopic dedup/sensor-berlin-01
+ * @mappingTopic dedup/+
  * @samplePayload
  *   {
  *     "externalId": "sensor-berlin-01",

@@ -164,6 +164,15 @@ public class CodeTemplateService {
                 if (codeTemplate.sampleTopic == null) {
                     codeTemplate.sampleTopic = existing.sampleTopic;
                 }
+                if (codeTemplate.publishTopic == null) {
+                    codeTemplate.publishTopic = existing.publishTopic;
+                }
+                if (codeTemplate.mappingTopic == null) {
+                    codeTemplate.mappingTopic = existing.mappingTopic;
+                }
+                if (codeTemplate.filterMapping == null) {
+                    codeTemplate.filterMapping = existing.filterMapping;
+                }
             }
             persist(tenant, serviceConfiguration, codeTemplates, codeTemplate);
             log.debug("{} - Updated code template", tenant);

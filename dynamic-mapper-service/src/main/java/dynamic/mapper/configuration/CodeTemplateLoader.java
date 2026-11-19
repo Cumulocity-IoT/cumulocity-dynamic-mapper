@@ -176,6 +176,27 @@ public class CodeTemplateLoader {
                             anyAdded = true;
                         }
                     }
+                    if (stored.filterMapping == null) {
+                        String filterMapping = headers.extractAnnotation(packaged, "@filterMapping");
+                        if (!filterMapping.isEmpty()) {
+                            stored.filterMapping = filterMapping;
+                            anyAdded = true;
+                        }
+                    }
+                    if (stored.mappingTopic == null) {
+                        String mappingTopic = headers.extractAnnotation(packaged, "@mappingTopic");
+                        if (!mappingTopic.isEmpty()) {
+                            stored.mappingTopic = mappingTopic;
+                            anyAdded = true;
+                        }
+                    }
+                    if (stored.publishTopic == null) {
+                        String publishTopic = headers.extractAnnotation(packaged, "@publishTopic");
+                        if (!publishTopic.isEmpty()) {
+                            stored.publishTopic = publishTopic;
+                            anyAdded = true;
+                        }
+                    }
                     continue;
                 }
 
@@ -333,7 +354,10 @@ public class CodeTemplateLoader {
         CodeTemplate template = new CodeTemplate(
                 templateId, name, description, templateType,
                 headers.encode(content), internal, readonly, defaultTemplate,
-                headers.extractSamplePayload(header), headers.extractAnnotation(header, "@sampleTopic"));
+                headers.extractSamplePayload(header), headers.extractAnnotation(header, "@sampleTopic"),
+                headers.extractAnnotation(header, "@publishTopic"),
+                headers.extractAnnotation(header, "@mappingTopic"),
+                headers.extractAnnotation(header, "@filterMapping"));
 
         // Migrate header to two-section format on load so the divider is always present
         headers.rectifyHeaderInCodeTemplate(template);

@@ -6,6 +6,7 @@
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
  * @sampleTopic perDevStats/sensor-001
+ * @mappingTopic perDevStats/+
  * @samplePayload
  *   {
  *     "temperature": 23.5
