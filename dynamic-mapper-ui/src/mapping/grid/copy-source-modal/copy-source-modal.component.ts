@@ -20,7 +20,7 @@
 
 import { Component, Input, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 
@@ -29,7 +29,7 @@ export type CopySource = 'active' | 'draft';
 
 /**
  * Modal asking which version of a mapping with unpublished draft changes to duplicate.
- * Same structure as the publish-draft modal. Resolves with the chosen source on confirm,
+ * Built like the other dialogs (`c8y-modal` with an icon header). Resolves with the chosen source on confirm,
  * or `null` on cancel.
  */
 @Component({
@@ -38,34 +38,42 @@ export type CopySource = 'active' | 'draft';
   standalone: true,
   imports: [CoreModule, FormsModule],
   template: `
-    <div class="modal-header">
-      <h4 class="modal-title">Duplicate mapping</h4>
-    </div>
-    <div class="modal-body">
-      <p class="text-muted" style="margin-bottom:12px">
-        Mapping: <strong>{{ mappingName }}</strong><br>
-        This mapping has unpublished draft changes. Which version do you want to copy?
-      </p>
-      <div class="form-group">
-        <label class="c8y-radio">
-          <input type="radio" name="copySource" value="draft" [(ngModel)]="source" data-cy="dm-copy-source-draft" />
-          <span></span>
-          <span>Draft version <span class="text-muted">(your latest unpublished changes)</span></span>
-        </label>
-        <label class="c8y-radio">
-          <input type="radio" name="copySource" value="active" [(ngModel)]="source" data-cy="dm-copy-source-active" />
-          <span></span>
-          <span>
-            Active version @if (activeVersion) { <strong>{{ activeVersion }}</strong> }
-            <span class="text-muted">(the configuration that is currently running)</span>
-          </span>
-        </label>
+    <c8y-modal
+      [title]="'Duplicate mapping' | translate"
+      (onClose)="confirm()"
+      (onDismiss)="cancel()"
+      [labels]="labels"
+      [disabled]="false"
+      [headerClasses]="'modal-header dialog-header'"
+    >
+      <ng-container c8y-modal-title>
+        <span [c8yIcon]="'copy'"></span>
+      </ng-container>
+      <div class="animated fadeIn">
+          <p class="text-muted m-b-16">
+            {{ 'Mapping' | translate }}: <strong>{{ mappingName }}</strong><br />
+            {{ 'This mapping has unpublished draft changes. Which version do you want to copy?' | translate }}
+          </p>
+          <div class="form-group">
+            <label class="c8y-radio">
+              <input type="radio" name="copySource" value="draft" [(ngModel)]="source" data-cy="dm-copy-source-draft" />
+              <span></span>
+              <span>
+                {{ 'Draft version' | translate }}
+                <span class="text-muted">({{ 'your latest unpublished changes' | translate }})</span>
+              </span>
+            </label>
+            <label class="c8y-radio">
+              <input type="radio" name="copySource" value="active" [(ngModel)]="source" data-cy="dm-copy-source-active" />
+              <span></span>
+              <span>
+                {{ 'Active version' | translate }} @if (activeVersion) { <strong>{{ activeVersion }}</strong> }
+                <span class="text-muted"> ({{ 'the configuration that is currently running' | translate }})</span>
+              </span>
+            </label>
+          </div>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-default" (click)="cancel()" data-cy="dm-copy-source-cancel">Cancel</button>
-      <button type="button" class="btn btn-primary" (click)="confirm()" data-cy="dm-copy-source-ok">Duplicate</button>
-    </div>
+    </c8y-modal>
   `
 })
 export class CopySourceModalComponent implements OnDestroy {
@@ -74,6 +82,8 @@ export class CopySourceModalComponent implements OnDestroy {
   @Input() activeVersion?: string;
 
   source: CopySource = 'draft';
+
+  readonly labels: ModalLabels = { cancel: 'Cancel', ok: 'Duplicate' };
 
   /** Emits the chosen source on confirm, or null when cancelled or dismissed. */
   readonly closeSubject = new Subject<CopySource | null>();

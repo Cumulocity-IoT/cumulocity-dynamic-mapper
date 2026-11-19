@@ -23,8 +23,7 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plugin'"></span>
   </ng-container>
-  <div class="p-24 modal-inner-scroll animated fadeIn">
-    <div class="modal-body">
+  <div class="animated fadeIn">
       @if (!isAppCreated) {
         <c8y-form-group [hasError]="!!errorMessage" class="m-auto modal-drop-area">
           <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.jar'" [loading]="isLoading"
@@ -58,6 +57,5 @@
           </p>
         }
       }
-    </div>
   </div>
 </c8y-modal>

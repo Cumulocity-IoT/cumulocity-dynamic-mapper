@@ -38,6 +38,7 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
   imports: [CoreModule, FormsModule, InputGroupEditableComponent],
   template: `
     <c8y-modal
+      [title]="'Publish draft' | translate"
       [labels]="labels"
       [disabled]="!isValid()"
       (onClose)="confirm()"
@@ -47,9 +48,7 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
       <ng-container c8y-modal-title>
         <span [c8yIcon]="'upload'"></span>
       </ng-container>
-      <div class="p-24 modal-inner-scroll animated fadeIn">
-        <p class="text-center text-medium text-16 sticky-top bg-white">{{ 'Publish draft' | translate }}</p>
-        <div class="p-24">
+      <div class="animated fadeIn">
           <p class="text-muted">
             {{ 'Mapping' | translate }}: <strong>{{ mappingName }}</strong><br />
             {{ 'Current active version' | translate }}: <strong>{{ currentVersion ?? '—' }}</strong>
@@ -101,7 +100,6 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
               [(ngModel)]="note"
             ></c8y-input-group-editable>
           </c8y-form-group>
-        </div>
       </div>
     </c8y-modal>
   `
