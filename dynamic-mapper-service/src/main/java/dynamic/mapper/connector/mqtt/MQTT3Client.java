@@ -230,10 +230,7 @@ public class MQTT3Client extends AMQTTClient {
                     boolean wasConnected = connectionStateManager.isConnected();
 
                     boolean stale = myGeneration != connectGeneration.get();
-                    boolean intentional;
-                    synchronized (disconnectionLock) {
-                        intentional = intentionalDisconnect || isDisconnecting;
-                    }
+                    boolean intentional = isDisconnectIntentional();
 
                     // This listener fires as a side effect of our OWN AMQTTClient.disconnect() call
                     // too (closing the client triggers it), which already reports DISCONNECTED
@@ -545,7 +542,7 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     protected void connectorSpecificHousekeeping(String tenant) {
-        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnecting) {
+        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnectInProgress()) {
             long now = System.currentTimeMillis();
             if (now >= nextReconnectTimeMs) {
                 int attempt = reconnectAttempt.incrementAndGet();

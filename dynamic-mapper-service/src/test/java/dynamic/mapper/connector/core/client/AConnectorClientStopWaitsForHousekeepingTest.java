@@ -25,8 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -85,14 +83,10 @@ class AConnectorClientStopWaitsForHousekeepingTest {
         connector.serviceConfiguration = config;
         connector.initializeManagers();
 
-        Field f = AConnectorClient.class.getDeclaredField("housekeepingExecutor");
-        f.setAccessible(true);
-        ScheduledThreadPoolExecutor executor = (ScheduledThreadPoolExecutor) f.get(connector);
-        Method run = AConnectorClient.class.getDeclaredMethod("runHousekeeping");
-        run.setAccessible(true);
+        ScheduledThreadPoolExecutor executor = connector.housekeepingExecutor();
         executor.execute(() -> {
             try {
-                run.invoke(connector);
+                connector.performHousekeeping();
             } catch (Exception ignored) {
                 // failures inside the cycle are not what this test is about
             }

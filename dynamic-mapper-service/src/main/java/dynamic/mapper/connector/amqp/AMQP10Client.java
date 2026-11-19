@@ -199,10 +199,7 @@ public class AMQP10Client extends AConnectorClient {
 
             connection = factory.createConnection();
             connection.setExceptionListener(ex -> {
-                boolean intentional;
-                synchronized (disconnectionLock) {
-                    intentional = intentionalDisconnect || isDisconnecting;
-                }
+                boolean intentional = isDisconnectIntentional();
                 if (intentional) {
                     // disconnect() already reports DISCONNECTED itself. Guards against the same
                     // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
@@ -497,7 +494,7 @@ public class AMQP10Client extends AConnectorClient {
         // Backed off like AMQTTClient's connectorSpecificHousekeeping(): without
         // nextReconnectTimeMs gating this, a connector that's down for a long time would spawn a
         // new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
-        if (!isPhysicallyConnected() && shouldConnect() && !isConnecting) {
+        if (!isPhysicallyConnected() && shouldConnect() && !isConnectInProgress()) {
             long now = System.currentTimeMillis();
             if (now >= nextReconnectTimeMs) {
                 int attempt = reconnectAttempt.incrementAndGet();
