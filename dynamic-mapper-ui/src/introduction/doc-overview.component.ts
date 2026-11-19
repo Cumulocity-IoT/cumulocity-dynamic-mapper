@@ -22,9 +22,10 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulati
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { afterNextRenderInZone } from '../shared/misc/after-render';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, Feature, NODE1, NODE3 } from '../shared';
+import { Direction, ExtensionStatus, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
+import { ExtensionService } from '../extension';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -53,6 +54,10 @@ export class DocOverviewComponent implements OnInit {
   countMappingInbound$ = new BehaviorSubject<number | string>(0);
   countMappingOutbound$ = new BehaviorSubject<number | string>(0);
   countConnector$ = new BehaviorSubject<number | string>(0);
+  /** External (uploaded) Java extensions that are loaded; null until known, and stays null when the list is not readable. */
+  countExtension$ = new BehaviorSubject<number | string | null>(null);
+  /** The entries (event names) of those extensions that are loaded: what a mapping can select. */
+  countExtensionEntries$ = new BehaviorSubject<number | string>(0);
   feature: Feature;
 
   // The overview page is now short: the intro prose, the live tenant counts, then the
@@ -68,11 +73,13 @@ export class DocOverviewComponent implements OnInit {
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
+  ROUTE_EXTENSIONS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
 
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
+    private extensionService: ExtensionService,
     private route: ActivatedRoute,
     private router: Router,
     private markdownService: DocMarkdownService,
@@ -97,6 +104,20 @@ export class DocOverviewComponent implements OnInit {
     this.connectorConfigurationService.getConfigurations()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((count) => this.countConnector$.next(!count ? 'no' : count.length));
+
+    // Reading the extensions needs the Admin or Create role; without it the line stays hidden
+    this.extensionService.getProcessorExtensions()
+      .then((extensions) => {
+        const loaded = Array.from(extensions.values())
+          .filter((extension) => extension.external && extension.loaded !== ExtensionStatus.NOT_LOADED);
+        const entries = loaded.reduce(
+          (sum, extension) => sum + Object.values(extension.extensionEntries ?? {}).filter((entry) => entry.loaded).length,
+          0
+        );
+        this.countExtensionEntries$.next(entries || 'no');
+        this.countExtension$.next(loaded.length || 'no');
+      })
+      .catch(() => this.countExtension$.next(null));
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(

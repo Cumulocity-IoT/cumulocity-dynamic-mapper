@@ -3409,10 +3409,16 @@ msgstr ""
 msgid "e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
 msgstr ""
 
+msgid "entries are currently loaded."
+msgstr ""
+
 msgid "event"
 msgstr ""
 
 msgid "events"
+msgstr ""
+
+msgid "external Java extensions"
 msgstr ""
 
 msgid "for subscription and deduplication details."
@@ -3515,6 +3521,9 @@ msgid "was removed in release 6.3. Affected mappings are no longer executed. Exp
 msgstr ""
 
 msgid "was removed in release 6.3. If you still have affected mappings, export them, recreate them using the"
+msgstr ""
+
+msgid "with"
 msgstr ""
 
 msgid "your latest unpublished changes"

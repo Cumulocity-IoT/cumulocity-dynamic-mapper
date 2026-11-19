@@ -43,6 +43,11 @@
       <li>
         <b>{{ countConnector$ | async }}</b>&ngsp;<a [routerLink]="ROUTE_CONNECTORS"><span translate>connectors</span></a>&ngsp;<span translate>are currently defined.</span>
       </li>
+      @if ((countExtension$ | async) !== null) {
+        <li>
+          <b>{{ countExtension$ | async }}</b>&ngsp;<a [routerLink]="ROUTE_EXTENSIONS"><span translate>external Java extensions</span></a>&ngsp;<span translate>with</span>&ngsp;<b>{{ countExtensionEntries$ | async }}</b>&ngsp;<span translate>entries are currently loaded.</span>
+        </li>
+      }
     </ul>
 
     <!-- The three-tier "where to start" table that routes the reader onward. -->

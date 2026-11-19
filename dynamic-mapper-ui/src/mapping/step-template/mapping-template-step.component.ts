@@ -218,6 +218,14 @@ export class MappingTemplateStepComponent implements OnDestroy {
       });
     });
 
+    // The filter can change while this step lives on: the stepper renders the step once and keeps it across all
+    // steps, and General settings write the same expression. (The unified editor creates the step anew per tab, so
+    // it reads the filter on creation.) Follow the host, or the field keeps showing what it had on first render.
+    effect(() => {
+      const filterMapping = this.mapping()?.filterMapping ?? '';
+      untracked(() => this.followHostFilterMapping(filterMapping));
+    });
+
     // The execution filter field offers the property names of the source template as completion. The
     // provider reads the live editor content on every request, so it follows the template as it is edited.
     effect(() => {
@@ -252,6 +260,28 @@ export class MappingTemplateStepComponent implements OnDestroy {
         this.hasTargetMetadata = this.containsMetadata(targetTemplate);
       });
     });
+  }
+
+  /** Shows a filter that the host changed (not typed here): the field, and its evaluation result. */
+  private followHostFilterMapping(filterMapping: string): void {
+    // Before the form is provided, subscribeToFilterFormly pre-populates the model from the mapping
+    if (!this.filterFormlySubscribed) return;
+    if ((this.filterModel.filterMapping ?? '') === filterMapping) return;
+    // What this step still holds from typing is older than what the host has now
+    this.pendingFilterMapping = undefined;
+    const control = this.filterFormly()?.get('filterMapping');
+    if (!filterMapping) {
+      this.filterModel = { filterMapping: '' };
+      control?.setValue('', { emitEvent: false });
+      control?.setErrors(null);
+    } else {
+      this.filterModel = { ...this.filterModel, filterMapping };
+      control?.setValue(filterMapping, { emitEvent: false });
+      // Without a source template the evaluation would only fail; the source template effect runs it once there is one
+      const template = this.sourceTemplate();
+      if (template) void this.updateFilterExpressionResult(filterMapping, template);
+    }
+    this.cdr.markForCheck();
   }
 
   private subscribeToFilterFormly(filterFormly: FormGroup): void {

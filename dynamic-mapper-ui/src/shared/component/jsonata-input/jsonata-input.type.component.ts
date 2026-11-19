@@ -17,7 +17,7 @@
  */
 
 import { ChangeDetectionStrategy, Component, NgZone, OnDestroy, OnInit, ViewEncapsulation, inject, signal } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
 import { FieldType } from '@ngx-formly/core';
 import { TranslateService } from '@ngx-translate/core';
@@ -195,6 +195,7 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
     };
 
     const showControlValue = () => {
+      if (model.isDisposed()) return;
       const value = control.value ?? '';
       if (value === model.getValue()) return;
       applyingExternalValue = true;
@@ -216,6 +217,9 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
     const controlSubscription = control.valueChanges.subscribe(() => {
       showControlValue();
     });
+    // `setValue(v, { emitEvent: false })` (how a step shows a filter it computed) does not emit valueChanges
+    // but still calls the view callbacks. Without this the editor kept its old, e.g. empty, text.
+    (control as FormControl).registerOnChange(() => showControlValue());
     const statusSubscription = control.statusChanges.subscribe(applyReadOnly);
 
     const templateProvider = this.props['templateProvider'] as (() => unknown) | undefined;

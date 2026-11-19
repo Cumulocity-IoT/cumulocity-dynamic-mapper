@@ -852,6 +852,9 @@ msgstr ""
 msgid "Enter the type or fragment name of the execution filter to continue."
 msgstr ""
 
+msgid "entries are currently loaded."
+msgstr ""
+
 msgid "Error handling and logging"
 msgstr ""
 
@@ -979,6 +982,9 @@ msgid "External ID caches"
 msgstr ""
 
 msgid "External id type"
+msgstr ""
+
+msgid "external Java extensions"
 msgstr ""
 
 msgid "Failed mappings:"
@@ -3121,6 +3127,9 @@ msgid "When the SourceTemplate or TargetTemplate is a JSON array, the Transforma
 msgstr ""
 
 msgid "Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path."
+msgstr ""
+
+msgid "with"
 msgstr ""
 
 msgid "Working with device identifiers and external IDs"
