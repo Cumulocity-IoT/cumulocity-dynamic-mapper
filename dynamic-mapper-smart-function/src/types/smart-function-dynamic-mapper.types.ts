@@ -1019,15 +1019,20 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * **JSON object (recommended):** Return a plain JavaScript object and the runtime
    * will serialize it to JSON before publishing. No manual serialization needed.
    *
-   * **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a
-   * non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol).
+   * **String:** sent as text. For binary data (e.g. Protobuf, a custom binary protocol),
+   * return the bytes as a Base64 or hex string and set `payloadEncoding` to `"base64"` or `"hex"`.
+   *
+   * **Uint8Array (legacy, JSON only):** the runtime turns a typed array into a list of numbers
+   * and reads it as UTF-8 JSON, so it only works for a JSON object encoded with `TextEncoder`.
+   * Binary bytes in a `Uint8Array` fail with "Failed to clone payload". Do not use it for
+   * binary protocols; use `payloadEncoding` instead.
    * `TextEncoder` / `TextDecoder` are available (GraalJS is started with `js.text-encoding=true`).
    *
    * @example JSON object (preferred)
    * payload: { temperature: 25.5, timestamp: new Date().toISOString() }
    *
-   * @example Uint8Array via TextEncoder
-   * payload: new TextEncoder().encode(JSON.stringify(myObject))
+   * @example Binary as Base64
+   * payload: "AAEC/w==", payloadEncoding: "base64"
    */
   payload: Record<string, any> | Uint8Array | string;
 
@@ -1039,7 +1044,8 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * - `"text"` — the string payload is sent exactly as given: no quotes, no JSON
    *   serialization, no enrichment. Requires a string payload.
    * - `"base64"` / `"hex"` — the string payload is decoded to bytes that are sent as is.
-   *   Use for binary protocols (e.g. Protobuf, a firmware chunk). Whitespace in the string is
+   *   Use for binary protocols (e.g. Protobuf, a firmware chunk). Base64 uses the standard
+   *   alphabet (`+` and `/`), not the URL-safe one (`-` and `_`). Whitespace in the string is
    *   ignored; invalid input fails the message. Prefer this over a `Uint8Array`, which the
    *   runtime cannot tell from a serialized JSON document.
    *

@@ -245,6 +245,11 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // A raw payload (e.g. a text command such as an AT string) is sent as is: it is neither an object
             // to clone nor JSON to enrich, and it is never routed to a Cumulocity API.
             OutboundRawPayload.Raw rawPayload = OutboundRawPayload.resolve(deviceMessage, objectMapper, false);
+            if (rawPayload != null && MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
+                // SparkPlug B messages are protobuf built from a JSON object; sending text would skip that step
+                throw new ProcessingException(
+                        "A SparkPlug B mapping must return a JSON object as payload, not text or bytes");
+            }
 
             // Clone the payload to modify it
             Map<String, Object> payload = rawPayload == null ? clonePayload(deviceMessage.getPayload()) : null;
@@ -296,6 +301,10 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             if (payload != null) {
                 setResolvedPublishTopic(context, payload);
+            } else {
+                // A raw payload has no topic-level tokens to merge; without a topic of its own the message
+                // goes to the mapping's publish topic, as a JSON payload does.
+                context.setResolvedPublishTopic(mapping.getPublishTopic());
             }
 
             // Convert payload to JSON string for the request

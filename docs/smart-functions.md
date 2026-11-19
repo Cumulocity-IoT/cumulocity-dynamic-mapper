@@ -113,7 +113,7 @@ return [{
 ```ts
 return {
   topic: `measurements/${externalId}`,  // omit to use the mapping's fixed publish topic
-  payload: { temperature: 23.5 },       // object (serialized to JSON), string (sent as text) or Uint8Array
+  payload: { temperature: 23.5 },       // object (serialized to JSON) or string (sent as text); binary: Base64/hex string + payloadEncoding
   // optional:
   payloadEncoding: "json",             // "json" | "text" | "base64" | "hex"; omit to infer (object → json, string → text)
   contentType: "application/json",     // optional; defaults to text/plain (text) or application/octet-stream (binary), none for JSON

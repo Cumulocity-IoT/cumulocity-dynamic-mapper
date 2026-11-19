@@ -138,6 +138,8 @@ processor:
   text. A JavaScript function cannot do this reliably, which is why Smart Functions use `base64` or `hex`.
   Before this feature a `byte[]` was decoded as UTF-8 text, which corrupted binary; JSON bytes still take
   that path. The shipped `ProcessorExtensionAlarmToSparkplugB` returns protobuf bytes and benefits.
+  `ProcessorExtensionSmartOutbound07` (event `OperationToTextCommand`) returns a text command and is the
+  Java counterpart of `template-SMART-OUTBOUND-07.js`; sample mapping OUT-18 uses it.
 - **Why Base64, not `Uint8Array`.** The runtime turns a typed array into a list of numbers, which it cannot
   tell from a serialized JSON document (an existing path reads such a list as UTF-8 JSON). Base64 also
   matches inbound Any Payload, where the function receives Base64.

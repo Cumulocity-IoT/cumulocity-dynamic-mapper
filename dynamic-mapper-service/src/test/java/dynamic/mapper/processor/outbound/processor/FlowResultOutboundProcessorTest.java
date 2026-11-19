@@ -838,6 +838,57 @@ void setUp() throws Exception {
     }
 
     @Test
+    void testRawPayloadWithoutTopicUsesMappingPublishTopic() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic(null);
+        deviceMsg.setPayload("AT+GTRTO=gv300,3,,,,,,0001$");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertEquals(processingContext.getMapping().getPublishTopic(), request.getPublishTopic(),
+                "A raw payload without its own topic goes to the mapping's publish topic, like a JSON payload");
+    }
+
+    @Test
+    void testBinaryPayloadWithoutTopicUsesMappingPublishTopic() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic(null);
+        deviceMsg.setPayload("AAEC/w==");
+        deviceMsg.setPayloadEncoding("base64");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertEquals(processingContext.getMapping().getPublishTopic(), request.getPublishTopic());
+    }
+
+    @Test
+    void testRawPayloadFailsForSparkplugBMapping() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+        processingContext.getMapping().setMappingType(dynamic.mapper.model.MappingType.SPARKPLUGB);
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("spBv1.0/g/NCMD/n");
+        deviceMsg.setPayload("rebirth");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertTrue(processingContext.hasError(), "Text instead of an object must fail for SparkPlug B");
+        assertTrue(processingContext.getRequests().isEmpty());
+    }
+
+    @Test
     void testUnsupportedPayloadEncodingFails() throws Exception {
         TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
 

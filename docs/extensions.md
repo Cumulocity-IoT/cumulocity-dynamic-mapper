@@ -924,6 +924,7 @@ See `dynamic-mapper-extension/src/main/java/dynamic/mapper/processor/extension/e
 | `inbound/ProcessorExtensionSparkplugBMeasurement.java` | Inbound | Sparkplug B binary → C8Y measurement |
 | `outbound/ProcessorExtensionAlarmToCustomJson.java` | Outbound | C8Y alarm → custom JSON |
 | `outbound/ProcessorExtensionAlarmToSparkplugB.java` | Outbound | C8Y alarm → Sparkplug B binary |
+| `outbound/ProcessorExtensionSmartOutbound07.java` | Outbound | C8Y operation → raw text command (Any Payload) |
 
 ---
 

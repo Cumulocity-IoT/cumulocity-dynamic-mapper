@@ -22,8 +22,9 @@ for example a raw device command such as `AT+GTUPD=…$` or a binary protocol me
   `ByteArraySerializer` and cannot be overridden (the value is UTF-8 for text, so existing mappings are unchanged).
   `DeviceMessage` and `DynamicMapperRequest` keep their earlier all-args constructors.
 - **Documentation and examples:** [outbound-payload-formats.md](docs/feature/outbound-payload-formats.md), the Smart Function
-  and Java extension references, the code template *Send an operation as a raw text command*, and the sample mapping
-  *OUT-17 Any Payload - operation as a raw text command*.
+  and Java extension references, the code template *Send an operation as a raw text command*, the Java extension
+  `OperationToTextCommand`, and the sample mappings *OUT-17 Any Payload - operation as a raw text command* (Smart Function)
+  and *OUT-18* (the same with the Java extension).
 
 ### Acknowledgement and retries (behaviour change)
 

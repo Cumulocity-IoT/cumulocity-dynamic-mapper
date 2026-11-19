@@ -553,5 +553,38 @@
     "publishTopicSample": "command/berlin_01",
     "sourceTemplate": "{\"deviceId\":\"12345\",\"c8y_Command\":{\"text\":\"GTUPD=gv300,0,,,http://example.com/fw.bin,,,$\"}}",
     "code": "Ly8gQHRzLWNoZWNrCi8qKgogKiBAbmFtZSBTZW5kIGFuIG9wZXJhdGlvbiBhcyBhIHJhdyB0ZXh0IGNvbW1hbmQKICogQGRlc2NyaXB0aW9uIFR1cm5zIGEgQ3VtdWxvY2l0eSBvcGVyYXRpb24gaW50byB0aGUgc2luZ2xlIEFTQ0lJIGNvbW1hbmQgc3RyaW5nIGEgZGV2aWNlIGV4cGVjdHMsIGZvcgogKiAgICAgICAgICAgICAgZXhhbXBsZSBhbiBBVCBjb21tYW5kIHRoYXQgZW5kcyB3aXRoICIkIi4gVGhlIHN0cmluZyBpcyBzZW50IGV4YWN0bHkgYXMgcmV0dXJuZWQ6IG5vCiAqICAgICAgICAgICAgICBxdW90ZXMgYW5kIG5vIEpTT04uIFVzZSBwYXlsb2FkRW5jb2RpbmcgImJhc2U2NCIgb3IgImhleCIgZm9yIGJpbmFyeSBwcm90b2NvbHMuCiAqIEB0ZW1wbGF0ZVR5cGUgT1VUQk9VTkRfU01BUlRfRlVOQ1RJT04KICogQHNhbXBsZVRvcGljIGNvbW1hbmQvYmVybGluXzAxCiAqIEBwdWJsaXNoVG9waWMgY29tbWFuZC8rCiAqIEBzYW1wbGVQYXlsb2FkCiAqICAgewogKiAgICAgImRldmljZUlkIjogIjEyMzQ1IiwKICogICAgICJjOHlfQ29tbWFuZCI6IHsKICogICAgICAgInRleHQiOiAiR1RSVE89Z3YzMDAsMywsLCwsLDAwMDEkIgogKiAgICAgfQogKiAgIH0KKi8KCi8qKgogKiBAcGFyYW0ge2ltcG9ydCgnQGM4eS9keW5hbWljLW1hcHBlci1zbWFydC1mdW5jdGlvbicpLk91dGJvdW5kTWVzc2FnZX0gbXNnCiAqIEBwYXJhbSB7aW1wb3J0KCdAYzh5L2R5bmFtaWMtbWFwcGVyLXNtYXJ0LWZ1bmN0aW9uJykuU21hcnRGdW5jdGlvbkNvbnRleHR9IGNvbnRleHQKICovCmZ1bmN0aW9uIG9uTWVzc2FnZShtc2csIGNvbnRleHQpIHsKICAgIHZhciBjb21tYW5kID0gbXNnLnBheWxvYWRbImM4eV9Db21tYW5kIl07CiAgICBpZiAoIWNvbW1hbmQgfHwgIWNvbW1hbmRbInRleHQiXSkgewogICAgICAgIGNvbnRleHQuYWRkV2FybmluZygiT3BlcmF0aW9uIG9mIGRldmljZSAiICsgbXNnLnNvdXJjZUlkICsgIiBoYXMgbm8gYzh5X0NvbW1hbmQgdGV4dCAtIG5vIG1lc3NhZ2UgcHVibGlzaGVkLiIpOwogICAgICAgIHJldHVybiBudWxsOwogICAgfQoKICAgIHZhciBleHRlcm5hbElkID0gY29udGV4dC5nZXRFeHRlcm5hbElkKCk7CiAgICBpZiAoIWV4dGVybmFsSWQpIHsKICAgICAgICBjb250ZXh0LmFkZFdhcm5pbmcoIk5vIGV4dGVybmFsIGlkIHJlc29sdmVkIGZvciBkZXZpY2UgIiArIG1zZy5zb3VyY2VJZCArICIgLSBubyBtZXNzYWdlIHB1Ymxpc2hlZC4iKTsKICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICByZXR1cm4gewogICAgICAgIHRvcGljOiAiY29tbWFuZC8iICsgZXh0ZXJuYWxJZCwKICAgICAgICAvLyBBIHN0cmluZyBwYXlsb2FkIGlzIHNlbnQgYXMgdGV4dDsgIkFUKyIgaXMgYWRkZWQgaGVyZSBzbyB0aGUgb3BlcmF0aW9uIG9ubHkgY2FycmllcyB0aGUgY29tbWFuZCBib2R5CiAgICAgICAgcGF5bG9hZDogIkFUKyIgKyBjb21tYW5kWyJ0ZXh0Il0sCiAgICAgICAgcGF5bG9hZEVuY29kaW5nOiAidGV4dCIKICAgIH07Cn0KZXhwb3J0IHsgb25NZXNzYWdlIH07Cg=="
+  },
+  {
+    "name": "OUT-18 Any Payload - operation as a raw text command (Java extension)",
+    "targetAPI": "OPERATION",
+    "direction": "OUTBOUND",
+    "mappingType": "ANY_PAYLOAD",
+    "transformationType": "EXTENSION_JAVA",
+    "substitutions": [],
+    "active": false,
+    "debug": false,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": false,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "filterMapping": "$exists(c8y_Command)",
+    "filterInventory": null,
+    "maxFailureCount": 5,
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1792500000000,
+    "version": "1.0.0",
+    "targetTemplate": "{}",
+    "publishTopic": "command/+",
+    "publishTopicSample": "command/berlin_01",
+    "sourceTemplate": "{\"deviceId\":\"12345\",\"c8y_Command\":{\"text\":\"GTRTO=gv300,3,,,,,,0001$\"}}",
+    "extension": {
+      "extensionName": "dynamic-mapper-extension",
+      "eventName": "OperationToTextCommand",
+      "fqnClassName": "dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound07",
+      "extensionType": "EXTENSION_OUTBOUND",
+      "direction": "OUTBOUND"
+    }
   }
 ]

@@ -2912,7 +2912,7 @@ msgstr ""
 msgid "This mapping uses a type that is no longer supported (PROTOBUF_INTERNAL or SUBSTITUTION_AS_CODE). Use Any Payload with a Smart Function or a Java extension, or a Smart Function."
 msgstr ""
 
-msgid "This payload format requires the Smart Function transformation type."
+msgid "This payload format requires the Smart Function transformation type. Any Payload also accepts a Java extension."
 msgstr ""
 
 msgid "This payload type is not edited as JSON. The mapper decodes it, or your code receives the raw data."

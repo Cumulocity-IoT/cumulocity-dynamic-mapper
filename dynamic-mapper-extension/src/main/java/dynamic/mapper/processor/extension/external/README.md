@@ -18,7 +18,7 @@ external/
 └── outbound/         # Extensions for Cumulocity → device processing
     ├── ProcessorExtensionAlarmToCustomJson.java
     ├── ProcessorExtensionAlarmToSparkplugB.java (Protobuf / SparkplugB)
-    └── ProcessorExtensionSmartOutbound01/03.java (Java equivalents of Smart Function templates)
+    └── ProcessorExtensionSmartOutbound01/03/07.java (Java equivalents of Smart Function templates; 07 sends a raw text command)
 ```
 
 > **Note:** The `SmartInbound`/`SmartOutbound` samples are Java equivalents of a *subset* of the
@@ -283,7 +283,7 @@ Extension has direction INBOUND but is being used in OUTBOUND processing
 ### Outbound Examples
 1. **ProcessorExtensionAlarmToCustomJson** - Alarm to custom JSON conversion
 2. **ProcessorExtensionAlarmToSparkplugB** - Alarm to SparkplugB / Protobuf conversion
-3. **ProcessorExtensionSmartOutbound01/03** - Java equivalents of the matching
+3. **ProcessorExtensionSmartOutbound01/03/07** - Java equivalents of the matching
    `template-SMART-OUTBOUND-NN.js` templates (see note above)
 
 ## Further Reading
