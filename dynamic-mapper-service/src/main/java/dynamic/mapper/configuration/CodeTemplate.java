@@ -111,6 +111,15 @@ public class CodeTemplate implements Cloneable {
     public String filterMapping;
 
     /**
+     * The Cumulocity API the template works with, declared as {@code @targetAPI}: the API it creates
+     * data in (INBOUND) or listens to (OUTBOUND), one of {@code MEASUREMENT}, {@code EVENT},
+     * {@code ALARM}, {@code INVENTORY}, {@code OPERATION}. The UI preselects it for a new mapping;
+     * without it the mapping starts with MEASUREMENT. Optional.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String targetAPI;
+
+    /**
      * The direction this template applies to, derived from its {@link TemplateType} and serialized
      * for clients that group templates by direction.
      *

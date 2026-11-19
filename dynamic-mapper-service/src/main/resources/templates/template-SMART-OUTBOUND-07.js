@@ -5,6 +5,7 @@
  *              example an AT command that ends with "$". The string is sent exactly as returned: no
  *              quotes and no JSON. Use payloadEncoding "base64" or "hex" for binary protocols.
  * @templateType OUTBOUND_SMART_FUNCTION
+ * @targetAPI OPERATION
  * @sampleTopic command/berlin_01
  * @publishTopic command/+
  * @filterMapping $exists(c8y_Command)

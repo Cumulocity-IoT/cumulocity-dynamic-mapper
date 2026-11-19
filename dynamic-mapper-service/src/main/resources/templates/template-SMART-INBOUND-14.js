@@ -6,6 +6,7 @@
  *              MQTT QoS 1 retry. The check is atomic, keys expire with the window, and the monitoring table
  *              counts every drop under Repeated.
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic dedup/sensor-berlin-01
  * @mappingTopic dedup/+
  * @samplePayload

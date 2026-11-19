@@ -6,6 +6,7 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType OUTBOUND_SMART_FUNCTION
+ * @targetAPI OPERATION
  * @sampleTopic anyTopic
  * @publishTopic anyTopic
  * @filterMapping true

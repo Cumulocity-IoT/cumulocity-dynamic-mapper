@@ -7,6 +7,7 @@
  *              for the first time. The deviceGroups list names the device groups the device is added to
  *              as a child asset; missing groups are created automatically.
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic testSmartInbound/sensor-berlin-01
  * @mappingTopic testSmartInbound/+
  * @samplePayload

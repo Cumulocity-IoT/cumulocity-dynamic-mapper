@@ -404,7 +404,7 @@ public class CodeTemplateHeaderService {
 
     private static final Set<String> SYSTEM_ANNOTATIONS =
             Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly",
-                    "@sampleTopic", "@samplePayload", "@publishTopic", "@mappingTopic", "@filterMapping");
+                    "@sampleTopic", "@samplePayload", "@publishTopic", "@mappingTopic", "@filterMapping", "@targetAPI");
     // Note: @direction is no longer parsed or emitted -- it is listed only so that legacy headers
     // still carrying it have the line stripped on the next rectify. See TemplateType#getDirection.
 
@@ -516,6 +516,9 @@ public class CodeTemplateHeaderService {
         sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        if (codeTemplate.targetAPI != null && !codeTemplate.targetAPI.isBlank()) {
+            sb.append(" * @targetAPI ").append(codeTemplate.targetAPI.trim()).append("\n");
+        }
         if (codeTemplate.sampleTopic != null && !codeTemplate.sampleTopic.isBlank()) {
             sb.append(" * @sampleTopic ").append(codeTemplate.sampleTopic.trim()).append("\n");
         }

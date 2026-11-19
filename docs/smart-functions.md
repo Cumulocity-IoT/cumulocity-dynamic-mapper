@@ -172,6 +172,9 @@ A shipped code template starts with a JSDoc header. Besides `@name`, `@descripti
 - `@samplePayload` is JSON. It may span several lines; each continuation line is indented by at least two
   spaces after the `*`, and a blank ` *` line ends it. A value that is not valid JSON is ignored with a warning.
 - `@sampleTopic` is a topic that matches the payload (the publish topic for an outbound template).
+- `@targetAPI` (optional) is the Cumulocity API the template works with: `MEASUREMENT`, `EVENT`, `ALARM`,
+  `INVENTORY`, or `OPERATION`. A new mapping created from the template starts with it as its **Target API**
+  (inbound) or **Source API** (outbound). Without it the mapping starts with `MEASUREMENT`.
 - `@mappingTopic` (inbound only, optional) is the topic pattern the template subscribes to, for example
   `testSmartInbound/+`. A new inbound mapping created from the template takes it as its **Mapping topic**.
 - `@filterMapping` (outbound only, optional) is the execution filter the template is written for, a JSONata
@@ -183,7 +186,7 @@ A shipped code template starts with a JSDoc header. Besides `@name`, `@descripti
 - When a new **JSON** mapping is created from the template, they become the mapping's sample message, so the
   first dry run exercises the template's own fields. Without them the generic per-target sample is used, which
   usually lacks the fields the template reads. Templates for raw bytes (`ANY_PAYLOAD`) do not declare a payload.
-- The values are read when the template is loaded and stored on the template (`samplePayload`, `sampleTopic`, `publishTopic`, `mappingTopic`, `filterMapping`
+- The values are read when the template is loaded and stored on the template (`samplePayload`, `sampleTopic`, `publishTopic`, `mappingTopic`, `filterMapping`, `targetAPI`
   in the `/configuration/code` API). On startup, a stored template that has none receives them from the
   packaged version; a value the tenant already has is never overwritten. "Reset System Templates" also reloads them.
 

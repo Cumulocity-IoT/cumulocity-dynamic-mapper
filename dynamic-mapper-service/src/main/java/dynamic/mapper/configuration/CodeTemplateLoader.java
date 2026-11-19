@@ -176,6 +176,13 @@ public class CodeTemplateLoader {
                             anyAdded = true;
                         }
                     }
+                    if (stored.targetAPI == null) {
+                        String targetAPI = headers.extractAnnotation(packaged, "@targetAPI");
+                        if (!targetAPI.isEmpty()) {
+                            stored.targetAPI = targetAPI;
+                            anyAdded = true;
+                        }
+                    }
                     if (stored.filterMapping == null) {
                         String filterMapping = headers.extractAnnotation(packaged, "@filterMapping");
                         if (!filterMapping.isEmpty()) {
@@ -357,7 +364,8 @@ public class CodeTemplateLoader {
                 headers.extractSamplePayload(header), headers.extractAnnotation(header, "@sampleTopic"),
                 headers.extractAnnotation(header, "@publishTopic"),
                 headers.extractAnnotation(header, "@mappingTopic"),
-                headers.extractAnnotation(header, "@filterMapping"));
+                headers.extractAnnotation(header, "@filterMapping"),
+                headers.extractAnnotation(header, "@targetAPI"));
 
         // Migrate header to two-section format on load so the divider is always present
         headers.rectifyHeaderInCodeTemplate(template);

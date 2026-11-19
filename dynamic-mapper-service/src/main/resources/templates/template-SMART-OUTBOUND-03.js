@@ -5,6 +5,7 @@
  *              The payload of an element may itself be an array, e.g. payload: [{ ... }], for
  *              devices that expect batch payloads.
  * @templateType OUTBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic measurements/berlin_01
  * @publishTopic measurements/+
  * @filterMapping $exists(c8y_TemperatureMeasurement)

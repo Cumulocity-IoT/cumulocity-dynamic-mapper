@@ -68,7 +68,7 @@ deserializes.
 The shipped files are in [`src/main/resources/templates`](../../dynamic-mapper-service/src/main/resources/templates)
 (`template-SYSTEM.js`, `template-SHARED.js`, `template-SMART-INBOUND-NN.js`, `template-SMART-OUTBOUND-NN.js`).
 Each starts with a JSDoc header of annotations (`@name`, `@description`, `@templateType`, `@defaultTemplate`,
-`@samplePayload`, `@sampleTopic`, `@publishTopic`, `@mappingTopic`, `@filterMapping`).
+`@samplePayload`, `@sampleTopic`, `@publishTopic`, `@mappingTopic`, `@filterMapping`, `@targetAPI`).
 
 ### Lifecycle
 
@@ -76,7 +76,7 @@ Each starts with a JSDoc header of annotations (`@name`, `@description`, `@templ
 |---|---|---|
 | First start with no templates | Load every `template*.js` | `BootstrapService` calls `initCodeTemplates(config, false)` |
 | Later starts | Add shipped templates that are missing; match on `templateType` plus case-folded `@name` | `addMissingInternalTemplates` |
-| Later starts | Fill `samplePayload`, `sampleTopic`, `publishTopic`, `mappingTopic` and `filterMapping` on stored templates that lack them | same method |
+| Later starts | Fill `samplePayload`, `sampleTopic`, `publishTopic`, `mappingTopic`, `filterMapping` and `targetAPI` on stored templates that lack them | same method |
 | Every start | Replace `SYSTEM` if its code differs from the shipped file | `refreshSystemTemplate`, before the GraalVM engine compiles the sources |
 | `POST /operation` `INIT_CODE_TEMPLATES` | Remove every `internal` template except `SHARED`, then reload from the classpath | `initCodeTemplates(config, true)`, then a `CODE_TEMPLATE_INIT_EVENT_TYPE` event |
 | First read through `/code` on an empty map | Same as first start, and saves | `ConfigurationController.getCodeTemplates` |

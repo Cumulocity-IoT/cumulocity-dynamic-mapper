@@ -120,6 +120,8 @@ export interface CodeTemplate {
   mappingTopic?: string;
   /** The execution filter an OUTBOUND template is written for (`@filterMapping`), a JSONata expression. */
   filterMapping?: string;
+  /** The Cumulocity API the template reads (OUTBOUND) or writes (INBOUND) (`@targetAPI`), e.g. `OPERATION`. */
+  targetAPI?: string;
 }
 
 export interface CodeTemplateMap {

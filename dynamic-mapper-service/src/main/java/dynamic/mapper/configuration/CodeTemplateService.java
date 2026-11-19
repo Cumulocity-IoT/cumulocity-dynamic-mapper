@@ -173,6 +173,9 @@ public class CodeTemplateService {
                 if (codeTemplate.filterMapping == null) {
                     codeTemplate.filterMapping = existing.filterMapping;
                 }
+                if (codeTemplate.targetAPI == null) {
+                    codeTemplate.targetAPI = existing.targetAPI;
+                }
             }
             persist(tenant, serviceConfiguration, codeTemplates, codeTemplate);
             log.debug("{} - Updated code template", tenant);

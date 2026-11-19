@@ -4,6 +4,7 @@
  * @description Creates one measurement
  * @templateType OUTBOUND_SMART_FUNCTION
  * @defaultTemplate true
+ * @targetAPI MEASUREMENT
  * @sampleTopic measurements/berlin_01
  * @publishTopic measurements/+
  * @filterMapping $exists(c8y_TemperatureMeasurement)

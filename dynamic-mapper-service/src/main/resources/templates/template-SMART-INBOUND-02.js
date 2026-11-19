@@ -3,6 +3,7 @@
  * @name Smart Function using device data for enrichment
  * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic testSmartInbound/sensor-berlin-01
  * @mappingTopic testSmartInbound/+
  * @samplePayload

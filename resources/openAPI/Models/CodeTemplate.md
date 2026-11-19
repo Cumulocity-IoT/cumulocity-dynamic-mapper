@@ -16,6 +16,7 @@
 | **publishTopic** | **String** |  | [optional] [default to null] |
 | **mappingTopic** | **String** |  | [optional] [default to null] |
 | **filterMapping** | **String** |  | [optional] [default to null] |
+| **targetAPI** | **String** |  | [optional] [default to null] |
 | **direction** | **String** |  | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

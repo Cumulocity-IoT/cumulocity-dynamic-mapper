@@ -825,6 +825,21 @@ describe('applyCodeTemplateSample', () => {
     expect(inbound.publishTopic).not.toBe('command/+');
   });
 
+  it('seeds the target API from @targetAPI for every mapping type and direction, and ignores an unknown API', () => {
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT' });
+    applyCodeTemplateSample(outbound, template({ targetAPI: 'OPERATION' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
+    expect(outbound.targetAPI).toBe('OPERATION');
+
+    const inboundBinary = makeMapping({ targetAPI: 'MEASUREMENT', mappingTopic: '' });
+    applyCodeTemplateSample(inboundBinary, template({ targetAPI: 'ALARM', mappingTopic: 'a/+' }), MappingType.ANY_PAYLOAD, Direction.INBOUND);
+    expect(inboundBinary.targetAPI).toBe('ALARM');
+    expect(inboundBinary.mappingTopic).toBe('a/+');
+
+    const unknown = makeMapping({ targetAPI: 'MEASUREMENT' });
+    applyCodeTemplateSample(unknown, template({ targetAPI: 'NOPE' }), MappingType.JSON, Direction.INBOUND);
+    expect(unknown.targetAPI).toBe('MEASUREMENT');
+  });
+
   it('seeds the execution filter from @filterMapping for OUTBOUND only', () => {
     const outbound = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}', filterMapping: '' });
     applyCodeTemplateSample(outbound, template({ filterMapping: '$exists(c8y_Command)' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
