@@ -13,3 +13,10 @@ settings are hidden. Otherwise, set the **Base URL** and choose **Authentication
 The separate **Cumulocity API** connector type is a preconfigured variant of this connector for the same purpose.
 
 ![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_Webhook.png "Webhook connector configuration properties.")
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). Sent to an
+external system, the body is the text or the bytes unchanged, with the content type set on the message (`text/plain`
+for text and `application/octet-stream` for binary by default, `application/json` for JSON). With **Use Cumulocity API
+of this tenant** on, the connector always sends JSON, because the payload is routed to a Cumulocity API.

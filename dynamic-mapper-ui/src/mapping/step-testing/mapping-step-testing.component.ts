@@ -491,6 +491,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (parsed.some(p => p.wrapped)) {
       staticLogs.push('INFO ' + this.t(gettext('A request or response is not a JSON object, so it is shown as text under "payload".')));
     }
+    if (result.requests.some(req => req.binaryPayload)) {
+      staticLogs.push('INFO ' + this.t(gettext('A binary payload is sent as bytes. The text shown is the Base64 or hexadecimal text it was decoded from.')));
+    }
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];
 

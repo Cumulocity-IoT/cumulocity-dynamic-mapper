@@ -41,3 +41,10 @@ Mechanisms beyond the three listed above (`OAUTHBEARER`, `GSSAPI`/Kerberos, AWS 
 fields. You can still configure them with the raw Kafka client properties (`sasl.mechanism`,
 `sasl.jaas.config`, `security.protocol`, and others) in **Additional producer properties** and **Additional
 consumer properties**. Those maps are applied last and therefore override anything derived above.
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The connector
+sends the record value as bytes: text as UTF-8, binary unchanged. A content type set on the message is sent as the
+`content-type` record header. The key and value serializers are fixed (`String` key, `byte[]` value): a different
+`value.serializer` in **Additional producer properties** is ignored and a warning is logged.

@@ -77,7 +77,8 @@ a Pulsar regex and uses `.topicsPattern(...)`; otherwise a plain `.topic(...)`.
 Gets or creates a cached `Producer<byte[]>` per topic, with up to 3 creation retries (`MAX_PRODUCER_CREATE_RETRIES`, exponential backoff via `retryOperation`);
 handles a Pulsar PIP-344 `FeatureNotSupportedException` by falling back to
 `createAsync()`. `AT_MOST_ONCE` uses `producer.sendAsync()` fire-and-forget (swallowing
-failures); other QoS levels use blocking `producer.send()`.
+failures); other QoS levels use blocking `producer.send()`. The value is `binaryPayload` when set, else the request text as UTF-8;
+a content type is not carried.
 
 ### Ack / QoS
 

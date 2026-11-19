@@ -235,8 +235,10 @@ Key interactions in `MappingStepTestingComponent`:
   ID and a Dry Run has produced a result; `liveTestDisabledReason` is the button's tooltip, so the user is told which
   of the three applies. *Dry Run* is disabled while a result is shown (tooltip: use *Reset Dry Run*). Only the button
   that started a test shows the spinner (`runningTest`).
-- HEX/FLAT_FILE mappings send `sourceTemplate['payload']` instead of the whole JSON template
-  (`requiresRawPayload()`) and the console carries a note that whitespace/line-ending parsing may differ from a device.
+- HEX/FLAT_FILE and *inbound* ANY_PAYLOAD mappings send `sourceTemplate['payload']` instead of the whole JSON template
+  (`requiresRawPayload()`; an outbound ANY_PAYLOAD mapping reads a Cumulocity object, so it sends the whole template)
+  and the console carries a note that whitespace/line-ending parsing may differ from a device. A binary outbound result
+  is shown as the Base64 or hex text it was decoded from, with a console note (`binaryPayload` on the request) and the console carries a note that whitespace/line-ending parsing may differ from a device.
 
 ### Known gotchas and limits
 

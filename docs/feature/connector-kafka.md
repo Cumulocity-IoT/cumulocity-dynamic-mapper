@@ -107,7 +107,8 @@ explicit warning log.
 
 ### Publish (`publishMEAO`)
 
-Synchronous send with a 10s wait: `kafkaProducer.send(record).get(10, TimeUnit.SECONDS)`
+The record value is `byte[]`: `binaryPayload` when set, else the request text as UTF-8; a request content type is added as the
+`content-type` header. Synchronous send with a 10s wait: `kafkaProducer.send(record).get(10, TimeUnit.SECONDS)`
 — effectively sync-over-async. The Kafka record key is whatever value the mapping
 bound to `_CONTEXT_DATA_.key` (`context.getKey()`), so mappings can control Kafka
 partitioning via that binding. Topic is the mapping's own publish topic if set, else

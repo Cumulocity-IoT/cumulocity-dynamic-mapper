@@ -56,7 +56,8 @@ JSONata/DEFAULT transformations and require `SMART_FUNCTION`:
   (`Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function`).
 - **`MappingType.ANY_PAYLOAD`** — unparsed/raw payloads (not necessarily JSON) require
   `SMART_FUNCTION` or `EXTENSION_JAVA` — a JSONata expression has nothing well-defined to
-  evaluate against.
+  evaluate against. Outbound, a Smart Function can return text or binary instead of JSON
+  (`payloadEncoding`, `contentType`): see [outbound-payload-formats.md](outbound-payload-formats.md).
 - **`MappingType.SPARKPLUGB`** — Sparkplug B's protobuf-encoded, schema-driven payload
   structure requires `SMART_FUNCTION` unconditionally.
 

@@ -42,3 +42,9 @@ Shown when the protocol is `amqps://`.
 
 The routing key is the mapping topic with `/` replaced by a dot, for example `devices/sensor1` becomes `devices.sensor1`. **Wildcards in inbound topics** is on by default. **Wildcards in outbound
 topics** is off by default. Both are editable.
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The connector
+publishes the bytes unchanged. A content type set on the message is used as the AMQP `content-type`; without one the
+connector sends `application/json`.

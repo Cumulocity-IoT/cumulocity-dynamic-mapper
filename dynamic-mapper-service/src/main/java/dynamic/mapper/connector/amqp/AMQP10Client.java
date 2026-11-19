@@ -726,7 +726,7 @@ public class AMQP10Client extends AConnectorClient {
                 .property("contentType", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .label("Content type")
-                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it.")
+                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it. A content type set on a message by a Smart Function or Java extension takes precedence.")
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)

@@ -74,6 +74,9 @@ msgstr ""
 msgid "A request or response is not a JSON object, so it is shown as text under \"payload\"."
 msgstr ""
 
+msgid "A binary payload is sent as bytes. The text shown is the Base64 or hexadecimal text it was decoded from."
+msgstr ""
+
 msgid "A substitution defining the DeviceIdentifier must be used."
 msgstr ""
 
@@ -2137,7 +2140,7 @@ msgstr ""
 msgid "Payload Format"
 msgstr ""
 
-msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing."
+msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing. Outbound, the Smart Function or Java Extension returns the message as text (e.g. an AT command), or as binary, and the mapper sends it unchanged."
 msgstr ""
 
 msgid "Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and passes a rich JSON object to your Smart Function. For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized to SparkPlug B protobuf binary before publishing. NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent NDATA / DDATA messages can resolve metric aliases. The aliasMap (metric name → alias) is available in the outbound Smart Function via context.getConfig().aliasMap."

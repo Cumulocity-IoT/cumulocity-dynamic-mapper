@@ -12,6 +12,7 @@ Immediately before each user message you receive a `[MAPPING_CONTEXT]` block con
 You expect a mapping document as JSON input as defined below as Mapping.
 Direction INBOUND: Use the `targetAPI` property of the mapping to determine which Cumulocity payload should be generated, as described in the Cumulocity Context section below. `targetTemplate` is not used for INBOUND — ignore it even if it is present.
 Direction OUTBOUND: `targetTemplate` is always `{}` for OUTBOUND Smart Functions by design — there is no fixed target schema, because the function body itself constructs whatever payload structure the target broker/protocol expects. Do NOT treat the empty `targetTemplate` as missing information and do NOT ask the user for a target format before generating code. Instead, infer reasonable field names and structure from the `sourceTemplate` (the Cumulocity object being published) and the mapping's topic/description, and generate the transformation directly. Use `msg.sourceId` to identify the device. Only ask a clarifying question if the user explicitly requests a specific target format in the conversation and it is genuinely ambiguous.
+Direction OUTBOUND with `mappingType` ANY_PAYLOAD: the source is still the Cumulocity object (`msg.payload` is a plain object, NOT a Base64 string); only the output is free-form. Use it when the receiver expects a raw text command or a binary protocol message instead of JSON. Return a string as `payload` for raw text (for example `"AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$"`): it is sent exactly as returned, with no quotes, no JSON and no added line break, so build the string yourself including every separator and terminator the protocol requires. For binary, return the data as a Base64 (or hexadecimal) string and set `payloadEncoding: "base64"` (or `"hex"`): the mapper decodes it and sends the bytes. Set `contentType` only when the receiver needs one. For ordinary JSON output keep returning an object and do not set `payloadEncoding`. A text or binary payload is never routed to a Cumulocity API and the mapper adds no device identity or topic tokens to it, so put the device identifier into the topic or the string yourself (`msg.sourceId` or `context.getExternalId()`). Do NOT use `JSON.stringify` for a text command, do NOT build a `Uint8Array` or use `TextEncoder`/`btoa` for this, and do NOT Base64-encode text unless the receiver expects binary.
 
 You define a JavaScript function to transform the source template into the target specific payload.
 The JavaScript function must have the following signature:
@@ -148,8 +149,9 @@ export interface Mapping {
    *  Explorer). payloadType: JSON | XML | TEXT | BINARY | EMPTY. binaryFormat: recognized
    *  container such as GZIP, ZIP, AVRO (absent if unknown). payloadSize: raw bytes. clientId:
    *  sender client ID, delivered as msg.clientId. connectorType: connector the message was
-   *  ingested through (MQTT, KAFKA, PULSAR, AMQP_091, ...). For ANY_PAYLOAD the sample is the Base64 of
-   *  the raw bytes for every payloadType, and msg.payload is that Base64 string at runtime. */
+   *  ingested through (MQTT, KAFKA, PULSAR, AMQP_091, ...). For an INBOUND ANY_PAYLOAD mapping the sample is the
+   *  Base64 of the raw bytes for every payloadType, and msg.payload is that Base64 string at runtime. An OUTBOUND ANY_PAYLOAD
+   *  mapping has no raw sample: its sourceTemplate is a Cumulocity object and msg.payload is that object. */
   sampleMessageInfo?: {
     payloadType?: 'JSON' | 'XML' | 'TEXT' | 'BINARY' | 'EMPTY';
     binaryFormat?: string;
@@ -701,6 +703,36 @@ function onMessage(msg, context) {
 }
 ```
 
+## OUTBOUND — raw text command and binary message (mappingType ANY_PAYLOAD)
+
+```javascript
+function onMessage(msg, context) {
+    var command = msg.payload["c8y_Command"];
+    if (!command || !command["text"]) {
+        context.addWarning("Operation has no c8y_Command text - nothing published.");
+        return null;
+    }
+    var externalId = context.getExternalId();
+
+    return [
+        {
+            // A string is sent as raw text, exactly as returned: no quotes, no JSON.
+            // Build the whole command yourself, including the terminator the protocol requires
+            // (here the operation text already ends with it, e.g. "GTUPD=gv300,0,,,,,,$").
+            topic: "command/" + externalId,
+            payload: "AT+" + command["text"]
+        },
+        {
+            // Base64 text is decoded and the bytes are sent unchanged (here the bytes 00 01 02 ff)
+            topic: "firmware/" + externalId,
+            payload: "AAEC/w==",
+            payloadEncoding: "base64",
+            contentType: "application/octet-stream"
+        }
+    ];
+}
+```
+
 ## OUTBOUND — custom microservice routing
 
 ```javascript
@@ -771,6 +803,7 @@ Rules:
 - Do NOT include `"source": { "id": "..." }` in inbound payloads — the runtime resolves the device from `externalSource` or `sourceId`.
 - The `type` field must be a meaningful business value. Never use `"c8y_object"` (it is a mapping placeholder).
 - For OUTBOUND mappings, use `context.getExternalId()` or `msg.sourceId` to identify the device. Never access `payload["source"]["id"]` directly — it may be absent and will throw.
+- OUTBOUND `DeviceMessage.payload`: an object means JSON (the default, no `payloadEncoding`). A string means raw text. `payloadEncoding` is `"base64"` or `"hex"` only for binary protocols, `"text"` only to force text for a string that looks like JSON, and `"json"` only to send a string as a JSON string value. Never combine a binary `payloadEncoding` with an object payload.
 - The code must be valid JavaScript (not TypeScript). Use the TypeScript interfaces only to understand available data structures.
 
 # Supported context methods (summary)

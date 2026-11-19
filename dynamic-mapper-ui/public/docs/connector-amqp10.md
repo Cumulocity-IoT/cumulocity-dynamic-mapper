@@ -23,7 +23,7 @@ RabbitMQ and other AMQP 0-9-1 brokers, use the [AMQP 0-9-1 connector](/c8y-pkg-d
 | Property | Default | Description |
 |---|---|---|
 | **Destination type** (required) | Queue | Queue for point-to-point delivery. Topic for publish and subscribe. |
-| **Content type** | empty | AMQP content type set on outbound messages, for example `application/json`. Empty does not set it. |
+| **Content type** | empty | AMQP content type set on outbound messages, for example `application/json`. Empty does not set it. A content type set on a message by a Smart Function or Java Extension takes precedence. |
 | **Automatic recovery** | On | Reconnects automatically after a connection loss. |
 
 #### TLS
@@ -39,3 +39,9 @@ Shown when the protocol is `amqps://`.
 #### Topics and wildcards
 
 **Wildcards in inbound topics** and **Wildcards in outbound topics** are both off by default. Both are editable.
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). Text is sent as an
+AMQP text message, binary as a bytes message with the bytes unchanged. A content type set on the message overrides
+the **Content type** setting of the connector.

@@ -84,7 +84,7 @@ itself. Subscribers are created in `subscribe()` and started with
 
 Topic resolution: the mapping's own publish topic takes precedence, falling back to
 the connector's configured default `topicId`. Message body is raw bytes (binary
-payload if present, else the request body as UTF-8). Every message gets attributes
+payload if present, else the request body as UTF-8); a content type is not carried. Every message gets attributes
 `sourceSystem=cumulocity` and, when derivable, `messageType=<API type>` — this is Pub/Sub
 message-attribute metadata, not an ordering key; no ordering-key support (`setOrderingKey()`)
 is implemented. A publisher is never evicted from the cache after a failed publish (despite a

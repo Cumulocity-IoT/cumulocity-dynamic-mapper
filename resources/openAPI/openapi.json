@@ -4147,6 +4147,11 @@
             "format" : "byte",
             "description" : "Pre-encoded binary payload (e.g. SparkPlug B proto bytes). When set, connectors use this instead of encoding request as UTF-8."
           },
+          "contentType" : {
+            "type" : "string",
+            "description" : "Content type of the payload (e.g. text/plain, application/octet-stream). Connectors that can carry it use it; null keeps the connector default.",
+            "example" : "text/plain"
+          },
           "errorMessage" : {
             "type" : "string",
             "description" : "Message of the error that occurred during request execution; absent when the request succeeded",

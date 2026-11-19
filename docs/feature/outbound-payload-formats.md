@@ -165,7 +165,9 @@ processor:
   "send the `payload` string". Outbound Any Payload must send the whole Cumulocity JSON object, so the check
   is direction-aware; without it a Dry Run would have sent only a `payload` property.
 - **Changing the contract.** Follow [changing-the-runtime-api.md](../changing-the-runtime-api.md): the Java
-  class first, then the TypeScript type, `npm run generate:editor-api`, then `smartfunction.md` and the AI prompt.
+  class first, then the TypeScript type, `npm run generate:editor-api`, then `smartfunction.md` and the AI prompt. The prompt needs the guidance as well as the declaration: when to
+  return text or binary, that `msg.payload` of an outbound Any Payload mapping is an object, and an example.
+  `SmartFunctionApiContractTest` fails if a field or an encoding is missing from the prompt.
 
 ### Testing
 
@@ -183,6 +185,7 @@ processor:
 | Webhook body and `Content-Type` on the wire | `WebHookPublishTest` |
 | Native Pulsar bytes | `PulsarConnectorClientTest` |
 | Type contract | `smart-function-dynamic-mapper.types.spec.ts` |
+| The AI prompt and the in-app docs teach the fields, the encodings and the outbound Any Payload guidance | `SmartFunctionApiContractTest` |
 | Outbound Any Payload configuration | `stepper-configuration.strategy.spec.ts` |
 
 The connector tests check what is handed to the transport, not a real broker: the Kafka, Pulsar and AMQP

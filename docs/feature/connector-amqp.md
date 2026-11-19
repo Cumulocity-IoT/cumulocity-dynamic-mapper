@@ -68,7 +68,8 @@ queue (with the generated name above) and consumes from it.
 `subscribe()` declares exchange/queue/binding then calls `basicConsume()` with
 `autoAck = (qos == AT_MOST_ONCE)`. `publishMEAO()` builds `AMQP.BasicProperties` with
 `deliveryMode(2)` (persistent) for `AT_LEAST_ONCE`, `deliveryMode(1)` otherwise, and
-`contentType=application/json`, then `basicPublish(exchange, routingKey, props, bytes)`.
+`contentType` from the request (`application/json` when it has none), then `basicPublish(exchange, routingKey, props, bytes)`,
+where `bytes` is `binaryPayload` when set and the request text as UTF-8 otherwise.
 
 #### QoS / ack
 
@@ -131,7 +132,7 @@ Built via `ConnectorSpecificationBuilder.create("AMQP 1.0 Connector", ConnectorT
 | `username` / `password` | string / sensitive | no | — | |
 | `clientId` | string | no | — | JMS client/container ID |
 | `destinationType` | option | yes | `queue` | `queue`/`topic` |
-| `contentType` | string | no | — | e.g. `application/json;charset=utf-8` |
+| `contentType` | string | no | — | e.g. `application/json;charset=utf-8`; a content type on the message takes precedence |
 | `trustCustomCertificate` + cert fields | boolean / string / large text | no | `false` | shown when `protocol=amqps://` |
 | `automaticRecovery` | boolean | no | `true` | see failover transport, below |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean | no | `false` / `false` | no wildcard support either direction |
@@ -144,8 +145,8 @@ A single JMS `Session` per connection, `Session.CLIENT_ACKNOWLEDGE` mode. `subsc
 creates a `MessageConsumer` with an `AMQP10Callback` listener (`AT_MOST_ONCE` acknowledges
 before dispatch, higher levels acknowledge once the pipeline result reports success; unsupported message
 types are acknowledged and dropped); `publishMEAO()` looks up or
-creates a cached `MessageProducer` per resolved destination, builds a `TextMessage`
-(optionally setting `JMS_AMQP_ContentType` from the `contentType` property), sets
+creates a cached `MessageProducer` per resolved destination, builds a `BytesMessage` for a `binaryPayload` and a `TextMessage` otherwise
+(setting `JMS_AMQP_ContentType` from the request's content type, else from the `contentType` property), sets
 `deliveryMode` `PERSISTENT` for `AT_LEAST_ONCE` / `NON_PERSISTENT` otherwise, and calls
 `producer.send(message)`. The whole producer-get/create/send sequence is
 `synchronized(this)`, sharing the lock with `disconnect()`.

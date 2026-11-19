@@ -78,8 +78,9 @@ flowchart LR
     class sub outbound;
 ```
 
-For **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because the
-payload is binary. To see a real binary message, use the
+For inbound **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because
+the payload is binary. An outbound **Any Payload** mapping shows the source editor, because its source is a regular
+Cumulocity object; only what it sends is free-form, and your Smart Function or Java Extension decides that. To see a real binary message, use the
 [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer).
 
 ![Connector selection](../../../resources/image/Dynamic_Mapper_Connector_Select.png "Selecting the connector(s) a mapping is deployed to.")

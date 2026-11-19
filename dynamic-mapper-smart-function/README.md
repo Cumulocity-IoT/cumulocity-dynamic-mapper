@@ -205,8 +205,15 @@ Demonstrates the generic type parameters on `SmartFunctionIn<T>` and `SmartFunct
 
 Shows how to:
 - Access a Cumulocity payload (pre-deserialized `SmartFunctionPayload`)
-- Convert data and encode the result as `Uint8Array`
+- Return the result as a plain object (serialized to JSON by the mapper)
 - Use the `_externalId_` topic placeholder
+
+### Sending text or binary (outbound)
+
+`DeviceMessage.payload` may also be a string, sent as raw text (for example a device command such as
+`"AT+GTUPD=…$"`), and `payloadEncoding` (`"json"`, `"text"`, `"base64"`, `"hex"`) and `contentType` control how it is
+put on the wire. See [`outbound-payload-formats.md`](../docs/feature/outbound-payload-formats.md) and the shipped
+template `template-SMART-OUTBOUND-07.js`.
 
 ### Example 6: Outbound with Data Transformation
 

@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import org.graalvm.polyglot.Context;
 
 import dynamic.mapper.model.API;
+import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.model.InputMessage;
 import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
@@ -210,6 +212,51 @@ class SmartFunctionApiContractTest {
             assertTrue(phantom.isEmpty(),
                     prompt + " teaches msg field(s) the runtime does not set: " + phantom
                             + ". Available: " + api);
+        }
+    }
+
+    /** The output fields a Smart Function can use to choose how an outbound payload is put on the wire. */
+    private static final List<String> OUTBOUND_PAYLOAD_FORMAT_FIELDS = List.of("payloadEncoding", "contentType");
+
+    @Test
+    @DisplayName("the Smart Function prompt teaches the outbound payload format fields and their values")
+    void promptTeachesTheOutboundPayloadFormats() throws IOException {
+        String prompt = read("prompts/smartfunction_prompt.txt");
+
+        for (String field : OUTBOUND_PAYLOAD_FORMAT_FIELDS) {
+            assertTrue(Arrays.stream(DeviceMessage.class.getDeclaredFields()).anyMatch(f -> f.getName().equals(field)),
+                    "DeviceMessage no longer declares '" + field + "': update OUTBOUND_PAYLOAD_FORMAT_FIELDS and the prompt");
+            assertTrue(prompt.contains(field + "?:"),
+                    "the prompt's DeviceMessage interface does not declare '" + field + "'");
+        }
+        // Every encoding the runtime accepts, so a new one cannot be added without telling the AI
+        for (Field f : DeviceMessage.class.getFields()) {
+            if (f.getName().startsWith("ENCODING_")) {
+                assertTrue(prompt.contains("\"" + getStatic(f) + "\""),
+                        "the prompt does not mention the payload encoding \"" + getStatic(f) + "\"");
+            }
+        }
+        // The guidance, not just the declaration: an outbound Any Payload mapping gets an object, not Base64
+        assertTrue(prompt.contains("Direction OUTBOUND with `mappingType` ANY_PAYLOAD"),
+                "the prompt has no guidance for outbound Any Payload mappings");
+        assertTrue(prompt.contains("NOT a Base64 string"),
+                "the prompt must say that msg.payload of an outbound Any Payload mapping is an object");
+    }
+
+    @Test
+    @DisplayName("the in-app docs describe the outbound payload format fields")
+    void docsDescribeTheOutboundPayloadFormats() throws IOException {
+        String docs = readDocs();
+        for (String field : OUTBOUND_PAYLOAD_FORMAT_FIELDS) {
+            assertTrue(docs.contains(field), USER_DOCS + " does not describe the output field '" + field + "'");
+        }
+    }
+
+    private static Object getStatic(Field f) {
+        try {
+            return f.get(null);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
         }
     }
 

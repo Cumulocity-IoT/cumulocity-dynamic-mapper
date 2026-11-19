@@ -547,6 +547,45 @@ properties:
 | `targetPath` | No* | Required when `cumulocityType: "custom"` is set. Relative REST path of the tenant-local microservice to call, e.g. `/service/my-processor/ingest`. Must start with `/service/`. The mapper validates this at runtime and rejects requests that do not match. Ignored for all other `cumulocityType` values. |
 | `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key, the key, not a header, or the Pulsar message key; for Kafka and Pulsar connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields`, see *Metadata Properties for Inbound Smart Functions*. |
 
+**Sending text or binary instead of JSON (outbound)**
+
+The payload of a returned message is not limited to JSON. Use an outbound mapping with the payload type **Any Payload**
+and the transformation type **Smart Function** to send exactly the bytes a device protocol expects.
+
+```javascript
+function onMessage(msg, context) {
+  return [
+    {
+      // A string is sent as raw text: no quotes, no JSON, no added line break
+      topic: "command/" + context.getExternalId(),
+      payload: "AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$"
+    },
+    {
+      // Base64 text is decoded and the bytes are sent unchanged
+      topic: "firmware/" + context.getExternalId(),
+      payload: "AAEC/w==",
+      payloadEncoding: "base64",
+      contentType: "application/x-protobuf"
+    }
+  ];
+}
+```
+
+| You return | `payloadEncoding` | Sent as |
+|---|---|---|
+| An object | none or `"json"` | JSON |
+| A string | none | Text (`text/plain`). A string that is valid JSON is sent unchanged, with the connector default content type |
+| A string | `"text"` | Text, even when it looks like JSON |
+| A string | `"base64"` or `"hex"` | The decoded bytes (`application/octet-stream`) |
+| A string | `"json"` | A JSON string value, with quotes |
+
+Text and binary go to the broker only: they are never routed to a Cumulocity API, `cumulocityType` does not apply,
+and the mapper does not fill in the device identity or topic levels. Returning the object is therefore still the
+better choice for JSON. In Dry Run, a binary result shows the Base64 or hexadecimal text it was decoded from.
+
+Connectors that carry a content type: Webhook (external system, not the Cumulocity API), AMQP and AMQP 1.0, MQTT 5, and
+Kafka (the `content-type` record header). Other connectors send the bytes without one.
+
 **Context Properties, available via `context.getConfig()`**
 
 | Property | Scope | Description |

@@ -171,6 +171,8 @@ field is resolved at runtime.
 
 - `MappingType.ANY_PAYLOAD` requires `SMART_FUNCTION` — except when `transformationType`
   is `EXTENSION_JAVA` (a Java extension is also allowed to handle an unparsed/raw payload).
+  The rule holds in both directions: an outbound `ANY_PAYLOAD` mapping sends text or binary that the function or
+  extension builds (see [outbound-payload-formats.md](outbound-payload-formats.md)).
 - `MappingType.SPARKPLUGB` requires `SMART_FUNCTION` unconditionally.
 
 | Error code | Fails | Passes |

@@ -19,3 +19,8 @@ The service account needs the role `roles/pubsub.publisher` for outbound and `ro
 | **Service account key** | none | The full JSON key of the service account. Shown for the Service Account Key mode. It is a secret. |
 | **ADC credentials JSON** | none | The content of the file that `gcloud auth application-default login` creates, usually `~/.config/gcloud/application_default_credentials.json`. Shown for the ADC mode. It is a secret. |
 | **Publish timeout (s)** (required) | 30 | How long the connector waits for a publish acknowledgement before it treats the request as failed. |
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The message data
+is the bytes, unchanged. A content type is not sent.

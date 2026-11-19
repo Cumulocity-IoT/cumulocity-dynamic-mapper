@@ -24,3 +24,8 @@ always processes inbound messages at least once, whatever QoS the mapping has.
 
 Cumulocity MQTT Service supports Sparkplug B only partially, because it does not provide retained messages. See
 [SparkPlug B](/c8y-pkg-dynamic-mapper/introduction/sparkplugb).
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The message is
+delivered to the device as bytes, unchanged. A content type is not sent.
