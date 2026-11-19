@@ -297,6 +297,8 @@ variant can also create `API.CUSTOM` requests.
 
 ### Transformation dispatch
 
+A Smart Function can send text or binary instead of JSON; see [outbound-payload-formats.md](outbound-payload-formats.md).
+
 As with inbound, the individual transformation mechanisms are documented separately:
 
 - [`transformation-jsonata.md`](transformation-jsonata.md) — shared with inbound via `AbstractJSONataExtractionProcessor`.

@@ -60,6 +60,11 @@ import org.springframework.stereotype.Component;
  * }
  * </pre>
  *
+ * <p>The payload need not be JSON. A {@code String} that does not start with <code>{</code> is sent as text,
+ * a {@code byte[]} as bytes, and {@link DeviceMessage#getPayloadEncoding() payloadEncoding} states the format
+ * explicitly (text, Base64 or hex binary). Use this with a mapping of type Any Payload for device protocols
+ * that expect a raw command or binary message.</p>
+ *
  * <p>Benefits of this pattern:</p>
  * <ul>
  *   <li>Cleaner code - no side effects, easier to test</li>

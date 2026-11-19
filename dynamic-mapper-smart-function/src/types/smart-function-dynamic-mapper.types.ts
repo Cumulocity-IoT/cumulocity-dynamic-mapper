@@ -1013,7 +1013,8 @@ export interface CumulocityObject<
  */
 export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   /**
-   * Message payload — either a plain JSON object or a `Uint8Array` of raw bytes.
+   * Message payload — a plain JSON object, a string (sent as text, see `payloadEncoding`),
+   * or a `Uint8Array` of raw bytes.
    *
    * **JSON object (recommended):** Return a plain JavaScript object and the runtime
    * will serialize it to JSON before publishing. No manual serialization needed.
@@ -1028,7 +1029,52 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * @example Uint8Array via TextEncoder
    * payload: new TextEncoder().encode(JSON.stringify(myObject))
    */
-  payload: Record<string, any> | Uint8Array;
+  payload: Record<string, any> | Uint8Array | string;
+
+  /**
+   * How `payload` is put on the wire. Optional: leave it out and the runtime infers it.
+   *
+   * - `"json"` — an object is serialized to JSON (the default for objects). With a string
+   *   payload, the string is sent as a JSON string value, i.e. with quotes.
+   * - `"text"` — the string payload is sent exactly as given: no quotes, no JSON
+   *   serialization, no enrichment. Requires a string payload.
+   * - `"base64"` / `"hex"` — the string payload is decoded to bytes that are sent as is.
+   *   Use for binary protocols (e.g. Protobuf, a firmware chunk). Whitespace in the string is
+   *   ignored; invalid input fails the message. Prefer this over a `Uint8Array`, which the
+   *   runtime cannot tell from a serialized JSON document.
+   *
+   * **Inference when omitted:** an object is sent as JSON; a string is sent as text. A string
+   * that is valid JSON (e.g. `JSON.stringify(obj)` or `"[1,2]"`) is sent unchanged with the
+   * connector's default content type. Prefer returning the object itself: only an object gets
+   * its device identity and topic levels filled in by the mapper.
+   *
+   * A text or binary payload is broker-bound only: it is never routed to a Cumulocity API, so
+   * `cumulocityType` does not apply, and topic-level tokens in the payload are not processed.
+   *
+   * @example Raw ASCII command (e.g. a Queclink OTA command)
+   * { topic: "queclink/cmd/123", payload: "AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$" }
+   *
+   * @example Text that starts with "{"
+   * { payload: "{not json}", payloadEncoding: "text" }
+   *
+   * @example Binary, Base64 encoded
+   * { topic: "device/fw", payload: "AAEC/w==", payloadEncoding: "base64" }
+   */
+  payloadEncoding?: "json" | "text" | "base64" | "hex";
+
+  /**
+   * Content type of the payload, e.g. `"text/plain"` or `"application/octet-stream"`.
+   *
+   * **Optional.** Defaults to `text/plain` for a text payload and `application/octet-stream`
+   * for `"base64"` / `"hex"`; a JSON payload, or a string that is valid JSON, keeps the
+   * connector's default. Used by connectors
+   * that can carry one: Webhook (`Content-Type` header), AMQP and AMQP 1.0 (content type),
+   * MQTT 5 (content type property) and Kafka (`content-type` record header). Other connectors
+   * ignore it.
+   *
+   * @example "application/x-protobuf"
+   */
+  contentType?: string;
 
   /**
    * The topic on the transport (e.g., MQTT topic).

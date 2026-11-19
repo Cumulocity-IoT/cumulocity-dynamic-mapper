@@ -170,15 +170,18 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     enabled: true,
     description: gettext(
       'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). ' +
-      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.'),
+      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing. ' +
+      'Outbound, the Smart Function or Java Extension returns the message as text (e.g. an AT command), or as ' +
+      'binary, and the mapper sends it unchanged.'),
     transformationTypes: {
       // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
       [Direction.INBOUND]: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
-      // Direction not supported
-      [Direction.OUTBOUND]: [],
+      // Outbound, both choose the wire format of each message they return (payloadEncoding: text, base64, hex).
+      [Direction.OUTBOUND]: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA],
     },
     // Code-driven base. The per-transformation overrides in stepper-configuration.strategy.ts
-    // add the rest (target editor hidden, testing enabled, processor-extension selector for Java).
+    // add the rest (target editor hidden, testing enabled, processor-extension selector for Java,
+    // source editor for outbound, whose source is a regular Cumulocity JSON object).
     stepperConfiguration: createStepperConfig(CODE_DRIVEN_STEPPER_CONFIGURATION)
   },
   [MappingType.SPARKPLUGB]: {

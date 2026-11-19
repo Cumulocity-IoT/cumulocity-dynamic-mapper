@@ -78,7 +78,7 @@ A Cumulocity web plugin providing a full UI for:
 | `FLAT_FILE` | Delimited flat-file payloads |
 | `HEX` | Raw hexadecimal byte payloads |
 | `SPARKPLUGB` | SparkPlug B payloads over MQTT |
-| `ANY_PAYLOAD` | Generic binary/text, processed entirely by an extension or Smart Function |
+| `ANY_PAYLOAD` | Generic binary/text, processed entirely by an extension or Smart Function. Outbound (Smart Function or Java extension), the function or extension returns text or binary (`byte[]`, or Base64/hex via `payloadEncoding`) |
 | `CODE_BASED` | Payload handled by a code-based (JavaScript) transformation *(legacy — creation disabled since v6.2, superseded by Smart Functions)* |
 
 ## Transformation Types (TransformationType)

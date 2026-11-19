@@ -509,12 +509,14 @@ public class AMQPClient extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payloadBytes = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
             if (topic == null || topic.isEmpty()) {
@@ -529,7 +531,7 @@ public class AMQPClient extends AConnectorClient {
 
                 AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
                         .deliveryMode(publishQos.requiresAcknowledgement() ? 2 : 1)
-                        .contentType("application/json")
+                        .contentType(request.getContentType() != null ? request.getContentType() : "application/json")
                         .build();
 
                 // Publish message. Synchronized against disconnect()'s channel teardown so a
@@ -539,12 +541,12 @@ public class AMQPClient extends AConnectorClient {
                     if (channel == null || !channel.isOpen()) {
                         throw new IllegalStateException("Channel is not open");
                     }
-                    channel.basicPublish(exchangeName, routingKey, props, payload.getBytes(StandardCharsets.UTF_8));
+                    channel.basicPublish(exchangeName, routingKey, props, payloadBytes);
                 }
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
-                            tenant, getConnectorName(), topic, publishQos, payload);
+                            tenant, getConnectorName(), topic, publishQos, new String(payloadBytes, StandardCharsets.UTF_8));
                 } else {
                     log.debug("{} - Published message ({}/{}): exchange=[{}], routingKey=[{}], QoS: {}",
                             tenant, i + 1, requests.size(), exchangeName, routingKey, publishQos);

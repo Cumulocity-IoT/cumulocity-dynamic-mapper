@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.API;
@@ -43,6 +44,7 @@ import dynamic.mapper.processor.model.ExternalIdInfo;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
+import dynamic.mapper.processor.util.OutboundRawPayload;
 import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
@@ -240,8 +242,12 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 return;
             }
 
+            // A raw payload (e.g. a text command such as an AT string) is sent as is: it is neither an object
+            // to clone nor JSON to enrich, and it is never routed to a Cumulocity API.
+            OutboundRawPayload.Raw rawPayload = OutboundRawPayload.resolve(deviceMessage, objectMapper, false);
+
             // Clone the payload to modify it
-            Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
+            Map<String, Object> payload = rawPayload == null ? clonePayload(deviceMessage.getPayload()) : null;
 
             // internalSourceId: the internal C8Y managed object ID — must NOT be overwritten.
             // The same context is reused for every DeviceMessage in the batch
@@ -288,18 +294,24 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
-            setResolvedPublishTopic(context, payload);
+            if (payload != null) {
+                setResolvedPublishTopic(context, payload);
+            }
 
             // Convert payload to JSON string for the request
-            String payloadJson = objectMapper.writeValueAsString(payload);
+            String payloadJson = rawPayload != null ? rawPayload.text() : objectMapper.writeValueAsString(payload);
 
             // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
             DynamicMapperRequest request = ProcessingResultHelper.createDynamicMapperRequest(
                     context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     deviceMessage.getAction(), mapping);
+            if (rawPayload != null) {
+                request.setBinaryPayload(rawPayload.bytes());
+            }
+            request.setContentType(rawPayload != null ? rawPayload.contentType() : deviceMessage.getContentType());
 
             // For SparkPlug B outbound, serialize payload to proto binary bytes
-            if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
+            if (payload != null && MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
                 try {
                     byte[] protoBytes = sparkPlugBSerializer.serialize(payload);
                     request.setBinaryPayload(protoBytes);
@@ -332,8 +344,9 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Derive API: cumulocityType from the DeviceMessage first, then the resolved publish topic.
             // Without a match the request keeps the API it was created with (the mapping's target API).
-            API derivedAPI = OutboundRequestFinalizer.deriveApi(deviceMessage.getCumulocityType(),
-                    context.getResolvedPublishTopic());
+            API derivedAPI = rawPayload != null ? null
+                    : OutboundRequestFinalizer.deriveApi(deviceMessage.getCumulocityType(),
+                            context.getResolvedPublishTopic());
             if (derivedAPI != null) {
                 request.setApi(derivedAPI);
             }

@@ -43,7 +43,7 @@ The **payload type** (called **Payload Format** in the creation dialog) tells th
 JSON, Flat File (CSV), Hexadecimal, SparkPlug B, or Any Payload for binary and other formats the mapper does not
 parse itself, such as Protobuf or XML.
 
-JSON is the default and covers most cases. Flat File, Hexadecimal, and Any Payload apply to inbound mappings only.
+JSON is the default and covers most cases. Flat File and Hexadecimal apply to inbound mappings only. Any Payload applies to both directions: inbound it reads any payload, outbound it sends text or binary that your Smart Function or Java Extension builds.
 
 → [Payload types](/c8y-pkg-dynamic-mapper/introduction/payload-types)
 

@@ -123,15 +123,16 @@ Defaults are loaded from `src/main/resources/kafka-consumer.properties` and
 `group.id`, security/SASL/TLS, serializers) and finally by the free-form
 `defaultPropertiesConsumer` / `defaultPropertiesProducer` maps, which win.
 `security.protocol` in the files is always overridden by the code. The (de)serializer
-entries are also forced to the String classes in `buildKafkaProperties()` before the custom
-maps are applied, so the file entries are documentation of the default only; to use
-another (de)serializer, set it in `defaultPropertiesProducer` / `defaultPropertiesConsumer`
-(the connector's send/receive code is typed `String`, so a non-String class will not work).
+entries are forced in `buildKafkaProperties()`, so the file entries are documentation of the default only.
+The consumer side is typed `String`. The producer side sends `byte[]` values (`ByteArraySerializer`) and
+`String` keys, and `forceProducerSerializers()` re-applies them after the custom producer map, logging a warning
+when an override is dropped: a different class would fail every send. A consumer (de)serializer set in
+`defaultPropertiesConsumer` is not protected and will not work if it is not a `String` class.
 
 | Side | Property | Default | Why |
 |------|----------|---------|-----|
 | Consumer | `key.deserializer` / `value.deserializer` | `StringDeserializer` | Keys and payloads are handled as UTF-8 strings; mappings parse the payload themselves. |
-| Producer | `key.serializer` / `value.serializer` | `StringSerializer` | The record key is the string bound to `_CONTEXT_DATA_.key`, the value is the mapped payload string. |
+| Producer | `key.serializer` / `value.serializer` | `StringSerializer` / `ByteArraySerializer` | The record key is the string bound to `_CONTEXT_DATA_.key`. The value is the payload as bytes: text is UTF-8, as the string serializer produced, and binary outbound payloads are sent unchanged. Not configurable: an override in "Additional producer properties" is ignored with a warning. |
 | Consumer | `enable.auto.commit` | `false` | Offsets are committed by the connector only after the pipeline succeeds (at-least-once). With `true`, Kafka commits on a timer and a failed message can be lost. |
 | Consumer | `auto.offset.reset` | `latest` | A new consumer group starts at the end of the topic. |
 | Consumer | `max.poll.records` | `100` | Keeps a batch within `max.poll.interval.ms` (5 min) when processing is slow; otherwise the consumer is evicted and rebalances in a loop. |

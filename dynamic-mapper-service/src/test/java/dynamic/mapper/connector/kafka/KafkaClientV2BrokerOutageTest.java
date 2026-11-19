@@ -120,4 +120,65 @@ class KafkaClientV2BrokerOutageTest {
         assertFalse(context.getRequests().get(0).getError() instanceof ConnectorNotConnectedException);
         assertEquals(0, ((ProcessingException) context.getErrors().get(0)).getHttpStatusCode());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aBinaryPayloadIsPublishedAsBytesWithItsContentType() throws Exception {
+        when(state.isConnected()).thenReturn(true);
+        KafkaProducer<String, byte[]> producer = mock(KafkaProducer.class);
+        when(producer.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new org.apache.kafka.clients.producer.RecordMetadata(
+                                new org.apache.kafka.common.TopicPartition("topic", 0), 0, 0, 0, 0, 0)));
+        ReflectionTestUtils.setField(client, "kafkaProducer", producer);
+        byte[] bytes = { 0, 1, (byte) 0xFF };
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .resolvedPublishTopic("topic")
+                .requests(List.of(DynamicMapperRequest.builder().request("AAH/").binaryPayload(bytes)
+                        .contentType("application/octet-stream").build()))
+                .build();
+
+        client.publishMEAO(context);
+
+        org.mockito.ArgumentCaptor<ProducerRecord<String, byte[]>> captor =
+                org.mockito.ArgumentCaptor.forClass(ProducerRecord.class);
+        org.mockito.Mockito.verify(producer).send(captor.capture());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(bytes, captor.getValue().value());
+        assertEquals("application/octet-stream",
+                new String(captor.getValue().headers().lastHeader("content-type").value()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aTextPayloadIsPublishedAsUtf8WithoutContentTypeHeaderByDefault() throws Exception {
+        when(state.isConnected()).thenReturn(true);
+        KafkaProducer<String, byte[]> producer = mock(KafkaProducer.class);
+        when(producer.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new org.apache.kafka.clients.producer.RecordMetadata(
+                                new org.apache.kafka.common.TopicPartition("topic", 0), 0, 0, 0, 0, 0)));
+        ReflectionTestUtils.setField(client, "kafkaProducer", producer);
+
+        client.publishMEAO(context());
+
+        org.mockito.ArgumentCaptor<ProducerRecord<String, byte[]>> captor =
+                org.mockito.ArgumentCaptor.forClass(ProducerRecord.class);
+        org.mockito.Mockito.verify(producer).send(captor.capture());
+        org.junit.jupiter.api.Assertions.assertArrayEquals("{}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                captor.getValue().value());
+        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().headers().lastHeader("content-type"));
+    }
+
+    @Test
+    void aCustomSerializerCannotReplaceTheOnesTheSendCodeRequires() {
+        java.util.Properties props = new java.util.Properties();
+        props.put("key.serializer", "org.apache.kafka.common.serialization.IntegerSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        ReflectionTestUtils.invokeMethod(client, "forceProducerSerializers", props);
+
+        assertEquals("org.apache.kafka.common.serialization.StringSerializer", props.get("key.serializer"));
+        assertEquals("org.apache.kafka.common.serialization.ByteArraySerializer", props.get("value.serializer"));
+    }
 }

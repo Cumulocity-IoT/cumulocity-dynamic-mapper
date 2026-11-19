@@ -478,6 +478,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-inventory-cache-eviction` | A deleted device is evicted from the inventory cache (`GET /cache?cacheId=INVENTORY_CACHE`) via the Notification 2.0 DELETE |
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-anypayload-smartfunction` | Any Payload outbound: an Operation becomes a raw text command (`AT+GTUPD=…$`) and a Base64-decoded binary message; the broker receives the exact bytes (`mosquitto_sub -F %x`) — no quotes, no JSON wrapping |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
 | `test-outbound-smartfunction-molookup` | Smart Function `getManagedObjectByExternalId` — a C8Y measurement notification is enriched with managed-object properties before publishing |
 | `test-outbound-webhook` | C8Y Measurement → WEB_HOOK connector; asserts the http-polling-mock **received** the POST (path + JSON body) |

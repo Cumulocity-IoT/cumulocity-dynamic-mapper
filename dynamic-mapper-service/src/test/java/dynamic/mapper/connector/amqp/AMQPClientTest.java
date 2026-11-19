@@ -493,6 +493,77 @@ class AMQPClientTest {
         log.info("✅ Publish MEAO test passed");
     }
 
+    private AMQPClient connectedClient() throws Exception {
+        amqpClient = new AMQPClient(
+                serviceRegistry, clientServices,
+                connectorRegistry,
+                connectorConfiguration,
+                dispatcher,
+                TEST_SUBSCRIPTION_ID,
+                TEST_TENANT);
+        injectConnection(amqpClient, connection);
+        injectChannel(amqpClient, channel);
+        setConnectedState(amqpClient, true);
+        when(connection.isOpen()).thenReturn(true);
+        when(channel.isOpen()).thenReturn(true);
+        return amqpClient;
+    }
+
+    private ProcessingContext<?> contextFor(DynamicMapperRequest request) {
+        ProcessingContext<?> context = createTestProcessingContext();
+        when(context.getRequests()).thenReturn(java.util.Arrays.asList(request));
+        return context;
+    }
+
+    @Test
+    void testPublishMEAOSendsBinaryPayloadAsBytesWithItsContentType() throws Exception {
+        connectedClient();
+        byte[] bytes = { 0, 1, 2, (byte) 0xFF };
+        DynamicMapperRequest request = DynamicMapperRequest.builder().publishTopic("test/topic")
+                .request("AAEC/w==").binaryPayload(bytes).contentType("application/x-protobuf").build();
+
+        amqpClient.publishMEAO(contextFor(request));
+
+        org.mockito.ArgumentCaptor<com.rabbitmq.client.AMQP.BasicProperties> props =
+                org.mockito.ArgumentCaptor.forClass(com.rabbitmq.client.AMQP.BasicProperties.class);
+        org.mockito.ArgumentCaptor<byte[]> body = org.mockito.ArgumentCaptor.forClass(byte[].class);
+        verify(channel).basicPublish(anyString(), anyString(), props.capture(), body.capture());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(bytes, body.getValue());
+        assertEquals("application/x-protobuf", props.getValue().getContentType());
+    }
+
+    @Test
+    void testPublishMEAOKeepsJsonContentTypeWhenTheRequestHasNone() throws Exception {
+        connectedClient();
+        DynamicMapperRequest request = DynamicMapperRequest.builder().publishTopic("test/topic")
+                .request("{\"a\":1}").build();
+
+        amqpClient.publishMEAO(contextFor(request));
+
+        org.mockito.ArgumentCaptor<com.rabbitmq.client.AMQP.BasicProperties> props =
+                org.mockito.ArgumentCaptor.forClass(com.rabbitmq.client.AMQP.BasicProperties.class);
+        org.mockito.ArgumentCaptor<byte[]> body = org.mockito.ArgumentCaptor.forClass(byte[].class);
+        verify(channel).basicPublish(anyString(), anyString(), props.capture(), body.capture());
+        assertEquals("application/json", props.getValue().getContentType());
+        assertEquals("{\"a\":1}", new String(body.getValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void testPublishMEAOSendsTextWithTheStatedContentType() throws Exception {
+        connectedClient();
+        DynamicMapperRequest request = DynamicMapperRequest.builder().publishTopic("test/topic")
+                .request("AT+GTUPD=gv300$").contentType("text/plain").build();
+
+        amqpClient.publishMEAO(contextFor(request));
+
+        org.mockito.ArgumentCaptor<com.rabbitmq.client.AMQP.BasicProperties> props =
+                org.mockito.ArgumentCaptor.forClass(com.rabbitmq.client.AMQP.BasicProperties.class);
+        org.mockito.ArgumentCaptor<byte[]> body = org.mockito.ArgumentCaptor.forClass(byte[].class);
+        verify(channel).basicPublish(anyString(), anyString(), props.capture(), body.capture());
+        assertEquals("text/plain", props.getValue().getContentType());
+        assertEquals("AT+GTUPD=gv300$", new String(body.getValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     @Test
     void testPublishMEAOWhenNotConnected() throws Exception {
         // Given

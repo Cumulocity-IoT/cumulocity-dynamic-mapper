@@ -538,6 +538,7 @@ Create a C8Y object or manage a subscription and verify the broker or mapper sta
 | `test-outbound-filter.sh` | filterMapping — selective forwarding |
 | `test-outbound-topic-resolution.sh` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction.sh` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-anypayload-smartfunction.sh` | Any Payload outbound Smart Function: Operation → raw text command and Base64 binary, exact bytes on the broker |
 | `test-outbound-smartfunction-externalsource.sh` | Smart Function externalSource → _externalId_ topic (broker round-trip) |
 | `test-outbound-smartfunction-molookup.sh` | Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment |
 | `test-outbound-static-subscription.sh` | Static subscription management |

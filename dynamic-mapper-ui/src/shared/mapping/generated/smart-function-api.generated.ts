@@ -75,8 +75,18 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
     "properties": [
       {
         "name": "payload",
-        "type": "Record<string, any> | Uint8Array<ArrayBufferLike>",
-        "documentation": "Message payload — either a plain JSON object or a `Uint8Array` of raw bytes. **JSON object (recommended):** Return a plain JavaScript object and the runtime will serialize it to JSON before publishing. No manual serialization needed. **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol). `TextEncoder` / `TextDecoder` are available (GraalJS is started with `js.text-encoding=true`)."
+        "type": "string | Record<string, any> | Uint8Array<ArrayBufferLike>",
+        "documentation": "Message payload — a plain JSON object, a string (sent as text, see `payloadEncoding`), or a `Uint8Array` of raw bytes. **JSON object (recommended):** Return a plain JavaScript object and the runtime will serialize it to JSON before publishing. No manual serialization needed. **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol). `TextEncoder` / `TextDecoder` are available (GraalJS is started with `js.text-encoding=true`)."
+      },
+      {
+        "name": "payloadEncoding",
+        "type": "\"json\" | \"text\" | \"base64\" | \"hex\"",
+        "documentation": "How `payload` is put on the wire. Optional: leave it out and the runtime infers it. - `\"json\"` — an object is serialized to JSON (the default for objects). With a string payload, the string is sent as a JSON string value, i.e. with quotes. - `\"text\"` — the string payload is sent exactly as given: no quotes, no JSON serialization, no enrichment. Requires a string payload. - `\"base64\"` / `\"hex\"` — the string payload is decoded to bytes that are sent as is. Use for binary protocols (e.g. Protobuf, a firmware chunk). Whitespace in the string is ignored; invalid input fails the message. Prefer this over a `Uint8Array`, which the runtime cannot tell from a serialized JSON document. **Inference when omitted:** an object is sent as JSON; a string is sent as text. A string that is valid JSON (e.g. `JSON.stringify(obj)` or `\"[1,2]\"`) is sent unchanged with the connector's default content type. Prefer returning the object itself: only an object gets its device identity and topic levels filled in by the mapper. A text or binary payload is broker-bound only: it is never routed to a Cumulocity API, so `cumulocityType` does not apply, and topic-level tokens in the payload are not processed."
+      },
+      {
+        "name": "contentType",
+        "type": "string",
+        "documentation": "Content type of the payload, e.g. `\"text/plain\"` or `\"application/octet-stream\"`. **Optional.** Defaults to `text/plain` for a text payload and `application/octet-stream` for `\"base64\"` / `\"hex\"`; a JSON payload, or a string that is valid JSON, keeps the connector's default. Used by connectors that can carry one: Webhook (`Content-Type` header), AMQP and AMQP 1.0 (content type), MQTT 5 (content type property) and Kafka (`content-type` record header). Other connectors ignore it."
       },
       {
         "name": "topic",

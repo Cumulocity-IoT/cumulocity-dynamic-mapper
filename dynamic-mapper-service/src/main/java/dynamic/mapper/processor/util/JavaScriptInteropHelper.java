@@ -208,6 +208,12 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("cumulocityType") && !value.getMember("cumulocityType").isNull()) {
             msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
         }
+        if (value.hasMember("payloadEncoding") && !value.getMember("payloadEncoding").isNull()) {
+            msg.setPayloadEncoding(value.getMember("payloadEncoding").asString());
+        }
+        if (value.hasMember("contentType") && !value.getMember("contentType").isNull()) {
+            msg.setContentType(value.getMember("contentType").asString());
+        }
         if (value.hasMember("topic")) {
             msg.setTopic(value.getMember("topic").asString());
         }

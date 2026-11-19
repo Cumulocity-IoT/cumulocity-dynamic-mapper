@@ -107,6 +107,7 @@ declare -a TESTS=(
     "outbound|test-outbound-inventory-cache-eviction|Inventory cache — eviction on device delete"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
+    "outbound|test-outbound-anypayload-smartfunction|Any Payload outbound Smart Function: Operation → raw text command and Base64 binary on the broker (exact bytes)"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
     "outbound|test-outbound-smartfunction-molookup|Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
     # ── Outbound (subscription management) ────────────────────────────────────

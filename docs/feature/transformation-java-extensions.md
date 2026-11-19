@@ -43,7 +43,7 @@ and is re-exported into the `dynamic-mapper-interface` module via a `build-helpe
 extensions (`processor/extension/external/inbound` and `outbound`) built against it:
 
 - [`ProcessorExtensionInbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionInbound.java) — `CumulocityObject[] onMessage(Message<O> message, JavaExtensionContext context)`. Broker message → array of Cumulocity objects (measurement, event, alarm, operation, managed object).
-- [`ProcessorExtensionOutbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionOutbound.java) — `DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context) throws ProcessingException`. Cumulocity payload → array of broker messages.
+- [`ProcessorExtensionOutbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionOutbound.java) — `DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context) throws ProcessingException`. Cumulocity payload → array of broker messages. The message payload can be JSON, text or bytes: see [outbound-payload-formats.md](outbound-payload-formats.md).
 
 Both follow the same "SMART function pattern" as Smart Functions: a pure function that
 returns what to emit, rather than an imperative API that calls back into a C8Y client

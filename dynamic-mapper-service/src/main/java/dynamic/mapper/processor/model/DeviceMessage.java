@@ -44,6 +44,34 @@ public class DeviceMessage {
      */
     private Object payload;
 
+    /** {@link #payloadEncoding} value: the payload is serialized to JSON (the default for objects). */
+    public static final String ENCODING_JSON = "json";
+
+    /** {@link #payloadEncoding} value: a string payload is sent as is, without quotes or JSON serialization. */
+    public static final String ENCODING_TEXT = "text";
+
+    /** {@link #payloadEncoding} value: the string payload is Base64 text that is decoded to bytes before sending. */
+    public static final String ENCODING_BASE64 = "base64";
+
+    /** {@link #payloadEncoding} value: the string payload is hexadecimal text that is decoded to bytes before sending. */
+    public static final String ENCODING_HEX = "hex";
+
+    /**
+     * Optional: how {@link #payload} is put on the wire. {@code null} means "infer": an object is sent as
+     * JSON, a string as plain text. {@code "json"} with a string payload sends a JSON string value.
+     * {@code "base64"} and {@code "hex"} decode the string payload to bytes that are sent as is.
+     * Only applies to broker-bound messages.
+     */
+    private String payloadEncoding;
+
+    /**
+     * Optional: content type of the payload, e.g. {@code "text/plain"}. Connectors that can carry one use it
+     * (webhook header, AMQP content type, MQTT 5 content type, Kafka {@code content-type} header). When omitted
+     * with a text or binary payload, {@code text/plain} or {@code application/octet-stream} is used; JSON, and a
+     * string or byte[] that is a JSON array or scalar, keep the connector default.
+     */
+    private String contentType;
+
     /**
      * What kind of operation is being performed.
      *
@@ -102,6 +130,17 @@ public class DeviceMessage {
      */
     private String sourceId;
 
+    /**
+     * The all-args constructor as it was before {@code payloadEncoding} and {@code contentType} existed. Kept so
+     * an extension compiled against an earlier version still links; new code uses {@link #create()}.
+     */
+    public DeviceMessage(Object payload, MappingAction action, CumulocityType cumulocityType,
+            Object externalSource, String transportId, String topic, String clientId, Boolean retain,
+            Map<String, String> transportFields, Instant time, String sourceId) {
+        this(payload, null, null, action, cumulocityType, externalSource, transportId, topic, clientId, retain,
+                transportFields, time, sourceId);
+    }
+
     // ==================== Builder Factory Methods ====================
 
     /**
@@ -140,6 +179,8 @@ public class DeviceMessage {
      */
     public static class Builder {
         private Object payload;
+        private String payloadEncoding;
+        private String contentType;
         private MappingAction action;
         private CumulocityType cumulocityType;
         private Object externalSource;
@@ -169,7 +210,8 @@ public class DeviceMessage {
         /**
          * Set the message payload.
          *
-         * @param payload The payload (can be String, byte[], Map, or any object)
+         * @param payload The payload: a Map or object (sent as JSON), a String (text, or JSON text if it starts
+         *                with <code>{</code>), or byte[] (sent as bytes). See {@link DeviceMessage#getPayloadEncoding()}.
          * @return This builder
          */
         public Builder payload(Object payload) {
@@ -299,6 +341,28 @@ public class DeviceMessage {
         }
 
         /**
+         * Set how the payload is put on the wire ({@code "json"} or {@code "text"}).
+         *
+         * @param payloadEncoding The encoding, or null to infer it from the payload type
+         * @return This builder
+         */
+        public Builder payloadEncoding(String payloadEncoding) {
+            this.payloadEncoding = payloadEncoding;
+            return this;
+        }
+
+        /**
+         * Set the content type of the payload.
+         *
+         * @param contentType The content type, or null for the connector default
+         * @return This builder
+         */
+        public Builder contentType(String contentType) {
+            this.contentType = contentType;
+            return this;
+        }
+
+        /**
          * Set the Cumulocity device ID (sourceId) explicitly.
          * When set, this overrides automatic device resolution.
          * Useful for routing data to/from a different device than the origin.
@@ -319,6 +383,8 @@ public class DeviceMessage {
         public DeviceMessage build() {
             DeviceMessage msg = new DeviceMessage();
             msg.setPayload(payload);
+            msg.setPayloadEncoding(payloadEncoding);
+            msg.setContentType(contentType);
             msg.setAction(action);
             msg.setCumulocityType(cumulocityType);
             msg.setExternalSource(externalSource);

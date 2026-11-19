@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -657,6 +658,200 @@ void setUp() throws Exception {
         log.info("   - Method: {}", request.getMethod());
         log.info("   - Publish topic (from JS): {}", request.getPublishTopic());
         log.info("   - Path Cumulocity (adjusted): {}", request.getPathCumulocity());
+    }
+
+    @Test
+    void testTextPayloadIsSentUnchanged() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        // Given - a raw ASCII command, no payloadEncoding: inferred as text
+        String command = "AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$";
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("queclink/cmd/" + TEST_DEVICE_ID);
+        deviceMsg.setPayload(command);
+
+        processingContext.setFlowResult(deviceMsg);
+
+        // When
+        fullProcessor.process(processingContext);
+
+        // Then - no quotes, no JSON wrapping, not routed to a Cumulocity API
+        assertFalse(processingContext.hasError(), "Should not report errors: " + processingContext.getErrors());
+        assertEquals(1, processingContext.getRequests().size());
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertEquals(command, request.getRequest());
+        assertEquals("queclink/cmd/" + TEST_DEVICE_ID, request.getPublishTopic());
+        assertEquals(null, request.getPathCumulocity(), "A text payload must not target a Cumulocity API");
+    }
+
+    @Test
+    void testJsonObjectStringIsSentUnchangedInsteadOfFailing() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        // Given - a function that returns JSON.stringify(obj); cloning a string into an object never worked
+        // (the class mocks the ObjectMapper; deciding whether a string is JSON needs a real reader)
+        when(objectMapper.readerFor(com.fasterxml.jackson.databind.JsonNode.class))
+                .thenReturn(new ObjectMapper().readerFor(com.fasterxml.jackson.databind.JsonNode.class));
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/out");
+        deviceMsg.setPayload("{\"temp\":21.5}");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        // When
+        fullProcessor.process(processingContext);
+
+        // Then - sent as given, with the connector's own (JSON) content type
+        assertFalse(processingContext.hasError(), "Should not report errors: " + processingContext.getErrors());
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertEquals("{\"temp\":21.5}", request.getRequest());
+        assertEquals(null, request.getContentType());
+        assertEquals(null, request.getPathCumulocity());
+    }
+
+    @Test
+    void testTextEncodingKeepsJsonLookingString() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        // Given - explicit text encoding wins over the "starts with {" heuristic
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/cmd");
+        deviceMsg.setPayload("{not json}");
+        deviceMsg.setPayloadEncoding(DeviceMessage.ENCODING_TEXT);
+
+        processingContext.setFlowResult(deviceMsg);
+
+        // When
+        fullProcessor.process(processingContext);
+
+        // Then
+        assertFalse(processingContext.hasError());
+        assertEquals("{not json}", processingContext.getRequests().get(0).getRequest());
+    }
+
+    @Test
+    void testJsonEncodingSendsStringAsJsonStringValue() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/cmd");
+        deviceMsg.setPayload("reboot");
+        deviceMsg.setPayloadEncoding(DeviceMessage.ENCODING_JSON);
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertFalse(processingContext.hasError());
+        assertEquals("\"reboot\"", processingContext.getRequests().get(0).getRequest());
+    }
+
+    @Test
+    void testTextEncodingRequiresStringPayload() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/cmd");
+        deviceMsg.setPayload(new HashMap<>(Map.of("a", 1)));
+        deviceMsg.setPayloadEncoding(DeviceMessage.ENCODING_TEXT);
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertTrue(processingContext.hasError(), "A non-string payload with text encoding must fail");
+        assertTrue(processingContext.getRequests().isEmpty());
+    }
+
+    @Test
+    void testBase64PayloadIsDecodedToBytes() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/fw");
+        deviceMsg.setPayload("AAEC/w==");
+        deviceMsg.setPayloadEncoding(DeviceMessage.ENCODING_BASE64);
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertFalse(processingContext.hasError(), "Should not report errors: " + processingContext.getErrors());
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertArrayEquals(new byte[] { 0, 1, 2, (byte) 0xFF }, request.getBinaryPayload());
+        assertEquals("application/octet-stream", request.getContentType());
+        assertEquals("device/fw", request.getPublishTopic());
+        assertEquals(null, request.getPathCumulocity(), "A binary payload must not target a Cumulocity API");
+    }
+
+    @Test
+    void testHexPayloadIsDecodedToBytes() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/fw");
+        deviceMsg.setPayload("00 01 02 ff"); // whitespace is tolerated
+        deviceMsg.setPayloadEncoding(DeviceMessage.ENCODING_HEX);
+        deviceMsg.setContentType("application/x-custom");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertFalse(processingContext.hasError(), "Should not report errors: " + processingContext.getErrors());
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertArrayEquals(new byte[] { 0, 1, 2, (byte) 0xFF }, request.getBinaryPayload());
+        assertEquals("application/x-custom", request.getContentType(), "An explicit content type wins");
+    }
+
+    @Test
+    void testInvalidBinaryEncodingFails() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage hex = createTemperatureMeasurementDeviceMessage();
+        hex.setTopic("device/fw");
+        hex.setPayload("0g"); // not hex
+        hex.setPayloadEncoding(DeviceMessage.ENCODING_HEX);
+        processingContext.setFlowResult(hex);
+
+        fullProcessor.process(processingContext);
+
+        assertTrue(processingContext.hasError(), "Invalid hex must fail");
+        assertTrue(processingContext.getRequests().isEmpty());
+    }
+
+    @Test
+    void testTextPayloadDefaultsToTextPlainContentType() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/cmd");
+        deviceMsg.setPayload("AT+GTRTO=gv300,3,,,,,,0001$");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        DynamicMapperRequest request = processingContext.getRequests().get(0);
+        assertEquals("text/plain", request.getContentType());
+        assertEquals(null, request.getBinaryPayload(), "Text is sent from the request string, not as bytes");
+    }
+
+    @Test
+    void testUnsupportedPayloadEncodingFails() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("device/cmd");
+        deviceMsg.setPayload("AAEC");
+        deviceMsg.setPayloadEncoding("gzip");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(processingContext);
+
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getRequests().isEmpty());
     }
 
     @Test

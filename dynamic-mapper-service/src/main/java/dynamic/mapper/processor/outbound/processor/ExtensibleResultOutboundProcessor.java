@@ -37,6 +37,7 @@ import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.OutputCollector;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.processor.util.OutboundRawPayload;
 import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
@@ -171,11 +172,14 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                 publishTopic = context.getResolvedPublishTopic();
             }
 
+            // A raw payload (text, or bytes) is sent as is and never routed to a Cumulocity API
+            OutboundRawPayload.Raw raw = OutboundRawPayload.resolve(deviceMsg, objectMapper, true);
+
             // Serialize payload if needed
-            String payloadString = serializePayload(deviceMsg.getPayload());
+            String payloadString = raw != null ? raw.text() : serializePayload(deviceMsg.getPayload());
 
             // Same API derivation as the Smart Function path: cumulocityType first, then the topic.
-            API api = OutboundRequestFinalizer.deriveApi(deviceMsg.getCumulocityType(), publishTopic);
+            API api = raw != null ? null : OutboundRequestFinalizer.deriveApi(deviceMsg.getCumulocityType(), publishTopic);
 
             // Build the request for outbound publishing. The method is required by the webhook
             // connector (it switches on it), so it is always set; the action defaults to POST.
@@ -191,6 +195,8 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                     .externalIdType(context.getMapping().getExternalIdType())
                     .externalId(context.getExternalId())
                     .request(payloadString)
+                    .binaryPayload(raw != null ? raw.bytes() : null)
+                    .contentType(raw != null ? raw.contentType() : deviceMsg.getContentType())
                     .build();
             if (api != null) {
                 // Source identifier in the body and the device ID in the path for PUT/PATCH/DELETE.
@@ -218,10 +224,10 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
     /**
      * Serialize payload object to JSON string.
      *
-     * <p>Handles different payload types:</p>
+     * <p>Only reached for a payload that {@link OutboundRawPayload} leaves to the JSON path. Handles:</p>
      * <ul>
-     *   <li>String → returned as-is (assumed to be JSON)</li>
-     *   <li>byte[] → converted to String (UTF-8)</li>
+     *   <li>String → returned as-is (JSON text starting with <code>{</code>)</li>
+     *   <li>byte[] → converted to String (UTF-8, JSON bytes starting with <code>{</code>)</li>
      *   <li>Map/Object → serialized to JSON using ObjectMapper</li>
      * </ul>
      *

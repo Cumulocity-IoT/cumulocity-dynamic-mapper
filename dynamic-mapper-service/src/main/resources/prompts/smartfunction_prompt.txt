@@ -411,8 +411,19 @@ interface DeviceMessage {
     /** MQTT topic or transport destination. Use `_externalId_` placeholder to auto-resolve. */
     topic: string;
 
-    /** Outbound payload (plain object — the connector serializes it) */
-    payload: object | object[];
+    /** Outbound payload: a plain object (the connector serializes it to JSON) or a string (sent as raw text, e.g. a device command such as "AT+GTUPD=...$") */
+    payload: object | object[] | string;
+
+    /**
+     * How the payload is put on the wire: "json", "text", "base64" or "hex". Omit to infer
+     * (object → json, string → text). "base64"/"hex" decode the string payload to bytes for binary protocols.
+     * A string that is valid JSON is sent unchanged with the connector default content type; prefer returning the object itself.
+     * A text or binary payload is broker-bound only and is never routed to a Cumulocity API.
+     */
+    payloadEncoding?: "json" | "text" | "base64" | "hex";
+
+    /** Content type, e.g. "text/plain". Defaults to text/plain (text) or application/octet-stream (binary); none for JSON. */
+    contentType?: string;
 
     /**
      * Transport-specific key/value metadata.

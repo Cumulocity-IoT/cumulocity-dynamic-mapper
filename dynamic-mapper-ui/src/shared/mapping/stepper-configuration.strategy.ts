@@ -95,6 +95,12 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: { showProcessorExtensionsSource: true, showFilterExpression: false }
   },
   {
+    // An outbound Any Payload mapping reads a regular Cumulocity JSON object: only its output is free-form
+    condition: (ctx) =>
+      ctx.mappingType === MappingType.ANY_PAYLOAD && ctx.direction === Direction.OUTBOUND,
+    properties: { showEditorSource: true }
+  },
+  {
     // Expansion shows the payload structure, which eases defining substitutions and code.
     condition: (ctx) =>
       ctx.transformationType === TransformationType.SMART_FUNCTION ||

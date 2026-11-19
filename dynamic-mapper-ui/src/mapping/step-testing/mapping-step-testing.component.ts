@@ -272,11 +272,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
-  /** The test sends the `payload` string of the source template rather than the template itself. */
+  /**
+   * The test sends the `payload` string of the source template rather than the template itself.
+   * Only inbound: an outbound Any Payload mapping reads a Cumulocity JSON object, and only its output is free-form.
+   */
   protected requiresRawPayload(): boolean {
     return this.testMapping?.mappingType === MappingType.HEX ||
            this.testMapping?.mappingType === MappingType.FLAT_FILE ||
-           this.testMapping?.mappingType === MappingType.ANY_PAYLOAD;
+           (this.testMapping?.mappingType === MappingType.ANY_PAYLOAD &&
+            this.testMapping?.direction !== Direction.OUTBOUND);
   }
 
   /** Whitespace and line terminators only matter for text formats; ANY_PAYLOAD carries base64. */

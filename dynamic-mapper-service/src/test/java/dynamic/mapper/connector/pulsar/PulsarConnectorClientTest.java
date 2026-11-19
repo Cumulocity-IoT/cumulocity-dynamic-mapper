@@ -317,6 +317,35 @@ class PulsarConnectorClientTest {
     }
 
     @Test
+    void outboundSendsABinaryPayloadAsBytesInsteadOfTheRequestText() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        ProducerBuilder<byte[]> producerBuilder = mock();
+        Producer<byte[]> producer = mock();
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "public", "pulsarNamespace", "default"));
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.sendTimeout(anyInt(), any())).thenReturn(producerBuilder);
+        when(producerBuilder.create()).thenReturn(producer);
+        when(producer.isConnected()).thenReturn(true);
+
+        byte[] bytes = { 0, 1, 2, (byte) 0xFF };
+        // the request keeps the Base64 text for display; the bytes are what must be sent
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .qos(Qos.AT_LEAST_ONCE)
+                .resolvedPublishTopic("device/fw")
+                .requests(List.of(DynamicMapperRequest.builder().request("AAEC/w==").binaryPayload(bytes).build()))
+                .build();
+
+        new TestPulsarConnectorClient(pulsarClient, configuration).publishMEAO(context);
+
+        verify(producer).send(aryEq(bytes));
+        assertTrue(context.getErrors().isEmpty());
+    }
+
+    @Test
     void subscriptionNameIsPrefixedWithTopicByDefault() {
         ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
         when(configuration.getProperties()).thenReturn(Map.of("subscriptionName", "my-sub"));
