@@ -35,6 +35,7 @@ import {
   getSchema,
   Mapping,
   SAMPLE_TEMPLATES_C8Y,
+  SAMPLE_TEMPLATES_EXTERNAL,
   StepperConfiguration,
   TransformationType,
   countDeviceIdentifiers,
@@ -53,7 +54,7 @@ import { StepperViewModel, createStepperViewModel } from '../editor-base/stepper
 import { buildFilterFormlyFields, buildTemplateForm, EditorSessionCallbacks } from './editor-session.forms';
 
 export type { EditorSessionCallbacks };
-import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, isCodeOrExtensionTransformation, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf } from '../../shared/mapping/util';
+import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, isGenericSampleTemplate, hasEsmExport, isCodeOrExtensionTransformation, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf } from '../../shared/mapping/util';
 
 @Injectable()
 export class MappingStepperService {
@@ -463,16 +464,26 @@ export class MappingStepperService {
         return undefined;
     }
 
-    /** Mutates `mapping.sourceTemplate`/`targetTemplate` for the newly-selected target API, returning whichever schema (source or target) needs re-computing. */
+    /**
+     * Mutates `mapping.sourceTemplate`/`targetTemplate` for the newly-selected target API, returning whichever schema (source or target) needs re-computing.
+     *
+     * The source template is only replaced when it is empty or still one of the generic samples. A source captured
+     * in Message Explorer (or typed by the user) is the user's data and must survive a target API change; otherwise
+     * the AI agent and the substitutions would work from the canned sample instead of the real message.
+     */
     applyTargetAPIChange(mapping: Mapping, direction: Direction, changedTargetAPI: string): { schemaSource?: JsonSchema; schemaTarget?: JsonSchema } {
         if (direction === Direction.INBOUND) {
             mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
                 ? '{}'
                 : SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
-            mapping.sourceTemplate = getExternalTemplate(mapping);
+            if (isGenericSampleTemplate(mapping.sourceTemplate, SAMPLE_TEMPLATES_EXTERNAL)) {
+                mapping.sourceTemplate = getExternalTemplate(mapping);
+            }
             return { schemaTarget: getSchema(mapping.targetAPI, mapping.direction, true, false) };
         } else {
-            mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+            if (isGenericSampleTemplate(mapping.sourceTemplate, SAMPLE_TEMPLATES_C8Y)) {
+                mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+            }
             mapping.targetTemplate = getExternalTemplate(mapping);
             return { schemaSource: getSchema(mapping.targetAPI, mapping.direction, false, false) };
         }

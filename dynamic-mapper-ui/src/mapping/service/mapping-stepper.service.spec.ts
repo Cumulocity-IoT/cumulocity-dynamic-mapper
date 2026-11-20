@@ -43,7 +43,7 @@ import {
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../shared/configuration/configuration.model';
 import { captureMappingContentSnapshot } from '../../shared/mapping/util';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
-import { DeploymentMapEntry } from '../../shared';
+import { DeploymentMapEntry, SAMPLE_TEMPLATES_EXTERNAL } from '../../shared';
 
 /**
  * Unit tests for the Phase 3 "stateless-but-mutating" editing operations moved from
@@ -451,6 +451,21 @@ describe('MappingStepperService', () => {
       expect(mapping.sourceTemplate).toBeDefined();
       expect(result.schemaTarget).toBeDefined();
       expect(result.schemaSource).toBeUndefined();
+    });
+
+    it('keeps a source template captured in Message Explorer when the target API changes (INBOUND)', () => {
+      const captured = '{"temperature":23.6,"unit":"C","source":"961837264"}';
+      const mapping = makeMapping({ direction: Direction.INBOUND, targetAPI: 'MEASUREMENT', sourceTemplate: captured });
+      service.applyTargetAPIChange(mapping, Direction.INBOUND, 'EVENT');
+
+      expect(mapping.sourceTemplate).toBe(captured);
+    });
+
+    it('still swaps a generic sample source template when the target API changes (INBOUND)', () => {
+      const mapping = makeMapping({ direction: Direction.INBOUND, targetAPI: 'EVENT', sourceTemplate: SAMPLE_TEMPLATES_EXTERNAL['MEASUREMENT'].replace(/"time":\s*"[^"]+"/, '"time": "2020-01-01T00:00:00.000Z"') });
+      service.applyTargetAPIChange(mapping, Direction.INBOUND, 'EVENT');
+
+      expect(JSON.parse(mapping.sourceTemplate as string).eventType).toBe('TestEvent');
     });
 
     it('refreshes templates and returns the source schema for OUTBOUND', () => {

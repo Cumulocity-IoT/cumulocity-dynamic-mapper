@@ -27,4 +27,5 @@ export * from './encoding.util';
 export * from './code-template.util';
 export * from './content-snapshot.util';
 export * from './editor-session.util';
+export * from './sample-template.util';
 export { randomIdAsString } from './random-id';
