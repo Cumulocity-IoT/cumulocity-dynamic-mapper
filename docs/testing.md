@@ -486,7 +486,10 @@ cy.c8yscrn('mapping-stepper-step2');
 
 ## 3. System / Shell Integration Tests
 
-**Location:** `resources/testing/integration/`
+**Location:** `resources/testing/integration/` — `run-tests.sh` (runner), `test-harness.sh` + `lib/` (helpers),
+`tests/mqtt/<inbound|outbound|extension|smartfunction>/` (broker tests), `tests/independent/<api|connectors|platform>/`
+(tests that ignore the g/m choice), `tools/` (test template, MQTT Service cert helper). See the
+[integration README](../resources/testing/integration/README.md) for the layout.
 **Prerequisites:** `c8y` CLI configured and authenticated; dynamic mapper microservice deployed
 
 Run all tests with `run-tests.sh` (see [3.4 Test Runner](#34-test-runner)).
@@ -565,14 +568,14 @@ Create a C8Y object or manage a subscription and verify the broker or mapper sta
 
 ### 3.4 Test Runner
 
-`run-tests.sh` is a menu-driven suite runner for all integration tests. It takes two kinds of
+`run-tests.sh` is a menu-driven test runner for all integration tests. It takes two kinds of
 token, in any order: **which tests** to run and **which broker** to run them against.
 
 ```
-./run-tests.sh [SUITE ...] [CONNECTOR]
+./run-tests.sh [TESTS ...] [CONNECTOR]
 ```
 
-**SUITE** — which tests:
+**TESTS** — which tests:
 
 | Token | Runs |
 |-------|------|
@@ -582,23 +585,33 @@ token, in any order: **which tests** to run and **which broker** to run them aga
 | `e` \| `extension` | Java processor-extension tests (§3.1b) |
 | `s` \| `smartfunc` | Smart Function pattern tests (§3.1a) |
 | `r` \| `reliability` | Reliability tests (§3.3) |
+| `x` \| `independent` | Only the tests that do not depend on the connector choice (scope `own` / `none`, see below) |
 | `<script-name>` | One script, with or without `.sh` |
 | `<n> [n2 …]` | One or more menu indices |
 | `<n>-<m>` | A range of menu indices, e.g. `3-7` |
 | _(omitted)_ | Interactive menu |
 
-**CONNECTOR** — which broker the MQTT tests drive (default `g`):
+**CONNECTOR** — which broker the tests with scope `mqtt` drive (default `g`):
 
 | Token | Broker |
 |-------|--------|
 | `g` | Generic MQTT — a public broker (`broker.hivemq.com`) |
 | `m` | Cumulocity MQTT Service — `CUMULOCITY_MQTT_SERVICE_PULSAR`, TLS `:9883`, X.509 client-certificate auth. Sets `DM_BROKER_MODE=c8y-mqtt-service` automatically |
 
-This is what lets the **same suite run against both brokers with no per-file edits** — the single
+This is what lets the **same tests run against both brokers with no per-file edits** — the single
 most useful property of the runner, and the one worth using before a release.
 
+Not every test needs a broker. Each catalogue entry has a **scope**: `mqtt` tests drive the broker and
+run against the selected connector; `own` tests create their own connector (HTTP, REST_POLLING,
+WEB_HOOK, the MQTT Service lifecycle, a broker-outage endpoint) and `none` tests need no broker (REST API
+and platform checks). `own` and `none` tests are *independent* of `g`/`m`: `all m` runs every `mqtt` test
+against the MQTT Service and every independent test once. `./run-tests.sh x` runs only the independent
+tests, and `./run-tests.sh --list` prints the catalogue with scope and path.
+
 ```bash
-./run-tests.sh                      # interactive: prompts for suite and connector
+./run-tests.sh                      # interactive: prompts for tests and connector
+./run-tests.sh x                    # only the tests independent of the connector (no g/m needed)
+./run-tests.sh --list               # catalogue: number, category, scope, script path
 ./run-tests.sh all                  # everything, public broker (default)
 ./run-tests.sh inbound m            # all inbound tests against the MQTT Service
 ./run-tests.sh 1 3 5 g              # menu items 1, 3, 5 against the public broker
@@ -609,8 +622,8 @@ most useful property of the runner, and the one worth using before a release.
 | Feature | Detail |
 |---------|--------|
 | Per-test cleanup | Passes `--cleanup` to every script automatically |
-| Suite summary | Pass / fail / skip counts + list of failed test names |
-| Fail-fast mode | `DM_STOP_ON_FAIL=1` aborts the suite on first failure |
+| Run summary | Pass / fail / skip counts + list of failed test names |
+| Fail-fast mode | `DM_STOP_ON_FAIL=1` aborts the run on first failure |
 | ANSI colours | Auto-disabled when stdout is piped or redirected |
 
 **Environment variables** (set before running; `run-tests.sh --help` prints the full list):

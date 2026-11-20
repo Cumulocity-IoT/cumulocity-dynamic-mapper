@@ -420,7 +420,7 @@ advances the cursor, by design).
 ## Webhook receiver (outbound target)
 
 The mock also records requests of the mapper's **WEB_HOOK** connector, used by
-`../../integration/test-outbound-webhook.sh`. Set the connector's `baseUrl` to
+`../../integration/tests/independent/connectors/test-outbound-webhook.sh`. Set the connector's `baseUrl` to
 `${C8Y_BASEURL}/service/http-polling-mock/webhook`; a mapping's publish topic is appended
 as the path. POST/PUT/PATCH/DELETE under `/webhook/**` answer 200 and are logged.
 

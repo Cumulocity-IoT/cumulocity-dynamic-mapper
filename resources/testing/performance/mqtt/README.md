@@ -62,7 +62,7 @@ always derived automatically: `WORKERS = ceil(total_tps / max_tps_per_client)`.
 
 ### Cert auth (default, `--auth cert`)
 
-Mirrors [`resources/testing/integration/create-mqtt-service-x509-cert.sh`](../../integration/create-mqtt-service-x509-cert.sh):
+Mirrors [`resources/testing/integration/tools/create-mqtt-service-x509-cert.sh`](../../integration/tools/create-mqtt-service-x509-cert.sh):
 a self-signed X.509 client certificate is generated per worker connection and
 uploaded as a *trusted certificate* on the tenant (`c8y devicemanagement
 certificates create --autoRegistrationEnabled`), which the MQTT Service

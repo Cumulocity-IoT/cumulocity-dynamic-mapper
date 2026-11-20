@@ -6,7 +6,7 @@ Two responsibilities:
     invocations keep working unchanged.
   - X.509 client-certificate provisioning for Cumulocity MQTT Service auth,
     using the same mechanism as
-    resources/testing/integration/create-mqtt-service-x509-cert.sh: the CN of
+    resources/testing/integration/tools/create-mqtt-service-x509-cert.sh: the CN of
     a self-signed certificate, uploaded as a trusted certificate, IS the MQTT
     clientId (the tenant id goes in the MQTT username field, no password is
     used). Because clientId must equal the cert CN, one cert is provisioned
@@ -60,7 +60,7 @@ def add_common_args(parser: argparse.ArgumentParser, default_total_tps: float):
         help="Authentication mode: 'cert' (default) provisions one short-lived "
              "X.509 client certificate per worker connection and uploads it as a "
              "trusted certificate, mirroring "
-             "resources/testing/integration/create-mqtt-service-x509-cert.sh "
+             "resources/testing/integration/tools/create-mqtt-service-x509-cert.sh "
              "(requires the c8y CLI to be logged in, + openssl); 'password' uses "
              "MQTT_USERNAME/MQTT_PASSWORD or a C8Y JWT (env: MQTT_AUTH)",
     )

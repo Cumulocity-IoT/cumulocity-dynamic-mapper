@@ -25,7 +25,7 @@
 
 /**
  * Inbound JSON → C8Y Event mapping payload — a faithful port of
- * resources/testing/integration/test-inbound-json-jsonata.sh (mappingTopic dmtest/event/+,
+ * resources/testing/integration/tests/mqtt/inbound/test-inbound-json-jsonata.sh (mappingTopic dmtest/event/+,
  * targetAPI EVENT, DEFAULT transformation with _TOPIC_LEVEL_, txt→text, msg_type→type
  * and $now()→time substitutions, createNonExistingDevice via c8y_Serial external id).
  */
@@ -65,7 +65,7 @@ export const buildInboundEventMapping = (suffix: number) => ({
 
 /**
  * Outbound C8Y EVENT -> broker mapping payload, a port of
- * resources/testing/integration/test-outbound-event.sh (inactive, DEFAULT transformation).
+ * resources/testing/integration/tests/mqtt/outbound/test-outbound-event.sh (inactive, DEFAULT transformation).
  */
 export const buildOutboundEventMapping = (suffix: number) => ({
   name: `cypress-outbound-event-${suffix}`,
@@ -100,7 +100,7 @@ export const buildOutboundEventMapping = (suffix: number) => ({
 /**
  * Inbound SMART_FUNCTION mapping payload (inactive). The function creates one event whose text is
  * `marker`, so a spec can edit the code and see the changed text in the dry-run result. Modelled
- * on resources/testing/integration/test-inbound-smartfunction-03.sh; the code travels
+ * on resources/testing/integration/tests/mqtt/smartfunction/test-inbound-smartfunction-03.sh; the code travels
  * base64-encoded and ends with `export { onMessage };`, which the Smart Function loader requires.
  */
 export const buildInboundSmartFunctionMapping = (suffix: number, marker: string) => ({

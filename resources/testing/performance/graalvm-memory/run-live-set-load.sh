@@ -90,7 +90,7 @@ dm_parse_args ${KEEP_ARGS[@]+"${KEEP_ARGS[@]}"}
 
 # Smart Function body of a test script: the text between "<<'JSCODE'" and the closing "JSCODE".
 extract_code() {   # <test script>
-    awk "/<<'JSCODE'/ {on=1; next} /^JSCODE\$/ {on=0} on" "$INT/$1"
+    awk "/<<'JSCODE'/ {on=1; next} /^JSCODE\$/ {on=0} on" "$INT/tests/mqtt/smartfunction/$1"
 }
 
 create_mapping() {   # <name> <identifier> <topic> <targetApi> <createNonExistingDevice> <code>

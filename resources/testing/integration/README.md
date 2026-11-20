@@ -2,17 +2,76 @@
 
 This directory contains bash-based integration tests for the Dynamic Mapper's inbound and outbound transformation pipelines. By default they use the public HiveMQ MQTT broker; the same MQTT tests can also be driven through the **Cumulocity MQTT Service** (`CUMULOCITY_MQTT_SERVICE_PULSAR` connector, X.509 cert auth) — see [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
+## Layout
+
+```
+integration/
+├── run-tests.sh            runner: catalogue, menu, g/m connector selection, cleanup sweep
+├── test-harness.sh         entry point tests source (thin; loads lib/*.sh)
+├── lib/                    the harness, one file per concern
+│   ├── core.sh             config, colours, output, tool validation, assertions, CLI flags, waits
+│   ├── api.sh              devices, Dynamic Mapper REST API, Cumulocity data / inventory
+│   ├── subscriptions.sh    static / type / group subscriptions
+│   ├── mappings.sh         Smart Function helpers, mapping lifecycle and deployment
+│   ├── connectors.sh       connector lifecycle, http-polling-mock (REST_POLLING / WEB_HOOK)
+│   └── mqtt.sh             broker selection (g / m), MQTT Service certificates, publish/subscribe
+├── tests/
+│   ├── mqtt/               scope "mqtt": drive the MQTT broker, run against the selected connector
+│   │   ├── inbound/  outbound/  extension/  smartfunction/
+│   └── independent/        scopes "own" / "none": ignore g/m, run once per run
+│       ├── api/            REST-only checks (no broker)
+│       ├── connectors/     tests that create their own connector (HTTP, REST_POLLING, WEB_HOOK,
+│       │                   MQTT Service lifecycle, broker outage)
+│       └── platform/       tenant isolation, connector status, reconnect
+├── tools/                  TEST_TEMPLATE.sh, MQTT Service cert helper, setup diagnostic
+└── tmp/                    generated certificates and state files (git-ignored)
+```
+
+### Test scopes (g / m versus independent tests)
+
+The **CONNECTOR** token (`g` generic MQTT, `m` Cumulocity MQTT Service) only matters to tests
+that talk to the MQTT broker. Every catalogue entry in `run-tests.sh` therefore carries a scope
+(`"category|scope|name|description"`):
+
+| Scope | Meaning | Examples | With `g` / `m` |
+|-------|---------|----------|----------------|
+| `mqtt` | Drives the MQTT broker | most inbound / outbound / extension / smartfunction tests | runs against the selected connector |
+| `own` | Creates and drives its own connector | HTTP connector, REST polling, webhook, broker outage, MQTT Service lifecycle | ignored — runs once |
+| `none` | Needs no broker | `api-*`, `multi-tenant`, `multi-connector`, `reconnect` | ignored — runs once |
+
+`own` and `none` tests are **independent**: `run-tests.sh all m` runs every `mqtt` test against the
+MQTT Service and every independent test once (with a neutral broker mode, and without provisioning
+the run-wide certificate for them). Run only those with `bash run-tests.sh x` (no connector needed).
+`bash run-tests.sh --list` prints the catalogue with scope and path and flags missing, duplicate
+or unlisted scripts.
+
+### Adding a test
+
+1. Copy [tools/TEST_TEMPLATE.sh](tools/TEST_TEMPLATE.sh) into `tests/mqtt/<group>/` (broker tests) or
+   `tests/independent/<group>/` (everything else). The file name must be unique across `tests/`.
+2. Add a `"category|scope|name|description"` line to `TESTS` in `run-tests.sh` — one entry per line,
+   because a test's banner number is its line position in that catalogue.
+3. `bash run-tests.sh --list` must report no missing or unlisted scripts.
+
 ## Quick Start
+
+Run the commands below from this directory (`resources/testing/integration`).
 
 ```bash
 # Validate environment only — exits before any test data is created
-bash test-inbound-json-smartfunction.sh --validate-only
+bash tests/mqtt/inbound/test-inbound-json-default.sh --validate-only
 
 # Run a single test (created data is cleaned up by default)
-bash test-inbound-json-smartfunction.sh
+bash tests/mqtt/inbound/test-inbound-json-default.sh
 
 # Keep created test data for debugging (skip cleanup)
-bash test-inbound-json-smartfunction.sh --keep
+bash tests/mqtt/inbound/test-inbound-json-default.sh --keep
+
+# List the catalogue (number, category, scope, path)
+bash run-tests.sh --list
+
+# Run only the tests independent of the g/m choice
+bash run-tests.sh x
 
 # Run all inbound tests
 bash run-tests.sh inbound
@@ -20,8 +79,8 @@ bash run-tests.sh inbound
 # Run all tests
 bash run-tests.sh
 
-# Pick suite + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
-bash run-tests.sh inbound m       # inbound suite against the MQTT Service
+# Pick tests + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
+bash run-tests.sh inbound m       # all inbound tests against the MQTT Service
 bash run-tests.sh all g           # everything against the public broker
 
 # Same thing with options; --keep retains all test data from the whole run
@@ -29,7 +88,7 @@ bash run-tests.sh inbound -c m -k
 DM_KEEP=true bash run-tests.sh all
 ```
 
-The runner takes two parameters — `[SUITE] [CONNECTOR]` — plus the options
+The runner takes two parameters — `[TESTS] [CONNECTOR]` — plus the options
 `-c/--connector <g|m>` and `-k/--keep` (equivalent to `DM_KEEP=true`). See
 [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
@@ -77,7 +136,7 @@ bash run-tests.sh --cleanup-only -y
 
 Every test script follows this pattern:
 
-1. **Load harness** — `source test-harness.sh` to get common functions
+1. **Load harness** — `source "${INTEGRATION_DIR}/test-harness.sh"` to get common functions (`INTEGRATION_DIR` is `"${SCRIPT_DIR}/../../.."` for scripts under `tests/<scope>/<group>/`)
 2. **Parse flags** — Handle `--cleanup`, `--keep`, `--validate-only` options
 3. **Validate environment** — Call `dm_validate_tools`, then `dm_wait_for_service`
 4. **Setup test data** — Create mapping, deploy to connector, activate
@@ -88,9 +147,9 @@ Every test script follows this pattern:
 
 ### Complete Test Template
 
-See [TEST_TEMPLATE.sh](TEST_TEMPLATE.sh) for a fully documented example with all best practices.
+See [tools/TEST_TEMPLATE.sh](tools/TEST_TEMPLATE.sh) for a fully documented example with all best practices.
 
-### Core Functions from test-harness.sh
+### Core Functions from the harness (`test-harness.sh` → `lib/*.sh`)
 
 #### Validation & Setup
 
@@ -225,7 +284,7 @@ Override via environment variables:
 export MQTT_HOST=my-broker.example.com
 export MQTT_PORT=8883
 export MQTT_TLS=true
-bash test-inbound-json-smartfunction.sh
+bash tests/mqtt/inbound/test-inbound-json-smartfunction.sh
 ```
 
 ## Running against the Cumulocity MQTT Service
@@ -247,7 +306,7 @@ bash run-tests.sh 1 3 5 m          # menu items 1/3/5 against the MQTT Service
 
 # via environment (a single script, or your own lane)
 export DM_BROKER_MODE=c8y-mqtt-service
-bash test-inbound-json-default.sh
+bash tests/mqtt/inbound/test-inbound-json-default.sh
 ```
 
 | `DM_BROKER_MODE` | Broker | Auth |
@@ -317,7 +376,7 @@ Other tests may run against `m` too, but those that need broker-specific feature
 (HTTP connector, Kafka/Sparkplug extensions, multi-connector) are not expected to pass.
 
 For bringing MQTT Service up on a new tenant, or diagnosing cert / reachability /
-connector problems, run [diagnose-mqtt-service-setup.sh](diagnose-mqtt-service-setup.sh) —
+connector problems, run [tools/diagnose-mqtt-service-setup.sh](tools/diagnose-mqtt-service-setup.sh) —
 a deliberately verbose, self-contained probe of the full cert-authenticated round trip.
 It is a diagnostic, not a regression test, so it is not part of `run-tests.sh`.
 
@@ -397,7 +456,7 @@ SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 
 1. **Run with `--keep` flag** to preserve test data:
    ```bash
-   bash test-inbound-json-smartfunction.sh --keep
+   bash tests/mqtt/inbound/test-inbound-json-smartfunction.sh --keep
    ```
 
 2. **Manually inspect mapping stats:**
