@@ -18,19 +18,12 @@
 ~  @authors Christof Strack, Stefan Witschel
 ~
 -->
-<c8y-modal (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels"
+<c8y-modal [title]="title | translate" (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels"
   [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plus-circle'"></span>
   </ng-container>
-  <div class="p-24 modal-inner-scroll animated fadeIn">
-    <p class="text-center text-medium text-16 sticky-top bg-white">
-      {{
-      title
-      | translate
-      }}
-    </p>
-    <div class="p-24">
+  <div class="animated fadeIn">
       <c8y-form-group>
         <label translate>Name</label>
         <input
@@ -53,6 +46,5 @@
           ></c8y-input-group-editable>
         </c8y-form-group>
       }
-    </div>
   </div>
 </c8y-modal>

@@ -82,7 +82,9 @@ For each request in the batch:
   `WebClient` at connect time (not per request).
 - **Auth**: Basic (base64 `user:password`) or Bearer (`token`), also set globally on
   the `WebClient` at connect time — no per-request auth logic.
-- **Body**: the raw JSON payload, sent with `Content-Type: application/json`.
+- **Body**: the payload, sent with `Content-Type: application/json` by default. For an external system a request can
+  carry text or bytes (`DynamicMapperRequest.binaryPayload`) and a content type; both are used as given (see
+  [outbound-payload-formats.md](outbound-payload-formats.md)). `cumulocityInternal` mode always sends JSON.
 - **PATCH**: emulated as GET + deep-merge + PUT (since Cumulocity's REST API doesn't
   support arbitrary partial PATCH), stripping read-only fields
   (`self, id, lastUpdated, creationTime, owner, childDevices, childAssets,

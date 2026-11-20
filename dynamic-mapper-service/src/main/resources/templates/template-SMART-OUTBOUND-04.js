@@ -6,6 +6,10 @@
  *              SparkPlug B protobuf binary by the mapper before publishing.
  * @templateType OUTBOUND_SMART_FUNCTION
  * @mappingType SPARKPLUGB
+ * @targetAPI OPERATION
+ * @sampleTopic spBv1.0/group1/NCMD/edgenode1
+ * @publishTopic spBv1.0/group1/NCMD/edgenode1
+ * @filterMapping true
  * @samplePayload
  *   {
  *     "id": "99001",

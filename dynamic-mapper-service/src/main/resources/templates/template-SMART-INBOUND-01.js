@@ -4,7 +4,9 @@
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
+ * @targetAPI MEASUREMENT
  * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

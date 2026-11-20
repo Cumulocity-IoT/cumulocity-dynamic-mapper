@@ -3,7 +3,9 @@
  * @name Create either measurement or event
  * @description Create either measurement or event, with persistent state for message counting and error deduplication
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic flowState/sensor-berlin-01
+ * @mappingTopic flowState/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

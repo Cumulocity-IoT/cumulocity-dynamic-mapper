@@ -77,7 +77,7 @@ export const ValidationFormlyError = {
     message: gettext('An extension must be selected for an Extension (Java) mapping.')
   },
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type: {
-    message: gettext('This payload format requires the Smart Function transformation type.')
+    message: gettext('This payload format requires the Smart Function transformation type. Any Payload also accepts a Java extension.')
   },
   Substitution_Source_Expression_Must_Be_Valid_JSONata: {
     message:

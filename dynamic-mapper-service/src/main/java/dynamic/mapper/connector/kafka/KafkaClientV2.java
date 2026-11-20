@@ -56,6 +56,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -63,6 +65,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -111,7 +114,7 @@ public class KafkaClientV2 extends AConnectorClient {
     private static final String KAFKA_PRODUCER_PROPERTIES = "/kafka-producer.properties";
 
     // Kafka clients
-    private KafkaProducer<String, String> kafkaProducer;
+    private KafkaProducer<String, byte[]> kafkaProducer;
     private AdminClient adminClient;
 
     // Properties
@@ -171,6 +174,26 @@ public class KafkaClientV2 extends AConnectorClient {
         wireFromRegistry(serviceRegistry, services, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
+    }
+
+    /**
+     * The send code builds {@code ProducerRecord<String, byte[]>}, so the key and value serializers are not
+     * configurable: a custom {@code value.serializer} (for example the former default, StringSerializer) would
+     * fail every send with a ClassCastException.
+     */
+    private void forceProducerSerializers(Properties producerProps) {
+        forceProducerSerializer(producerProps, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        forceProducerSerializer(producerProps, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                ByteArraySerializer.class);
+    }
+
+    private void forceProducerSerializer(Properties producerProps, String key, Class<?> required) {
+        Object configured = producerProps.get(key);
+        if (configured != null && !required.getName().equals(configured.toString())) {
+            log.warn("{} - Ignoring custom producer property {}={}: the connector requires {}", tenant, key,
+                    configured, required.getName());
+        }
+        producerProps.put(key, required.getName());
     }
 
     /**
@@ -377,7 +400,7 @@ public class KafkaClientV2 extends AConnectorClient {
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
 
         // Apply custom properties last (they override defaults)
         if (customConsumerProps != null) {
@@ -387,6 +410,7 @@ public class KafkaClientV2 extends AConnectorClient {
         if (customProducerProps != null) {
             log.info("{} - Applying {} custom producer properties", tenant, customProducerProps.size());
             producerProps.putAll(customProducerProps);
+            forceProducerSerializers(producerProps);
         }
 
         this.kafkaConsumerProperties = consumerProps;
@@ -1076,12 +1100,14 @@ public class KafkaClientV2 extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payload = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             // Use the publishTopic from the request, fallback to context if not set
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
@@ -1091,7 +1117,10 @@ public class KafkaClientV2 extends AConnectorClient {
                 continue;
             }
 
-            ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
+            ProducerRecord<String, byte[]> record = new ProducerRecord<>(topic, key, payload);
+            if (request.getContentType() != null) {
+                record.headers().add("content-type", request.getContentType().getBytes(StandardCharsets.UTF_8));
+            }
 
             try {
                 Future<RecordMetadata> future = kafkaProducer.send(record);

@@ -19,7 +19,8 @@
  */
 import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CoreModule, InputGroupEditableComponent, ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Subject } from 'rxjs';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
@@ -35,9 +36,10 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
   selector: 'd11r-publish-version-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CoreModule, FormsModule, InputGroupEditableComponent],
+  imports: [CoreModule, FormsModule],
   template: `
     <c8y-modal
+      [title]="'Publish draft' | translate"
       [labels]="labels"
       [disabled]="!isValid()"
       (onClose)="confirm()"
@@ -47,65 +49,71 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
       <ng-container c8y-modal-title>
         <span [c8yIcon]="'upload'"></span>
       </ng-container>
-      <div class="p-24 modal-inner-scroll animated fadeIn">
-        <p class="text-center text-medium text-16 sticky-top bg-white">{{ 'Publish draft' | translate }}</p>
-        <div class="p-24">
-          <p class="text-muted">
-            {{ 'Mapping' | translate }}: <strong>{{ mappingName }}</strong><br />
-            {{ 'Current active version' | translate }}: <strong>{{ currentVersion ?? '—' }}</strong>
-          </p>
+      <div class="animated fadeIn">
+        <div class="dm-publish-grid" style="display: grid; grid-template-columns: 11rem 1fr; gap: 12px 16px; align-items: baseline">
+          <span class="text-muted">{{ 'Mapping' | translate }}</span>
+          <span class="text-medium">{{ mappingName }}</span>
 
-          <c8y-form-group>
-            <label>{{ 'New version' | translate }} <span class="text-danger">*</span></label>
-            <div class="d-flex gap-8 m-b-8">
-              <button type="button" class="btn btn-default btn-sm" (click)="pick(suggestions.patch)">
-                {{ 'Patch' | translate }} &nbsp;<code>{{ suggestions.patch }}</code>
-              </button>
-              <button type="button" class="btn btn-default btn-sm" (click)="pick(suggestions.minor)">
-                {{ 'Minor' | translate }} &nbsp;<code>{{ suggestions.minor }}</code>
-              </button>
-              <button type="button" class="btn btn-default btn-sm" (click)="pick(suggestions.major)">
-                {{ 'Major' | translate }} &nbsp;<code>{{ suggestions.major }}</code>
-              </button>
-            </div>
+          <span class="text-muted">{{ 'Current active version' | translate }}</span>
+          <span class="text-medium">{{ currentVersion ?? '—' }}</span>
+
+          <label class="text-muted m-b-0" for="dm-publish-version">{{ 'New version' | translate }}</label>
+          <c8y-form-group class="m-b-0" [hasError]="!!version && !isValid()">
             <input
+              id="dm-publish-version"
               class="form-control"
               type="text"
               [(ngModel)]="version"
               [placeholder]="'e.g. 1.2.3' | translate"
-              [class.has-error]="version && !isValid()"
+              required
+              data-cy="dm-publish-version"
             />
+            <div class="d-flex flex-wrap a-i-center gap-8 m-t-8">
+              @for (s of bumps; track s.key) {
+                <button
+                  type="button"
+                  class="btn btn-xs"
+                  [ngClass]="version === suggestions[s.key] ? 'btn-primary' : 'btn-default'"
+                  (click)="pick(suggestions[s.key])"
+                >
+                  {{ s.label | translate }}
+                  <span class="m-l-4" style="font-family: monospace">{{ suggestions[s.key] }}</span>
+                </button>
+              }
+            </div>
             @if (version && !isValid()) {
-              <span class="help-block text-danger">{{ 'Must be MAJOR.MINOR.PATCH (e.g. 1.2.3)' | translate }}</span>
+              <span class="help-block">{{ 'Must be MAJOR.MINOR.PATCH (e.g. 1.2.3)' | translate }}</span>
             }
           </c8y-form-group>
 
-          <c8y-form-group>
-            <label class="c8y-switch">
-              <input type="checkbox" [ngModel]="activate" (ngModelChange)="setActivate($event)" data-cy="dm-publish-activate" />
-              <span class="m-r-8"></span>
-              <span>{{ activateLabel | translate }}</span>
-            </label>
-            <span class="help-block text-muted">{{ activateHint | translate: { version: currentVersion } }}</span>
-          </c8y-form-group>
-
-          <c8y-form-group>
-            <label>{{ 'Change note' | translate }} <span class="text-muted">({{ 'optional' | translate }})</span></label>
-            <c8y-input-group-editable
-              [multiline]="true"
-              [noSaveButton]="true"
-              maxHeight="160px"
-              formGroupClass="m-b-0"
-              ariaLabel="Change note"
-              placeholder="Describe what changed in this version"
-              [(ngModel)]="note"
-            ></c8y-input-group-editable>
-          </c8y-form-group>
+          <label class="text-muted m-b-0" for="dm-publish-note">{{ 'Change note' | translate }}</label>
+          <textarea
+            id="dm-publish-note"
+            class="form-control"
+            rows="3"
+            [(ngModel)]="note"
+            [placeholder]="'Describe what changed in this version' | translate"
+            data-cy="dm-publish-note"
+          ></textarea>
         </div>
+
+        <hr class="m-t-24 m-b-16" />
+
+        <c8y-form-group class="m-b-0">
+          <label class="c8y-switch">
+            <input type="checkbox" [ngModel]="activate" (ngModelChange)="setActivate($event)" data-cy="dm-publish-activate" />
+            <span></span>
+            <span>{{ activateLabel | translate }}</span>
+          </label>
+          @if (activateHint) {
+            <span class="help-block text-muted">{{ activateHint | translate: { version: currentVersion } }}</span>
+          }
+        </c8y-form-group>
       </div>
     </c8y-modal>
   `
-})export class PublishVersionModalComponent implements OnInit {
+})
+export class PublishVersionModalComponent implements OnInit {
   @Input() mappingName = '';
   @Input() currentVersion: string | null = null;
   @Input() suggestions: { patch: string; minor: string; major: string } = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
@@ -114,6 +122,12 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
   @Input() mappingActive = false;
   /** Preset for the activation option. Save & Activate passes true; it is always the user's call. */
   @Input() activate = true;
+
+  readonly bumps: { key: 'patch' | 'minor' | 'major'; label: string }[] = [
+    { key: 'patch', label: gettext('Patch') },
+    { key: 'minor', label: gettext('Minor') },
+    { key: 'major', label: gettext('Major') }
+  ];
 
   version = '';
   note = '';

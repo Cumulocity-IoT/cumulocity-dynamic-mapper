@@ -4,7 +4,9 @@
  * @description Parses a multiline CSV payload and creates one measurement per data line. Requires a
  *              mapping that delivers the raw text, so the CSV arrives as a string in payload.payload.
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI MEASUREMENT
  * @sampleTopic testCSV/351144440855493
+ * @mappingTopic testCSV/+
  * @samplePayload
  *   {
  *     "payload": "351144440855493\n01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00\n01/12/2025 15:54:38,0,+021.63,+00002041,+000139.3,-088.7,+000.3,00\n01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00"

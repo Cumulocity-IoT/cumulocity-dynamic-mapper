@@ -537,13 +537,54 @@ properties:
 | Property | Required | Description |
 |---|:---:|---|
 | `topic` | Yes* | The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For Webhook connectors, this is appended to the base URL as the context path. **For Webhook connectors with Cumulocity Internal enabled:** If `cumulocityType` is not specified, the `topic` is used to derive the Cumulocity API endpoint. Topics should start with the API name (e.g., `"measurement"`, `"event"`, `"alarm"`, `"inventory"`) to automatically route to the correct Cumulocity REST API endpoint. However, using `cumulocityType` is recommended for more reliable API routing. |
-| `payload` | Yes | The data object or array to send to the external broker/system |
+| `payload` | Yes | The data object or array to send to the external broker/system. Return a **string** to send a raw text payload such as a device command (for example `"AT+GTUPD=...$"`); it is sent exactly as given, with no quotes and no JSON serialization. |
+| `payloadEncoding` | No | How `payload` is put on the wire: `"json"` or `"text"`. **Omitted:** an object is sent as JSON, a string is sent as text. A string that is valid JSON (for example the result of `JSON.stringify(obj)`, or `"[1,2]"`) is sent unchanged, with the connector default content type. Returning the object itself is still preferred: only an object gets its device identity and topic levels filled in by the mapper. `"text"` requires a string payload. `"json"` with a string sends a JSON string value, with quotes. `"base64"` and `"hex"` decode the string payload to bytes that are sent unchanged, for binary protocols; whitespace in the string is ignored and invalid input fails the message. A text or binary payload goes to the broker only: it is never routed to a Cumulocity API, and `cumulocityType` does not apply. |
+| `contentType` | No | Content type of the payload, for example `"text/plain"` or `"application/octet-stream"`. Defaults to `text/plain` for a text payload and `application/octet-stream` for `"base64"` and `"hex"`; a JSON payload, or a string that is valid JSON, keeps the connector default. Used by the Webhook (`Content-Type` header), AMQP and AMQP 1.0 (content type), MQTT 5 (content type property) and Kafka (`content-type` record header) connectors. Other connectors ignore it. |
 | `action` | No | The action to perform: `"create"` (POST), `"update"` (PUT), `"patch"` (PATCH), or `"delete"` (DELETE). The action is automatically mapped to the corresponding HTTP method. **For Webhook connectors with Cumulocity Internal enabled:** The `action` property is essential for determining how to interact with the Cumulocity REST API. Combined with the `topic`, it controls whether to create, update, patch, or delete Cumulocity objects (measurements, events, alarms, inventory). **Special case:** Measurements are immutable time-series data and don't support update or patch operations. If you specify `action: "update"` or `action: "patch"` for measurements, the mapper automatically converts it to `"create"` (POST) to create a new measurement instead. |
 | `cumulocityType` | No | Explicitly specifies which Cumulocity API type to use: `"measurement"`, `"event"`, `"alarm"`, `"operation"`, `"managedObject"`, or `"custom"`. **When specified:** The mapper uses this explicit value to determine the target Cumulocity API endpoint, making the API selection less ambiguous. **When not specified:** The mapper falls back to deriving the API type from the `topic` string (e.g., a topic starting with `"measurements/"` automatically routes to the Measurement API). **Custom routing (`"custom"`):** Forwards the payload to a tenant-local microservice at the path given by `targetPath`. Device identity resolution and broker publishing are both skipped. The `action` value is mapped to the corresponding HTTP method (`"create"` → POST, `"update"` → PUT, etc.). **Recommended for Webhook connectors with Cumulocity Internal:** Using `cumulocityType` provides explicit control over API routing and is more reliable than topic-based derivation. |
 | `externalSource` | No | Array specifying the external ID type: `[{type: "c8y_Serial"}]`. Defines which external ID type should be used to resolve the device identity for `_externalId_` token replacement in the broker topic. Ignored when `sourceId` is set explicitly. |
 | `sourceId` | No | Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device that triggered the mapping. **Default behavior (omitted):** The mapper uses the internal ID of the device that triggered the outbound mapping. For external broker connectors, it additionally resolves the external ID (e.g. LoRa EUI, serial) via `externalSource` for `_externalId_` token replacement in the broker topic. **When set:** The provided ID is used as the internal C8Y managed object ID for the Cumulocity REST API call (`source.id`) and also for broker topic routing. The `externalSource` lookup is skipped. **Use case:** Cross-device routing, when data from one device should be associated with a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting measurement should be stored under a child device: `sourceId: childDeviceInternalId`. **Note:** This must be a Cumulocity *internal* numeric managed object ID, not an external identifier like a serial number or LoRa EUI. |
 | `targetPath` | No* | Required when `cumulocityType: "custom"` is set. Relative REST path of the tenant-local microservice to call, e.g. `/service/my-processor/ingest`. Must start with `/service/`. The mapper validates this at runtime and rejects requests that do not match. Ignored for all other `cumulocityType` values. |
 | `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key, the key, not a header, or the Pulsar message key; for Kafka and Pulsar connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields`, see *Metadata Properties for Inbound Smart Functions*. |
+
+**Sending text or binary instead of JSON (outbound)**
+
+The payload of a returned message is not limited to JSON. Use an outbound mapping with the payload type **Any Payload**
+and the transformation type **Smart Function** to send exactly the bytes a device protocol expects.
+
+```javascript
+function onMessage(msg, context) {
+  return [
+    {
+      // A string is sent as raw text: no quotes, no JSON, no added line break
+      topic: "command/" + context.getExternalId(),
+      payload: "AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$"
+    },
+    {
+      // Base64 text is decoded and the bytes are sent unchanged
+      topic: "firmware/" + context.getExternalId(),
+      payload: "AAEC/w==",
+      payloadEncoding: "base64",
+      contentType: "application/x-protobuf"
+    }
+  ];
+}
+```
+
+| You return | `payloadEncoding` | Sent as |
+|---|---|---|
+| An object | none or `"json"` | JSON |
+| A string | none | Text (`text/plain`). A string that is valid JSON is sent unchanged, with the connector default content type |
+| A string | `"text"` | Text, even when it looks like JSON |
+| A string | `"base64"` or `"hex"` | The decoded bytes (`application/octet-stream`) |
+| A string | `"json"` | A JSON string value, with quotes |
+
+Text and binary go to the broker only: they are never routed to a Cumulocity API, `cumulocityType` does not apply,
+and the mapper does not fill in the device identity or topic levels. Returning the object is therefore still the
+better choice for JSON. In Dry Run, a binary result shows the Base64 or hexadecimal text it was decoded from.
+
+Connectors that carry a content type: Webhook (external system, not the Cumulocity API), AMQP and AMQP 1.0, MQTT 5, and
+Kafka (the `content-type` record header). Other connectors send the bytes without one.
 
 **Context Properties, available via `context.getConfig()`**
 

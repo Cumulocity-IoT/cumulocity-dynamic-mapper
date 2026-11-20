@@ -341,7 +341,7 @@ export function buildPropertyFields(host: PropertyFieldsHost): FormlyFieldConfig
               { label: gettext('Filter by fragment'), value: 'fragment' },
               { label: gettext('Custom filter'), value: 'custom' }
             ],
-            placeholder: gettext('Select a filter'),
+            placeholder: gettext('Select a filter (required)'),
             disabled: host.isFieldDisabled,
             required: true,
             change: () => host.onExecutionFilterChanged()

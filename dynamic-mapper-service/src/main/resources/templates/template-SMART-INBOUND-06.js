@@ -6,7 +6,9 @@
  *              by looking up the parent from assetParents in the inventory cache.
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
+ * @targetAPI MEASUREMENT
  * @sampleTopic testSmartInbound/child-sensor-01
+ * @mappingTopic testSmartInbound/+
  * @samplePayload
  *   {
  *     "messageId": "msg-001",

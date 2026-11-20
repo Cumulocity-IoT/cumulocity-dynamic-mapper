@@ -21,11 +21,10 @@
 import { Injectable } from '@angular/core';
 import {
   IManagedObject,
-  InventoryBinaryService,
   InventoryService,
   FetchClient
 } from '@c8y/client';
-import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
+import { forkJoin, from, map, Observable } from 'rxjs';
 
 import {
   BASE_URL,
@@ -53,8 +52,7 @@ export class ExtensionService {
 
   constructor(
     private readonly client: FetchClient,
-    private readonly inventoryService: InventoryService,
-    private readonly inventoryBinaryService: InventoryBinaryService
+    private readonly inventoryService: InventoryService
   ) { }
 
   async getProcessorExtensions(): Promise<Map<string, Extension>> {
@@ -131,20 +129,6 @@ export class ExtensionService {
       await this.deleteExtensionFromBackend(app['name']);
     } catch (error) {
       console.error(`Failed to delete extension ${app['name']}:`, error);
-      throw error;
-    }
-  }
-
-  async cancelProcessorExtensionCreation(app: Partial<IManagedObject>): Promise<void> {
-    if (!app?.id) {
-      console.warn('Cannot cancel: invalid app object');
-      return;
-    }
-
-    try {
-      await this.inventoryBinaryService.delete(app);
-    } catch (error) {
-      console.error('Failed to cancel extension creation:', error);
       throw error;
     }
   }
@@ -233,33 +217,63 @@ export class ExtensionService {
     }
   }
 
-  uploadProcessorExtensionWithProgress$(file: File | Blob, app: Partial<IManagedObject>): Observable<IFetchWithProgress> {
-    const uploadStartTimestamp = new Date().getTime();
-    const subject = new BehaviorSubject<IFetchWithProgress>({
-      percentage: 0,
-      totalBytes: null,
-      bufferedBytes: 0,
-      bytesPerSecond: 0
-    });
-    const onProgress = (event: ProgressEvent) => {
-      const eventTimestamp = new Date().getTime();
-      const duration = eventTimestamp - uploadStartTimestamp;
-      subject.next({
-        percentage: Math.round((event.loaded / event.total) * 100),
-        totalBytes: event.total,
-        bufferedBytes: event.loaded,
-        bytesPerSecond: Math.round(event.loaded / Math.max(1, Math.round(duration / 1000)))
+  /**
+   * Uploads the JAR through the backend (`POST /extension`), which stores it, registers it under `name`, loads it and
+   * rolls a new upload back if nothing can be loaded. XMLHttpRequest rather than fetch: only it reports upload progress.
+   *
+   * The observable completes when the extension is loaded and errors with `{ data: <backend error body> }` (a rejected
+   * upload) or a plain string (no response). Unsubscribing aborts the upload.
+   */
+  uploadProcessorExtensionWithProgress$(
+    file: File,
+    options: { name?: string; overwrite?: boolean } = {}
+  ): Observable<IFetchWithProgress> {
+    return new Observable<IFetchWithProgress>(subscriber => {
+      const uploadStartTimestamp = Date.now();
+      const body = new FormData();
+      body.append('file', file, file.name);
+      if (options.name) {
+        body.append('name', options.name);
+      }
+      body.append('overwrite', String(!!options.overwrite));
+
+      // The same auth headers the c8y client sends; the content type is left to the browser (multipart boundary)
+      const headers: Record<string, string> = { ...(this.client.getFetchOptions().headers as Record<string, string>), accept: 'application/json' };
+      Object.keys(headers).filter(key => key.toLowerCase() === 'content-type').forEach(key => delete headers[key]);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`, true);
+      Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+
+      xhr.upload.addEventListener('progress', (event: ProgressEvent) => {
+        const duration = Date.now() - uploadStartTimestamp;
+        subscriber.next({
+          percentage: event.total ? Math.round((event.loaded / event.total) * 100) : 0,
+          totalBytes: event.total,
+          bufferedBytes: event.loaded,
+          bytesPerSecond: Math.round(event.loaded / Math.max(1, Math.round(duration / 1000)))
+        });
       });
-    };
+      xhr.addEventListener('loadend', () => {
+        if (xhr.readyState !== 4) {
+          return;
+        }
+        if (xhr.status === 200 || xhr.status === 201) {
+          subscriber.complete();
+          return;
+        }
+        let data: unknown;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          data = undefined;
+        }
+        subscriber.error(data ? { data } : 'Could not upload file.');
+      });
+      xhr.send(body);
 
-    const xhr = this.inventoryBinaryService.createWithProgress(file, onProgress, app);
-    const uploadPromise = this.inventoryBinaryService.getXMLHttpResponse(xhr);
-    uploadPromise.then(
-      () => subject.complete(),
-      (error) => subject.error(error)
-    );
-
-    return subject.asObservable();
+      return () => xhr.abort();
+    });
   }
 
 }

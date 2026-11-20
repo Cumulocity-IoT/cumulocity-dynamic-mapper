@@ -664,12 +664,14 @@ public class PulsarConnectorClient extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payload = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             // Use the publishTopic from the request, fallback to context if not set
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
@@ -799,10 +801,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Send message with QoS handling
      */
-    private void sendMessageWithQos(Producer<byte[]> producer, String payload, Qos qos, ProcessingContext<?> context)
-            throws PulsarClientException {
-
-        byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
+    private void sendMessageWithQos(Producer<byte[]> producer, byte[] payloadBytes, Qos qos,
+            ProcessingContext<?> context) throws PulsarClientException {
 
         // The message key comes from the mapping ('key' transport field / _CONTEXT_DATA_.key)
         String key = context.getKey();

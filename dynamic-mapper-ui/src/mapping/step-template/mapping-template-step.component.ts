@@ -157,6 +157,12 @@ export class MappingTemplateStepComponent implements OnDestroy {
    */
   private filterFormlySubscribed = false;
   private pendingFilterMapping: string | undefined;
+  /**
+   * Bumped whenever the step adopts a filter from the host. A debounced edit or a running evaluation that
+   * started under an older value is stale and must not restore its expression or emit it.
+   */
+  private filterEpoch = 0;
+  private typedFilterEpoch = 0;
   private destroyed = false;
   sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
@@ -218,6 +224,14 @@ export class MappingTemplateStepComponent implements OnDestroy {
       });
     });
 
+    // The filter can change while this step lives on: the stepper renders the step once and keeps it across all
+    // steps, and General settings write the same expression. (The unified editor creates the step anew per tab, so
+    // it reads the filter on creation.) Follow the host, or the field keeps showing what it had on first render.
+    effect(() => {
+      const filterMapping = this.mapping()?.filterMapping ?? '';
+      untracked(() => this.followHostFilterMapping(filterMapping));
+    });
+
     // The execution filter field offers the property names of the source template as completion. The
     // provider reads the live editor content on every request, so it follows the template as it is edited.
     effect(() => {
@@ -254,6 +268,29 @@ export class MappingTemplateStepComponent implements OnDestroy {
     });
   }
 
+  /** Shows a filter that the host changed (not typed here): the field, and its evaluation result. */
+  private followHostFilterMapping(filterMapping: string): void {
+    // Before the form is provided, subscribeToFilterFormly pre-populates the model from the mapping
+    if (!this.filterFormlySubscribed) return;
+    if ((this.filterModel.filterMapping ?? '') === filterMapping) return;
+    // What this step still holds from typing is older than what the host has now
+    this.pendingFilterMapping = undefined;
+    this.filterEpoch++;
+    const control = this.filterFormly()?.get('filterMapping');
+    if (!filterMapping) {
+      this.filterModel = { filterMapping: '' };
+      control?.setValue('', { emitEvent: false });
+      control?.setErrors(null);
+    } else {
+      this.filterModel = { ...this.filterModel, filterMapping };
+      control?.setValue(filterMapping, { emitEvent: false });
+      // Without a source template the evaluation would only fail; the source template effect runs it once there is one
+      const template = this.sourceTemplate();
+      if (template) void this.updateFilterExpressionResult(filterMapping, template);
+    }
+    this.cdr.markForCheck();
+  }
+
   private subscribeToFilterFormly(filterFormly: FormGroup): void {
     // Pre-populate filterModel so Formly shows the existing expression on first render.
     if (this.mapping()?.filterMapping) {
@@ -270,11 +307,16 @@ export class MappingTemplateStepComponent implements OnDestroy {
     // The newest text the user typed that the debounced evaluation below has not handled yet. The editor
     // destroys this step when the user leaves the tab, so ngOnDestroy hands it to the host instead of
     // losing an edit made within the debounce window.
-    filterValues$.subscribe(path => (this.pendingFilterMapping = path));
+    filterValues$.subscribe(path => {
+      this.pendingFilterMapping = path;
+      this.typedFilterEpoch = this.filterEpoch;
+    });
     filterValues$.pipe(
       debounceTime(500),
       distinctUntilChanged()
     ).subscribe(path => {
+      // The host changed the filter after this was typed: the typed text is outdated
+      if (this.typedFilterEpoch !== this.filterEpoch) return;
       this.pendingFilterMapping = undefined;
       if (path) this.updateFilterExpressionResult(path);
     });
@@ -389,6 +431,7 @@ export class MappingTemplateStepComponent implements OnDestroy {
 
   async updateFilterExpressionResult(path: string, templateOverride?: Template): Promise<void> {
     this.clearAlerts();
+    const epoch = this.filterEpoch;
     try {
       // Use an explicitly supplied template first (passed by the parent when it
       // has already expanded the templates but Angular hasn't yet propagated the
@@ -399,6 +442,8 @@ export class MappingTemplateStepComponent implements OnDestroy {
         template,
         path
       );
+      // The host adopted another filter while this evaluated: its result would restore the old expression
+      if (epoch !== this.filterEpoch) return;
       this.filterModel.filterExpression = result;
       this.filterModel.filterMapping = path;
       this.filterMappingChange.emit(path);
@@ -418,6 +463,7 @@ export class MappingTemplateStepComponent implements OnDestroy {
         this.filterFormly().get('filterMapping')?.markAsTouched();
       }
     } catch (error) {
+      if (epoch !== this.filterEpoch) return;
       this.filterModel.filterExpression ??= { result: '', resultType: '', valid: false };
       this.filterModel.filterExpression.valid = false;
       this.filterFormly().get('filterMapping')?.setErrors({ validationError: { message: error.message } });

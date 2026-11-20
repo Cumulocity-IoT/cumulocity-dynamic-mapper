@@ -15,7 +15,7 @@ list, and Expert Mode is not needed to select them. Which of them are available 
 | JSON | Yes | Yes |
 | Flat File (CSV) | Yes | No |
 | Hexadecimal | Yes | No |
-| Any Payload | Yes | No |
+| Any Payload | Yes | Yes |
 | SparkPlug B | Yes | Yes (NCMD and DCMD) |
 
 The following describes each payload type and how the mapper processes it:
@@ -44,7 +44,13 @@ returns `23157`, or with `parseInt(msg.getPayload()["payload"], 16)` in a Smart 
 Use this when the payload format is unknown or binary (Protobuf, CBOR, XML, custom binary), or when you want full
 programmatic control. The raw payload bytes are passed to your transformation as a Base64-encoded string. You must
 use a **Smart Function** or **Java Extension** that decodes and interprets the bytes. In a Smart Function, read the
-raw data with `msg.getPayload()` and decode it with `atob()`. Any Payload mappings are inbound only.
+raw data with `msg.getPayload()` and decode it with `atob()`.
+
+Any Payload also works **outbound**. The source is still the Cumulocity JSON object, and your Smart Function or Java
+Extension decides what is sent: return a string to send raw text such as a device command (for example
+`AT+GTUPD=…$`), or set `payloadEncoding` to `base64` or `hex` to send binary. The mapper sends it unchanged, with no
+JSON wrapping. A Java Extension can also return a `byte[]`. See the Smart Function reference for the output fields
+`payloadEncoding` and `contentType`.
 
 :::important
 The former payload types **Protobuf** and **Payload parsed in Java Extension** are deprecated and no longer offered

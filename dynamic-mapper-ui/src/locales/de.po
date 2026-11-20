@@ -103,6 +103,9 @@ msgstr ""
 msgid "60 seconds"
 msgstr ""
 
+msgid "A binary payload is sent as bytes. The text shown is the Base64 or hexadecimal text it was decoded from."
+msgstr ""
+
 msgid "A device type rule only subscribes devices created afterward. Tick the box of a new type to also subscribe the devices of that type that already exist. This rescans the inventory in the background and can take a while on large inventories."
 msgstr ""
 
@@ -699,6 +702,9 @@ msgstr ""
 msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
 msgstr ""
 
+msgid "Describe what changed in this version"
+msgstr ""
+
 msgid "Details & logs"
 msgstr ""
 
@@ -771,6 +777,9 @@ msgstr ""
 msgid "draft"
 msgstr ""
 
+msgid "Draft version"
+msgstr ""
+
 msgid "Drag to resize (double-click to reset)"
 msgstr ""
 
@@ -784,6 +793,9 @@ msgid "Dry Run runs the mapping without writing anything to your tenant."
 msgstr ""
 
 msgid "Dummy message!"
+msgstr ""
+
+msgid "Duplicate mapping"
 msgstr ""
 
 msgid "Duplicate subscription removed to prevent multiply processed messages"
@@ -838,6 +850,12 @@ msgid "Enriching data with device inventory information"
 msgstr ""
 
 msgid "Enter agent name"
+msgstr ""
+
+msgid "Enter the type or fragment name of the execution filter to continue."
+msgstr ""
+
+msgid "entries are currently loaded."
 msgstr ""
 
 msgid "Error handling and logging"
@@ -936,6 +954,9 @@ msgstr ""
 msgid "Extension is required"
 msgstr ""
 
+msgid "Extension name"
+msgstr ""
+
 msgid "Extension Name"
 msgstr ""
 
@@ -964,6 +985,9 @@ msgid "External ID caches"
 msgstr ""
 
 msgid "External id type"
+msgstr ""
+
+msgid "external Java extensions"
 msgstr ""
 
 msgid "Failed mappings:"
@@ -1156,6 +1180,9 @@ msgid "Feature changes in release 6.4.0"
 msgstr ""
 
 msgid "Fetch now"
+msgstr ""
+
+msgid "Fill in the required fields to continue."
 msgstr ""
 
 msgid "Filter by"
@@ -1994,9 +2021,6 @@ msgstr ""
 msgid "operation"
 msgstr ""
 
-msgid "optional"
-msgstr ""
-
 msgid "Optional YAML parameter passed to the extension."
 msgstr ""
 
@@ -2046,7 +2070,7 @@ msgstr ""
 msgid "Payload Format"
 msgstr ""
 
-msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing."
+msgid "Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing. Outbound, the Smart Function or Java Extension returns the message as text (e.g. an AT command), or as binary, and the mapper sends it unchanged."
 msgstr ""
 
 msgid "Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and passes a rich JSON object to your Smart Function. For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized to SparkPlug B protobuf binary before publishing. NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent NDATA / DDATA messages can resolve metric aliases. The aliasMap (metric name → alias) is available in the outbound Smart Function via context.getConfig().aliasMap."
@@ -2199,6 +2223,9 @@ msgstr ""
 msgid "Repeated"
 msgstr "Wiederholt"
 
+msgid "Replace an existing extension with the same name"
+msgstr ""
+
 msgid "Replace code"
 msgstr ""
 
@@ -2343,8 +2370,8 @@ msgstr ""
 msgid "Select a device or group to create a dedicated Notification 2.0 subscription."
 msgstr ""
 
-msgid "Select a filter"
-msgstr "Filter auswählen"
+msgid "Select a filter (required)"
+msgstr ""
 
 msgid "Select a node in the source template and a node in the target template, then add the substitution."
 msgstr ""
@@ -2353,6 +2380,9 @@ msgid "Select a substitution from the list, or add a new one."
 msgstr ""
 
 msgid "Select agent"
+msgstr ""
+
+msgid "Select an execution filter to continue."
 msgstr ""
 
 msgid "Select at least one connector before saving."
@@ -2753,6 +2783,9 @@ msgstr ""
 msgid "The complete log of the selected microservice instance, including the lines of every tenant that shares it."
 msgstr ""
 
+msgid "the configuration that is currently running"
+msgstr ""
+
 msgid "The Cumulocity API that receives the result: Alarm, Event, Measurement, Inventory, or Operation. <code>Custom</code> is for Smart Functions that call a Cumulocity microservice REST endpoint (<code>/service/...</code>) instead of a standard API."
 msgstr ""
 
@@ -2897,10 +2930,13 @@ msgstr ""
 msgid "This mapping has unpublished draft changes"
 msgstr ""
 
+msgid "This mapping has unpublished draft changes. Which version do you want to copy?"
+msgstr ""
+
 msgid "This mapping uses a type that is no longer supported (PROTOBUF_INTERNAL or SUBSTITUTION_AS_CODE). Use Any Payload with a Smart Function or a Java extension, or a Smart Function."
 msgstr ""
 
-msgid "This payload format requires the Smart Function transformation type."
+msgid "This payload format requires the Smart Function transformation type. Any Payload also accepts a Java extension."
 msgstr ""
 
 msgid "This payload type is not edited as JSON. The mapper decodes it, or your code receives the raw data."
@@ -3093,6 +3129,9 @@ msgstr ""
 msgid "Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path."
 msgstr ""
 
+msgid "with"
+msgstr ""
+
 msgid "Working with device identifiers and external IDs"
 msgstr ""
 
@@ -3148,6 +3187,9 @@ msgid "You have unsaved changes. Do you want to save before leaving?"
 msgstr ""
 
 msgid "Your code produces the structure of the target payload."
+msgstr ""
+
+msgid "your latest unpublished changes"
 msgstr ""
 
 msgid "Your session has expired. Sign in again and repeat the test."

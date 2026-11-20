@@ -119,6 +119,8 @@ tenant are allowed.
   whether a failure also triggers a reconnect; with it off, the connector withholds the ack and waits
   for the broker to retransmit, and the limit still applies.
 - Retained-message publish is honored via `retain(context.isRetain())`.
+- The payload is `binaryPayload` when set, else the request text as UTF-8. `MQTT5Client` sets the request's content type as the MQTT 5
+  content type property; MQTT 3.1.1 has none. See [outbound-payload-formats.md](outbound-payload-formats.md).
 
 ### Wildcard support
 

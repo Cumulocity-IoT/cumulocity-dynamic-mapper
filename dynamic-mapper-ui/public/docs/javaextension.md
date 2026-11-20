@@ -246,6 +246,29 @@ public class ProcessorExtensionSmartOutbound01 implements ProcessorExtensionOutb
 }
 ```
 
+The payload of a `DeviceMessage` is not limited to JSON. With the payload type **Any Payload** and the transformation
+type **Java Extension**, an outbound extension can send a raw device command or a binary message:
+
+```java
+// Raw text, sent exactly as given: no quotes, no JSON
+DeviceMessage.forTopic("command/" + context.getExternalId())
+    .payload("AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$")
+    .build();
+
+// Binary: pass the bytes, they are sent unchanged
+DeviceMessage.forTopic("firmware/device").payload(protobufBytes).build();
+
+// Binary from Base64 text, with an explicit content type
+DeviceMessage.forTopic("firmware/device")
+    .payload("AAEC/w==").payloadEncoding(DeviceMessage.ENCODING_BASE64)
+    .contentType("application/x-protobuf")
+    .build();
+```
+
+A `Map` or object is sent as JSON, a string as text, and a `byte[]` as bytes. A string that starts with `{`, and one
+that is a valid JSON array or scalar, keep their earlier behavior as JSON. Use `DeviceMessage.ENCODING_TEXT` to send
+such a string as text. Text and binary go to the broker only: they are never routed to a Cumulocity API.
+
 Register it exactly as an inbound extension, the `className` is what tells the mapper it is outbound:
 
 ```yaml

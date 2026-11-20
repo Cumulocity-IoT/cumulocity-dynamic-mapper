@@ -404,7 +404,7 @@ public class CodeTemplateHeaderService {
 
     private static final Set<String> SYSTEM_ANNOTATIONS =
             Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly",
-                    "@sampleTopic", "@samplePayload");
+                    "@sampleTopic", "@samplePayload", "@publishTopic", "@mappingTopic", "@filterMapping", "@targetAPI");
     // Note: @direction is no longer parsed or emitted -- it is listed only so that legacy headers
     // still carrying it have the line stripped on the next rectify. See TemplateType#getDirection.
 
@@ -516,8 +516,20 @@ public class CodeTemplateHeaderService {
         sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        if (codeTemplate.targetAPI != null && !codeTemplate.targetAPI.isBlank()) {
+            sb.append(" * @targetAPI ").append(codeTemplate.targetAPI.trim()).append("\n");
+        }
         if (codeTemplate.sampleTopic != null && !codeTemplate.sampleTopic.isBlank()) {
             sb.append(" * @sampleTopic ").append(codeTemplate.sampleTopic.trim()).append("\n");
+        }
+        if (codeTemplate.mappingTopic != null && !codeTemplate.mappingTopic.isBlank()) {
+            sb.append(" * @mappingTopic ").append(codeTemplate.mappingTopic.trim()).append("\n");
+        }
+        if (codeTemplate.publishTopic != null && !codeTemplate.publishTopic.isBlank()) {
+            sb.append(" * @publishTopic ").append(codeTemplate.publishTopic.trim()).append("\n");
+        }
+        if (codeTemplate.filterMapping != null && !codeTemplate.filterMapping.isBlank()) {
+            sb.append(" * @filterMapping ").append(codeTemplate.filterMapping.trim()).append("\n");
         }
         if (codeTemplate.samplePayload != null && !codeTemplate.samplePayload.isBlank()) {
             // Continuation lines are indented past the tag so extractAnnotation reads them back.

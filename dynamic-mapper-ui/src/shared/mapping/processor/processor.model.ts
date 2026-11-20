@@ -37,6 +37,10 @@ export interface DynamicMapperRequest {
   externalIdType?: string;
   request?: unknown;
   response?: unknown;
+  /** Outbound: content type sent with the message, e.g. "text/plain" or "application/octet-stream"; absent for JSON. */
+  contentType?: string;
+  /** Outbound: the bytes of a binary payload (Base64 on the wire); `request` then shows the text it was decoded from. */
+  binaryPayload?: string;
   /** Why this request failed; absent when it succeeded. */
   errorMessage?: string;
   hidden?: boolean;

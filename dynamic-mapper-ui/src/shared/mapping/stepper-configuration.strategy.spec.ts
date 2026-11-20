@@ -71,6 +71,45 @@ describe('StepperConfigurationResolver', () => {
       expect(result.showEditorSource).toBe(false);
     });
 
+    it('should offer outbound ANY_PAYLOAD with a Smart Function or Java extension and show its Cumulocity source editor', () => {
+      const description = MappingTypeDescriptionMap[MappingType.ANY_PAYLOAD];
+      expect(description.transformationTypes[Direction.OUTBOUND]).toEqual([
+        TransformationType.SMART_FUNCTION,
+        TransformationType.EXTENSION_JAVA
+      ]);
+
+      const context: StepperConfigurationContext = {
+        mappingType: MappingType.ANY_PAYLOAD,
+        transformationType: TransformationType.SMART_FUNCTION,
+        direction: Direction.OUTBOUND,
+        persistence: 'draft',
+        substitutionsAsCode: false
+      };
+
+      const result = StepperConfigurationResolver.resolve(description.stepperConfiguration, context);
+
+      expect(result.showEditorSource).toBe(true); // the source is a regular Cumulocity JSON object
+      expect(result.showEditorTarget).toBe(false); // the output is chosen by the function
+      expect(result.allowTestTransformation).toBe(true);
+    });
+
+    it('should select the Java extension on the target side for outbound ANY_PAYLOAD', () => {
+      const context: StepperConfigurationContext = {
+        mappingType: MappingType.ANY_PAYLOAD,
+        transformationType: TransformationType.EXTENSION_JAVA,
+        direction: Direction.OUTBOUND,
+        persistence: 'draft',
+        substitutionsAsCode: false
+      };
+
+      const result = StepperConfigurationResolver.resolve(
+        MappingTypeDescriptionMap[MappingType.ANY_PAYLOAD].stepperConfiguration, context);
+
+      expect(result.showProcessorExtensionsTarget).toBe(true);
+      expect(result.showEditorSource).toBe(true);
+      expect(result.allowTestTransformation).toBe(true);
+    });
+
     it('should apply outbound override', () => {
       const baseConfig: StepperConfiguration = {
         allowTestSending: true,

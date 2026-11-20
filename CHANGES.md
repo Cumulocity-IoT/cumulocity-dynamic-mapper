@@ -2,6 +2,37 @@
 
 ## Release 6.6.1 (in development)
 
+### Outbound payload formats: text and binary (new feature)
+
+An outbound mapping can now send more than JSON. With the payload type **Any Payload** (now offered outbound) and the
+transformation type **Smart Function** or **Java Extension**, the function or extension decides what goes on the wire,
+for example a raw device command such as `AT+GTUPD=…$` or a binary protocol message.
+
+- **New output fields on `DeviceMessage`:** `payloadEncoding` (`json`, `text`, `base64`, `hex`) and `contentType`. A string
+  payload is sent as raw text, `base64` and `hex` are decoded to bytes, and a Java extension may also return a `byte[]`.
+  An object is sent as JSON, as before. The TypeScript type of `payload` now includes `string`.
+- **Connectors:** Kafka, AMQP 0-9-1, AMQP 1.0, the Webhook (external systems) and the native Pulsar connector send the
+  bytes unchanged; MQTT, the MQTT Service and Pub/Sub already did. A content type is carried by the Webhook, AMQP, AMQP 1.0,
+  MQTT 5 and Kafka (`content-type` header).
+- **No change for existing mappings.** JSON objects, and strings or bytes that are JSON, are sent as before, with the same
+  content type. A Java extension's string starting with `{` keeps its JSON handling.
+- **Behavior changes to be aware of:** a Smart Function that returns a string no longer fails with "Failed to clone
+  payload"; it is sent as given. A request with `binaryPayload` (Sparkplug B) is now sent as bytes by Kafka, AMQP, AMQP 1.0,
+  the Webhook and native Pulsar, which used to send its JSON text. The Kafka producer value serializer is now
+  `ByteArraySerializer` and cannot be overridden (the value is UTF-8 for text, so existing mappings are unchanged).
+  `DeviceMessage` and `DynamicMapperRequest` keep their earlier all-args constructors.
+- **Documentation and examples:** [outbound-payload-formats.md](docs/feature/outbound-payload-formats.md), the Smart Function
+  and Java extension references, the code template *Send an operation as a raw text command*, the Java extension
+  `OperationToTextCommand`, and the sample mappings *OUT-17 Any Payload - operation as a raw text command* (Smart Function)
+  and *OUT-18* (the same with the Java extension).
+
+### Upload Java extensions through the backend (new feature)
+
+`POST /extension` (Admin role) takes the extension JAR as a multipart form, checks it,
+  stores and registers it, loads it and rolls a new upload back if nothing loads; `overwrite=true` replaces an existing
+  extension. The UI now uses it instead of writing to the binary repository directly, and its dialog shows the extension name
+  and an *overwrite* option. The 50 MB limit is now also enforced by the service.
+
 ### Acknowledgement and retries (behaviour change)
 
 A message is now acknowledged only after the mapping pipeline settled it. One rule applies to every connector:

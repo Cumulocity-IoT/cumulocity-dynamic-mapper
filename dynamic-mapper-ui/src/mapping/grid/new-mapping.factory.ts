@@ -213,6 +213,12 @@ export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
     };
   }
 
+  // OUTBOUND: the user has to choose the execution filter (General Settings step); there is no default.
+  // A code template that declares @filterMapping is the one exception: it applies below.
+  if (direction === Direction.OUTBOUND) {
+    mapping.filterMapping = '';
+  }
+
   // Seed the sample from the chosen code template (see applyCodeTemplateSample); the Message
   // Explorer pre-fill below still takes precedence.
   if (substitutionsAsCode) {
@@ -220,10 +226,6 @@ export function buildNewMapping(req: NewMappingRequest): NewMappingResult {
   }
 
   // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
-  // OUTBOUND: the user has to choose the execution filter (General Settings step); there is no default.
-  if (direction === Direction.OUTBOUND) {
-    mapping.filterMapping = '';
-  }
 
   if (preFill) {
     const isInbound = direction === Direction.INBOUND;

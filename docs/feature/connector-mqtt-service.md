@@ -72,6 +72,7 @@ message properties, not real Pulsar subscriptions:
   don't double-consume) reads all inbound traffic from `from-device`. The real MQTT
   topic and client ID are carried as Pulsar message properties (`PULSAR_PROPERTY_TOPIC`,
   `PULSAR_PROPERTY_CLIENT_ID`), read back out in `MQTTServicePulsarCallback.received()`.
+- The outbound value is `binaryPayload` when set, else the request text as UTF-8; a content type is not carried.
 - A single `deviceProducer` publishes all outbound messages to `to-device`, with the
   target MQTT topic set as both a message property and the partition key
   (`sendMessageToDevice()`).

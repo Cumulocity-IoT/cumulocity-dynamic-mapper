@@ -803,6 +803,63 @@ describe('applyCodeTemplateSample', () => {
     expect(mapping.mappingTopicSample).not.toBe('measurements/berlin_01');
   });
 
+  it('seeds the sample for an OUTBOUND ANY_PAYLOAD mapping but not for INBOUND ANY_PAYLOAD', () => {
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}' });
+    applyCodeTemplateSample(outbound, template({ sampleTopic: 'command/berlin_01' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
+    expect(outbound.sourceTemplate).toBe('{"sensorData":{"temp_val":23.5}}');
+    expect(outbound.publishTopicSample).toBe('command/berlin_01');
+
+    const inbound = makeMapping({ sourceTemplate: '{}', mappingTopicSample: '' });
+    applyCodeTemplateSample(inbound, template(), MappingType.ANY_PAYLOAD, Direction.INBOUND);
+    expect(inbound.sourceTemplate).toBe('{}');
+    expect(inbound.mappingTopicSample).toBe('');
+  });
+
+  it('seeds the publish topic from @publishTopic for OUTBOUND only', () => {
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}', publishTopic: '' });
+    applyCodeTemplateSample(outbound, template({ publishTopic: 'command/+' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
+    expect(outbound.publishTopic).toBe('command/+');
+
+    const inbound = makeMapping({ sourceTemplate: '{}', mappingTopic: '' });
+    applyCodeTemplateSample(inbound, template({ publishTopic: 'command/+' }), MappingType.JSON, Direction.INBOUND);
+    expect(inbound.publishTopic).not.toBe('command/+');
+  });
+
+  it('seeds the target API from @targetAPI for every mapping type and direction, and ignores an unknown API', () => {
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, targetAPI: 'MEASUREMENT' });
+    applyCodeTemplateSample(outbound, template({ targetAPI: 'OPERATION' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
+    expect(outbound.targetAPI).toBe('OPERATION');
+
+    const inboundBinary = makeMapping({ targetAPI: 'MEASUREMENT', mappingTopic: '' });
+    applyCodeTemplateSample(inboundBinary, template({ targetAPI: 'ALARM', mappingTopic: 'a/+' }), MappingType.ANY_PAYLOAD, Direction.INBOUND);
+    expect(inboundBinary.targetAPI).toBe('ALARM');
+    expect(inboundBinary.mappingTopic).toBe('a/+');
+
+    const unknown = makeMapping({ targetAPI: 'MEASUREMENT' });
+    applyCodeTemplateSample(unknown, template({ targetAPI: 'NOPE' }), MappingType.JSON, Direction.INBOUND);
+    expect(unknown.targetAPI).toBe('MEASUREMENT');
+  });
+
+  it('seeds the execution filter from @filterMapping for OUTBOUND only', () => {
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}', filterMapping: '' });
+    applyCodeTemplateSample(outbound, template({ filterMapping: '$exists(c8y_Command)' }), MappingType.ANY_PAYLOAD, Direction.OUTBOUND);
+    expect(outbound.filterMapping).toBe('$exists(c8y_Command)');
+
+    const inbound = makeMapping({ sourceTemplate: '{}', filterMapping: 'true' });
+    applyCodeTemplateSample(inbound, template({ filterMapping: '$exists(c8y_Command)' }), MappingType.JSON, Direction.INBOUND);
+    expect(inbound.filterMapping).toBe('true');
+  });
+
+  it('seeds the mapping topic from @mappingTopic for INBOUND only', () => {
+    const inbound = makeMapping({ sourceTemplate: '{}', mappingTopic: '' });
+    applyCodeTemplateSample(inbound, template({ mappingTopic: 'testSmartInbound/+' }), MappingType.JSON, Direction.INBOUND);
+    expect(inbound.mappingTopic).toBe('testSmartInbound/+');
+
+    const outbound = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}', mappingTopic: '' });
+    applyCodeTemplateSample(outbound, template({ mappingTopic: 'testSmartInbound/+' }), MappingType.JSON, Direction.OUTBOUND);
+    expect(outbound.mappingTopic).toBe('');
+  });
+
   it('leaves fields the template does not declare untouched', () => {
     const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: 'keep/me' });
 

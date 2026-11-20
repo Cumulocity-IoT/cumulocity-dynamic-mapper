@@ -60,8 +60,14 @@ Never edit it by hand; commit the result. The full chain is in
 ### 4. Update the prose
 
 - `dynamic-mapper-ui/public/docs/smartfunction.md` — the user-facing reference
-- `dynamic-mapper-service/src/main/resources/prompts/*.txt` — what the AI is told; for a
-  `_CONTEXT_DATA_` key, put it in the **right direction's** section
+- `dynamic-mapper-service/src/main/resources/agents/smartfunction_agent.json` (`agent.system`) — what the AI agent
+  is **really** told: the platform serves this file. `prompts/smartfunction_prompt.txt` mirrors it exactly
+  (`SmartFunctionApiContractTest` fails if they differ), so a change made in the `.txt` alone never reaches the agent.
+  Change the JSON, keeping `system` a one-line string (patch the raw text; do not reformat the file), then regenerate
+  the mirror: `python3 -c "import json;print(json.load(open('agents/smartfunction_agent.json'))['agent']['system'],end='')" > prompts/smartfunction_prompt.txt`
+  from `dynamic-mapper-service/src/main/resources`. For a `_CONTEXT_DATA_` key, put it in the **right
+  direction's** section. Existing tenants keep the prompt of an agent that already exists in the AI Agent Manager:
+  re-create the agent for the change to take effect there
 - A template in `dynamic-mapper-service/src/main/resources/templates/` if the change deserves an
   example — optional, but templates are what users copy
 

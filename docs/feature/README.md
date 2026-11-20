@@ -29,6 +29,7 @@ decided against rather than forgotten.
 | [mapping-processing-inbound.md](mapping-processing-inbound.md) | Broker → Cumulocity pipeline |
 | [inbound-flow-diagram.md](inbound-flow-diagram.md) | Supporting diagram: the inbound processor chain end to end |
 | [mapping-processing-outbound.md](mapping-processing-outbound.md) | Cumulocity → broker pipeline |
+| [outbound-payload-formats.md](outbound-payload-formats.md) | What an outbound Smart Function can send: JSON, raw text, Base64 or hex binary, content type, per-connector support |
 | [mapping-validation.md](mapping-validation.md) | The rules a mapping is checked against |
 | [mapping-versioning.md](mapping-versioning.md) | Drafts, publishing, rollback, retention |
 | [substitution-editor.md](substitution-editor.md) | The Transformation step's substitution list and editor, in a split view |

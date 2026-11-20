@@ -75,3 +75,8 @@ connector cannot verify the match, the mapping sees the Pulsar local name, for e
 
 For the Pulsar subscription name, the subscription type, and a comparison with Kafka and MQTT terms, see
 [Pulsar, Kafka, and MQTT compared](/c8y-pkg-dynamic-mapper/introduction/how-to-pulsar-kafka-mqtt).
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The message is
+produced as bytes, unchanged. A content type is not sent.

@@ -43,7 +43,7 @@ and is re-exported into the `dynamic-mapper-interface` module via a `build-helpe
 extensions (`processor/extension/external/inbound` and `outbound`) built against it:
 
 - [`ProcessorExtensionInbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionInbound.java) — `CumulocityObject[] onMessage(Message<O> message, JavaExtensionContext context)`. Broker message → array of Cumulocity objects (measurement, event, alarm, operation, managed object).
-- [`ProcessorExtensionOutbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionOutbound.java) — `DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context) throws ProcessingException`. Cumulocity payload → array of broker messages.
+- [`ProcessorExtensionOutbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionOutbound.java) — `DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context) throws ProcessingException`. Cumulocity payload → array of broker messages. The message payload can be JSON, text or bytes: see [outbound-payload-formats.md](outbound-payload-formats.md).
 
 Both follow the same "SMART function pattern" as Smart Functions: a pure function that
 returns what to emit, rather than an imperative API that calls back into a C8Y client
@@ -90,13 +90,32 @@ available, logging a warning and returning a safe default when it is not (e.g.
 
 ### Upload, listing and removal
 
-The UI (`dynamic-mapper-ui/src/extension/`) uploads the JAR to the Cumulocity binary repository and creates a managed
-object carrying the `d11r_processorExtension` fragment (`name`, `external`, ...); the service is not involved in the
-upload. The size cap (50 MB) is enforced in `AddExtensionComponent` only. The extension grid then triggers the
-admin-only `RELOAD_EXTENSIONS` operation (`ExtensionManager.reloadExtensions`) so the service loads it. The service
-exposes `GET /extension` and `GET /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`) and
-`DELETE /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN`). Per-tenant isolation comes from reading the
-extension managed objects as the calling tenant; the class loaders and the registry are keyed by tenant.
+`POST /extension` (`ROLE_DYNAMIC_MAPPER_ADMIN`) uploads an extension JAR; the UI's **Add Java Extension** dialog
+(`dynamic-mapper-ui/src/extension/`) and scripts use the same endpoint. The request is `multipart/form-data` with the
+`file`, an optional `name` (default: the file name without `.jar`) and `overwrite` (default `false`). The name is what
+mappings refer to; it must start with a letter or digit and contain only letters, digits, `.`, `_` and `-`.
+`ExtensionManager.uploadProcessorExtension` then, under the tenant's lock:
+
+1. rejects a file that is empty, larger than 50 MB (`ExtensionManager.MAX_EXTENSION_BYTES`, also the multipart limit in
+   `application.properties`), or has no `extension-external.yaml`;
+2. refuses an existing name unless `overwrite` is set (409), and always refuses a built-in extension's name;
+3. stores the JAR in the Cumulocity binary repository together with a managed object carrying the
+   `d11r_processorExtension` fragment (`name`, `external`), or replaces the file of the existing one;
+4. loads the extensions of the tenant and returns the registered one with `201`. If nothing could be loaded from the file
+   the response is `422` and a **new** upload is removed again; an overwritten file is not restored.
+
+Before this endpoint the UI wrote to the binary repository itself and the size cap lived in `AddExtensionComponent` only.
+The extension grid still triggers the admin-only `RELOAD_EXTENSIONS` operation (`ExtensionManager.reloadExtensions`) after
+the dialog closes; the upload has already loaded the extension on the instance that handled it, and the operation makes
+other instances pick it up. The service also exposes `GET /extension` and `GET /extension/{extensionName}`
+(`ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`) and `DELETE /extension/{extensionName}`
+(`ROLE_DYNAMIC_MAPPER_ADMIN`). Per-tenant isolation comes from reading the extension managed objects as the calling
+tenant; the class loaders and the registry are keyed by tenant.
+
+```bash
+curl -u "$TENANT/$USER:$PASSWORD" -F "file=@dynamic-mapper-extension.jar" \
+  "https://$HOST/service/dynamic-mapper-service/extension"
+```
 
 `DELETE` is guarded in `ExtensionController`:
 

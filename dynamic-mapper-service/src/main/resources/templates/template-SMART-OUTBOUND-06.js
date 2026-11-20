@@ -5,7 +5,10 @@
  *              severity becomes a numeric level (WARNING=1 .. CRITICAL=4) and a cleared alarm is
  *              sent as level 0. Alarms that are only acknowledged are not forwarded.
  * @templateType OUTBOUND_SMART_FUNCTION
+ * @targetAPI ALARM
  * @sampleTopic alarm/outbound/berlin_01
+ * @publishTopic alarm/outbound/+
+ * @filterMapping true
  * @samplePayload
  *   {
  *     "time": "2025-01-01T12:00:00.000Z",

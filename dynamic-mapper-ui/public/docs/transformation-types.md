@@ -18,7 +18,7 @@ Which types you can select depends on the payload type and the direction:
 |---|---|---|
 | JSON | Smart Function, JSONata | Smart Function, JSONata, Java Extension |
 | Flat File, Hexadecimal | Smart Function, JSONata | Not available |
-| Any Payload | Smart Function, Java Extension | Not available |
+| Any Payload | Smart Function, Java Extension | Smart Function, Java Extension |
 | SparkPlug B | Smart Function | Smart Function |
 
 **Quick-reference decision guide:**
@@ -30,7 +30,8 @@ Which types you can select depends on the payload type and the direction:
 | Familiar imperative JavaScript syntax per-field | **Smart Function** | JavaScript Substitutions have been removed in release 6.3; Smart Functions offer a superset of capabilities |
 | Full control over the output payload | **Smart Function** | You build the entire target object; all substitution types are bypassed |
 | Array inputs producing multiple C8Y objects | **Smart Function** | Return an array from the function; each element becomes a separate C8Y request |
-| Binary / Protobuf / unknown-format payloads | **Smart Function + Any Payload** | Payload is passed as a Base64 string; decode and parse it in your function |
+| Binary / Protobuf / unknown-format payloads | **Smart Function + Any Payload** | Inbound, the payload is passed as a Base64 string; decode and parse it in your function |
+| Send a raw device command or binary message to a broker | **Smart Function + Any Payload** (outbound) | Return a string to send it as text, or set `payloadEncoding` to `base64` or `hex` to send bytes. A Java Extension can also return a `byte[]` |
 | Java type safety, existing Java libraries, server-side execution | **Java Extension** | Packaged as a JAR uploaded to the Cumulocity tenant; compiled JVM performance |
 
 #### Defining a substitution using JSONata {#jsonata-substitution}

@@ -65,7 +65,7 @@ import {
  * - Accessing Cumulocity payload data
  * - Creating device messages with proper typing
  * - Using context.getConfig().externalId for the outbound topic
- * - Converting data to Uint8Array for transmission
+ * - Returning the payload as a JSON object, which the mapper serializes
  *
  * Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
  */

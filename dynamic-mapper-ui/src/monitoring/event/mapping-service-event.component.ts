@@ -413,7 +413,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       this.deletedMoIds.add(moId);
       this.alertService.success(gettext('Mapping deleted.'));
     } catch (error) {
-      this.alertService.danger(gettext('Failed to delete mapping'), error as any);
+      this.alertService.danger(gettext('Failed to delete mapping'), error instanceof Error ? error.message : String(error));
     }
     this.cdr.markForCheck();
   }

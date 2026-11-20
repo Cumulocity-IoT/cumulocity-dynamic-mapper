@@ -827,6 +827,46 @@ public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOu
 }
 ```
 
+#### Sending text or binary instead of JSON
+
+The payload of a returned `DeviceMessage` is not limited to JSON. An extension can send a raw device
+command or a binary protocol message, with a mapping of type **Any Payload** and transformation type
+**Java Extension** (outbound):
+
+```java
+// Raw text, sent exactly as given: no quotes, no JSON
+DeviceMessage.forTopic("command/" + context.getExternalId())
+    .payload("AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$")
+    .build();
+
+// Binary: pass the bytes; they are sent unchanged
+DeviceMessage.forTopic("device/fw").payload(protobufBytes).build();
+
+// Binary from text, and an explicit content type
+DeviceMessage.forTopic("device/fw")
+    .payload("AAEC/w==").payloadEncoding(DeviceMessage.ENCODING_BASE64)
+    .contentType("application/x-protobuf")
+    .build();
+```
+
+| Payload | `payloadEncoding` | Sent as |
+|---|---|---|
+| `Map` or object | none | JSON |
+| `String` that is not JSON | none | text, `text/plain` |
+| `String` that is a JSON array or scalar | none | unchanged, connector default content type (as before) |
+| `String` starting with `{` | none | JSON text with enrichment and API routing (as before); use `ENCODING_TEXT` to send it as text |
+| `byte[]` that is not JSON | none | bytes, `application/octet-stream` |
+| `byte[]` that is a JSON array or scalar | none | sent as JSON text (as before) |
+| `byte[]` starting with `{` | none | JSON text with enrichment and API routing (as before) |
+| `byte[]` | `ENCODING_JSON` | JSON text, as before |
+| `String` | `ENCODING_TEXT` | text |
+| `String` | `ENCODING_BASE64` or `ENCODING_HEX` | the decoded bytes |
+| `String` | `ENCODING_JSON` | a JSON string value, with quotes |
+
+Text and binary go to the broker only: they are never routed to a Cumulocity API, so `cumulocityType` and
+an API-style topic have no effect. See [outbound-payload-formats.md](feature/outbound-payload-formats.md)
+for connector support and the full rules. Inbound extensions already receive any payload as `byte[]`.
+
 ### Registration
 
 Register each extension class in `dynamic-mapper-extension/src/main/resources/extension-external.properties`:
@@ -844,7 +884,7 @@ Build steps:
 1. Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` in `dynamic-mapper-extension`
 2. Register the class in `extension-external.properties`
 3. Build the JAR: `cd dynamic-mapper-extension && mvn package`
-4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI
+4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI, or with `POST /extension` (multipart form, field `file`; see [transformation-java-extensions.md](feature/transformation-java-extensions.md))
 5. Create a mapping with `transformationType: EXTENSION_JAVA` and select the uploaded extension and its registered event name in the Transformation section
 
 > **Note:** The `RepairStrategy.CREATE_IF_MISSING` strategy is available in inbound extensions. It creates a target node if it does not exist, which is useful for mappings that must adapt to payloads with dynamic or optional fields.
@@ -884,6 +924,7 @@ See `dynamic-mapper-extension/src/main/java/dynamic/mapper/processor/extension/e
 | `inbound/ProcessorExtensionSparkplugBMeasurement.java` | Inbound | Sparkplug B binary → C8Y measurement |
 | `outbound/ProcessorExtensionAlarmToCustomJson.java` | Outbound | C8Y alarm → custom JSON |
 | `outbound/ProcessorExtensionAlarmToSparkplugB.java` | Outbound | C8Y alarm → Sparkplug B binary |
+| `outbound/ProcessorExtensionSmartOutbound07.java` | Outbound | C8Y operation → raw text command (Any Payload) |
 
 ---
 

@@ -30,7 +30,7 @@ Coverage matrix: payload formats × transformation types × direction.
 | SPARKPLUGB | Inbound | n/a | n/a | ⬜ | n/a |
 | SPARKPLUGB | Outbound | n/a | n/a | ✅ | n/a |
 | ANY_PAYLOAD | Inbound | n/a | n/a | ⬜ | ⬜ |
-| ANY_PAYLOAD | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
+| ANY_PAYLOAD | Outbound | n/a | n/a | ✅ | ✅ |
 
 **Legend:** ✅ covered · ⬜ gap · n/a not applicable · 🚫 not supported (direction rejected by model)
 
@@ -62,14 +62,17 @@ These tests exercise individual processor steps in isolation using Mockito mocks
 | `DeserializationOutboundProcessorTest` | C8Y notification deserialization |
 | `EnrichmentOutboundProcessorTest` | External ID resolution, `_IDENTITY_` outbound |
 | `FlowOutboundProcessorTest` | Outbound flow-processor dispatch |
-| `FlowResultOutboundProcessorTest` | Outbound result collection |
+| `FlowResultOutboundProcessorTest` | Outbound result collection, including text, Base64 and hex payloads and content types |
+| `ExtensibleResultOutboundProcessorTest` | Java extension results: JSON unchanged, text, `byte[]`, `payloadEncoding`, content type |
+| `OutboundRawPayloadTest` (`processor/util/`) | The rules that decide how an outbound payload is sent: JSON, text, Base64/hex, `byte[]`, JSON-document handling |
+| `DynamicMapperRequestCompatibilityTest` (`model/`) | The all-args constructors of `DeviceMessage` and `DynamicMapperRequest` from earlier versions still exist |
 | `JSONataOutboundProcessorTest` | JSONata on C8Y payload, `filterMapping` evaluation |
 | `AbstractEnrichmentProcessorTest` (`processor/`) | Shared enrichment: status counters, GraalVM context acquisition, error handling |
 | `SendInboundProcessorParallelTest` | Parallel request emission to Cumulocity |
 | `AnyPayloadInboundTest` | ANY_PAYLOAD inbound via SMART_FUNCTION and EXTENSION_JAVA |
 | `SparkplugBDeserializerTest` (`inbound/deserializer/`) | Sparkplug B decoding |
 
-**Note:** HEX outbound, FLAT_FILE outbound, and ANY_PAYLOAD outbound are not supported directions and require no tests.
+**Note:** HEX outbound and FLAT_FILE outbound are not supported directions and require no tests. ANY_PAYLOAD outbound is supported with SMART_FUNCTION and EXTENSION_JAVA: see `OutboundRawPayloadTest`, `OutboundAnyPayloadPipelineIntegrationTest` and the connector tests below.
 
 ### 1.2 Unit Tests — Smart Functions (GraalVM)
 
@@ -146,6 +149,7 @@ These start at the dispatcher entry point (`InboundMessageDispatcher.onMessage()
 
 | Test Class / Method | What it verifies |
 |--------------------|-----------------|
+| `OutboundAnyPayloadPipelineIntegrationTest` | Any Payload outbound end to end through the real router with real GraalVM JavaScript and a Java extension: raw text, Base64/hex bytes, mixed output, `JSON.stringify` strings, invalid encoding fails; a mocked connector records what is published |
 | `OutboundPipelineIntegrationTest` | |
 | `testDispatcherOnNotification_MeasurementCreate` | Measurement → broker |
 | `testDispatcherOnNotification_EventCreate` | Event → broker |
@@ -208,6 +212,9 @@ All under `connector/`.
 | `AMQPClientTest` | AMQP initialization and configuration; QoS clamped to the connector capability; `supportedQos` reaching the specification |
 | `GooglePubSubClientTest` | Ack-before-processing vs. ack-after-success / nack-on-error; topic resolution; config validation |
 | `WebHookTest` | Webhook connector HTTP endpoint binding |
+| `WebHookPublishTest` | Webhook body bytes and `Content-Type` on the wire (real local HTTP server): JSON, text, binary, PUT/PATCH |
+| `AMQP10ClientPublishTest` | AMQP 1.0 bytes message vs text message, content type from the request or the connector |
+| `MQTT5ClientPublishTest` | MQTT 5 content type property |
 | `MappingSubscriptionManagerTest` (`core/client/`) | Reference-counted topic subscriptions, max-QoS-per-topic, QoS upgrade on add and on reconcile |
 | `ConnectorRetryReconnectTest` (`core/client/`) | Disconnect → retry → reconnect cycle |
 | `AConnectorClientSubscriptionInitRetryTest` (`core/client/`) | Retry of the initial subscription set-up |
@@ -259,12 +266,12 @@ All under `notification/`.
 | `MQTTServicePulsarClientTest` | Pulsar client construction and config |
 | `ConnectorConfigurationServiceTest` | Connector config CRUD, validation |
 
-**Missing:** MQTT5Client, KafkaClientV2, PulsarConnectorClient, AMQP10Client and HttpClient unit tests.
+**Missing:** broad unit tests for MQTT5Client, KafkaClientV2, PulsarConnectorClient, AMQP10Client and HttpClient. Only their outbound text/binary publish paths are covered (`MQTT5ClientPublishTest`, `KafkaClientV2BrokerOutageTest`, `PulsarConnectorClientTest`, `AMQP10ClientPublishTest`).
 
 ### 1.6 Gaps in Backend Tests
 
 > **Not supported** (rejected by `MappingTypeDescriptionMap` — `directionSupported: false`):
-> HEX outbound, FLAT_FILE outbound, ANY_PAYLOAD outbound.
+> HEX outbound, FLAT_FILE outbound.
 > These combinations do not exist and must **not** be tested.
 
 Previously tracked gaps — ANY_PAYLOAD inbound, Sparkplug B inbound, GraalVM sandbox security,
@@ -538,6 +545,7 @@ Create a C8Y object or manage a subscription and verify the broker or mapper sta
 | `test-outbound-filter.sh` | filterMapping — selective forwarding |
 | `test-outbound-topic-resolution.sh` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction.sh` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-anypayload-smartfunction.sh` | Any Payload outbound Smart Function: Operation → raw text command and Base64 binary, exact bytes on the broker |
 | `test-outbound-smartfunction-externalsource.sh` | Smart Function externalSource → _externalId_ topic (broker round-trip) |
 | `test-outbound-smartfunction-molookup.sh` | Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment |
 | `test-outbound-static-subscription.sh` | Static subscription management |

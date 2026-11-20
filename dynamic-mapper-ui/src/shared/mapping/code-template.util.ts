@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Direction, Mapping, MappingType } from './mapping.model';
+import { API, Direction, Mapping, MappingType } from './mapping.model';
 import type { CodeTemplate } from '../configuration/configuration.model';
 
 // ─── String / template utilities ─────────────────────────────────────────────
@@ -113,10 +113,34 @@ export function applyCodeTemplateSample(
   mappingType: MappingType,
   direction: Direction
 ): void {
-  if (!codeTemplate || mappingType !== MappingType.JSON) {
+  if (!codeTemplate) {
     return;
   }
-  const { samplePayload, sampleTopic } = codeTemplate;
+  const { samplePayload, sampleTopic, publishTopic, mappingTopic, filterMapping, targetAPI } = codeTemplate;
+
+  // What the template reads or writes does not depend on how the payload is encoded, so these apply to
+  // every mapping type. An unknown API name is ignored rather than written into the mapping.
+  if (targetAPI && Object.values(API).some(api => api.name === targetAPI)) {
+    mapping.targetAPI = targetAPI;
+  }
+  if (mappingTopic && direction === Direction.INBOUND) {
+    mapping.mappingTopic = mappingTopic;
+  }
+  if (filterMapping && direction === Direction.OUTBOUND) {
+    mapping.filterMapping = filterMapping;
+  }
+  if (publishTopic && direction === Direction.OUTBOUND) {
+    mapping.publishTopic = publishTopic;
+  }
+
+  // OUTBOUND ANY_PAYLOAD also takes a JSON sample: its source is the Cumulocity message (JSON);
+  // only the published payload is raw. INBOUND ANY_PAYLOAD sources are raw bytes, so it is excluded.
+  const takesJsonSample =
+    mappingType === MappingType.JSON ||
+    (mappingType === MappingType.ANY_PAYLOAD && direction === Direction.OUTBOUND);
+  if (!takesJsonSample) {
+    return;
+  }
   if (samplePayload) {
     mapping.sourceTemplate = samplePayload;
   }

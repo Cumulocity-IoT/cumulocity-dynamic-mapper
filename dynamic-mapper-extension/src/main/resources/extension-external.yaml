@@ -109,6 +109,11 @@ extensions:
     description: Measurement processor with Kafka key generation support
     version: "2.0"
 
+  - eventName: OperationToTextCommand
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound07
+    description: Operation to a raw text command (for example an AT command), for an Any Payload mapping
+    version: "2.0"
+
   - eventName: AlarmToSparkplugB
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB
     parameter:

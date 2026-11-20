@@ -589,7 +589,9 @@ export function createCompletionProviderFlowFunction(monaco: typeof Monaco, dire
             `- \`context: SmartFunctionContext\` — Runtime context with state, config, and device lookups\n\n` +
             `**Returns** \`DeviceMessage | DeviceMessage[]\` with these fields:\n` +
             `- \`topic\` — Broker topic to publish to (omit to use the mapping's fixed publish topic)\n` +
-            `- \`payload\` — Message body: plain JSON object (auto-serialized) or \`Uint8Array\` for binary protocols\n` +
+            `- \`payload\` — Message body: a plain JSON object (auto-serialized), a string (sent as raw text, e.g. a device command such as \`"AT+GTUPD=…$"\`), or \`Uint8Array\`\n` +
+            `- \`payloadEncoding\` — Optional: \`"json"\`, \`"text"\`, \`"base64"\` or \`"hex"\`. With \`"base64"\` / \`"hex"\` the string payload is decoded and the bytes are sent (binary protocols). Omit it to infer: object → JSON, string → text\n` +
+            `- \`contentType\` — Optional content type, e.g. \`"text/plain"\`; used by connectors that can carry one (Webhook, AMQP, MQTT 5, Kafka header)\n` +
             `- \`transportFields\` — Transport-specific metadata, e.g. \`{ "key": externalId }\` for Kafka partition key\n` +
             `- \`transportId\` — Target transport identifier (e.g. \`"mqtt"\`, \`"kafka"\`)\n` +
             `- \`clientId\` — MQTT/transport client ID for the outgoing message\n\n` +

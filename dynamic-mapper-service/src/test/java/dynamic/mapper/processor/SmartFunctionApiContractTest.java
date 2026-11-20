@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,6 +32,7 @@ import java.nio.file.Path;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import org.graalvm.polyglot.Context;
 
 import dynamic.mapper.model.API;
+import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.model.InputMessage;
 import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
@@ -210,6 +213,89 @@ class SmartFunctionApiContractTest {
             assertTrue(phantom.isEmpty(),
                     prompt + " teaches msg field(s) the runtime does not set: " + phantom
                             + ". Available: " + api);
+        }
+    }
+
+    /** The output fields a Smart Function can use to choose how an outbound payload is put on the wire. */
+    private static final List<String> OUTBOUND_PAYLOAD_FORMAT_FIELDS = List.of("payloadEncoding", "contentType");
+
+    /**
+     * The system prompt the AI agent really runs with. {@code prompts/smartfunction_prompt.txt} only mirrors it and has
+     * already drifted, so a change to the prompt that is made in the mirror alone never reaches the agent.
+     */
+    private static String agentSystemPrompt() throws IOException {
+        return new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(read("agents/smartfunction_agent.json")).path("agent").path("system").asText();
+    }
+
+    @Test
+    @DisplayName("the agent prompt the platform serves and its .txt mirror are identical")
+    void agentPromptAndItsMirrorAreIdentical() throws IOException {
+        // They had drifted apart in both directions: the JSON lacked newer runtime features (isDuplicate,
+        // additionalSamples) and the .txt lacked the header and Any Payload rules, so each check made against one of
+        // them said nothing about what the agent really runs with. Change the JSON, then copy it into the .txt:
+        //   python3 -c "import json;print(json.load(open('agents/smartfunction_agent.json'))['agent']['system'],end='')" \
+        //     > prompts/smartfunction_prompt.txt
+        assertEquals(agentSystemPrompt().strip(), read("prompts/smartfunction_prompt.txt").strip(),
+                "agents/smartfunction_agent.json (agent.system) and prompts/smartfunction_prompt.txt differ. "
+                        + "The agent runs the JSON; the .txt must mirror it exactly.");
+    }
+
+    @Test
+    @DisplayName("the Smart Function agent prompt (the JSON the platform serves and its .txt mirror) teaches the outbound payload formats")
+    void promptTeachesTheOutboundPayloadFormats() throws IOException {
+        Map<String, String> prompts = new LinkedHashMap<>();
+        prompts.put("agents/smartfunction_agent.json (agent.system)", agentSystemPrompt());
+        prompts.put("prompts/smartfunction_prompt.txt", read("prompts/smartfunction_prompt.txt"));
+
+        for (Map.Entry<String, String> entry : prompts.entrySet()) {
+            String where = entry.getKey();
+            String prompt = entry.getValue();
+
+            for (String field : OUTBOUND_PAYLOAD_FORMAT_FIELDS) {
+                assertTrue(Arrays.stream(DeviceMessage.class.getDeclaredFields()).anyMatch(f -> f.getName().equals(field)),
+                        "DeviceMessage no longer declares '" + field + "': update OUTBOUND_PAYLOAD_FORMAT_FIELDS and the prompt");
+                assertTrue(prompt.contains(field + "?:"),
+                        where + ": the DeviceMessage interface does not declare '" + field + "'");
+            }
+            // Every encoding the runtime accepts, so a new one cannot be added without telling the AI
+            for (Field f : DeviceMessage.class.getFields()) {
+                if (f.getName().startsWith("ENCODING_")) {
+                    assertTrue(prompt.contains("\"" + getStatic(f) + "\""),
+                            where + ": does not mention the payload encoding \"" + getStatic(f) + "\"");
+                }
+            }
+            // The guidance, not just the declaration
+            assertTrue(prompt.contains("Direction OUTBOUND with `mappingType` ANY_PAYLOAD"),
+                    where + ": no guidance for outbound Any Payload mappings");
+            assertTrue(prompt.contains("NOT a Base64 string"),
+                    where + ": must say that msg.payload of an outbound Any Payload mapping is an object");
+            assertTrue(prompt.contains("NEVER an entry of `transportFields`"),
+                    where + ": must say that contentType is not a transport field (the runtime would ignore it)");
+        }
+
+        // The agent prompt used to say that every ANY_PAYLOAD message is Base64; that holds for INBOUND only
+        String agent = prompts.values().iterator().next();
+        assertFalse(agent.contains("If it is `ANY_PAYLOAD`, the broker message is raw bytes"),
+                "the agent prompt must restrict the raw-bytes rules of ANY_PAYLOAD to INBOUND mappings");
+        assertTrue(agent.contains("`ANY_PAYLOAD` and `direction` is INBOUND"),
+                "the agent prompt must restrict the raw-bytes rules of ANY_PAYLOAD to INBOUND mappings");
+    }
+
+    @Test
+    @DisplayName("the in-app docs describe the outbound payload format fields")
+    void docsDescribeTheOutboundPayloadFormats() throws IOException {
+        String docs = readDocs();
+        for (String field : OUTBOUND_PAYLOAD_FORMAT_FIELDS) {
+            assertTrue(docs.contains(field), USER_DOCS + " does not describe the output field '" + field + "'");
+        }
+    }
+
+    private static Object getStatic(Field f) {
+        try {
+            return f.get(null);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
         }
     }
 

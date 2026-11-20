@@ -5,7 +5,9 @@
  *              client ID from context (not the payload) as the device identifier.
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
+ * @targetAPI MEASUREMENT
  * @sampleTopic perDevStats/sensor-001
+ * @mappingTopic perDevStats/+
  * @samplePayload
  *   {
  *     "temperature": 23.5

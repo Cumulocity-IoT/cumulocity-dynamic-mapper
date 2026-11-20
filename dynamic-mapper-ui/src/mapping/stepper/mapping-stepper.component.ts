@@ -164,6 +164,9 @@ export class MappingStepperComponent extends MappingEditorBase implements OnInit
   }
 
   private async handleGeneralSettingsStep(): Promise<void> {
+    // Show what is still missing (red border, "required") on arrival, not only after the user touches a field.
+    this.propertyFormly.markAllAsTouched();
+    this.cdr.markForCheck();
     this.templatesInitialized = false;
     await this.reloadExtensions();
   }

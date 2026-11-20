@@ -114,6 +114,14 @@ export interface CodeTemplate {
   samplePayload?: string;
   /** A topic matching {@link samplePayload} (`@sampleTopic`). */
   sampleTopic?: string;
+  /** The topic pattern an OUTBOUND template publishes to (`@publishTopic`), e.g. `command/+`. */
+  publishTopic?: string;
+  /** The topic pattern an INBOUND template subscribes to (`@mappingTopic`), e.g. `sensors/+`. */
+  mappingTopic?: string;
+  /** The execution filter an OUTBOUND template is written for (`@filterMapping`), a JSONata expression. */
+  filterMapping?: string;
+  /** The Cumulocity API the template reads (OUTBOUND) or writes (INBOUND) (`@targetAPI`), e.g. `OPERATION`. */
+  targetAPI?: string;
 }
 
 export interface CodeTemplateMap {

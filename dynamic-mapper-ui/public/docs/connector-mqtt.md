@@ -53,3 +53,9 @@ by default. `+` matches one level and `#` matches the remaining levels. Topic le
 | **Sparkplug host ID** | The host ID used in those certificates. Shown only when **Sparkplug host** is on. If you leave it empty, the tenant name is used. |
 
 See [SparkPlug B](/c8y-pkg-dynamic-mapper/introduction/sparkplugb) for the protocol details.
+
+#### Text and binary payloads (outbound)
+
+A Smart Function or Java Extension can send text or binary instead of JSON (see [Any Payload](/c8y-pkg-dynamic-mapper/introduction/payload-types)). The payload is
+published unchanged. With MQTT 5, a content type set on the message is sent as the MQTT 5 content type property.
+MQTT 3.1.1 has no content type.

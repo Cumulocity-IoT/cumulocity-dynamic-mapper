@@ -272,11 +272,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
-  /** The test sends the `payload` string of the source template rather than the template itself. */
+  /**
+   * The test sends the `payload` string of the source template rather than the template itself.
+   * Only inbound: an outbound Any Payload mapping reads a Cumulocity JSON object, and only its output is free-form.
+   */
   protected requiresRawPayload(): boolean {
     return this.testMapping?.mappingType === MappingType.HEX ||
            this.testMapping?.mappingType === MappingType.FLAT_FILE ||
-           this.testMapping?.mappingType === MappingType.ANY_PAYLOAD;
+           (this.testMapping?.mappingType === MappingType.ANY_PAYLOAD &&
+            this.testMapping?.direction !== Direction.OUTBOUND);
   }
 
   /** Whitespace and line terminators only matter for text formats; ANY_PAYLOAD carries base64. */
@@ -486,6 +490,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
     if (parsed.some(p => p.wrapped)) {
       staticLogs.push('INFO ' + this.t(gettext('A request or response is not a JSON object, so it is shown as text under "payload".')));
+    }
+    if (result.requests.some(req => req.binaryPayload)) {
+      staticLogs.push('INFO ' + this.t(gettext('A binary payload is sent as bytes. The text shown is the Base64 or hexadecimal text it was decoded from.')));
     }
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];

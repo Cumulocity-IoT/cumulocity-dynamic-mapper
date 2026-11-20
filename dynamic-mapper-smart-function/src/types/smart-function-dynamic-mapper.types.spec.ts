@@ -536,3 +536,35 @@ describe('mock context.isDuplicate', () => {
     expect(ctx.isDuplicate({ b: [2, 3], a: 1 }, 60)).toBe(true);
   });
 });
+
+describe('DeviceMessage payload', () => {
+  it('accepts a raw text command with an inferred encoding', () => {
+    const msg: DeviceMessage = {
+      topic: 'queclink/cmd/123',
+      payload: 'AT+GTUPD=gv300,0,,,http://example.com/fw.bin,,,$'
+    };
+
+    expect(typeof msg.payload).toBe('string');
+    expect(msg.payloadEncoding).toBeUndefined();
+  });
+
+  it('accepts an explicit payloadEncoding', () => {
+    const text: DeviceMessage = { payload: '{not json}', payloadEncoding: 'text' };
+    const json: DeviceMessage = { payload: { a: 1 }, payloadEncoding: 'json' };
+
+    expect(text.payloadEncoding).toBe('text');
+    expect(json.payloadEncoding).toBe('json');
+  });
+
+  it('accepts a binary payload with a content type', () => {
+    const msg: DeviceMessage = {
+      topic: 'device/fw',
+      payload: 'AAEC/w==',
+      payloadEncoding: 'base64',
+      contentType: 'application/x-protobuf'
+    };
+
+    expect(msg.payloadEncoding).toBe('base64');
+    expect(msg.contentType).toBe('application/x-protobuf');
+  });
+});

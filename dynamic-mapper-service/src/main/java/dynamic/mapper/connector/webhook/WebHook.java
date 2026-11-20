@@ -488,6 +488,17 @@ public class WebHook extends AConnectorClient {
             RequestMethod method = request.getMethod();
             API derivedAPI = request.getApi();
 
+            // A raw payload is for a broker or an external webhook only: never route it to a Cumulocity API
+            if (cumulocityInternal && request.isRawPayload()) {
+                log.warn("{} - Raw payload cannot be sent to Cumulocity ({}/{}), skipping", tenant, i + 1,
+                        requests.size());
+                Exception rejected = new Exception(
+                        "A raw payload cannot be sent to Cumulocity: use a connector for an external system");
+                request.setError(rejected);
+                context.addError(new ProcessingException(rejected.getMessage(), rejected));
+                continue;
+            }
+
             // For cumulocityInternal, resolve API and path from the request metadata
             if (cumulocityInternal) {
                 String publishTopic = request.getPublishTopic() != null
@@ -526,7 +537,8 @@ public class WebHook extends AConnectorClient {
                     tenant, i + 1, requests.size(), fullPath, method, request.getApi());
 
             try {
-                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload, context);
+                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload, context,
+                        cumulocityInternal ? null : request);
 
                 ResponseEntity<String> response = responseEntity.timeout(REQUEST_TIMEOUT).block();
 
@@ -617,27 +629,33 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute HTTP request based on method
      */
-    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload, ProcessingContext<?> context) {
+    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload,
+            ProcessingContext<?> context, DynamicMapperRequest rawRequest) {
+        // Only a request to an external system can carry a raw body: the Cumulocity-internal path always sends JSON
+        Object body = rawRequest != null && rawRequest.getBinaryPayload() != null ? rawRequest.getBinaryPayload() : payload;
+        MediaType mediaType = rawRequest != null && rawRequest.getContentType() != null
+                ? MediaType.parseMediaType(rawRequest.getContentType())
+                : MediaType.APPLICATION_JSON;
         switch (method) {
             case PUT:
-                return executePut(path, payload);
+                return executePut(path, body, mediaType);
             case DELETE:
                 return executeDelete(path);
             case PATCH:
-                return executePatch(path, payload, context);
+                return executePatch(path, payload, body, mediaType, context);
             default:
-                return executePost(path, payload);
+                return executePost(path, body, mediaType);
         }
     }
 
     /**
      * Execute POST request
      */
-    private Mono<ResponseEntity<String>> executePost(String path, String payload) {
+    private Mono<ResponseEntity<String>> executePost(String path, Object body, MediaType mediaType) {
         return webhookClient.post()
                 .uri(path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(payload), String.class)
+                .contentType(mediaType)
+                .bodyValue(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, this::handleClientError)
                 .onStatus(HttpStatusCode::is5xxServerError, this::handleServerError)
@@ -647,11 +665,11 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute PUT request
      */
-    private Mono<ResponseEntity<String>> executePut(String path, String payload) {
+    private Mono<ResponseEntity<String>> executePut(String path, Object body, MediaType mediaType) {
         return webhookClient.put()
                 .uri(path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(payload), String.class)
+                .contentType(mediaType)
+                .bodyValue(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, this::handleClientError)
                 .onStatus(HttpStatusCode::is5xxServerError, this::handleServerError)
@@ -673,7 +691,8 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute PATCH request
      */
-    private Mono<ResponseEntity<String>> executePatch(String path, String payload, ProcessingContext<?> context) {
+    private Mono<ResponseEntity<String>> executePatch(String path, String payload, Object body, MediaType mediaType,
+            ProcessingContext<?> context) {
         if (isCumulocityInternal()) {
             // For Cumulocity internal, do GET + merge + PUT
             return patchObject(path, payload, context);
@@ -681,8 +700,8 @@ public class WebHook extends AConnectorClient {
             // For external, do direct PATCH
             return webhookClient.patch()
                     .uri(path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Mono.just(payload), String.class)
+                    .contentType(mediaType)
+                    .bodyValue(body)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, this::handleClientError)
                     .onStatus(HttpStatusCode::is5xxServerError, this::handleServerError)

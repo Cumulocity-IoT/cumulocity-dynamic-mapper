@@ -39,10 +39,12 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import jakarta.jms.BytesMessage;
 import jakarta.jms.Connection;
 import jakarta.jms.DeliveryMode;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
+import jakarta.jms.Message;
 import jakarta.jms.MessageConsumer;
 import jakarta.jms.MessageProducer;
 import jakarta.jms.Session;
@@ -429,12 +431,15 @@ public class AMQP10Client extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] binaryPayload = request.getBinaryPayload();
+            String payload = binaryPayload != null
+                    ? new String(binaryPayload, java.nio.charset.StandardCharsets.UTF_8)
+                    : request.getRequest();
             String address = request.getPublishTopic() != null
                     ? request.getPublishTopic()
                     : context.getResolvedPublishTopic();
@@ -450,8 +455,17 @@ public class AMQP10Client extends AConnectorClient {
                     Destination destination = resolveDestination(address);
                     MessageProducer producer = getOrCreateProducer(address, destination);
 
-                    TextMessage message = session.createTextMessage(payload);
-                    String contentType = (String) connectorConfiguration.getProperties().get("contentType");
+                    Message message;
+                    if (binaryPayload != null) {
+                        BytesMessage bytesMessage = session.createBytesMessage();
+                        bytesMessage.writeBytes(binaryPayload);
+                        message = bytesMessage;
+                    } else {
+                        message = session.createTextMessage(payload);
+                    }
+                    String contentType = request.getContentType() != null
+                            ? request.getContentType()
+                            : (String) connectorConfiguration.getProperties().get("contentType");
                     if (StringUtils.isNotEmpty(contentType)) {
                         message.setStringProperty("JMS_AMQP_ContentType", contentType);
                     }
@@ -712,7 +726,7 @@ public class AMQP10Client extends AConnectorClient {
                 .property("contentType", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .label("Content type")
-                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it.")
+                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it. A content type set on a message by a Smart Function or Java extension takes precedence.")
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)

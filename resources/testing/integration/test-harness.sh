@@ -1909,6 +1909,23 @@ dm_mqtt_subscribe_one_verbose() {   # <topic> [timeout_secs=10]
     mosquitto_sub "${_args[@]}"
 }
 
+# Like dm_mqtt_subscribe_one but prints the payload as lowercase hex (mosquitto_sub -F %x, no spaces,
+# no trailing newline from the payload), so callers can assert the exact BYTES a message carried:
+# a text payload without quotes or JSON wrapping, or a binary payload that is not valid UTF-8.
+dm_mqtt_subscribe_one_hex() {   # <topic> [timeout_secs=10]
+    local _topic=$1 _timeout=${2:-10}
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout" -F "%x")
+    _dm_mqtt_append_auth_args _args "dmtest-sub-$$-${RANDOM}"
+    _dm_mqtt_append_tls_args _args
+    mosquitto_sub "${_args[@]}"
+}
+
+# The lowercase hex of a string's bytes, as dm_mqtt_subscribe_one_hex prints a payload.
+dm_hex_of() {   # <string>
+    printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n'
+}
+
 # Prime a topic subscription to reduce timing races where a test publishes before
 # the background subscriber is fully established.
 #

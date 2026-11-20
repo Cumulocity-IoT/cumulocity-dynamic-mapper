@@ -523,8 +523,10 @@ public class MQTT5Client extends AMQTTClient {
                         .qos(mqttQos)
                         .payload(payloadBytes);
 
-                // MQTT5 specific: can add user properties, content type, etc.
-                // Example: messageBuilder.contentType("application/json");
+                // MQTT5 specific: the content type travels with the message
+                if (request.getContentType() != null) {
+                    messageBuilder.contentType(request.getContentType());
+                }
 
                 Mqtt5Publish message = messageBuilder.build();
 

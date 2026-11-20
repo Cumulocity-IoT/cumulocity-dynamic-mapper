@@ -7,7 +7,9 @@
  *              Repeated messages for the same device and alarm type update the existing alarm
  *              instead of creating a second one.
  * @templateType INBOUND_SMART_FUNCTION
+ * @targetAPI ALARM
  * @sampleTopic testAlarm/sensor-berlin-01
+ * @mappingTopic testAlarm/+
  * @samplePayload
  *   {
  *     "code": "Overheat",

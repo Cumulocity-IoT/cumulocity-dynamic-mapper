@@ -44,8 +44,15 @@ measurement_count() {
 }
 
 topic_subscribed() {   # prints true/false for this mapping's topic on the MQTT connector
-    dm_api GET "/monitoring/subscription/${_DM_MQTT_CONNECTOR_ID}" \
-        | jq -r --arg t "dmtest/reconcile/+" 'if type=="object" then (((.[$t] // 0)|tonumber? // 0) > 0) else false end'
+    # dm_api prints its WARN line to stdout on a failed GET, which would corrupt the
+    # jq input. Drop that line; an error or an empty subscription map
+    # (nothing subscribed any more) both mean "not subscribed".
+    local _out
+    _out=$(dm_api GET "/monitoring/subscription/${_DM_MQTT_CONNECTOR_ID}" 2>/dev/null | grep -v 'WARN: dm_api' || true)
+    [ -z "$_out" ] && { printf 'false'; return 0; }
+    printf '%s' "$_out" \
+        | jq -r --arg t "dmtest/reconcile/+" 'if type=="object" then (((.[$t] // 0)|tonumber? // 0) > 0) else false end' 2>/dev/null \
+        || printf 'false'
 }
 
 dm_parse_args "$@"
