@@ -715,6 +715,9 @@ msgstr ""
 msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
 msgstr ""
 
+msgid "Describe what changed in this version"
+msgstr ""
+
 msgid "Description"
 msgstr ""
 
@@ -3461,9 +3464,6 @@ msgid "open"
 msgstr ""
 
 msgid "operation"
-msgstr ""
-
-msgid "optional"
 msgstr ""
 
 msgid "outbound"

@@ -702,6 +702,9 @@ msgstr ""
 msgid "Deprecated — use Any Payload with Java Extension transformation type instead."
 msgstr ""
 
+msgid "Describe what changed in this version"
+msgstr ""
+
 msgid "Details & logs"
 msgstr ""
 
@@ -2016,9 +2019,6 @@ msgid "Open the Message Explorer from the mapper navigation menu."
 msgstr ""
 
 msgid "operation"
-msgstr ""
-
-msgid "optional"
 msgstr ""
 
 msgid "Optional YAML parameter passed to the extension."
