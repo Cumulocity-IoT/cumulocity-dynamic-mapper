@@ -20,6 +20,7 @@
 import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { Subject } from 'rxjs';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
@@ -123,9 +124,9 @@ export class PublishVersionModalComponent implements OnInit {
   @Input() activate = true;
 
   readonly bumps: { key: 'patch' | 'minor' | 'major'; label: string }[] = [
-    { key: 'patch', label: 'Patch' },
-    { key: 'minor', label: 'Minor' },
-    { key: 'major', label: 'Major' }
+    { key: 'patch', label: gettext('Patch') },
+    { key: 'minor', label: gettext('Minor') },
+    { key: 'major', label: gettext('Major') }
   ];
 
   version = '';
