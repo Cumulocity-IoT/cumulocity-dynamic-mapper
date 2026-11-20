@@ -316,6 +316,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     deviceMessage.getAction(), mapping);
             if (rawPayload != null) {
                 request.setBinaryPayload(rawPayload.bytes());
+                request.setRawPayload(true);
             }
             request.setContentType(rawPayload != null ? rawPayload.contentType() : deviceMessage.getContentType());
 

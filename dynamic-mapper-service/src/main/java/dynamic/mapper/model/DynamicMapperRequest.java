@@ -70,9 +70,21 @@ public class DynamicMapperRequest {
     private byte[] binaryPayload;
     @Schema(description = "Content type of the payload (e.g. text/plain, application/octet-stream). Connectors that can carry it use it; null keeps the connector default.", example = "text/plain")
     private String contentType;
+    @Schema(description = "True for a raw (text or binary) payload that is sent unchanged. Such a request is for a message broker or an external webhook only and is never routed to a Cumulocity API.")
+    private boolean rawPayload;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
     // this happens when a device is created implicitly with mapping.createNonExistingDevice == true
     // private Boolean alreadySubmitted;
+    /**
+     * The all-args constructor as it was before {@code rawPayload} existed.
+     */
+    public DynamicMapperRequest(int predecessor, RequestMethod method, API api, String publishTopic, Boolean retain,
+            String sourceId, String externalId, String externalIdType, String request, String requestCumulocity,
+            String pathCumulocity, String response, Exception error, byte[] binaryPayload, String contentType) {
+        this(predecessor, method, api, publishTopic, retain, sourceId, externalId, externalIdType, request,
+                requestCumulocity, pathCumulocity, response, error, binaryPayload, contentType, false);
+    }
+
     /**
      * The all-args constructor as it was before {@code contentType} existed. Kept so code compiled against an
      * earlier version still links; new code uses the builder.
@@ -81,7 +93,7 @@ public class DynamicMapperRequest {
             String sourceId, String externalId, String externalIdType, String request, String requestCumulocity,
             String pathCumulocity, String response, Exception error, byte[] binaryPayload) {
         this(predecessor, method, api, publishTopic, retain, sourceId, externalId, externalIdType, request,
-                requestCumulocity, pathCumulocity, response, error, binaryPayload, null);
+                requestCumulocity, pathCumulocity, response, error, binaryPayload, null, false);
     }
 
     public boolean hasError() {

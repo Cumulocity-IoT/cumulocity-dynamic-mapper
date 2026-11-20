@@ -197,6 +197,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                     .request(payloadString)
                     .binaryPayload(raw != null ? raw.bytes() : null)
                     .contentType(raw != null ? raw.contentType() : deviceMsg.getContentType())
+                    .rawPayload(raw != null)
                     .build();
             if (api != null) {
                 // Source identifier in the body and the device ID in the path for PUT/PATCH/DELETE.

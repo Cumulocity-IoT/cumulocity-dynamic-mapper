@@ -488,6 +488,17 @@ public class WebHook extends AConnectorClient {
             RequestMethod method = request.getMethod();
             API derivedAPI = request.getApi();
 
+            // A raw payload is for a broker or an external webhook only: never route it to a Cumulocity API
+            if (cumulocityInternal && request.isRawPayload()) {
+                log.warn("{} - Raw payload cannot be sent to Cumulocity ({}/{}), skipping", tenant, i + 1,
+                        requests.size());
+                Exception rejected = new Exception(
+                        "A raw payload cannot be sent to Cumulocity: use a connector for an external system");
+                request.setError(rejected);
+                context.addError(new ProcessingException(rejected.getMessage(), rejected));
+                continue;
+            }
+
             // For cumulocityInternal, resolve API and path from the request metadata
             if (cumulocityInternal) {
                 String publishTopic = request.getPublishTopic() != null
