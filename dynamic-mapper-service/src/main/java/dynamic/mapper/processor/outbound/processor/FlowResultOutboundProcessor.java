@@ -222,8 +222,12 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
         try {
 
+            // A raw payload (e.g. a text command such as an AT string) is sent as is: it is neither an object
+            // to clone nor JSON to enrich, and it is never routed to a Cumulocity API, not even as a custom
+            // route, so it is resolved first.
+            OutboundRawPayload.Raw rawPayload = OutboundRawPayload.resolve(deviceMessage, objectMapper, false);
             // Custom routing: bypass device resolution, call tenant-local microservice directly
-            if (CumulocityType.CUSTOM.equals(deviceMessage.getCumulocityType())) {
+            if (rawPayload == null && CumulocityType.CUSTOM.equals(deviceMessage.getCumulocityType())) {
                 String servicePath = deviceMessage.getTopic();
                 if (servicePath == null || !servicePath.startsWith("/service/")) {
                     throw new ProcessingException(
@@ -242,9 +246,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 return;
             }
 
-            // A raw payload (e.g. a text command such as an AT string) is sent as is: it is neither an object
-            // to clone nor JSON to enrich, and it is never routed to a Cumulocity API.
-            OutboundRawPayload.Raw rawPayload = OutboundRawPayload.resolve(deviceMessage, objectMapper, false);
             if (rawPayload != null && MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
                 // SparkPlug B messages are protobuf built from a JSON object; sending text would skip that step
                 throw new ProcessingException(

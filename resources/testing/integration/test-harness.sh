@@ -1923,7 +1923,7 @@ dm_mqtt_subscribe_one_hex() {   # <topic> [timeout_secs=10]
 
 # The lowercase hex of a string's bytes, as dm_mqtt_subscribe_one_hex prints a payload.
 dm_hex_of() {   # <string>
-    printf '%s' "$1" | od -An -tx1 | tr -d ' \n'
+    printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n'
 }
 
 # Prime a topic subscription to reduce timing races where a test publishes before

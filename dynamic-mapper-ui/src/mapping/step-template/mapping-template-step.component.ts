@@ -157,6 +157,12 @@ export class MappingTemplateStepComponent implements OnDestroy {
    */
   private filterFormlySubscribed = false;
   private pendingFilterMapping: string | undefined;
+  /**
+   * Bumped whenever the step adopts a filter from the host. A debounced edit or a running evaluation that
+   * started under an older value is stale and must not restore its expression or emit it.
+   */
+  private filterEpoch = 0;
+  private typedFilterEpoch = 0;
   private destroyed = false;
   sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
@@ -269,6 +275,7 @@ export class MappingTemplateStepComponent implements OnDestroy {
     if ((this.filterModel.filterMapping ?? '') === filterMapping) return;
     // What this step still holds from typing is older than what the host has now
     this.pendingFilterMapping = undefined;
+    this.filterEpoch++;
     const control = this.filterFormly()?.get('filterMapping');
     if (!filterMapping) {
       this.filterModel = { filterMapping: '' };
@@ -300,11 +307,16 @@ export class MappingTemplateStepComponent implements OnDestroy {
     // The newest text the user typed that the debounced evaluation below has not handled yet. The editor
     // destroys this step when the user leaves the tab, so ngOnDestroy hands it to the host instead of
     // losing an edit made within the debounce window.
-    filterValues$.subscribe(path => (this.pendingFilterMapping = path));
+    filterValues$.subscribe(path => {
+      this.pendingFilterMapping = path;
+      this.typedFilterEpoch = this.filterEpoch;
+    });
     filterValues$.pipe(
       debounceTime(500),
       distinctUntilChanged()
     ).subscribe(path => {
+      // The host changed the filter after this was typed: the typed text is outdated
+      if (this.typedFilterEpoch !== this.filterEpoch) return;
       this.pendingFilterMapping = undefined;
       if (path) this.updateFilterExpressionResult(path);
     });
@@ -419,6 +431,7 @@ export class MappingTemplateStepComponent implements OnDestroy {
 
   async updateFilterExpressionResult(path: string, templateOverride?: Template): Promise<void> {
     this.clearAlerts();
+    const epoch = this.filterEpoch;
     try {
       // Use an explicitly supplied template first (passed by the parent when it
       // has already expanded the templates but Angular hasn't yet propagated the
@@ -429,6 +442,8 @@ export class MappingTemplateStepComponent implements OnDestroy {
         template,
         path
       );
+      // The host adopted another filter while this evaluated: its result would restore the old expression
+      if (epoch !== this.filterEpoch) return;
       this.filterModel.filterExpression = result;
       this.filterModel.filterMapping = path;
       this.filterMappingChange.emit(path);
@@ -448,6 +463,7 @@ export class MappingTemplateStepComponent implements OnDestroy {
         this.filterFormly().get('filterMapping')?.markAsTouched();
       }
     } catch (error) {
+      if (epoch !== this.filterEpoch) return;
       this.filterModel.filterExpression ??= { result: '', resultType: '', valid: false };
       this.filterModel.filterExpression.valid = false;
       this.filterFormly().get('filterMapping')?.setErrors({ validationError: { message: error.message } });

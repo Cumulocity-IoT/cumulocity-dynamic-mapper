@@ -205,7 +205,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
     /**
      * Process a single message element and add it to the output list.
-     * Objects with a {@code cumulocityType} property are converted to
+     * Objects with a {@code cumulocityType} property, except a DeviceMessage with a raw payload (which ignores
+     * it), are converted to
      * {@link dynamic.mapper.processor.model.CumulocityObject} (e.g. custom routing);
      * all other objects are treated as {@link dynamic.mapper.processor.model.DeviceMessage}.
      */
@@ -217,7 +218,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         }
 
         try {
-            if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+            if (!JavaScriptInteropHelper.isRawDeviceMessage(element)
+                    && JavaScriptInteropHelper.isCumulocityObject(element)) {
                 // e.g. cumulocityType: "custom" — route to processCumulocityObject
                 var cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
                 outputMessages.add(cumulocityObj);

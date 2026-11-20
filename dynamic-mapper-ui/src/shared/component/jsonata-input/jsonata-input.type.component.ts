@@ -219,7 +219,12 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
     });
     // `setValue(v, { emitEvent: false })` (how a step shows a filter it computed) does not emit valueChanges
     // but still calls the view callbacks. Without this the editor kept its old, e.g. empty, text.
-    (control as FormControl).registerOnChange(() => showControlValue());
+    // Angular has no way to unregister a view callback: drop the reference on teardown so the destroyed editor
+    // (and its Monaco model) is not retained and later `setValue()` calls do nothing for it.
+    const viewCallbacks = (control as unknown as { _onChange?: unknown[] })._onChange;
+    let onViewUpdate: (() => void) | null = showControlValue;
+    const viewCallback = () => onViewUpdate?.();
+    (control as FormControl).registerOnChange(viewCallback);
     const statusSubscription = control.statusChanges.subscribe(applyReadOnly);
 
     const templateProvider = this.props['templateProvider'] as (() => unknown) | undefined;
@@ -236,6 +241,13 @@ export class JsonataInputTypeComponent extends FieldType implements OnInit, OnDe
           }
         })
       ),
+      {
+        dispose: () => {
+          onViewUpdate = null;
+          const index = viewCallbacks?.indexOf(viewCallback) ?? -1;
+          if (index >= 0) viewCallbacks?.splice(index, 1);
+        }
+      },
       { dispose: () => controlSubscription.unsubscribe() },
       { dispose: () => statusSubscription.unsubscribe() },
       editor.onDidContentSizeChange((e) =>

@@ -199,6 +199,35 @@ class OutboundAnyPayloadPipelineIntegrationTest {
     }
 
     @Test
+    void aRawSmartFunctionResultIgnoresCumulocityTypeAndStaysOnTheBrokerPath() {
+        Mapping mapping = smartFunctionMapping("""
+                function onMessage(msg, context) {
+                    return [
+                        { topic: "device/cmd", payload: "AT+X$", payloadEncoding: "text", cumulocityType: "event" },
+                        { topic: "device/fw", payload: "AAEC/w==", payloadEncoding: "base64",
+                          cumulocityType: "operation" },
+                        { topic: "/service/my-service/x", payload: "plain", cumulocityType: "custom",
+                          targetPath: "/service/my-service/x" }
+                    ];
+                }
+                """);
+
+        ProcessingContext<Object> result = run(mapping);
+
+        assertNoErrors(result);
+        List<DynamicMapperRequest> requests = onlyPublish();
+        assertEquals(3, requests.size());
+        assertEquals("AT+X$", requests.get(0).getRequest());
+        assertEquals("text/plain", requests.get(0).getContentType());
+        assertArrayEquals(new byte[] { 0, 1, 2, (byte) 0xFF }, requests.get(1).getBinaryPayload());
+        assertEquals("plain", requests.get(2).getRequest(), "not JSON-serialized");
+        for (DynamicMapperRequest request : requests) {
+            assertTrue(request.isRawPayload());
+            assertNull(request.getPathCumulocity(), "a raw payload is never routed to a Cumulocity API");
+        }
+    }
+
+    @Test
     void aSmartFunctionSendsBase64AndHexAsBytes() {
         Mapping mapping = smartFunctionMapping("""
                 function onMessage(msg, context) {

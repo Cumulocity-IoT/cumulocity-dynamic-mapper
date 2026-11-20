@@ -123,6 +123,33 @@ public class JavaScriptInteropHelper {
     }
 
     /**
+     * Checks if a Value is a DeviceMessage that carries a raw payload: it has a topic and states a
+     * {@code payloadEncoding} or {@code contentType}, or its payload is text or bytes. A raw payload is sent to a
+     * broker as is, so a {@code cumulocityType} on it is ignored and must not turn it into a
+     * {@link CumulocityObject}.
+     *
+     * @param value The value to check
+     * @return true if it is a DeviceMessage with a raw payload
+     */
+    public static boolean isRawDeviceMessage(Value value) {
+        if (!isDeviceMessage(value)) {
+            return false;
+        }
+        if (hasNonNullMember(value, "payloadEncoding") || hasNonNullMember(value, "contentType")) {
+            return true;
+        }
+        if (!value.hasMember("payload")) {
+            return false;
+        }
+        Value payload = value.getMember("payload");
+        return payload.isString() || payload.hasBufferElements();
+    }
+
+    private static boolean hasNonNullMember(Value value, String name) {
+        return value.hasMember(name) && !value.getMember(name).isNull();
+    }
+
+    /**
      * Checks if a Value represents a CumulocityObject (by checking for
      * 'cumulocityType' property)
      * 
