@@ -64,6 +64,11 @@ flowchart LR
 
     classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
     class choose outbound;
+
+    classDef ok fill:#e8f4e8,stroke:#119D11,color:#212121;
+    classDef caution fill:#fff1de,stroke:#FF8800,color:#212121;
+    class async ok;
+    class warn caution;
 ```
 
 The selection is written when you save the mapping, after the mapping itself was saved. Cancel the editor and

@@ -495,6 +495,7 @@ public class ExplorerService {
                 // covers both a single selected device and a group expanded to its member devices.
                 if (session.hasSubscribedDevices()) {
                     notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
+                    notificationSubscriber.sweepOrphanedExplorerSubscribers(tenant);
                     for (String devId : session.getSubscribedDeviceIds()) {
                         ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, devId, false);
                         if (mor != null) {

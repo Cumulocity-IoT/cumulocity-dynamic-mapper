@@ -202,6 +202,42 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
         connectionManager.initializeExplorerDeviceClient(tenant, sessionId);
     }
 
+    /**
+     * Deletes explorer subscribers that belong to no open explorer session. Explorer sessions live in
+     * memory only, so a subscriber outlives its session when closing it failed, the connect failed, or the
+     * service restarted. Run when a session ends.
+     */
+    public void sweepOrphanedExplorerSubscribers(String tenant) {
+        try {
+            connectionManager.runAsTenant(tenant, () -> sweepOrphanedExplorerSubscribersInTenant(tenant));
+        } catch (Exception e) {
+            log.warn("{} - Explorer subscriber sweep failed: {}", tenant, e.getMessage());
+        }
+    }
+
+    private void sweepOrphanedExplorerSubscribersInTenant(String tenant) {
+        try {
+            if (!isNotificationServiceAvailable(tenant)) {
+                return;
+            }
+            Set<String> active = connectionManager.getActiveExplorerSubscriberNames();
+            for (String subscriber : messagingManagementService.getSubscribers(tenant,
+                    Utils.EXPLORER_DEVICE_SUBSCRIPTION)) {
+                if (connectionManager.isOwnExplorerSubscriberName(subscriber) && !active.contains(subscriber)) {
+                    try {
+                        messagingManagementService.deleteSubscriber(tenant, Utils.EXPLORER_DEVICE_SUBSCRIPTION,
+                                subscriber);
+                    } catch (Exception e) {
+                        log.warn("{} - Could not delete orphaned explorer subscriber '{}': {}", tenant, subscriber,
+                                e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("{} - Explorer subscriber sweep failed: {}", tenant, e.getMessage());
+        }
+    }
+
     public void closeExplorerDeviceClient(String sessionId) {
         connectionManager.closeExplorerDeviceClient(sessionId);
     }
@@ -239,6 +275,18 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
      */
     public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdentifier) {
         tokenManager.unsubscribeDeviceSubscriberByConnector(tenant, connectorIdentifier);
+    }
+
+    /**
+     * Unsubscribe the static and dynamic device subscribers of a connector by name. Needed when no
+     * token is stored (e.g. after a service restart), where the token-based variant does nothing.
+     */
+    public void unsubscribeDeviceSubscribersByName(String tenant, String connectorIdentifier, String suffix) {
+        String s = suffix != null ? suffix : "";
+        tokenManager.unsubscribeBySubscriberName(Utils.STATIC_DEVICE_SUBSCRIPTION,
+                Utils.STATIC_DEVICE_SUBSCRIBER + connectorIdentifier + s);
+        tokenManager.unsubscribeBySubscriberName(Utils.DYNAMIC_DEVICE_SUBSCRIPTION,
+                Utils.DYNAMIC_DEVICE_SUBSCRIBER + connectorIdentifier + s);
     }
 
     // === Type Subscription Methods ===
@@ -368,17 +416,18 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
 
         String suffix = currentSuffix != null ? currentSuffix : "";
 
+        // Only enabled connectors keep device subscribers; a disabled connector cannot consume, so its
+        // subscriber would only accumulate a backlog. Re-enabling creates a new one.
         Set<String> currentConnectorIds = allConfigs != null
-                ? allConfigs.stream().map(ConnectorConfiguration::getIdentifier).collect(Collectors.toSet())
+                ? allConfigs.stream().filter(c -> Boolean.TRUE.equals(c.getEnabled()))
+                        .map(ConnectorConfiguration::getIdentifier).collect(Collectors.toSet())
                 : Set.of();
 
         int cleaned = 0;
 
-        // Tenant-level subscriptions: valid subscriber = base + suffix (no connector ID)
-        cleaned += cleanupTenantSubscribers(tenant, Utils.MANAGEMENT_SUBSCRIPTION,
-                Utils.MANAGEMENT_SUBSCRIBER, suffix);
-        cleaned += cleanupTenantSubscribers(tenant, Utils.CACHE_INVENTORY_SUBSCRIPTION,
-                Utils.CACHE_INVENTORY_SUBSCRIBER, suffix);
+        // Tenant-level subscribers (management, cache inventory) are not cleaned up: the only name that
+        // can be an orphan there is one with a different suffix, which belongs to another instance on
+        // the same tenant (e.g. a local backend next to the deployed service) and is live.
 
         // Per-connector subscriptions: valid subscriber = base + connectorId + suffix
         cleaned += cleanupDeviceSubscribers(tenant, Utils.STATIC_DEVICE_SUBSCRIPTION,
@@ -388,16 +437,19 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
 
         // Explorer subscriptions: keyed by a fresh session id per UI session, which
         // cannot survive a service restart, so any subscriber found at startup is orphaned.
+        // Only this instance's own: another instance on the same tenant (e.g. a local backend) has live
+        // sessions under a different suffix.
         cleaned += cleanupAllSubscribers(tenant, Utils.EXPLORER_DEVICE_SUBSCRIPTION,
-                Utils.EXPLORER_DEVICE_SUBSCRIBER);
+                connectionManager::isOwnExplorerSubscriberName);
 
         log.info("{} - Orphaned subscriber cleanup completed, {} subscriber(s) cleaned", tenant, cleaned);
     }
 
-    private int cleanupAllSubscribers(String tenant, String subscriptionName, String subscriberBase) {
+    private int cleanupAllSubscribers(String tenant, String subscriptionName,
+            java.util.function.Predicate<String> isOwn) {
         int cleaned = 0;
         for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
-            if (!subscriber.startsWith(subscriberBase)) {
+            if (!isOwn.test(subscriber)) {
                 continue;
             }
             log.info("{} - Deleting orphaned Explorer subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
@@ -412,23 +464,21 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
         return cleaned;
     }
 
-    private int cleanupTenantSubscribers(String tenant, String subscriptionName,
-            String subscriberBase, String currentSuffix) {
-        String validName = subscriberBase + currentSuffix;
-        int cleaned = 0;
-        for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
-            if (!subscriber.isEmpty() && !subscriber.equals(validName)) {
-                log.info("{} - Deleting orphaned Tenant subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
-                try {
-                    messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
-                    cleaned++;
-                } catch (Exception e) {
-                    log.warn("{} - Could not delete subscriber '{}' from subscription '{}': {}",
-                            tenant, subscriber, subscriptionName, e.getMessage());
-                }
-            }
+    /**
+     * Whether a device subscriber (name without its base) is an orphan of this instance. Valid is
+     * {@code connectorId + suffix} of a current connector. A name of a current connector with a different
+     * suffix belongs to another instance on the same tenant: with a suffix of our own, names that do not
+     * end with it are skipped; without one, names that start with a current connector id are skipped.
+     */
+    static boolean isOrphanedDeviceSubscriber(String rest, Set<String> currentConnectorIds, String suffix) {
+        String s = suffix != null ? suffix : "";
+        if (currentConnectorIds.stream().anyMatch(id -> rest.equals(id + s))) {
+            return false;
         }
-        return cleaned;
+        if (!s.isEmpty()) {
+            return rest.endsWith(s);
+        }
+        return currentConnectorIds.stream().noneMatch(rest::startsWith);
     }
 
     private int cleanupDeviceSubscribers(String tenant, String subscriptionName,
@@ -439,9 +489,7 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
                 continue;
             }
             String rest = subscriber.substring(subscriberBase.length());
-            boolean isValid = currentConnectorIds.stream()
-                    .anyMatch(connId -> rest.equals(connId + currentSuffix));
-            if (!isValid) {
+            if (isOrphanedDeviceSubscriber(rest, currentConnectorIds, currentSuffix)) {
                 log.info("{} - Deleting orphaned Device subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
                 try {
                     messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);

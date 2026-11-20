@@ -94,6 +94,11 @@ flowchart TD
 
     classDef result fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
     class r1,r2,r3,r4 result;
+
+    classDef edge fill:#f3f3f3,stroke:#8a8a8a,color:#212121;
+    classDef core fill:#fff7d6,stroke:#FFBE00,color:#212121;
+    class root edge;
+    class one,many core;
 ```
 
 The number of requests generated from one message is its **cardinality**. It is driven by whichever substitution

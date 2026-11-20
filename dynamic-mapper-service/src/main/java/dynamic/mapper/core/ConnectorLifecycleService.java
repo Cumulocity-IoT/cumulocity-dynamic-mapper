@@ -498,11 +498,14 @@ public class ConnectorLifecycleService {
                 log.info("{} - Connector {} is not active, marking as disabled", tenant, configuration.getName());
                 configuration.setEnabled(false);
                 connectorConfigurationService.saveConnectorConfiguration(configuration);
+                // A subscriber can outlive a stopped client (e.g. after a service restart): drop it too
+                unsubscribeConnectorNotifications(tenant, connectorIdentifier);
                 return;
             }
 
             configuration.setEnabled(false);
             connectorConfigurationService.saveConnectorConfiguration(configuration);
+            unsubscribeConnectorNotifications(tenant, client.getConnectorIdentifier());
             disableConnector(tenant, client.getConnectorIdentifier());
             // Reconnect other notification clients for remaining connectors
             boolean reconnected = notificationSubscriber.notificationSubscriberReconnect(tenant);
@@ -630,6 +633,26 @@ public class ConnectorLifecycleService {
             notificationSubscriber.unsubscribeDeviceSubscriberByConnector(tenant,
                     connectorIdentifier);
             notificationSubscriber.removeConnector(tenant, connectorIdentifier);
+        }
+    }
+
+    /**
+     * Unsubscribes the Notification 2.0 device subscribers (static and dynamic) of a connector that is
+     * being disabled, so Cumulocity stops queueing outbound messages for a connector that cannot consume
+     * them. Uses the stored tokens and, when none exist (e.g. after a restart), the subscriber names.
+     * Re-enabling the connector creates new subscribers.
+     */
+    public void unsubscribeConnectorNotifications(String tenant, String connectorIdentifier) {
+        if (!isOutboundMappingEnabled(tenant)) {
+            return;
+        }
+        try {
+            notificationSubscriber.unsubscribeDeviceSubscriberByConnector(tenant, connectorIdentifier);
+            notificationSubscriber.unsubscribeDeviceSubscribersByName(tenant, connectorIdentifier,
+                    additionalSubscriptionIdTest);
+        } catch (Exception e) {
+            log.warn("{} - Could not unsubscribe notification subscribers of connector {}: {}", tenant,
+                    connectorIdentifier, e.getMessage());
         }
     }
 

@@ -167,6 +167,10 @@ public class NotificationConnectionManager {
             return;
         }
         String tokenSeed = Utils.EXPLORER_DEVICE_SUBSCRIBER + sessionId.replace("-", "") + additionalSubscriptionIdTest;
+        // Recorded before the token is created: the subscriber exists on the platform from then on, even
+        // if the WebSocket never opens, so closeExplorerDeviceClient must be able to delete it, and the
+        // sweep of orphaned explorer subscribers must not take it for an orphan.
+        explorerDeviceSessionMeta.put(sessionId, new String[]{tenant, tokenSeed});
         try {
             String token = subscriptionsService.callForTenant(tenant,
                     () -> tokenManager.createToken(Utils.EXPLORER_DEVICE_SUBSCRIPTION, tokenSeed));
@@ -177,7 +181,6 @@ public class NotificationConnectionManager {
             if (client != null) {
                 CustomWebSocketClient old = explorerDeviceClients.put(sessionId, client);
                 if (old != null) { closeQuietly(old, sessionId); }
-                explorerDeviceSessionMeta.put(sessionId, new String[]{tenant, tokenSeed});
                 log.info("{} - Explorer device WebSocket opened for session {}", tenant, sessionId);
             }
         } catch (Exception e) {
@@ -210,13 +213,40 @@ public class NotificationConnectionManager {
             String tenant = meta[0];
             String subscriberName = meta[1];
             try {
-                subscriptionsService.callForTenant(tenant,
-                        () -> { tokenManager.unsubscribeBySubscriberName(Utils.EXPLORER_DEVICE_SUBSCRIPTION, subscriberName); return null; });
-                log.info("{} - Explorer device subscriber '{}' deleted from C8Y", tenant, subscriberName);
+                Boolean deleted = subscriptionsService.callForTenant(tenant,
+                        () -> tokenManager.unsubscribeBySubscriberName(Utils.EXPLORER_DEVICE_SUBSCRIPTION, subscriberName));
+                if (Boolean.TRUE.equals(deleted)) {
+                    log.info("{} - Explorer device subscriber '{}' deleted from C8Y", tenant, subscriberName);
+                } else {
+                    log.warn("{} - Explorer device subscriber '{}' could not be deleted from C8Y; "
+                            + "the next orphan sweep or service restart removes it", tenant, subscriberName);
+                }
             } catch (Exception e) {
                 log.warn("{} - Could not delete explorer device subscriber '{}': {}", tenant, subscriberName, e.getMessage());
             }
         }
+    }
+
+    /** Runs the action with the tenant's service credentials: callers on the session watchdog thread have none. */
+    public void runAsTenant(String tenant, Runnable action) {
+        subscriptionsService.callForTenant(tenant, () -> { action.run(); return null; });
+    }
+
+    /**
+     * Whether a subscriber name is an explorer subscriber of this instance: base + 32 hex session id +
+     * this instance's suffix. Another instance on the same tenant (for example a local backend next to the
+     * deployed service) uses a different suffix, or none; its live subscribers must not be taken for orphans.
+     */
+    public boolean isOwnExplorerSubscriberName(String name) {
+        String base = Utils.EXPLORER_DEVICE_SUBSCRIBER;
+        String suffix = additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "";
+        return name != null && name.length() == base.length() + 32 + suffix.length()
+                && name.startsWith(base) && name.endsWith(suffix);
+    }
+
+    /** Subscriber names of the explorer sessions that are open now (including ones still connecting). */
+    public Set<String> getActiveExplorerSubscriberNames() {
+        return explorerDeviceSessionMeta.values().stream().map(m -> m[1]).collect(java.util.stream.Collectors.toSet());
     }
 
     public void initializeStaticDeviceClient(String tenant) {

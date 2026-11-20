@@ -28,8 +28,16 @@ and the local UI must send its REST calls to it.
    export C8Y_BOOTSTRAP_USER="servicebootstrap_dynamic-mapper-service"
    export C8Y_BOOTSTRAP_PASSWORD="<bootstrap-password>"
    export C8Y_MICROSERVICE_ISOLATION="MULTI_TENANT"
+   export APP_ADDITIONALSUBSCRIPTIONIDTEST="local"
    mvn spring-boot:run -Dspring-boot.run.profiles=dev
    ```
+
+   Set `APP_ADDITIONALSUBSCRIPTIONIDTEST` (letters and digits only, no hyphen or underscore) so the
+   local backend does not share Notification 2.0 subscribers with the deployed service on the same
+   tenant. Without it, both use the same subscriber names for the same connector (they compete for
+   the messages), and one instance's startup cleanup can delete the other's subscribers. Stopping the
+   backend with Ctrl-C leaves its subscribers in Cumulocity until the next start with the same suffix;
+   disable the connector or close the explorer session first to avoid that.
 
 3. **UI** with a proxy that sends `/service/dynamic-mapper-service/**` to the local backend and
    everything else to the tenant ([proxy.local-backend.conf.cjs](../../../../dynamic-mapper-ui/proxy.local-backend.conf.cjs);

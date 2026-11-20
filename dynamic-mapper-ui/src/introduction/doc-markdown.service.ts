@@ -60,7 +60,9 @@ function ensureMermaidInitialized(): void {
     // prevents the over-wrapping — labels were being broken mid-word ("classes" -> "cl asses")
     // because foreignObject content inherits the page's CSS.
     htmlLabels: false,
-    flowchart: { wrappingWidth: 360 }
+    // padding (default 15) is the space between a label and its node border. A decision diamond
+    // grows by it on both axes, so a smaller value shrinks the diamonds most.
+    flowchart: { wrappingWidth: 360, padding: 8 }
   });
 }
 

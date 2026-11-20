@@ -128,6 +128,8 @@ export C8Y_BOOTSTRAP_TENANT="<tenant-id>"
 export C8Y_BOOTSTRAP_USER="servicebootstrap_dynamic-mapper-service"
 export C8Y_BOOTSTRAP_PASSWORD="<bootstrap-password>"
 export C8Y_MICROSERVICE_ISOLATION="MULTI_TENANT"
+# Keeps this backend's Notification 2.0 subscribers apart from the deployed service (letters/digits only)
+export APP_ADDITIONALSUBSCRIPTIONIDTEST="local"
 
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```

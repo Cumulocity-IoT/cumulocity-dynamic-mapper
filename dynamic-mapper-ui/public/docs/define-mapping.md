@@ -76,6 +76,9 @@ flowchart LR
 
     classDef outbound fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
     class sub outbound;
+
+    classDef ok fill:#e8f4e8,stroke:#119D11,color:#212121;
+    class test ok;
 ```
 
 For inbound **Any Payload** and **SparkPlug B** mappings the wizard shows no source or target template editors, because

@@ -92,6 +92,13 @@ flowchart LR
     c8y(["Cumulocity object<br/>measurement, event, alarm, device"])
 
     broker --> conn --> match --> filter --> trans --> c8y
+
+    classDef edge fill:#f3f3f3,stroke:#8a8a8a,color:#212121;
+    classDef warn fill:#fff1de,stroke:#FF8800,color:#212121;
+    classDef core fill:#fff7d6,stroke:#FFBE00,color:#212121;
+    class broker,c8y edge;
+    class filter warn;
+    class trans core;
 ```
 
 A single message can match more than one mapping: `device/+/data` and `device/#` both match

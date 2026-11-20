@@ -168,6 +168,26 @@ class ConnectorLifecycleServiceTest {
         verify(connectorConfigs).saveConnectorConfiguration(stored);
         verify(registry, never()).unregisterClient(anyString(), anyString());
         verify(notifications, never()).notificationSubscriberReconnect(anyString());
+        // a subscriber can outlive a stopped client, so it is dropped by name
+        verify(notifications).unsubscribeDeviceSubscribersByName(TENANT, ID, "");
+    }
+
+    @Test
+    void disconnectUnsubscribesTheNotificationSubscribersBeforeRemovingTheConnector() throws Exception {
+        ConnectorConfiguration stored = config(ConnectorType.PULSAR, true);
+        when(connectorConfigs.getConnectorConfiguration(ID, TENANT)).thenReturn(stored);
+        AConnectorClient client = mock(AConnectorClient.class);
+        when(client.getConnectorIdentifier()).thenReturn(ID);
+        when(registry.getClientForTenant(TENANT, ID)).thenReturn(client);
+        when(notifications.notificationSubscriberReconnect(TENANT)).thenReturn(true);
+
+        service.disconnect(TENANT, ID);
+
+        InOrder order = inOrder(notifications, registry);
+        order.verify(notifications).unsubscribeDeviceSubscriberByConnector(TENANT, ID);
+        order.verify(notifications).unsubscribeDeviceSubscribersByName(TENANT, ID, "");
+        order.verify(registry).unregisterClient(TENANT, ID);
+        order.verify(notifications).removeConnector(TENANT, ID);
     }
 
     @Test

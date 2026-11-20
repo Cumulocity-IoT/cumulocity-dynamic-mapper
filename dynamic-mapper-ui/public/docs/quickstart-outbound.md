@@ -30,6 +30,13 @@ flowchart LR
     broker(["Message published<br/>to the broker"])
 
     c8y --> sub --> map --> broker
+
+    classDef edge fill:#f3f3f3,stroke:#8a8a8a,color:#212121;
+    classDef warn fill:#fff1de,stroke:#FF8800,color:#212121;
+    classDef outbound fill:#e8f0fa,stroke:#316ca8,color:#212121;
+    class c8y,broker edge;
+    class sub warn;
+    class map outbound;
 ```
 
 #### Step 1: Subscribe the device

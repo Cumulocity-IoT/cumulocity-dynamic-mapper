@@ -214,9 +214,9 @@ public class TokenManager {
      * token is available. Errors (e.g. 422 for non-alphanumeric subscriber names)
      * are silently ignored at debug level.
      */
-    public void unsubscribeBySubscriberName(String subscription, String subscriberName) {
+    public boolean unsubscribeBySubscriberName(String subscription, String subscriberName) {
         if (subscription == null || subscriberName == null) {
-            return;
+            return false;
         }
         try {
             // Create token directly (not via createToken()) to avoid its ERROR-level log on failure
@@ -225,9 +225,11 @@ public class TokenManager {
             String token = tokenApi.create(tokenRequest).getTokenString();
             tokenApi.unsubscribe(new Token(token));
             log.info("Unsubscribed orphaned subscriber '{}' from subscription '{}'", subscriberName, subscription);
+            return true;
         } catch (Exception e) {
             log.debug("Could not unsubscribe subscriber '{}' from subscription '{}': {}",
                     subscriberName, subscription, e.getMessage());
+            return false;
         }
     }
 

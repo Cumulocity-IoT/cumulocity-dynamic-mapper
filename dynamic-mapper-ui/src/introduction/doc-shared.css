@@ -348,6 +348,20 @@
   height: auto;
 }
 
+/* Edge labels sit on a background rectangle that the 'neutral' theme paints light grey at 50%
+   opacity, so the connector line stays visible through the text and the label looks like a grey
+   patch. Make it opaque white. themeVariables cannot do this: only the 'base' theme honors them.
+   The rule mermaid injects into the SVG is scoped by the diagram id and wins on specificity,
+   hence !important. */
+.d11r-doc pre.mermaid .edgeLabel,
+.d11r-doc pre.mermaid .edgeLabel p {
+  background-color: #fff !important;
+}
+.d11r-doc pre.mermaid .edgeLabel rect {
+  fill: #fff !important;
+  opacity: 1 !important;
+}
+
 /* Code element styling */
 .d11r-doc pre code {
   font-family: 'Courier New', Courier, monospace !important;

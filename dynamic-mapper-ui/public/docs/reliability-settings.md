@@ -15,13 +15,13 @@ The diagram shows what a connector does with a message, once it knows the QoS th
 ```mermaid
 flowchart TD
     msg(["Message arrives from the broker"])
-    qos{"QoS that applies<br/>to this message"}
+    qos{"QoS that<br/>applies to<br/>this message"}
     early["Acknowledge at once<br/>before the mapping runs"]
     run["Mapping runs<br/>the connector waits for the result"]
-    result{"How did it end?"}
+    result{"How did<br/>it end?"}
     settled["Acknowledge<br/>success, client error (4xx),<br/>or mapping error without HTTP status"]
     unsettled["Do not acknowledge<br/>server error (5xx), timeout,<br/>CPU limit hit, or exception"]
-    limit{"Failed as often as<br/>Maximum processing attempts?"}
+    limit{"Failed as often as<br/>Maximum processing<br/>attempts?"}
     again["Broker delivers it again<br/>negative ack, requeue, or reconnect"]
     drop["Acknowledge and drop<br/>the error stays in the mapping status"]
 
@@ -35,6 +35,14 @@ flowchart TD
     limit -- "no" --> again
     again --> msg
     limit -- "yes" --> drop
+
+    classDef edge fill:#f3f3f3,stroke:#8a8a8a,color:#212121;
+    classDef ok fill:#e8f4e8,stroke:#119D11,color:#212121;
+    classDef warn fill:#fff1de,stroke:#FF8800,color:#212121;
+    class msg edge;
+    class settled ok;
+    class unsettled,again warn;
+    class drop edge;
 ```
 
 A message that is not acknowledged comes back, so the same message can run through the mapping again. A mapping
@@ -113,6 +121,70 @@ delivers the message again every few seconds until the broker is back. Other con
 
 The service log shows `paused its device WebSockets` when a connector is held and `resuming its device WebSockets`
 when it is released. See [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting).
+
+#### Notification 2.0 subscribers of a connector {#notification-subscribers}
+
+Two things take part, and only one of them follows the connector.
+
+- A **subscription** says which device data Cumulocity sends to the Dynamic Mapper. It belongs to a device, a device
+  type, or a device group, and you create it in the **Subscription** step of an outbound mapping.
+- A **subscriber** is the consumer that the Dynamic Mapper creates in Cumulocity to receive the data of a
+  subscription, one per enabled connector. Examples are `DynamicMapperStaticDeviceSubscriber<connector id>` for devices
+  you subscribed one by one and `DynamicMapperDynamicDeviceSubscriber<connector id>` for devices selected by device type
+  or group. You can see them in **Administration → Monitoring → Messaging service → Notifications 2.0**.
+
+Connector changes only add or remove subscribers. They never change your subscriptions. Cumulocity queues outbound
+messages for a subscriber even when nothing is connected to it, so a subscriber that is not needed any more must be
+removed.
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoSubscriber
+    NoSubscriber --> Enabled : Enable connector, subscriber is created and WebSocket opens
+    Enabled --> NoSubscriber : Disable, disconnect, or delete connector, subscriber and its queue are removed
+    NoSubscriber --> NoSubscriber : Service restart removes leftover subscribers of disabled or deleted connectors
+
+    state Enabled {
+        [*] --> Active
+        Active --> Held : Broker connection is lost, WebSocket closes and subscriber is kept
+        Held --> Active : Broker connection is back, WebSocket opens and queued messages arrive
+    }
+
+    NoSubscriber : No subscriber, nothing is queued. Device subscriptions stay in place
+    Active : Subscriber exists, WebSocket open, messages are published to the broker
+    Held : Subscriber exists, WebSocket closed, Cumulocity queues messages for it
+
+    classDef none fill:#f3f3f3,stroke:#8a8a8a,color:#212121
+    classDef active fill:#e8f4e8,stroke:#119D11,color:#212121
+    classDef held fill:#fff1de,stroke:#FF8800,color:#212121
+    class NoSubscriber none
+    class Active active
+    class Held held
+```
+
+- **Active:** the Dynamic Mapper consumes the messages and publishes them to the broker.
+- **Held:** the subscriber is kept and the WebSocket is closed, so Cumulocity queues the messages until the broker is
+  back. This applies to the connectors listed under
+  [Outbound messages while the broker is down](#broker-outage).
+- **Disabled, disconnected, or deleted:** the subscriber is removed together with its queue. The subscriptions of
+  your mappings stay as they are. Messages that arise while a connector is switched off are not kept for it.
+  Enabling the connector again creates a new subscriber that starts empty.
+- **Service restart:** at startup the Dynamic Mapper removes subscribers of connectors that were deleted or are
+  disabled.
+
+Message Explorer sessions with the direction **Outbound** use a short-lived subscriber of their own,
+`DynamicMapperExplorerDeviceSubscriber<session id>`. It is created when you start the session and removed when you
+stop it, when the session expires after the time without polling, or at the next start of the service. When a
+session ends, the Dynamic Mapper also deletes leftover explorer subscribers that belong to no open session.
+
+:::caution
+Do not run a second backend, for example a local one, against the same tenant as the deployed service without a
+subscriber suffix. Both would use the same subscriber names for the same connector, compete for the messages, and
+delete each other's subscribers at startup. Set the property `APP.additionalSubscriptionIdTest` (environment variable
+`APP_ADDITIONALSUBSCRIPTIONIDTEST`) on the second backend to a value of letters and digits only. Stop that backend by
+disabling its connectors and closing its explorer sessions first, otherwise their subscribers stay in Cumulocity
+until the next start with the same suffix.
+:::
 
 #### QoS behavior by connector {#qos-by-connector}
 

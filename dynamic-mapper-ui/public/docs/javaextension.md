@@ -44,6 +44,10 @@ flowchart LR
     end
 
     s3 --> s4 --> s5
+
+    style build fill:#f3f3f3,stroke:#8a8a8a
+    style deploy fill:#fff7d6,stroke:#FFBE00
+    style run fill:#e8f4e8,stroke:#119D11
 ```
 
 Each step in detail:

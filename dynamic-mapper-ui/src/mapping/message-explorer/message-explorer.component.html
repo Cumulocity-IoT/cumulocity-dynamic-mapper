@@ -112,23 +112,37 @@
   @if (sessionId) {
     <div class="alert d-flex a-i-center g-8 m-b-8" [class.alert-info]="!paused" [class.alert-warning]="paused" style="min-width: stretch;">
       <i [c8yIcon]="paused ? 'pause' : 'c8y-data-explorer'"></i>
-      <span>
+      <!-- One flex row of label/value pairs instead of inline text with commas: Angular drops whitespace-only text
+           nodes between elements, which glued "connector:" to its value, and a comma at the start of a line
+           collapsed into " ," (or doubled up). The gap between the pairs does the separating. -->
+      <span class="d-flex a-i-center flex-wrap g-24">
         <strong>{{ paused ? ('Paused' | translate) : ('Active session' | translate) }}</strong>
-        &mdash;
         <span class="label" [class.label-success]="sessionDirection === 'INBOUND'" [class.label-info]="sessionDirection === 'OUTBOUND'">
           <i [c8yIcon]="sessionDirection === 'OUTBOUND' ? 'arrow-up' : 'arrow-down'"></i>
           {{ sessionDirection | translate }}
         </span>
-        <span translate>connector:</span> <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>,
-        , <span translate>topic:</span> <code>{{ sessionTopic }}</code>
+        <span class="d-inline-flex a-i-baseline" style="gap: 4px;">
+          <span translate>connector:</span>
+          <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>
+        </span>
+        <span class="d-inline-flex a-i-baseline" style="gap: 4px;">
+          <span translate>topic:</span>
+          <code>{{ sessionTopic }}</code>
+        </span>
         @if (sessionDirection === 'OUTBOUND' && sessionSourceId) {
-          , <span translate>source:</span> <strong>{{ sessionDeviceName ?? sessionSourceId }}</strong>
+          <span class="d-inline-flex a-i-baseline" style="gap: 4px;">
+            <span translate>source:</span>
+            <strong>{{ sessionDeviceName ?? sessionSourceId }}</strong>
+          </span>
         }
         @if (sessionDirection === 'OUTBOUND' && sessionDeviceTypeFilter) {
-          , <span translate>device type:</span> <strong>{{ sessionDeviceTypeFilter }}</strong>
+          <span class="d-inline-flex a-i-baseline" style="gap: 4px;">
+            <span translate>device type:</span>
+            <strong>{{ sessionDeviceTypeFilter }}</strong>
+          </span>
         }
         @if (paused) {
-          &mdash; <span class="text-muted" translate>polling suspended, session still alive on broker</span>
+          <span class="text-muted" translate>polling suspended, session still alive on broker</span>
         }
       </span>
     </div>
