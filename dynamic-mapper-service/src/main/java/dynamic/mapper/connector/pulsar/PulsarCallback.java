@@ -94,17 +94,8 @@ public class PulsarCallback extends AbstractPulsarCallback {
                         consumer.acknowledge(message);
                         return null;
                     }
-                    AckOutcome outcome = ProcessingResultHelper.awaitOutcome(processedResults, tenant, topic, log, null);
-                    if (outcome == AckOutcome.ACK) {
-                        failureTracker.clear(messageId);
-                        if (serviceConfiguration().getLogPayload()) {
-                            log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
-                                    tenant, topic, connectorIdentifier);
-                        }
-                        consumer.acknowledge(message);
-                    } else {
-                        handleFailureOrPoisonPill(consumer, message, messageId, topic);
-                    }
+                    settle(consumer, message, messageId, topic,
+                            ProcessingResultHelper.awaitOutcome(processedResults, tenant, topic, log, null));
                 } catch (PulsarClientException e) {
                     log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                             tenant, topic, connectorIdentifier, e);
@@ -113,7 +104,7 @@ public class PulsarCallback extends AbstractPulsarCallback {
                     // (a task submitted to the pool swallows exceptions).
                     log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
                             tenant, topic, connectorIdentifier, e);
-                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                    settle(consumer, message, messageId, topic, AckOutcome.RETRY);
                 }
                 return null;
             }));

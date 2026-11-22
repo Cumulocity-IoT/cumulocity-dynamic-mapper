@@ -390,20 +390,22 @@ public class GooglePubSubClient extends AConnectorClient {
                         tenant, topic, messageId, e);
                 outcome = AckOutcome.RETRY;
             }
-            if (outcome == AckOutcome.ACK) {
-                tracker.clear(messageId);
-                consumer.ack();
-            } else if (tracker.recordFailureReachedLimit(messageId)) {
-                log.error("{} - Dropping Pub/Sub message after {} failed attempts: topic=[{}], messageId={}, "
-                        + "connector: {}", tenant, tracker.limit(), topic, messageId, connectorIdentifier);
-                consumer.ack();
-            } else {
-                log.warn("{} - Processing did not succeed for Pub/Sub message: topic=[{}], messageId={}, "
-                        + "nacking for redelivery", tenant, topic, messageId);
-                // Pub/Sub redelivers a nacked message at once: wait first, or a Cumulocity outage of a few seconds
-                // used up all attempts of the message
-                tracker.awaitRetryDelay(messageId);
-                consumer.nack();
+            switch (tracker.settle(messageId, outcome)) {
+                case ACK:
+                    consumer.ack();
+                    break;
+                case DROP:
+                    log.error("{} - Dropping Pub/Sub message after {} failed attempts: topic=[{}], messageId={}, "
+                            + "connector: {}", tenant, tracker.limit(), topic, messageId, connectorIdentifier);
+                    consumer.ack();
+                    break;
+                default:
+                    log.warn("{} - Processing did not succeed for Pub/Sub message: topic=[{}], messageId={}, "
+                            + "nacking for redelivery", tenant, topic, messageId);
+                    // Pub/Sub redelivers a nacked message at once: wait first, or a Cumulocity outage of a few
+                    // seconds used up all attempts of the message
+                    tracker.awaitRetryDelay(messageId);
+                    consumer.nack();
             }
         }
     }

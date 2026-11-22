@@ -35,6 +35,7 @@ import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -130,19 +131,8 @@ public class AMQPCallback extends DefaultConsumer {
                 // With autoAck=true the broker already considers the message delivered, so nothing to do.
                 if (this.getChannel() != null && !autoAck) {
                     String failureKey = failureKey(properties, routingKey, body);
-                    if (ProcessingResultHelper.awaitAckable(processedResults, tenant, topic, log)) {
-                        failureTracker.clear(failureKey);
-                        this.getChannel().basicAck(deliveryTag, false);
-                    } else if (failureTracker.recordFailureReachedLimit(failureKey)) {
-                        log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], connector: {}",
-                                tenant, failureTracker.limit(), routingKey, connectorIdentifier);
-                        this.getChannel().basicAck(deliveryTag, false);
-                    } else {
-                        // Wait before the requeue: it is redelivered at once, so without a delay the message
-                        // used up all its attempts within milliseconds of a Cumulocity outage starting
-                        failureTracker.awaitRetryDelay(failureKey);
-                        this.getChannel().basicNack(deliveryTag, false, true);
-                    }
+                    settle(deliveryTag, routingKey, failureKey,
+                            ProcessingResultHelper.awaitOutcome(processedResults, tenant, topic, log, null));
                 }
 
                 if (serviceConfiguration().getLogPayload()) {
@@ -158,20 +148,34 @@ public class AMQPCallback extends DefaultConsumer {
                 // requeue without counting, so a message that always throws looped forever, with no delay.
                 try {
                     if (this.getChannel() != null && !autoAck) {
-                        String failureKey = failureKey(properties, routingKey, body);
-                        if (failureTracker.recordFailureReachedLimit(failureKey)) {
-                            log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], "
-                                    + "connector: {}", tenant, failureTracker.limit(), routingKey, connectorIdentifier);
-                            this.getChannel().basicAck(deliveryTag, false);
-                        } else {
-                            failureTracker.awaitRetryDelay(failureKey);
-                            this.getChannel().basicNack(deliveryTag, false, true);
-                        }
+                        settle(deliveryTag, routingKey, failureKey(properties, routingKey, body), AckOutcome.RETRY);
                     }
                 } catch (Exception ex) {
                     log.error("{} - Error rejecting message", tenant, ex);
                 }
             }
+        }
+    }
+
+    /**
+     * Settles a delivery as {@link MessageFailureTracker#settle} decides: ack it, drop it (ack) at the limit, or
+     * wait and requeue it. The wait is because a requeue is redelivered at once: without it a message used up all its
+     * attempts within milliseconds of a Cumulocity outage starting.
+     */
+    private void settle(long deliveryTag, String routingKey, String failureKey, AckOutcome outcome)
+            throws IOException {
+        switch (failureTracker.settle(failureKey, outcome)) {
+            case ACK:
+                this.getChannel().basicAck(deliveryTag, false);
+                return;
+            case DROP:
+                log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], connector: {}",
+                        tenant, failureTracker.limit(), routingKey, connectorIdentifier);
+                this.getChannel().basicAck(deliveryTag, false);
+                return;
+            default:
+                failureTracker.awaitRetryDelay(failureKey);
+                this.getChannel().basicNack(deliveryTag, false, true);
         }
     }
 

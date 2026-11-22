@@ -66,9 +66,6 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     /** Minimum interval between two reconnect triggers to prevent reconnect storms. */
     private static final long MIN_RECONNECT_INTERVAL_MS = 60_000L;
 
-    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
-    private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
-
     protected final GenericMessageCallback genericMessageCallback;
     protected final String tenant;
     protected final String connectorIdentifier;
@@ -208,40 +205,24 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                 activeProcessingMessages.incrementAndGet();
                 virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
                     try {
-                        // Give a retransmission more time than the first attempt: a timeout can
-                        // be caused by a transiently slow platform, not by a broken mapping.
-                        // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget.
-                        Long timeoutOverride = null;
-                        if (timeout > 0) {
-                            int attempt = failureTracker.failures(messageId);
-                            timeoutOverride = Math.min(
-                                    (long) timeout * (attempt + 1),
-                                    (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
-                            if (attempt > 0) {
-                                log.info(
-                                        "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                        tenant, attempt + 1, timeoutOverride, timeout, connectorIdentifier);
-                            }
+                        // A retransmission gets more time than the first attempt (see escalatedTimeoutMs)
+                        Long timeoutOverride = failureTracker.escalatedTimeoutMs(messageId, timeout);
+                        int attempt = failureTracker.failures(messageId);
+                        if (timeoutOverride != null && attempt > 0) {
+                            log.info(
+                                    "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                    tenant, attempt + 1, timeoutOverride, timeout, connectorIdentifier);
                         }
 
-                        AckOutcome outcome = ProcessingResultHelper.awaitOutcome(
-                                processedResults, tenant, topic, log, timeoutOverride);
-                        if (outcome == AckOutcome.ACK) {
-                            failureTracker.clear(messageId);
-                            log.debug("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                                    tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                            acknowledgeMessage(mqttMessage);
-                        } else {
-                            // Not ACKed: let the broker retransmit (after a reconnect if configured)
-                            triggerReconnectOrAck(mqttMessage, topic, messageId);
-                        }
+                        settle(mqttMessage, topic, messageId, ProcessingResultHelper.awaitOutcome(
+                                processedResults, tenant, topic, log, timeoutOverride));
                     } catch (Exception e) {
                         // Anything unexpected (a CancellationException from the future, a failed acknowledgement):
                         // the pool swallows it, which left the message neither acknowledged nor counted and its
                         // receive-maximum slot held until the next reconnect. Count it like any other failure.
                         log.error("{} - Unexpected error settling MQTT message: topic: [{}], connector: {}",
                                 tenant, topic, connectorIdentifier, e);
-                        triggerReconnectOrAck(mqttMessage, topic, messageId);
+                        settle(mqttMessage, topic, messageId, AckOutcome.RETRY);
                     } finally {
                         activeProcessingMessages.decrementAndGet();
                     }
@@ -259,31 +240,39 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
     }
 
     /**
-     * Circuit-breaker-aware reconnect handler.
+     * Settles a message after its pipeline ran, as {@link MessageFailureTracker#settle} decides:
      * <ul>
-     *   <li>Records the failure. If the per-message counter reaches {@code maxProcessingAttempts}, the message is
-     *       treated as a poison pill: it is ACKed (discarded) and a hard error is logged, whatever the setting
-     *       below.</li>
-     *   <li>If {@code reconnectOnProcessingError} is disabled, returns (broker will retransmit).</li>
-     *   <li>Otherwise {@link #triggerReconnect(String)} schedules an exponentially backed-off disconnect.</li>
+     *   <li>acknowledge it when it was processed;</li>
+     *   <li>acknowledge (discard) it as a poison pill once it failed {@code maxProcessingAttempts} times, whatever
+     *       the setting below;</li>
+     *   <li>otherwise let the broker retransmit it. With {@code reconnectOnProcessingError} on,
+     *       {@link #triggerReconnect(String)} schedules a backed-off disconnect, which makes it do so. With it off
+     *       the message stays unacknowledged and the broker is left to retransmit on its own.</li>
      * </ul>
      */
-    protected void triggerReconnectOrAck(M mqttMessage, String topic, String messageId) {
-        if (failureTracker.recordFailureReachedLimit(messageId)) {
-            log.error(
-                    "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
-                            + "infinite retransmission. Message is discarded. topic: [{}], connector: {}",
-                    tenant, failureTracker.limit(), topic, connectorIdentifier);
-            acknowledgeMessage(mqttMessage);
-            return;
+    protected void settle(M mqttMessage, String topic, String messageId, AckOutcome outcome) {
+        switch (failureTracker.settle(messageId, outcome)) {
+            case ACK:
+                log.debug("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                        tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                acknowledgeMessage(mqttMessage);
+                return;
+            case DROP:
+                log.error(
+                        "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
+                                + "infinite retransmission. Message is discarded. topic: [{}], connector: {}",
+                        tenant, failureTracker.limit(), topic, connectorIdentifier);
+                acknowledgeMessage(mqttMessage);
+                return;
+            default:
+                if (!reconnectOnProcessingError) {
+                    log.info(
+                            "{} - END: reconnectOnProcessingError is disabled, waiting for broker to retransmit unACKed message. connector: {}",
+                            tenant, connectorIdentifier);
+                    return;
+                }
+                triggerReconnect(messageId);
         }
-        if (!reconnectOnProcessingError) {
-            log.info(
-                    "{} - END: reconnectOnProcessingError is disabled, waiting for broker to retransmit unACKed message. connector: {}",
-                    tenant, connectorIdentifier);
-            return;
-        }
-        triggerReconnect(messageId);
     }
 
     /**

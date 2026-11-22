@@ -43,9 +43,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class CustomWebSocketClient extends WebSocketClient {
-    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
-    private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
-
     /** Wait before a retransmission requested because the broker connection is down. */
     private static final long CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS = 5_000;
 
@@ -114,9 +111,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                 // ACK the message to prevent Cumulocity from endlessly re-delivering it.
                 log.error("{} - onNotification returned null for API: {}, Operation: {} — ACKing to prevent infinite redelivery, connector: InternalWebSocket",
                         tenant, notification.getApi(), notification.getOperation());
-                if (notification.getAckHeader() != null) {
-                    send(notification.getAckHeader());
-                }
+                ackIfPresent(notification);
                 return;
             }
             int mappingQos = processedResults.getConsolidatedQos().getLevel();
@@ -126,15 +121,12 @@ public class CustomWebSocketClient extends WebSocketClient {
                 // Use the provided virtualThreadPool instead of creating a new thread
                 virtualThreadPool.submit(() -> {
                     try {
-                        // Give a retransmission more time than the first attempt: a timeout can be caused by
-                        // a slow server. Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget.
+                        // A retransmission gets more time than the first attempt (see escalatedTimeoutMs)
                         Long timeoutOverride = null;
-                        if (timeout > 0 && processedResults.getProcessingResult() != null) {
+                        if (processedResults.getProcessingResult() != null) {
+                            timeoutOverride = failureTracker.escalatedTimeoutMs(messageId, timeout);
                             int attempt = failureTracker.failures(messageId);
-                            timeoutOverride = Math.min(
-                                    (long) timeout * (attempt + 1),
-                                    (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
-                            if (attempt > 0) {
+                            if (timeoutOverride != null && attempt > 0) {
                                 log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                         tenant, attempt + 1, timeoutOverride, timeout, connectorId.displayName());
                             }
@@ -147,14 +139,10 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 true);
                         if (outcome == AckOutcome.ACK) {
                             failureTracker.clear(messageId);
-                            if (notification.getAckHeader() != null) {
-                                log.debug(
-                                        "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
-                                send(notification.getAckHeader()); // ack message
-                            } else {
-                                throw new IllegalStateException("No message id found for ack");
-                            }
+                            log.debug(
+                                    "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
+                                    tenant, notification.getApi(), mappingQos, connectorId.displayName());
+                            ack(notification);
                         } else if (outcome == AckOutcome.RETRY_CONNECTOR_UNAVAILABLE) {
                             // The broker connection is down, the message is fine: do not count the attempt
                             // toward the poison-pill limit, and wait before the retransmission
@@ -175,14 +163,10 @@ public class CustomWebSocketClient extends WebSocketClient {
 
                 // If the original publish was QoS > 0 but got downgraded, we should still
                 // acknowledge
-                if (notification.getAckHeader() != null) {
-                    log.debug(
-                            "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                            tenant, notification.getApi(), mappingQos, connectorId.displayName());
-                    send(notification.getAckHeader()); // ack message
-                } else {
-                    throw new IllegalStateException("No message id found for ack");
-                }
+                log.debug(
+                        "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
+                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
+                ack(notification);
             }
         }
     }
@@ -203,19 +187,21 @@ public class CustomWebSocketClient extends WebSocketClient {
         return lastCloseReason != null && lastCloseReason.contains("409");
     }
 
-    /**
-     * Handles failure-to-acknowledge or poison-pill detection for unreliable messages.
-     * Each notification is tracked independently by its messageId, so one failing message does not affect others.
-     * <ul>
-     *   <li>If the failure counter for this specific message has reached {@code maxProcessingAttempts}: the message is treated as a <em>poison pill</em>
-     *       — it is ACKed (discarded) and a hard error is logged. This breaks an infinite redelivery
-     *       loop caused by a permanently unprocessable message.</li>
-     *   <li>Otherwise the WebSocket is disconnected to trigger Cumulocity to retransmit the unACKed message.</li>
-     * </ul>
-     *
-     * @param notification the unacknowledged notification
-     * @param messageId    unique identifier for tracking failures per notification
-     */
+    /** Acknowledges the notification on this WebSocket. A notification without an ack header cannot be settled. */
+    private void ack(Notification notification) {
+        if (notification.getAckHeader() == null) {
+            throw new IllegalStateException("No message id found for ack");
+        }
+        send(notification.getAckHeader());
+    }
+
+    /** Acknowledges the notification if it carries an ack header, and does nothing if it does not. */
+    private void ackIfPresent(Notification notification) {
+        if (notification.getAckHeader() != null) {
+            send(notification.getAckHeader());
+        }
+    }
+
     private void retransmitLater(Notification notification, String messageId) {
         reconnectAfter(CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS,
                 String.format("Broker connection of connector %s is down: message not acknowledged, reconnecting in "
@@ -247,6 +233,19 @@ public class CustomWebSocketClient extends WebSocketClient {
         }
     }
 
+    /**
+     * Handles failure-to-acknowledge or poison-pill detection for unreliable messages.
+     * Each notification is tracked independently by its messageId, so one failing message does not affect others.
+     * <ul>
+     *   <li>If the failure counter for this specific message has reached {@code maxProcessingAttempts}: the message is treated as a <em>poison pill</em>
+     *       — it is ACKed (discarded) and a hard error is logged. This breaks an infinite redelivery
+     *       loop caused by a permanently unprocessable message.</li>
+     *   <li>Otherwise the WebSocket is disconnected to trigger Cumulocity to retransmit the unACKed message.</li>
+     * </ul>
+     *
+     * @param notification the unacknowledged notification
+     * @param messageId    unique identifier for tracking failures per notification
+     */
     private void handleFailureOrRetransmit(Notification notification, String messageId) {
         // A closed WebSocket was closed on purpose (the connector is paused while its broker is down) and has
         // been dropped by its owner. Reconnecting it would open one nobody tracks or can pause again, and it
@@ -263,9 +262,7 @@ public class CustomWebSocketClient extends WebSocketClient {
             log.error("{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
                     + "infinite redelivery loop. Message is discarded. messageId: {}, API: {}, connector: {}",
                     tenant, failureTracker.limit(), messageId, notification.getApi(), connectorId.displayName());
-            if (notification.getAckHeader() != null) {
-                send(notification.getAckHeader());
-            }
+            ackIfPresent(notification);
             return;
         }
 

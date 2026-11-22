@@ -428,7 +428,9 @@ caps how often it will do so for the *same message*. The limit is the service co
 [`GooglePubSubClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClient.java)
 through one counter,
 [`MessageFailureTracker`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/callback/MessageFailureTracker.java).
-Each retry-worthy failure (server error, timeout, cancellation, exception) is counted; on the
+The decision after the pipeline ran is one method, `MessageFailureTracker.settle`, which returns acknowledge, retry or
+drop; each connector keeps only its protocol call (an ack, a nack, a seek, a reconnect) and the timeout escalation of a
+retransmission is `escalatedTimeoutMs` in the same class. Each retry-worthy failure (server error, timeout, cancellation, exception) is counted; on the
 failure that reaches the limit the message is acknowledged and dropped, so one undigestible
 payload cannot block a subscription forever. The error stays in the mapping status. The count is
 per message, keyed by something that survives redelivery (a message id, an offset, or a hash of

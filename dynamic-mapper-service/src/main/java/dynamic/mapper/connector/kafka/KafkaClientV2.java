@@ -874,26 +874,35 @@ public class KafkaClientV2 extends AConnectorClient {
             KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
-        // topic-partition-offset is the same on every redelivery of the record
-        String recordKey = record.topic() + "-" + record.partition() + "@" + record.offset();
+        return settle(record, wrapper,
+                ProcessingResultHelper.awaitOutcome(processedResults, tenant, record.topic(), log, null));
+    }
+
+    /**
+     * Settles a record as {@link MessageFailureTracker#settle} decides: commit it, drop it (commit past it, so the
+     * partition does not block on it forever) at the limit, or leave it uncommitted so the loop seeks back to it.
+     *
+     * @return {@code true} if the record is settled and the loop may continue
+     */
+    private boolean settle(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
+            ProcessingResultHelper.AckOutcome outcome) {
         MessageFailureTracker tracker = failureTracker();
-        if (ProcessingResultHelper.awaitAckable(processedResults, tenant, record.topic(), log)) {
-            tracker.clear(recordKey);
-            handleSuccessfulProcessing(record, wrapper);
-            return true;
+        switch (tracker.settle(recordKey(record), outcome)) {
+            case ACK:
+                handleSuccessfulProcessing(record, wrapper);
+                return true;
+            case DROP:
+                log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
+                        + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
+                        record.offset(), connectorIdentifier);
+                handleSuccessfulProcessing(record, wrapper);
+                return true;
+            default:
+                log.warn("{} - Not committing topic: [{}], partition: {}, offset: {}", tenant, record.topic(),
+                        record.partition(), record.offset());
+                handleProcessingError(record, wrapper, 0);
+                return false;
         }
-        if (tracker.recordFailureReachedLimit(recordKey)) {
-            // Drop: commit past the record so the partition does not block on it forever
-            log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
-                    + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
-                    record.offset(), connectorIdentifier);
-            handleSuccessfulProcessing(record, wrapper);
-            return true;
-        }
-        log.warn("{} - Not committing topic: [{}], partition: {}, offset: {}", tenant, record.topic(),
-                record.partition(), record.offset());
-        handleProcessingError(record, wrapper, 0);
-        return false;
     }
 
     /**
@@ -905,11 +914,10 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     boolean settleAfterUnexpectedError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
             Exception error) {
-        String recordKey = record.topic() + "-" + record.partition() + "@" + record.offset();
         MessageFailureTracker tracker = failureTracker();
         log.error("{} - Unexpected error processing record: topic: [{}], partition: {}, offset: {}, connector: {}",
                 tenant, record.topic(), record.partition(), record.offset(), connectorIdentifier, error);
-        if (tracker.recordFailureReachedLimit(recordKey)) {
+        if (tracker.recordFailureReachedLimit(recordKey(record))) {
             log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
                     + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
                     record.offset(), connectorIdentifier);
@@ -917,6 +925,11 @@ public class KafkaClientV2 extends AConnectorClient {
             return true;
         }
         return false;
+    }
+
+    /** topic-partition-offset: the same on every redelivery of the record. */
+    private static String recordKey(ConsumerRecord<?, ?> record) {
+        return record.topic() + "-" + record.partition() + "@" + record.offset();
     }
 
     private volatile MessageFailureTracker failureTracker;

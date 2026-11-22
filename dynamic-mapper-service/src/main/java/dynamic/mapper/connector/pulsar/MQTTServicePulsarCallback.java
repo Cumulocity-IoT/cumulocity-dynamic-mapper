@@ -94,33 +94,16 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
                         consumer.acknowledge(message);
                         return null;
                     }
-                    // Give a retransmission more time than the first attempt: a timeout can be caused
-                    // by a transiently slow platform, not by a broken mapping. Capped at
-                    // MAX_TIMEOUT_ESCALATION_FACTOR x the base budget.
-                    Long timeoutOverride = null;
-                    if (timeout > 0) {
-                        int attempt = failureTracker.failures(messageId);
-                        timeoutOverride = Math.min(
-                                (long) timeout * (attempt + 1),
-                                (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
-                        if (attempt > 0) {
-                            log.info(
-                                    "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                    tenant, attempt + 1, timeoutOverride, timeout, connectorIdentifier);
-                        }
+                    // A retransmission gets more time than the first attempt (see escalatedTimeoutMs)
+                    Long timeoutOverride = failureTracker.escalatedTimeoutMs(messageId, timeout);
+                    int attempt = failureTracker.failures(messageId);
+                    if (timeoutOverride != null && attempt > 0) {
+                        log.info(
+                                "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                tenant, attempt + 1, timeoutOverride, timeout, connectorIdentifier);
                     }
-                    AckOutcome outcome = ProcessingResultHelper.awaitOutcome(
-                            processedResults, tenant, towardsDeviceTopic, log, timeoutOverride);
-                    if (outcome == AckOutcome.ACK) {
-                        failureTracker.clear(messageId);
-                        if (serviceConfiguration().getLogPayload()) {
-                            log.info("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
-                                    tenant, towardsDeviceTopic, connectorIdentifier);
-                        }
-                        consumer.acknowledge(message);
-                    } else {
-                        handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
-                    }
+                    settle(consumer, message, messageId, towardsDeviceTopic, ProcessingResultHelper.awaitOutcome(
+                            processedResults, tenant, towardsDeviceTopic, log, timeoutOverride));
                 } catch (PulsarClientException e) {
                     log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                             tenant, towardsDeviceTopic, connectorIdentifier, e);
@@ -129,7 +112,7 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
                     // (a task submitted to the pool swallows exceptions).
                     log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
                             tenant, towardsDeviceTopic, connectorIdentifier, e);
-                    handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
+                    settle(consumer, message, messageId, towardsDeviceTopic, AckOutcome.RETRY);
                 }
                 return null;
             });

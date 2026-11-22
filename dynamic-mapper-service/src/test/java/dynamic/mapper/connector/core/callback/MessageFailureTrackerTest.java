@@ -184,4 +184,59 @@ class MessageFailureTrackerTest {
         fromProperty.recordFailureReachedLimit("m");
         assertEquals(0, fromProperty.retryDelayMillis("m"));
     }
+
+    // ---- settle: the decision every connector takes after the pipeline ran
+
+    @Test
+    void settleAcknowledgesAndForgetsTheFailuresOnSuccess() {
+        tracker.recordFailureReachedLimit("m");
+
+        assertEquals(MessageFailureTracker.Settlement.ACK,
+                tracker.settle("m", dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome.ACK));
+
+        assertEquals(0, tracker.failures("m"));
+    }
+
+    @Test
+    void settleCountsAFailureAndRetriesUntilTheLimitThenDrops() {
+        var retry = dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome.RETRY;
+
+        assertEquals(MessageFailureTracker.Settlement.RETRY, tracker.settle("m", retry));
+        assertEquals(MessageFailureTracker.Settlement.RETRY, tracker.settle("m", retry));
+        assertEquals(MessageFailureTracker.Settlement.DROP, tracker.settle("m", retry)); // the limit is 3
+        assertEquals(0, tracker.failures("m"), "a dropped message starts fresh");
+    }
+
+    @Test
+    void settleDoesNotCountABrokerConnectionThatIsDown() {
+        var unavailable = dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome.RETRY_CONNECTOR_UNAVAILABLE;
+
+        for (int i = 0; i < 10; i++) {
+            assertEquals(MessageFailureTracker.Settlement.RETRY, tracker.settle("m", unavailable));
+        }
+
+        assertEquals(0, tracker.failures("m"), "it says nothing about the message");
+    }
+
+    // ---- the wait budget of a retransmission
+
+    @Test
+    void aRetransmissionGetsMoreTimeCappedAtThreeTimesTheBase() {
+        assertEquals(1_000L, tracker.escalatedTimeoutMs("m", 1_000));   // first attempt
+        tracker.recordFailureReachedLimit("m");
+        assertEquals(2_000L, tracker.escalatedTimeoutMs("m", 1_000));
+        tracker.recordFailureReachedLimit("m");
+        assertEquals(3_000L, tracker.escalatedTimeoutMs("m", 1_000));
+        MessageFailureTracker patient = new MessageFailureTracker(() -> 10);
+        for (int i = 0; i < 6; i++) {
+            patient.recordFailureReachedLimit("m");
+        }
+        assertEquals(3_000L, patient.escalatedTimeoutMs("m", 1_000), "capped");
+    }
+
+    @Test
+    void noBaseBudgetMeansTheDefaultWait() {
+        assertEquals(null, tracker.escalatedTimeoutMs("m", 0));
+        assertEquals(null, tracker.escalatedTimeoutMs("m", -5));
+    }
 }

@@ -30,6 +30,7 @@ import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
@@ -170,31 +171,34 @@ public class AMQP10Callback implements MessageListener {
         }
     }
 
-    private void settleAfterError(Message message, String address, byte[] payload) {
-        String failureKey = failureKey(message, address, payload == null ? new byte[0] : payload);
-        if (failureTracker.recordFailureReachedLimit(failureKey)) {
-            log.error("{} - Dropping AMQP 1.0 message after {} failed attempts: address: [{}], connector: {}",
-                    tenant, failureTracker.limit(), address, connectorIdentifier);
-            acknowledgeQuietly(message, address);
-        } else {
-            failureTracker.awaitRetryDelay(failureKey);
-            recoverQuietly(address);
-        }
-    }
-
     private void settle(Message message, String address, byte[] payload,
             ProcessingResultWrapper<?> processedResults) {
-        String failureKey = failureKey(message, address, payload);
-        if (ProcessingResultHelper.awaitAckable(processedResults, tenant, address, log)) {
-            failureTracker.clear(failureKey);
-            acknowledgeQuietly(message, address);
-        } else if (failureTracker.recordFailureReachedLimit(failureKey)) {
-            log.error("{} - Dropping AMQP 1.0 message after {} failed attempts: address: [{}], connector: {}",
-                    tenant, failureTracker.limit(), address, connectorIdentifier);
-            acknowledgeQuietly(message, address);
-        } else {
-            failureTracker.awaitRetryDelay(failureKey);
-            recoverQuietly(address);
+        settle(message, address, failureKey(message, address, payload),
+                ProcessingResultHelper.awaitOutcome(processedResults, tenant, address, log, null));
+    }
+
+    private void settleAfterError(Message message, String address, byte[] payload) {
+        settle(message, address, failureKey(message, address, payload == null ? new byte[0] : payload),
+                AckOutcome.RETRY);
+    }
+
+    /**
+     * Settles a message as {@link MessageFailureTracker#settle} decides: acknowledge it, drop (acknowledge) it at the
+     * limit, or wait and recover the session so it is redelivered.
+     */
+    private void settle(Message message, String address, String failureKey, AckOutcome outcome) {
+        switch (failureTracker.settle(failureKey, outcome)) {
+            case ACK:
+                acknowledgeQuietly(message, address);
+                return;
+            case DROP:
+                log.error("{} - Dropping AMQP 1.0 message after {} failed attempts: address: [{}], connector: {}",
+                        tenant, failureTracker.limit(), address, connectorIdentifier);
+                acknowledgeQuietly(message, address);
+                return;
+            default:
+                failureTracker.awaitRetryDelay(failureKey);
+                recoverQuietly(address);
         }
     }
 

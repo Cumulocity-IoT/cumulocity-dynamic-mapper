@@ -33,6 +33,7 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -44,15 +45,12 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Common fields and constructor wiring</li>
  *   <li>{@link #cancelAndDrain(ProcessingResultWrapper)} — cancel a processing future and wait
  *       up to 2 seconds for it to drain before releasing the Pulsar ack slot</li>
- *   <li>{@link #handleFailureOrPoisonPill(Consumer, Message, String, String)} — per-message
- *       failure counting with poison-pill detection after {@code maxProcessingAttempts} failures</li>
+ *   <li>{@link #settle(Consumer, Message, String, String, AckOutcome)} — acknowledge, negative-acknowledge
+ *       or, after {@code maxProcessingAttempts} failures, discard a message as a poison pill</li>
  * </ul>
  */
 @Slf4j
 public abstract class AbstractPulsarCallback implements MessageListener<byte[]> {
-
-    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
-    protected static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
 
     protected final GenericMessageCallback genericMessageCallback;
     protected final String tenant;
@@ -111,36 +109,45 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
     }
 
     /**
-     * Handles a per-message failure by either negative-ACKing for redelivery or,
-     * once {@code maxProcessingAttempts} failures have occurred,
-     * treating the message as a poison pill and positive-ACKing it (discarding it)
-     * to break an infinite redelivery loop.
+     * Settles a message after its pipeline ran, as {@link MessageFailureTracker#settle} decides: acknowledge it when
+     * it was processed, negative-acknowledge it for redelivery when it failed, and once it failed
+     * {@code maxProcessingAttempts} times acknowledge (discard) it as a poison pill to break an infinite redelivery
+     * loop. The negative acknowledge carries Pulsar's own redelivery delay.
      *
      * @param consumer  the Pulsar consumer (for ack/nack)
      * @param message   the unacknowledged Pulsar message
      * @param messageId unique message identifier for per-message failure tracking
      * @param topic     human-readable topic string for logging
+     * @param outcome   what the pipeline result says
      */
-    protected void handleFailureOrPoisonPill(Consumer<byte[]> consumer, Message<byte[]> message,
-            String messageId, String topic) {
-        if (failureTracker.recordFailureReachedLimit(messageId)) {
-            log.error(
-                    "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
-                            + "infinite redelivery loop. Message is discarded. messageId: {}, topic: [{}], connector: {}",
-                    tenant, failureTracker.limit(), messageId, topic, connectorIdentifier);
-            try {
-                consumer.acknowledge(message);
-            } catch (PulsarClientException e) {
+    protected void settle(Consumer<byte[]> consumer, Message<byte[]> message, String messageId, String topic,
+            AckOutcome outcome) {
+        switch (failureTracker.settle(messageId, outcome)) {
+            case ACK:
+                log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
+                        tenant, topic, connectorIdentifier);
+                acknowledge(consumer, message, messageId, topic);
+                return;
+            case DROP:
                 log.error(
-                        "{} - Error acknowledging poison-pill Pulsar message: messageId: {}, topic: [{}], connector: {}",
-                        tenant, messageId, topic, connectorIdentifier, e);
-            }
-            return;
+                        "{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
+                                + "infinite redelivery loop. Message is discarded. messageId: {}, topic: [{}], connector: {}",
+                        tenant, failureTracker.limit(), messageId, topic, connectorIdentifier);
+                acknowledge(consumer, message, messageId, topic);
+                return;
+            default:
+                log.warn("{} - Negative ack for Pulsar redelivery: message: {}, topic: [{}], connector: {}",
+                        tenant, messageId, topic, connectorIdentifier);
+                consumer.negativeAcknowledge(message);
         }
+    }
 
-        log.warn("{} - Negative ack for Pulsar redelivery: message: {}, topic: [{}], connector: {}",
-                tenant, messageId, topic, connectorIdentifier);
-
-        consumer.negativeAcknowledge(message);
+    private void acknowledge(Consumer<byte[]> consumer, Message<byte[]> message, String messageId, String topic) {
+        try {
+            consumer.acknowledge(message);
+        } catch (PulsarClientException e) {
+            log.error("{} - Error acknowledging Pulsar message: messageId: {}, topic: [{}], connector: {}",
+                    tenant, messageId, topic, connectorIdentifier, e);
+        }
     }
 }

@@ -27,6 +27,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
 
 /**
  * Counts how often a message failed so a message that always fails does not loop forever.
@@ -116,6 +117,53 @@ public class MessageFailureTracker {
             Integer configured = current == null ? null : current.getMaxProcessingAttempts();
             return configured == null || configured < 1 ? DEFAULT_MAX_ATTEMPTS : configured;
         });
+    }
+
+    /** What a connector does with a message once its pipeline ran, see {@link #settle}. */
+    public enum Settlement {
+        /** Processed: acknowledge it. Its failures are forgotten. */
+        ACK,
+        /** It failed {@link #limit()} times: acknowledge it anyway, so it cannot block the subscription forever. */
+        DROP,
+        /** Do not acknowledge, redeliver it (after {@link #awaitRetryDelay}). The failure is counted. */
+        RETRY
+    }
+
+    /**
+     * The decision every connector took by hand after the pipeline ran: acknowledge and forget the failures,
+     * count the failure and redeliver, or drop at the limit. A connector keeps only its protocol call (an ack, a
+     * nack, a seek, a reconnect) and switches on the result.
+     *
+     * <p>{@link AckOutcome#RETRY_CONNECTOR_UNAVAILABLE} is redelivered without counting: the broker connection
+     * being down says nothing about the message.</p>
+     */
+    public Settlement settle(String key, AckOutcome outcome) {
+        switch (outcome) {
+            case ACK:
+                clear(key);
+                return Settlement.ACK;
+            case RETRY_CONNECTOR_UNAVAILABLE:
+                return Settlement.RETRY;
+            default:
+                return recordFailureReachedLimit(key) ? Settlement.DROP : Settlement.RETRY;
+        }
+    }
+
+    /** A retransmission gets this many times the base wait budget at most. */
+    public static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
+
+    /**
+     * The wait budget for the next attempt at a message. A timeout can be caused by a transiently slow platform,
+     * not by a broken mapping, so a retransmission gets more time than the first attempt: the base budget times
+     * the attempt number, capped at {@value #MAX_TIMEOUT_ESCALATION_FACTOR} times the base.
+     *
+     * @return the budget in milliseconds, or {@code null} to use the default (there is no base budget)
+     */
+    public Long escalatedTimeoutMs(String key, long baseMs) {
+        if (baseMs <= 0) {
+            return null;
+        }
+        return Math.min(baseMs * (failures(key) + 1), baseMs * MAX_TIMEOUT_ESCALATION_FACTOR);
     }
 
     /** Failures recorded so far for the message, for example to lengthen the wait on a retransmission. */
