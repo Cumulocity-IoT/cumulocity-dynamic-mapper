@@ -1065,6 +1065,32 @@ public class KafkaClientV2 extends AConnectorClient {
         return kafkaProducer != null && connectionStateManager.isConnected();
     }
 
+    /** The Kafka default of delivery.timeout.ms, used when the producer properties do not set it. */
+    private static final long DEFAULT_DELIVERY_TIMEOUT_MS = 120_000;
+    /** Slack on top of the delivery timeout, so the producer's own failure arrives before ours. */
+    private static final long SEND_TIMEOUT_MARGIN_MS = 1_000;
+
+    /**
+     * How long to wait for the result of a send. The producer gives up on a record after delivery.timeout.ms and
+     * never sends it afterwards, so waiting that long (plus a margin) means a record is either delivered or
+     * dropped for good when this returns. Waiting less, as a fixed 10 seconds did next to a delivery timeout of 15,
+     * treated a record as failed while it was still in the producer's buffer: it was sent when the broker came
+     * back, and the redelivered notification sent it again.
+     */
+    long sendTimeoutMillis() {
+        long delivery = DEFAULT_DELIVERY_TIMEOUT_MS;
+        Properties properties = kafkaProducerProperties;
+        Object configured = properties == null ? null : properties.get("delivery.timeout.ms");
+        if (configured != null) {
+            try {
+                delivery = Long.parseLong(configured.toString().trim());
+            } catch (NumberFormatException e) {
+                log.warn("{} - Ignoring invalid delivery.timeout.ms: {}", tenant, configured);
+            }
+        }
+        return delivery + SEND_TIMEOUT_MARGIN_MS;
+    }
+
     /** Timeouts and retriable errors of the producer mean the broker could not be reached, not a bad message. */
     private static boolean isBrokerUnavailable(Throwable error) {
         Throwable current = error;
@@ -1124,7 +1150,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
             try {
                 Future<RecordMetadata> future = kafkaProducer.send(record);
-                RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
+                RecordMetadata metadata = future.get(sendTimeoutMillis(), TimeUnit.MILLISECONDS);
 
                 if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
                     log.info("{} - Published to Kafka ({}/{}): topic=[{}], partition: {}, offset: {}, mapping: {}",

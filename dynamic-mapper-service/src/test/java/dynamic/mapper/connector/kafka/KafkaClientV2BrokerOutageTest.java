@@ -181,4 +181,41 @@ class KafkaClientV2BrokerOutageTest {
         assertEquals("org.apache.kafka.common.serialization.StringSerializer", props.get("key.serializer"));
         assertEquals("org.apache.kafka.common.serialization.ByteArraySerializer", props.get("value.serializer"));
     }
+
+    @Test
+    void theSendIsAwaitedForTheWholeDeliveryTimeout() throws Exception {
+        java.util.Properties properties = new java.util.Properties();
+        properties.put("delivery.timeout.ms", "15000");
+        ReflectionTestUtils.setField(client, "kafkaProducerProperties", properties);
+
+        // a fixed 10 seconds next to a 15 second delivery timeout treated a record as failed while it was still
+        // buffered; it was sent when the broker came back, and the redelivered notification sent it again
+        assertEquals(16_000L, client.sendTimeoutMillis());
+    }
+
+    @Test
+    void theSendTimeoutDefaultsToTheKafkaDeliveryTimeout() {
+        assertEquals(121_000L, client.sendTimeoutMillis());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void thePublishWaitsForTheDeliveryTimeout() throws Exception {
+        when(state.isConnected()).thenReturn(true);
+        java.util.Properties properties = new java.util.Properties();
+        properties.put("delivery.timeout.ms", "15000");
+        ReflectionTestUtils.setField(client, "kafkaProducerProperties", properties);
+        KafkaProducer<String, byte[]> producer = mock(KafkaProducer.class);
+        java.util.concurrent.Future<org.apache.kafka.clients.producer.RecordMetadata> future =
+                mock(java.util.concurrent.Future.class);
+        when(future.get(org.mockito.ArgumentMatchers.anyLong(), any())).thenReturn(
+                new org.apache.kafka.clients.producer.RecordMetadata(
+                        new org.apache.kafka.common.TopicPartition("topic", 0), 0, 0, 0, 0, 0));
+        when(producer.send(any(ProducerRecord.class))).thenReturn(future);
+        ReflectionTestUtils.setField(client, "kafkaProducer", producer);
+
+        client.publishMEAO(context());
+
+        org.mockito.Mockito.verify(future).get(16_000L, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
 }
