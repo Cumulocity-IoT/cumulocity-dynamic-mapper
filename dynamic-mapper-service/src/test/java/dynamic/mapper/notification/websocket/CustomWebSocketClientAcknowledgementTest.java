@@ -24,6 +24,7 @@ package dynamic.mapper.notification.websocket;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -88,6 +89,7 @@ class CustomWebSocketClientAcknowledgementTest {
                 ConnectorId.INTERNAL));
         doNothing().when(client).send(anyString());
         doNothing().when(client).reconnect();
+        doReturn(true).when(client).isOpen(); // a connected WebSocket; individual tests close it
     }
 
     private void returning(Supplier<ProcessingResultWrapper<Object>> result) {
@@ -203,5 +205,34 @@ class CustomWebSocketClientAcknowledgementTest {
 
         verify(client, times(1)).send(ACK); // only the success acknowledged; the count restarted
         verify(client, times(4)).reconnect();
+    }
+
+    @Test
+    void doesNotReconnectAClosedWebSocketAfterAFailure() {
+        // Closed on purpose: the connector is paused while its broker is down and the owner dropped this client.
+        // Reconnecting it would open a WebSocket nobody tracks, which consumes messages during the outage.
+        doReturn(false).when(client).isOpen();
+        returning(() -> atLeastOnce(failed()));
+
+        client.onMessage(RAW);
+
+        verify(client, never()).reconnect();
+        verify(client, never()).send(ACK);
+    }
+
+    @Test
+    void failuresOnAClosedWebSocketDoNotCountTowardsThePoisonPillLimit() {
+        returning(() -> atLeastOnce(failed())); // the limit is 3
+        doReturn(false).when(client).isOpen();
+        for (int i = 0; i < 5; i++) {
+            client.onMessage(RAW);
+        }
+
+        doReturn(true).when(client).isOpen();
+        client.onMessage(RAW);
+        client.onMessage(RAW);
+
+        verify(client, never()).send(ACK); // 2 counted failures, below the limit of 3: not dropped
+        verify(client, times(2)).reconnect();
     }
 }

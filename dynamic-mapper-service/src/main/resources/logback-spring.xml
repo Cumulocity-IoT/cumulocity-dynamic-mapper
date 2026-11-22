@@ -43,6 +43,14 @@
          docs/installation.md "Monitoring (OpenTelemetry)". -->
     <logger name="io.opentelemetry.exporter" level="OFF" />
 
+    <!-- Kafka client noise. While a broker is down the client logs "Rebootstrapping" about ten times a second
+         and a "could not be established" warning every second, and every client creation dumps its full
+         configuration at INFO. The mapper logs the state changes itself ("Kafka broker connectivity test
+         failed", "Kafka broker is reachable again", "Connection state changed"), so the client's own
+         connection chatter is not needed. Raise to INFO or DEBUG here to diagnose the client. -->
+    <logger name="org.apache.kafka" level="WARN" />
+    <logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" />
+
     <springProfile name="dev">
         <logger name="org.springframework.web" level="INFO" />
         <logger name="org.apache.commons.httpclient" level="INFO" />

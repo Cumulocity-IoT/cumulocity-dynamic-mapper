@@ -215,6 +215,13 @@ public class OutboundMessageDispatcher implements NotificationCallback {
 
         // Check connector connection status (skip for testing)
         if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {
+            if (connectorClient.holdsOutboundWhileDisconnected()) {
+                // Returning the empty result would acknowledge the notification and lose the message. Report
+                // it as not deliverable instead: it stays queued in Cumulocity and arrives again later.
+                log.warn("{} - Notification message received but connector {} is not connected. Not acknowledging, "
+                        + "it stays queued in Cumulocity", tenant, connectorClient.getConnectorName());
+                return ProcessingResultWrapper.connectorUnavailable(connectorClient.getConnectorName());
+            }
             log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
             return result;

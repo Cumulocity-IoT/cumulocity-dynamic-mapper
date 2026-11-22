@@ -505,7 +505,24 @@ Closing a WebSocket keeps the Notification 2.0 subscription. Unsubscribing would
 pause never does that.
 
 A message that arrives in the window between the broker dropping and the next check takes the retry path. It is not
-acknowledged and does not count toward `maxProcessingAttempts`.
+acknowledged and does not count toward `maxProcessingAttempts`. Two guards make that hold:
+
+- **The dispatcher does not return an empty result for a down connector.** `OutboundMessageDispatcher` checks the
+  connector before processing. For a connector that holds outbound messages it returns
+  `ProcessingResultWrapper.connectorUnavailable`, a settled result carrying a `ConnectorNotConnectedException`, so
+  the ack rule gives `RETRY_CONNECTOR_UNAVAILABLE`. An empty result would be acknowledged, because nothing failed
+  and there is nothing to wait for, and the message would be lost. Connectors that do not hold outbound messages
+  keep the old behavior: log and ignore.
+- **A closed WebSocket is not reconnected after a failure.** The pause closes the WebSocket and drops it from
+  `NotificationConnectionManager`. A message that was already in flight then fails on the closed socket, and
+  `CustomWebSocketClient.handleFailureOrRetransmit` used to call `reconnect()`. That opened a WebSocket nobody
+  tracked, so the pause could not close it again, and every message of the outage arrived on it. The method now
+  returns when `isOpen()` is false, before the failure is counted. Cumulocity keeps the message and delivers it
+  when the manager opens a new WebSocket on resume.
+
+These two together are the failure that the Kafka run in
+[`resources/testing/reliability/broker-outage`](../../resources/testing/reliability/broker-outage/README.md)
+exposed: 12 measurements created during a 70 second outage were acknowledged and discarded.
 
 ##### Which connectors take part
 

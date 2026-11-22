@@ -12,6 +12,12 @@
         </encoder>
     </appender>
 
+    <!-- Same Kafka client settings as logback-spring.xml. This file takes precedence over it whenever the test
+         classpath is on the classpath, which includes a backend started from an IDE launch configuration that
+         adds test classes. While a broker is down the client logs "Rebootstrapping" about ten times a second. -->
+    <logger name="org.apache.kafka" level="WARN" />
+    <logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" />
+
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
     </root>

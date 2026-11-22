@@ -23,11 +23,13 @@ package dynamic.mapper.processor.runtime;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -46,6 +48,24 @@ public class ProcessingResultWrapper<O> {
      */
     @Setter
     private Qos consolidatedQos;
+
+    /**
+     * A settled result that says the connector cannot take the message right now (its broker connection is
+     * down). It carries a {@link ConnectorNotConnectedException} (HTTP 503), so the caller does not acknowledge
+     * the notification and does not count the attempt toward the poison-pill limit: Cumulocity keeps the message
+     * and delivers it again.
+     *
+     * <p>An empty wrapper would be acknowledged, because there is nothing to wait for and nothing failed. That
+     * is how a message that arrives while the connector is down used to be lost.</p>
+     */
+    public static <O> ProcessingResultWrapper<O> connectorUnavailable(String connectorName) {
+        ProcessingContext<O> context = ProcessingContext.<O>builder().build();
+        context.addError(new ConnectorNotConnectedException(connectorName));
+        return ProcessingResultWrapper.<O>builder()
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
+                .processingResult(CompletableFuture.completedFuture(List.of(context)))
+                .build();
+    }
 
     /**
      * Null-safe accessor: a wrapper built on an early-exit path (no mapping resolved, invalid

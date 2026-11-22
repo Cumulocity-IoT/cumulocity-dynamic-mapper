@@ -237,6 +237,17 @@ public class CustomWebSocketClient extends WebSocketClient {
     }
 
     private void handleFailureOrRetransmit(Notification notification, String messageId) {
+        // A closed WebSocket was closed on purpose (the connector is paused while its broker is down) and has
+        // been dropped by its owner. Reconnecting it would open one nobody tracks or can pause again, and it
+        // would consume messages during the outage. Cumulocity keeps the unacknowledged message and delivers
+        // it when the owner opens a new WebSocket.
+        if (!isOpen()) {
+            log.info("{} - WebSocket is closed, not reconnecting: the message stays queued in Cumulocity, "
+                    + "messageId: {}, API: {}, connector: {}",
+                    tenant, messageId, notification.getApi(), connectorId.displayName());
+            return;
+        }
+
         if (failureTracker.recordFailureReachedLimit(messageId)) {
             log.error("{} - POISON PILL: {} failed attempts without success: ACKing message to prevent "
                     + "infinite redelivery loop. Message is discarded. messageId: {}, API: {}, connector: {}",
