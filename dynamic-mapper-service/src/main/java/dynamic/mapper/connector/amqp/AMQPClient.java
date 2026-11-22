@@ -521,74 +521,43 @@ public class AMQPClient extends AConnectorClient {
             return;
         }
 
-        var requests = context.getRequests();
-        if (requests == null || requests.isEmpty()) {
-            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
-            return;
-        }
-
         String exchangeName = (String) connectorConfiguration.getProperties()
                 .getOrDefault("exchange", "");
 
-        // Process each request
         // Anything above AT_MOST_ONCE must be published persistently (delivery mode 2);
         // testing for AT_LEAST_ONCE alone made EXACTLY_ONCE fall into the non-persistent
         // branch, i.e. a stronger request produced a weaker guarantee.
         Qos publishQos = effectivePublishQos(context);
 
-        for (int i = 0; i < requests.size(); i++) {
-            DynamicMapperRequest request = requests.get(i);
+        forEachPublishable(context, item -> {
+            // Convert topic to routing key (replace / with .)
+            String routingKey = item.topic().replace("/", ".");
 
-            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
-                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
-                continue;
-            }
+            AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
+                    .deliveryMode(publishQos.requiresAcknowledgement() ? 2 : 1)
+                    .contentType(item.request().getContentType() != null ? item.request().getContentType()
+                            : "application/json")
+                    .build();
 
-            byte[] payloadBytes = request.getBinaryPayload() != null
-                    ? request.getBinaryPayload()
-                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
-            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
-
-            if (topic == null || topic.isEmpty()) {
-                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
-                request.setError(new Exception("No publish topic specified"));
-                continue;
-            }
-
-            try {
-                // Convert topic to routing key (replace / with .)
-                String routingKey = topic.replace("/", ".");
-
-                AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
-                        .deliveryMode(publishQos.requiresAcknowledgement() ? 2 : 1)
-                        .contentType(request.getContentType() != null ? request.getContentType() : "application/json")
-                        .build();
-
-                // Publish message. Synchronized against disconnect()'s channel teardown so a
-                // disconnect racing in here can't hand basicPublish() a closed/nulled channel
-                // (TOCTOU: the isConnected() check above and this call are otherwise not atomic).
-                synchronized (this) {
-                    if (channel == null || !channel.isOpen()) {
-                        throw new IllegalStateException("Channel is not open");
-                    }
-                    channel.basicPublish(exchangeName, routingKey, props, payloadBytes);
+            // Publish message. Synchronized against disconnect()'s channel teardown so a
+            // disconnect racing in here can't hand basicPublish() a closed/nulled channel
+            // (TOCTOU: the isConnected() check above and this call are otherwise not atomic).
+            synchronized (this) {
+                if (channel == null || !channel.isOpen()) {
+                    throw new IllegalStateException("Channel is not open");
                 }
-
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
-                            tenant, getConnectorName(), topic, publishQos, new String(payloadBytes, StandardCharsets.UTF_8));
-                } else {
-                    log.debug("{} - Published message ({}/{}): exchange=[{}], routingKey=[{}], QoS: {}",
-                            tenant, i + 1, requests.size(), exchangeName, routingKey, publishQos);
-                }
-
-            } catch (Exception e) {
-                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
-                request.setError(e);
-                context.addError(new dynamic.mapper.processor.ProcessingException(
-                        "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
+                channel.basicPublish(exchangeName, routingKey, props, item.payload());
             }
-        }
+
+            if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                        tenant, getConnectorName(), item.topic(), publishQos,
+                        new String(item.payload(), StandardCharsets.UTF_8));
+            } else {
+                log.debug("{} - Published message ({}): exchange=[{}], routingKey=[{}], QoS: {}",
+                        tenant, item.position(), exchangeName, routingKey, publishQos);
+            }
+        });
     }
 
     @Override

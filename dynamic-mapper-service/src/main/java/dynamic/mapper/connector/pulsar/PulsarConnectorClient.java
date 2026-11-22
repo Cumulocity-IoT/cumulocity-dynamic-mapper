@@ -679,68 +679,41 @@ public class PulsarConnectorClient extends AConnectorClient {
             return;
         }
 
-        var requests = context.getRequests();
-        if (requests == null || requests.isEmpty()) {
-            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
-            return;
-        }
-
         Qos qos = effectivePublishQos(context);
 
-        // Process each request
-        for (int i = 0; i < requests.size(); i++) {
-            DynamicMapperRequest request = requests.get(i);
-
-            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
-                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
-                continue;
-            }
-
-            byte[] payload = request.getBinaryPayload() != null
-                    ? request.getBinaryPayload()
-                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
-            // Use the publishTopic from the request, fallback to context if not set
-            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
-
-            if (topic == null || topic.isEmpty()) {
-                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
-                request.setError(new Exception("No publish topic specified"));
-                continue;
-            }
-
+        forEachPublishable(context, item -> {
             try {
-                Producer<byte[]> producer = getOrCreateProducer(topic, qos);
+                Producer<byte[]> producer = getOrCreateProducer(item.topic(), qos);
 
                 if (producer != null && producer.isConnected()) {
-                    sendMessageWithQos(producer, payload, qos, context);
-                    log.debug("{} - Published message ({}/{}): topic={}", tenant, i + 1, requests.size(), topic);
+                    sendMessageWithQos(producer, item.payload(), qos, context);
+                    log.debug("{} - Published message ({}): topic={}", tenant, item.position(), item.topic());
                 } else {
-                    log.error("{} - No connected producer for topic: {} ({}/{})", tenant, topic, i + 1, requests.size());
-                    Exception notConnected = new Exception("No connected producer for topic: " + topic);
+                    log.error("{} - No connected producer for topic: {} ({})", tenant, item.topic(), item.position());
+                    Exception notConnected = new Exception("No connected producer for topic: " + item.topic());
                     markUnavailable(notConnected);
-                    failPublishUnavailable(context, request, notConnected);
+                    failPublishUnavailable(context, item.request(), notConnected);
                 }
-
             } catch (Exception e) {
-                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
-                discardProducerIfClosed(topic, e);
-                if (isBrokerUnavailable(e)) {
-                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it. The
-                    // connector is not available until the housekeeping reaches the broker again, which pauses the
-                    // device WebSockets instead of letting every message wait for its send timeout.
-                    markUnavailable(e);
-                    failPublishUnavailable(context, request, e);
-                } else {
-                    request.setError(e);
-                    context.addError(new dynamic.mapper.processor.ProcessingException(
-                            "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
-                }
+                // A producer that is closed is dropped so the next publish creates a new one
+                discardProducerIfClosed(item.topic(), e);
+                throw e;
             }
-        }
+        });
+    }
+
+    /**
+     * The connector is not available until the housekeeping reaches the broker again, which pauses the device
+     * WebSockets instead of letting every message wait for its send timeout.
+     */
+    @Override
+    protected void onBrokerUnavailable(Throwable error) {
+        markUnavailable(error);
     }
 
     /** Whether the broker could not be reached (timeout, no connection), as opposed to a problem of the message. */
-    static boolean isBrokerUnavailable(Throwable error) {
+    @Override
+    protected boolean isBrokerUnavailable(Throwable error) {
         Throwable current = error;
         for (int depth = 0; current != null && depth < 10; depth++) {
             if (current instanceof PulsarClientException.TimeoutException

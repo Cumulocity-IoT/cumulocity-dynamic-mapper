@@ -421,6 +421,29 @@ public abstract class AMQTTClient extends AConnectorClient {
         return true;
     }
 
+    /**
+     * The HiveMQ client says the connection is down with a state exception (publishing while not connected) or a
+     * closed or failed connection. The connection can drop between the readiness check and the publish: that is
+     * not a problem of the message, so it is retried and not counted, where it used to be acknowledged and lost.
+     */
+    @Override
+    protected boolean isBrokerUnavailable(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof com.hivemq.client.mqtt.exceptions.MqttClientStateException
+                    || current instanceof com.hivemq.client.mqtt.exceptions.ConnectionClosedException
+                    || current instanceof com.hivemq.client.mqtt.exceptions.ConnectionFailedException
+                    || current instanceof com.hivemq.client.mqtt.exceptions.MqttSessionExpiredException) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
     @Override
     public boolean supportsRequestAPI(dynamic.mapper.model.API api) {
         // MQTT brokers publish to topics — they cannot route to Cumulocity REST microservice

@@ -1137,7 +1137,8 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /** Timeouts and retriable errors of the producer mean the broker could not be reached, not a bad message. */
-    private static boolean isBrokerUnavailable(Throwable error) {
+    @Override
+    protected boolean isBrokerUnavailable(Throwable error) {
         Throwable current = error;
         for (int depth = 0; current != null && depth < 10; depth++) {
             if (current instanceof org.apache.kafka.common.errors.RetriableException
@@ -1159,63 +1160,25 @@ public class KafkaClientV2 extends AConnectorClient {
             return;
         }
 
-        var requests = context.getRequests();
-        if (requests == null || requests.isEmpty()) {
-            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
-            return;
-        }
-
         String key = context.getKey();
 
-        // Process each request
-        for (int i = 0; i < requests.size(); i++) {
-            DynamicMapperRequest request = requests.get(i);
-
-            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
-                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
-                continue;
+        forEachPublishable(context, item -> {
+            ProducerRecord<String, byte[]> record = new ProducerRecord<>(item.topic(), key, item.payload());
+            if (item.request().getContentType() != null) {
+                record.headers().add("content-type", item.request().getContentType().getBytes(StandardCharsets.UTF_8));
             }
 
-            byte[] payload = request.getBinaryPayload() != null
-                    ? request.getBinaryPayload()
-                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
-            // Use the publishTopic from the request, fallback to context if not set
-            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+            Future<RecordMetadata> future = kafkaProducer.send(record);
+            RecordMetadata metadata = future.get(sendTimeoutMillis(), TimeUnit.MILLISECONDS);
 
-            if (topic == null || topic.isEmpty()) {
-                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
-                request.setError(new Exception("No publish topic specified"));
-                continue;
+            if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
+                log.info("{} - Published to Kafka ({}): topic=[{}], partition: {}, offset: {}, mapping: {}",
+                        tenant, item.position(), item.topic(), metadata.partition(), metadata.offset(),
+                        context.getMapping().getName());
+            } else {
+                log.debug("{} - Published to Kafka ({}): topic=[{}]", tenant, item.position(), item.topic());
             }
-
-            ProducerRecord<String, byte[]> record = new ProducerRecord<>(topic, key, payload);
-            if (request.getContentType() != null) {
-                record.headers().add("content-type", request.getContentType().getBytes(StandardCharsets.UTF_8));
-            }
-
-            try {
-                Future<RecordMetadata> future = kafkaProducer.send(record);
-                RecordMetadata metadata = future.get(sendTimeoutMillis(), TimeUnit.MILLISECONDS);
-
-                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                    log.info("{} - Published to Kafka ({}/{}): topic=[{}], partition: {}, offset: {}, mapping: {}",
-                            tenant, i + 1, requests.size(), topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
-                } else {
-                    log.debug("{} - Published to Kafka ({}/{}): topic=[{}]", tenant, i + 1, requests.size(), topic);
-                }
-
-            } catch (Exception e) {
-                String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s] (%d/%d)", tenant, topic, i + 1, requests.size());
-                log.error(errorMessage, e);
-                if (isBrokerUnavailable(e)) {
-                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it
-                    failPublishUnavailable(context, request, e);
-                } else {
-                    request.setError(e);
-                    context.addError(new ProcessingException(errorMessage, e));
-                }
-            }
-        }
+        });
     }
 
     @Override

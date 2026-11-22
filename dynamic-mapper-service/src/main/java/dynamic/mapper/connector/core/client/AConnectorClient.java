@@ -362,6 +362,97 @@ public abstract class AConnectorClient {
         }
     }
 
+    /** One request of a context that can be published, with what every broker connector needs of it. */
+    protected record PublishItem(dynamic.mapper.model.DynamicMapperRequest request, byte[] payload, String topic,
+            int index, int total) {
+        /** The position in the context for log lines, for example {@code 2/3}. */
+        public String position() {
+            return (index + 1) + "/" + total;
+        }
+    }
+
+    /** The send of one {@link PublishItem}; an exception it throws is recorded as the failure of that request. */
+    @FunctionalInterface
+    protected interface PublishAction {
+        void publish(PublishItem item) throws Exception;
+    }
+
+    /**
+     * The loop every broker connector's {@code publishMEAO} repeated: for each request of the context, skip a null
+     * one or one without a payload, skip an API the connector does not publish ({@link #supportsRequestAPI}), take
+     * the payload bytes (a binary payload unchanged, text as UTF-8), resolve the topic (the request's own, else the
+     * context's) and record an error on a request that has none, then hand it to {@code action}. An exception from the
+     * action is logged and recorded by {@link #publishFailed}. The caller checks {@link #failPublishIfNotConnected}
+     * first.
+     */
+    protected final void forEachPublishable(ProcessingContext<?> context, PublishAction action) {
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+        int total = requests.size();
+        for (int i = 0; i < total; i++) {
+            dynamic.mapper.model.DynamicMapperRequest request = requests.get(i);
+
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, total);
+                continue;
+            }
+            if (!supportsRequestAPI(request.getApi())) {
+                // API.CUSTOM requests are routed via C8YAgent.createMEAO in SendOutboundProcessor;
+                // a broker connector has no broker topic to publish to for these.
+                log.debug("{} - Skipping request ({}/{}): API type '{}' is not supported by {} connector",
+                        tenant, i + 1, total, request.getApi(), getConnectorType());
+                continue;
+            }
+
+            byte[] payload = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic()
+                    : context.getResolvedPublishTopic();
+            if (topic == null || topic.isEmpty()) {
+                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, total);
+                request.setError(new Exception("No publish topic specified"));
+                continue;
+            }
+
+            try {
+                action.publish(new PublishItem(request, payload, topic, i, total));
+            } catch (Exception e) {
+                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, total, e);
+                publishFailed(context, request, e, i, total);
+            }
+        }
+    }
+
+    /**
+     * Whether a publish failed because the peer could not be reached (a timeout, no connection), as opposed to a
+     * problem of the message. A connector that can tell overrides it. Such a failure is retried and not counted
+     * toward the poison-pill limit, where a message error is acknowledged and dropped.
+     */
+    protected boolean isBrokerUnavailable(Throwable error) {
+        return false;
+    }
+
+    /** Called when a publish failed because the peer is unavailable, before it is recorded as retryable. */
+    protected void onBrokerUnavailable(Throwable error) {
+    }
+
+    /** Records the failure of one request as retryable if the peer is unavailable, otherwise as a message error. */
+    protected final void publishFailed(ProcessingContext<?> context, dynamic.mapper.model.DynamicMapperRequest request,
+            Exception error, int index, int total) {
+        if (isBrokerUnavailable(error)) {
+            onBrokerUnavailable(error);
+            failPublishUnavailable(context, request, error);
+        } else {
+            request.setError(error);
+            context.addError(new dynamic.mapper.processor.ProcessingException(
+                    "Failed to publish message " + (index + 1) + "/" + total, error));
+        }
+    }
+
     /** Records the same retryable error on every request of the context and on the context. No requests: no-op. */
     protected void failAllRequestsUnavailable(ProcessingContext<?> context, ConnectorNotConnectedException error) {
         var requests = context.getRequests();

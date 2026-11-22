@@ -457,68 +457,29 @@ public class MQTT3Client extends AMQTTClient {
             return;
         }
 
-        var requests = context.getRequests();
-        if (requests == null || requests.isEmpty()) {
-            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
-            return;
-        }
-
         // Clamped to the connector's capabilities (and null-safe) — publishing must obey
         // the same QoS contract as subscribing.
         MqttQos mqttQos = MqttQos.fromCode(effectivePublishQos(context).getLevel());
 
-        // Process each request
-        for (int i = 0; i < requests.size(); i++) {
-            DynamicMapperRequest request = requests.get(i);
+        forEachPublishable(context, item -> {
+            Mqtt3Publish message = Mqtt3Publish.builder()
+                    .topic(item.topic())
+                    .retain(context.isRetain())
+                    .qos(mqttQos)
+                    .payload(item.payload())
+                    .build();
 
-            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
-                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
-                continue;
+            mqttClient.publish(message);
+
+            if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                        tenant, getConnectorName(), item.topic(), mqttQos,
+                        new String(item.payload(), StandardCharsets.UTF_8));
+            } else {
+                log.debug("{} - Published message ({}): topic=[{}], QoS: {}", tenant, item.position(), item.topic(),
+                        mqttQos);
             }
-
-            if (!supportsRequestAPI(request.getApi())) {
-                // API.CUSTOM requests are routed via C8YAgent.createMEAO in SendOutboundProcessor;
-                // the broker connector has no broker topic to publish to for these.
-                log.debug("{} - Skipping request ({}/{}): API type '{}' is not supported by {} connector",
-                        tenant, i + 1, requests.size(), request.getApi(), getConnectorType());
-                continue;
-            }
-
-            byte[] payloadBytes = request.getBinaryPayload() != null
-                    ? request.getBinaryPayload()
-                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
-            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
-
-            if (topic == null || topic.isEmpty()) {
-                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
-                request.setError(new Exception("No publish topic specified"));
-                continue;
-            }
-
-            try {
-                Mqtt3Publish message = Mqtt3Publish.builder()
-                        .topic(topic)
-                        .retain(context.isRetain())
-                        .qos(mqttQos)
-                        .payload(payloadBytes)
-                        .build();
-
-                mqttClient.publish(message);
-
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
-                            tenant, getConnectorName(), topic, mqttQos, new String(payloadBytes, StandardCharsets.UTF_8));
-                } else {
-                    log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
-                }
-
-            } catch (Exception e) {
-                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
-                request.setError(e);
-                context.addError(new dynamic.mapper.processor.ProcessingException(
-                        "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
-            }
-        }
+        });
     }
 
     @Override
