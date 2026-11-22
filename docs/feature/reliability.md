@@ -446,6 +446,18 @@ chain. An outbound publish that fails
 because the broker connection is down is not counted either: it says nothing about the message (see
 [Outbound during a broker outage](#outbound-during-a-broker-outage)).
 
+##### Delay between attempts
+
+The limit counts attempts, not time. A connector that redelivers at once used them all within milliseconds of an
+outage of the platform starting: AMQP requeued immediately, Google Pub/Sub nacked (and is redelivered at once), and the
+outbound WebSocket reconnected at once. They now wait before each redelivery, one step per failure of that message: 5, 10,
+15 and 20 seconds, at most 30 (`MessageFailureTracker.retryDelayMillis`). With the default limit of 5 a message therefore
+survives about a minute of failing platform before it is dropped. The wait blocks the delivery thread on purpose: nothing
+else on that channel is delivered while the platform is failing. The outbound WebSocket reconnects once for all messages
+that failed together. Kafka (5 seconds between polls of a failed record), MQTT (reconnect back-off) and plain Pulsar
+(the client's negative-acknowledge delay) had a delay already. The step can be changed with the JVM system property
+`dynamic.mapper.retry.delay.step.ms`, 0 to retry at once; the test run sets it to 0.
+
 For MQTT the redelivery is achieved by *reconnecting* (with back-off), so the broker retransmits
 whatever it has not seen acknowledged. The connector property `reconnectOnProcessingError` gates the
 reconnect only: with the property off, the connector leaves the message unacknowledged and waits for

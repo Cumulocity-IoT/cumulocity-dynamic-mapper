@@ -126,4 +126,62 @@ class MessageFailureTrackerTest {
         assertEquals(0, tracker.failures("m0"), "the oldest entries are forgotten");
         assertEquals(1, tracker.failures("m19999"));
     }
+
+    // ---- the delay between attempts
+
+    @Test
+    void theDelayGrowsWithTheFailuresUpToTheMaximum() {
+        MessageFailureTracker delayed = new MessageFailureTracker(() -> 10, 5_000, 30_000);
+
+        long[] expected = { 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 30_000 };
+        for (long delay : expected) {
+            delayed.recordFailureReachedLimit("m");
+            assertEquals(delay, delayed.retryDelayMillis("m"));
+        }
+    }
+
+    @Test
+    void aDelayStepOfZeroRetriesAtOnce() {
+        MessageFailureTracker immediate = new MessageFailureTracker(() -> 10, 0, 30_000);
+        immediate.recordFailureReachedLimit("m");
+
+        assertEquals(0, immediate.retryDelayMillis("m"));
+        long start = System.nanoTime();
+        immediate.awaitRetryDelay("m");
+        assertTrue((System.nanoTime() - start) / 1_000_000 < 50);
+    }
+
+    @Test
+    void awaitRetryDelayWaitsForTheDelay() {
+        MessageFailureTracker delayed = new MessageFailureTracker(() -> 10, 40, 1_000);
+        delayed.recordFailureReachedLimit("m");
+
+        long start = System.nanoTime();
+        delayed.awaitRetryDelay("m");
+
+        assertTrue((System.nanoTime() - start) / 1_000_000 >= 35, "waited about one step");
+    }
+
+    @Test
+    void anInterruptEndsTheWaitAndIsKeptForTheCaller() {
+        MessageFailureTracker delayed = new MessageFailureTracker(() -> 10, 60_000, 60_000);
+        delayed.recordFailureReachedLimit("m");
+
+        Thread.currentThread().interrupt();
+        long start = System.nanoTime();
+        delayed.awaitRetryDelay("m");
+
+        assertTrue((System.nanoTime() - start) / 1_000_000 < 1_000, "did not sleep a minute");
+        assertTrue(Thread.interrupted(), "the interrupt flag is restored");
+    }
+
+    @Test
+    void theDefaultStepComesFromTheSystemPropertyWhichTheTestRunSetsToZero() {
+        // surefire and failsafe pass -Ddynamic.mapper.retry.delay.step.ms=0: tests that fail a message several
+        // times must not wait for the production delay
+        assertEquals("0", System.getProperty(MessageFailureTracker.RETRY_DELAY_STEP_PROPERTY));
+        MessageFailureTracker fromProperty = new MessageFailureTracker(() -> 10);
+        fromProperty.recordFailureReachedLimit("m");
+        assertEquals(0, fromProperty.retryDelayMillis("m"));
+    }
 }

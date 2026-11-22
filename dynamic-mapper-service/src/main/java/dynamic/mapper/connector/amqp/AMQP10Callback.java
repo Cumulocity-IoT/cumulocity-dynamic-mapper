@@ -113,9 +113,10 @@ public class AMQP10Callback implements MessageListener {
     public void onMessage(Message message) {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
             String address = resolveAddress(message);
+            byte[] payload = null;
 
             try {
-                byte[] payload = extractPayload(message);
+                payload = extractPayload(message);
                 if (payload == null) {
                     acknowledgeQuietly(message, address);
                     return;
@@ -159,7 +160,25 @@ public class AMQP10Callback implements MessageListener {
             } catch (Exception e) {
                 log.error("{} - Error processing AMQP 1.0 message on address: [{}]",
                         tenant, address, e);
+                // The exception was swallowed: the message stayed unacknowledged, and the acknowledge() of the next
+                // message settled it, which loses it (the hazard described above, for the exception path). Count it
+                // and recover the session like any failed attempt.
+                if (qos != Qos.AT_MOST_ONCE) {
+                    settleAfterError(message, address, payload);
+                }
             }
+        }
+    }
+
+    private void settleAfterError(Message message, String address, byte[] payload) {
+        String failureKey = failureKey(message, address, payload == null ? new byte[0] : payload);
+        if (failureTracker.recordFailureReachedLimit(failureKey)) {
+            log.error("{} - Dropping AMQP 1.0 message after {} failed attempts: address: [{}], connector: {}",
+                    tenant, failureTracker.limit(), address, connectorIdentifier);
+            acknowledgeQuietly(message, address);
+        } else {
+            failureTracker.awaitRetryDelay(failureKey);
+            recoverQuietly(address);
         }
     }
 
@@ -174,6 +193,7 @@ public class AMQP10Callback implements MessageListener {
                     tenant, failureTracker.limit(), address, connectorIdentifier);
             acknowledgeQuietly(message, address);
         } else {
+            failureTracker.awaitRetryDelay(failureKey);
             recoverQuietly(address);
         }
     }

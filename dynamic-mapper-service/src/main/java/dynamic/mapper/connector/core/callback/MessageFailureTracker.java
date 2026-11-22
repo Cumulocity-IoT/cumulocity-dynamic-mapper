@@ -45,7 +45,17 @@ public class MessageFailureTracker {
     public static final int DEFAULT_MAX_ATTEMPTS = ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS;
     private static final int MAX_TRACKED = 10_000;
 
+    /**
+     * JVM system property for the delay step in milliseconds, 0 to retry at once. The test run sets it to 0, so the
+     * tests that fail a message several times do not wait.
+     */
+    public static final String RETRY_DELAY_STEP_PROPERTY = "dynamic.mapper.retry.delay.step.ms";
+    public static final long DEFAULT_RETRY_DELAY_STEP_MS = 5_000;
+    public static final long DEFAULT_RETRY_DELAY_MAX_MS = 30_000;
+
     private final IntSupplier maxAttempts;
+    private final long delayStepMs;
+    private final long delayMaxMs;
     private final Map<String, Integer> failures = new LinkedHashMap<>(16, 0.75f, false) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
@@ -54,7 +64,45 @@ public class MessageFailureTracker {
     };
 
     public MessageFailureTracker(IntSupplier maxAttempts) {
+        this(maxAttempts, configuredDelayStepMs(), DEFAULT_RETRY_DELAY_MAX_MS);
+    }
+
+    public MessageFailureTracker(IntSupplier maxAttempts, long delayStepMs, long delayMaxMs) {
         this.maxAttempts = maxAttempts;
+        this.delayStepMs = Math.max(0, delayStepMs);
+        this.delayMaxMs = Math.max(0, delayMaxMs);
+    }
+
+    private static long configuredDelayStepMs() {
+        Long configured = Long.getLong(RETRY_DELAY_STEP_PROPERTY);
+        return configured == null ? DEFAULT_RETRY_DELAY_STEP_MS : configured;
+    }
+
+    /**
+     * How long to wait before the next attempt at this message: one step per failure so far, up to the maximum
+     * (5, 10, 15, 20 seconds, then 30). Without a delay a connector that nacks or reconnects retries within
+     * milliseconds, and a Cumulocity outage of a few seconds used up all attempts of every message in that time.
+     * Call it after {@link #recordFailureReachedLimit} returned {@code false}.
+     */
+    public long retryDelayMillis(String key) {
+        return Math.min(Math.max(1, failures(key)) * delayStepMs, delayMaxMs);
+    }
+
+    /**
+     * Waits {@link #retryDelayMillis} before the caller redelivers the message (a nack, a requeue, a recover, a
+     * reconnect). It blocks the delivery thread, which is the intent: nothing else on that channel is delivered
+     * while the platform is failing. An interrupt ends the wait early and is kept for the caller.
+     */
+    public void awaitRetryDelay(String key) {
+        long delay = retryDelayMillis(key);
+        if (delay <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

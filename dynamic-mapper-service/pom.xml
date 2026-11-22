@@ -506,6 +506,10 @@
                 <version>3.5.6</version>
                 <configuration>
                     <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
+                    <!-- Tests that fail a message several times must not wait for the retry delay -->
+                    <systemPropertyVariables>
+                        <dynamic.mapper.retry.delay.step.ms>0</dynamic.mapper.retry.delay.step.ms>
+                    </systemPropertyVariables>
 
                     <!-- Run fast unit tests by default -->
                     <includes>
@@ -532,6 +536,9 @@
                 <version>3.6.0</version>
                 <configuration>
                     <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
+                    <systemPropertyVariables>
+                        <dynamic.mapper.retry.delay.step.ms>0</dynamic.mapper.retry.delay.step.ms>
+                    </systemPropertyVariables>
                     <!-- Sequential execution for integration tests -->
                     <parallel>none</parallel>
                 </configuration>

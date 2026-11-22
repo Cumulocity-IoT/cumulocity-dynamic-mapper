@@ -135,6 +135,24 @@ class AMQPCallbacksAcknowledgementTest {
         verify(channel, never()).basicNack(3L, false, true);
     }
 
+    @Test
+    void amqp091CountsAnExceptionAndDropsTheMessageAtTheLimit() throws Exception {
+        // an exception requeued the message without counting it, so a message that always throws looped forever
+        Channel channel = mock(Channel.class);
+        when(dispatcher.onMessage(any())).thenThrow(new IllegalStateException("boom"));
+        AMQPCallback callback = new AMQPCallback(channel, false, "t1", serviceRegistry, dispatcher, "id", "name");
+        AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder().messageId("throws").build();
+
+        for (long tag = 1; tag <= 3; tag++) {
+            callback.handleDelivery("tag", new Envelope(tag, true, "exchange", "a.b"), properties, "x".getBytes());
+        }
+
+        verify(channel).basicNack(1L, false, true);
+        verify(channel).basicNack(2L, false, true);
+        verify(channel).basicAck(3L, false);   // third failure: dropped
+        verify(channel, never()).basicNack(3L, false, true);
+    }
+
     // ---- AMQP 1.0 ----
 
     private final jakarta.jms.Session session = mock(jakarta.jms.Session.class);
@@ -183,6 +201,23 @@ class AMQPCallbacksAcknowledgementTest {
         verify(session, org.mockito.Mockito.times(
                 dynamic.mapper.configuration.ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS - 1)).recover();
         verify(message).acknowledge();
+    }
+
+    @Test
+    void amqp10RecoversAndCountsAnExceptionThenDropsTheMessageAtTheLimit() throws Exception {
+        // the exception was swallowed: no recover, and the acknowledge() of the next message settled the failed one
+        BytesMessage message = jmsMessage();
+        when(message.getJMSMessageID()).thenReturn("ID:2");
+        when(dispatcher.onMessage(any())).thenThrow(new IllegalStateException("boom"));
+        AMQP10Callback callback = new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr",
+                Qos.AT_LEAST_ONCE, session);
+
+        for (int i = 0; i < 3; i++) {   // the limit is 3
+            callback.onMessage(message);
+        }
+
+        verify(session, org.mockito.Mockito.times(2)).recover();
+        verify(message).acknowledge();   // dropped on the third failure
     }
 
     @Test

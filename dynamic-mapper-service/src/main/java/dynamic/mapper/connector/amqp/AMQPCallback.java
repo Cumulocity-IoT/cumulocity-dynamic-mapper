@@ -138,6 +138,9 @@ public class AMQPCallback extends DefaultConsumer {
                                 tenant, failureTracker.limit(), routingKey, connectorIdentifier);
                         this.getChannel().basicAck(deliveryTag, false);
                     } else {
+                        // Wait before the requeue: it is redelivered at once, so without a delay the message
+                        // used up all its attempts within milliseconds of a Cumulocity outage starting
+                        failureTracker.awaitRetryDelay(failureKey);
                         this.getChannel().basicNack(deliveryTag, false, true);
                     }
                 }
@@ -151,12 +154,21 @@ public class AMQPCallback extends DefaultConsumer {
                 log.error("{} - Error processing AMQP message on routing key: [{}]",
                         tenant, routingKey, e);
 
-                // Reject message and requeue
+                // Reject message and requeue. An exception counts as a failed attempt like any other: it used to
+                // requeue without counting, so a message that always throws looped forever, with no delay.
                 try {
                     if (this.getChannel() != null && !autoAck) {
-                        this.getChannel().basicNack(deliveryTag, false, true);
+                        String failureKey = failureKey(properties, routingKey, body);
+                        if (failureTracker.recordFailureReachedLimit(failureKey)) {
+                            log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], "
+                                    + "connector: {}", tenant, failureTracker.limit(), routingKey, connectorIdentifier);
+                            this.getChannel().basicAck(deliveryTag, false);
+                        } else {
+                            failureTracker.awaitRetryDelay(failureKey);
+                            this.getChannel().basicNack(deliveryTag, false, true);
+                        }
                     }
-                } catch (IOException ex) {
+                } catch (Exception ex) {
                     log.error("{} - Error rejecting message", tenant, ex);
                 }
             }

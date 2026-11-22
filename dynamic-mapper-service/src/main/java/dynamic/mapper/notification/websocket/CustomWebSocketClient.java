@@ -217,15 +217,26 @@ public class CustomWebSocketClient extends WebSocketClient {
      * @param messageId    unique identifier for tracking failures per notification
      */
     private void retransmitLater(Notification notification, String messageId) {
+        reconnectAfter(CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS,
+                String.format("Broker connection of connector %s is down: message not acknowledged, reconnecting in "
+                        + "%dms so Cumulocity retransmits it (attempt not counted), messageId: %s, API: %s",
+                        connectorId.displayName(), CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS, messageId,
+                        notification.getApi()));
+    }
+
+    /**
+     * Reconnects once after the delay, so Cumulocity retransmits the unacknowledged messages. However many messages
+     * failed together, one reconnect redelivers them all: the others return at once.
+     */
+    private void reconnectAfter(long delayMs, String reason) {
         if (!retransmitScheduled.compareAndSet(false, true)) {
             return; // a reconnect is already pending and redelivers this message too
         }
         try {
-            log.warn("{} - Broker connection of connector {} is down: message not acknowledged, reconnecting in {}ms "
-                    + "so Cumulocity retransmits it (attempt not counted), messageId: {}, API: {}",
-                    tenant, connectorId.displayName(), CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS, messageId,
-                    notification.getApi());
-            Thread.sleep(CONNECTOR_UNAVAILABLE_RETRY_DELAY_MS);
+            log.warn("{} - {}", tenant, reason);
+            if (delayMs > 0) {
+                Thread.sleep(delayMs);
+            }
             if (isOpen()) { // closed means the connector was paused: it opens a new WebSocket when it is up
                 this.reconnect();
             }
@@ -258,10 +269,13 @@ public class CustomWebSocketClient extends WebSocketClient {
             return;
         }
 
-        // Disconnect WebSocket to trigger Cumulocity to retransmit unACKed messages
-        log.info("{} - Reconnecting WebSocket to trigger retransmission for messageId: {}, API: {}, connector: {}",
-                tenant, messageId, notification.getApi(), connectorId.displayName());
-        this.reconnect();
+        // Disconnect WebSocket to trigger Cumulocity to retransmit unACKed messages, after a delay that grows with
+        // the failures of the message: a reconnect redelivers at once, and an outage of the platform of a few
+        // seconds used up all attempts of every message
+        long delay = failureTracker.retryDelayMillis(messageId);
+        reconnectAfter(delay, String.format("Reconnecting WebSocket in %dms to trigger retransmission for "
+                + "messageId: %s, API: %s, connector: %s", delay, messageId, notification.getApi(),
+                connectorId.displayName()));
     }
 
     @Override
