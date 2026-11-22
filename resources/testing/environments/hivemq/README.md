@@ -56,7 +56,7 @@ jq '.[0]' connector/mqtt-connector.json | c8y api --method POST \
 
 Start the service, then enable the connector in the UI, or PUT the same body with `"enabled": true` to
 `/service/dynamic-mapper-service/configuration/connector/instance/test-mqtt-connector`. The connector
-settings are MQTT 3.1.1 over `mqtt://localhost:1883`, a clean session, and no credentials. For the TLS
+settings are MQTT 3.1.1 over `mqtt://localhost:1883`, a persistent session (`cleanSession=false`) and no credentials. The persistent session matters for reliability: with a clean session the broker forgets unacknowledged messages when the connector reconnects, which is how a failed inbound message is redelivered. For the TLS
 listener use protocol `mqtts://`, port `8883`, and trust the certificate (see the connector's
 "trust custom certificate" options).
 

@@ -1167,10 +1167,12 @@ public class NotificationConnectionManager {
     }
 
     private void syncConnectorAvailabilityAllTenants() {
+        // A scheduled task that throws is never run again: nothing may escape this method, an Error included, or
+        // the outbound pause would silently stop for good (reconnectAll is guarded the same way)
         try {
             subscriptionsService.runForEachTenant(() -> syncConnectorAvailability(subscriptionsService.getTenant()));
-        } catch (Exception e) {
-            log.error("Error while syncing connector availability: {}", e.getMessage(), e);
+        } catch (Throwable t) {
+            log.error("Error while syncing connector availability: {}", t.getMessage(), t);
         }
     }
 

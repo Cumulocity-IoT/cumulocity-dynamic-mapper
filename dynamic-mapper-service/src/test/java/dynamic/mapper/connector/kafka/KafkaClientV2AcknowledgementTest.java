@@ -116,6 +116,20 @@ class KafkaClientV2AcknowledgementTest {
     }
 
     @Test
+    void anUnexpectedErrorIsCountedAndTheRecordDroppedAtTheLimit() {
+        // an exception that escapes processKafkaMessage used to reach the loop's catch, which did not seek back:
+        // the rest of the batch was skipped and the next success (or the auto-commit) committed past it
+        Exception boom = new IllegalStateException("boom");
+
+        assertFalse(client.settleAfterUnexpectedError(record, wrapper, boom)); // attempt 1: seek back
+        assertFalse(client.settleAfterUnexpectedError(record, wrapper, boom)); // attempt 2: seek back
+        verify(wrapper, never()).requestCommit(any(), any());
+
+        assertTrue(client.settleAfterUnexpectedError(record, wrapper, boom));  // attempt 3: drop, commit past it
+        verify(wrapper).requestCommit(new TopicPartition("t", 0), new OffsetAndMetadata(6L));
+    }
+
+    @Test
     void aRecordIsDroppedAfterTheConfiguredAttemptsSoThePartitionDoesNotBlock() {
         ProcessingResultWrapper<Object> failing = ProcessingResultHelper.successAsync(
                 failedFuture(), Qos.AT_LEAST_ONCE, 1000);

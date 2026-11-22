@@ -235,6 +235,13 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                             // Not ACKed: let the broker retransmit (after a reconnect if configured)
                             triggerReconnectOrAck(mqttMessage, topic, messageId);
                         }
+                    } catch (Exception e) {
+                        // Anything unexpected (a CancellationException from the future, a failed acknowledgement):
+                        // the pool swallows it, which left the message neither acknowledged nor counted and its
+                        // receive-maximum slot held until the next reconnect. Count it like any other failure.
+                        log.error("{} - Unexpected error settling MQTT message: topic: [{}], connector: {}",
+                                tenant, topic, connectorIdentifier, e);
+                        triggerReconnectOrAck(mqttMessage, topic, messageId);
                     } finally {
                         activeProcessingMessages.decrementAndGet();
                     }

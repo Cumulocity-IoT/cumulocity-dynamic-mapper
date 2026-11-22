@@ -11,7 +11,7 @@
       "mqttHost": "localhost",
       "mqttPort": 1883,
       "clientId": "dynamic_mapper_local_test",
-      "cleanSession": true,
+      "cleanSession": false,
       "supportsWildcardInTopicInbound": true,
       "supportsWildcardInTopicOutbound": false
     }

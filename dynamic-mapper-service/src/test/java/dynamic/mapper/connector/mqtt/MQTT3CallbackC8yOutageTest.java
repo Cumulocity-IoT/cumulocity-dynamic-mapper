@@ -181,4 +181,51 @@ class MQTT3CallbackC8yOutageTest {
         verify(duringOutage, never()).acknowledge();          // waits for the broker to redeliver it
         verify(afterOutage, times(1)).acknowledge();
     }
+
+    @Test
+    void anUnexpectedExceptionIsCountedAsAFailureNotSwallowed() {
+        // a cancelled future throws CancellationException from Future.get, which awaitOutcome does not catch. The
+        // pool swallowed it: the message was neither acknowledged nor counted, and its slot stayed held.
+        MQTT3Callback cancelling = callbackReturning(() -> {
+            CompletableFuture<List<ProcessingContext<Object>>> cancelled = new CompletableFuture<>();
+            cancelled.cancel(true);
+            return ProcessingResultWrapper.<Object>builder()
+                    .processingResult(cancelled)
+                    .consolidatedQos(Qos.AT_LEAST_ONCE)
+                    .pipelineTimeoutMS(0)
+                    .build();
+        });
+        Mqtt3Publish message = publish("device/1/measurement", "{\"temp\":5}");
+
+        for (int attempt = 1; attempt < LIMIT; attempt++) {
+            cancelling.accept(message);
+            verify(message, never()).acknowledge();           // retried, waits for the broker to redeliver it
+        }
+        cancelling.accept(message);                           // counted: the limit drops it
+
+        verify(message, times(1)).acknowledge();
+    }
+
+    private MQTT3Callback callbackReturning(java.util.function.Supplier<ProcessingResultWrapper<Object>> result) {
+        ServiceConfiguration configuration = mock(ServiceConfiguration.class);
+        when(configuration.getLogPayload()).thenReturn(false);
+        when(configuration.getMaxProcessingAttempts()).thenReturn(LIMIT);
+        ExecutorService sameThread = mock(ExecutorService.class);
+        when(sameThread.submit(any(Callable.class))).thenAnswer(inv -> {
+            ((Callable<?>) inv.getArgument(0)).call();
+            return CompletableFuture.completedFuture(null);
+        });
+        ConnectorConfiguration connectorConfiguration = mock(ConnectorConfiguration.class);
+        when(connectorConfiguration.getProperties()).thenReturn(Map.of("reconnectOnProcessingError", false));
+        ConnectorConfigurationService connectorConfigurationService = mock(ConnectorConfigurationService.class);
+        when(connectorConfigurationService.getConnectorConfiguration("id", TENANT)).thenReturn(connectorConfiguration);
+        ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
+        when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(configuration);
+        when(serviceRegistry.getVirtualThreadPool()).thenReturn(sameThread);
+        GenericMessageCallback dispatcher = mock(GenericMessageCallback.class);
+        when(dispatcher.onMessage(any())).thenAnswer(inv -> result.get());
+        return new MQTT3Callback(TENANT, serviceRegistry, connectorConfigurationService, dispatcher, "id", "name",
+                "client", () -> {
+                });
+    }
 }

@@ -520,4 +520,15 @@ class NotificationConnectionManagerTest {
         m.setAccessible(true);
         m.invoke(manager, tenant);
     }
+
+    @org.junit.jupiter.api.Test
+    void anErrorInTheAvailabilitySyncDoesNotEndTheScheduledTask() {
+        // a scheduled task that throws is never run again, an Error included: the outbound pause would stop for good
+        org.mockito.Mockito.doThrow(new AssertionError("boom")).when(subscriptionsService)
+                .runForEachTenant(org.mockito.ArgumentMatchers.any(Runnable.class));
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                org.springframework.test.util.ReflectionTestUtils.invokeMethod(manager,
+                        "syncConnectorAvailabilityAllTenants"));
+    }
 }

@@ -719,7 +719,16 @@ public class KafkaClientV2 extends AConnectorClient {
                         boolean anyFailed = false;
                         for (TopicPartition partition : records.partitions()) {
                             for (ConsumerRecord<String, String> record : records.records(partition)) {
-                                if (!processKafkaMessage(record, wrapper)) {
+                                boolean settled;
+                                try {
+                                    settled = processKafkaMessage(record, wrapper);
+                                } catch (Exception e) {
+                                    // Unexpected, not a failed pipeline. It used to escape to the catch below,
+                                    // which did not seek back: the poll position had moved past the rest of the
+                                    // batch, and the auto-commit or the next success committed past it.
+                                    settled = settleAfterUnexpectedError(record, wrapper, e);
+                                }
+                                if (!settled) {
                                     consumer.seek(partition, record.offset());
                                     anyFailed = true;
                                     break;
@@ -884,6 +893,29 @@ public class KafkaClientV2 extends AConnectorClient {
         log.warn("{} - Not committing topic: [{}], partition: {}, offset: {}", tenant, record.topic(),
                 record.partition(), record.offset());
         handleProcessingError(record, wrapper, 0);
+        return false;
+    }
+
+    /**
+     * An exception escaped while processing a record. It counts as a failed attempt like any other: below the limit
+     * the record is not settled (the loop seeks back to it), at the limit it is dropped so the partition does not
+     * block on it forever. Package-private for unit tests.
+     *
+     * @return {@code true} if the record is dropped and the loop may continue; {@code false} if it must be redelivered
+     */
+    boolean settleAfterUnexpectedError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
+            Exception error) {
+        String recordKey = record.topic() + "-" + record.partition() + "@" + record.offset();
+        MessageFailureTracker tracker = failureTracker();
+        log.error("{} - Unexpected error processing record: topic: [{}], partition: {}, offset: {}, connector: {}",
+                tenant, record.topic(), record.partition(), record.offset(), connectorIdentifier, error);
+        if (tracker.recordFailureReachedLimit(recordKey)) {
+            log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
+                    + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
+                    record.offset(), connectorIdentifier);
+            handleSuccessfulProcessing(record, wrapper);
+            return true;
+        }
         return false;
     }
 
