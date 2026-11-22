@@ -213,8 +213,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         // Extract tenant from notification
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 
-        // Check connector connection status (skip for testing)
-        if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {
+        // Check connector connection status (skip for testing). The cheap check: this runs for every notification
+        // on the WebSocket reader thread, and isConnected() can probe the broker.
+        if (!testing && !connectorClient.isReadyForOutbound() && connectorClient.getConnectorType() != ConnectorType.TEST) {
             if (connectorClient.holdsOutboundWhileDisconnected()) {
                 // Returning the empty result would acknowledge the notification and lose the message. Report
                 // it as not deliverable instead: it stays queued in Cumulocity and arrives again later.

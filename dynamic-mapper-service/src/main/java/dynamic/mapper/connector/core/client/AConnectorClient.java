@@ -319,6 +319,17 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Whether the connector can take an outbound message right now. Meant for the per-message path: it is
+     * {@link #isReadyToPublish()}, which a connector keeps cheap, and never probes the broker the way
+     * {@link #isConnected()} does for Kafka (a round trip of up to a second, once per notification, on the
+     * WebSocket reader thread). The periodic availability sync keeps using {@link #isConnected()} to detect the
+     * outage and to decide on the pause.
+     */
+    public final boolean isReadyForOutbound() {
+        return isReadyToPublish();
+    }
+
+    /**
      * Call first in {@link #publishMEAO}: if the broker connection is down, records a retryable error on every
      * request and on the context, and returns {@code true} so the caller stops.
      *

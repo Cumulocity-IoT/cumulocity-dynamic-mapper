@@ -67,6 +67,7 @@ class OutboundMessageDispatcherConnectorDownTest {
         when(connector.getConnectorType()).thenReturn(ConnectorType.KAFKA);
         when(connector.hasOutboundExplorerListeners()).thenReturn(false);
         when(connector.isConnected()).thenReturn(false);
+        when(connector.isReadyForOutbound()).thenReturn(false);
         dispatcher = new OutboundMessageDispatcher(registry, connector, mock(OutboundMessageRouter.class),
                 mock(NotificationSubscriber.class));
     }
@@ -91,5 +92,16 @@ class OutboundMessageDispatcherConnectorDownTest {
         assertNull(result.getProcessingResult());
         assertEquals(AckOutcome.ACK,
                 ProcessingResultHelper.awaitOutcome(result, "t1", "MEASUREMENT#CREATE", LOG, null, true));
+    }
+
+    @Test
+    void theGuardDoesNotProbeTheBrokerForEveryMessage() {
+        when(connector.holdsOutboundWhileDisconnected()).thenReturn(true);
+        when(connector.isReadyForOutbound()).thenReturn(true);
+
+        dispatcher.onNotification(Notification.parse(RAW));
+
+        // isConnected() probes the broker for Kafka: the per-message guard must use the cheap check instead
+        org.mockito.Mockito.verify(connector, org.mockito.Mockito.never()).isConnected();
     }
 }

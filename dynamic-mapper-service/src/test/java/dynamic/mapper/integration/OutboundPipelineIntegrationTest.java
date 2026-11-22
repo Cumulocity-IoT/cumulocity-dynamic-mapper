@@ -141,6 +141,7 @@ class OutboundPipelineIntegrationTest {
         when(connectorClient.getConnectorName()).thenReturn("MQTT Connector");
         when(connectorClient.getConnectorIdentifier()).thenReturn(TEST_CONNECTOR);
         when(connectorClient.isConnected()).thenReturn(true);
+        when(connectorClient.isReadyForOutbound()).thenReturn(true);
 
         // Create dispatcher
         dispatcher = new OutboundMessageDispatcher(serviceRegistry, connectorClient, outboundMessageRouter, notificationSubscriber);
@@ -398,6 +399,7 @@ class OutboundPipelineIntegrationTest {
     void testDispatcherOnNotification_DisconnectedConnectorIgnored() throws Exception {
         // Given - Connector is disconnected
         when(connectorClient.isConnected()).thenReturn(false);
+        when(connectorClient.isReadyForOutbound()).thenReturn(false);
 
         String payload = """
                 {
