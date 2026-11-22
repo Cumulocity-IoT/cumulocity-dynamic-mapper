@@ -28,6 +28,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ReconnectBackoff;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -46,7 +47,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -59,14 +59,9 @@ public abstract class AMQTTClient extends AConnectorClient {
     // MQTT-specific fields - note: parent class already has sslContext
     protected MqttClientSslConfig mqttSslConfig; // MQTT-specific SSL config
     protected Boolean cleanSession = true; // MQTT 3.x uses cleanSession, MQTT 5 uses cleanStart
-    // AtomicInteger (not volatile int): incremented on the housekeeping-executor thread
-    // (connectorSpecificHousekeeping()) but reset to 0 on a HiveMQ/Netty callback thread
-    // (addConnectedListener) — a plain `++` read-modify-write would be able to lose a concurrent
-    // reset.
-    protected final AtomicInteger reconnectAttempt = new AtomicInteger(0);
-    protected volatile long nextReconnectTimeMs = 0;
-    protected static final int RECONNECT_DELAY_STEP_MS = 10000;
-    protected static final int RECONNECT_DELAY_MAX_MS  = 300000; // 5 minutes
+    // The housekeeping's reconnect backoff: advanced on the housekeeping-executor thread, reset from a
+    // HiveMQ/Netty callback thread (addConnectedListener), see ReconnectBackoff
+    protected final ReconnectBackoff reconnectBackoff = new ReconnectBackoff();
     // Bumped once per connect() attempt; captured by buildMqttClient()'s disconnected-listener
     // closure so a listener belonging to a superseded (already-replaced) mqttClient instance can
     // recognize itself as stale and skip scheduling a reconnect — see buildMqttClient() in

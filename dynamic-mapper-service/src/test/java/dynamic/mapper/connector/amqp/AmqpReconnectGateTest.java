@@ -128,7 +128,7 @@ class AmqpReconnectGateTest {
     void theBackoffHoldsTheNextAttemptBack() throws Exception {
         AMQPClient client = amqp();
         set(client, "connection", connection(false, false));
-        set(client, "nextReconnectTimeMs", NOW + 10_000);
+        client.reconnectBackoff.next(NOW); // the first attempt holds the next one back by one step: 10 seconds
 
         assertFalse(client.isReconnectDue(NOW));
         assertTrue(client.isReconnectDue(NOW + 10_001));
@@ -147,7 +147,7 @@ class AmqpReconnectGateTest {
     @Test
     void theAmqp10BackoffHoldsTheNextAttemptBack() throws Exception {
         AMQP10Client client = amqp10();
-        set(client, "nextReconnectTimeMs", NOW + 10_000);
+        client.reconnectBackoff.next(NOW);
 
         assertFalse(client.isReconnectDue(NOW));
         assertTrue(client.isReconnectDue(NOW + 10_001));

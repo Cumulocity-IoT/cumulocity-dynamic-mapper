@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import dynamic.mapper.connector.core.client.ReconnectBackoff;
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
@@ -244,7 +245,7 @@ public class MQTT3Client extends AMQTTClient {
 
                     boolean unexpected = !stale && !intentional && connectorConfiguration.getEnabled() && wasConnected;
                     if (unexpected) {
-                        nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
+                        reconnectBackoff.retryNow(); // reconnect on next housekeeping cycle
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
                         log.info(
@@ -254,8 +255,7 @@ public class MQTT3Client extends AMQTTClient {
                     }
                 }))
                 .addConnectedListener(context -> TenantLogContext.run(tenant, () -> {
-                    reconnectAttempt.set(0);
-                    nextReconnectTimeMs = Long.MAX_VALUE;
+                    reconnectBackoff.holdWhileConnected();
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT3 client connected", tenant);
                 }))
@@ -544,11 +544,10 @@ public class MQTT3Client extends AMQTTClient {
     protected void connectorSpecificHousekeeping(String tenant) {
         if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnectInProgress()) {
             long now = System.currentTimeMillis();
-            if (now >= nextReconnectTimeMs) {
-                int attempt = reconnectAttempt.incrementAndGet();
-                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
-                nextReconnectTimeMs = now + delay;
-                log.warn("{} - MQTT3 client disconnected, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+            if (reconnectBackoff.isDue(now)) {
+                ReconnectBackoff.Attempt attempt = reconnectBackoff.next(now);
+                log.warn("{} - MQTT3 client disconnected, reconnect attempt {} (next in {} ms)", tenant,
+                        attempt.number(), attempt.delayMs());
                 virtualThreadPool.submit(this::connect);
             }
         }

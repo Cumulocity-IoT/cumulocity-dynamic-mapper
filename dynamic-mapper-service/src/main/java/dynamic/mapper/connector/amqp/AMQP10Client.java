@@ -28,6 +28,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ReconnectBackoff;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -56,7 +57,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AMQP 1.0 Connector Client using Apache Qpid JMS.
@@ -83,13 +83,9 @@ public class AMQP10Client extends AConnectorClient {
     private final Map<String, MessageConsumer> consumers = new ConcurrentHashMap<>();
     private final Map<String, MessageProducer> producers = new ConcurrentHashMap<>();
 
-    // Reconnect backoff for monitorSubscriptions(), mirroring AMQTTClient's
-    // reconnectAttempt/nextReconnectTimeMs pattern: without this, a connector that's down for a
-    // long time would get a new reconnect attempt on every 30s housekeeping tick, forever.
-    private final AtomicInteger reconnectAttempt = new AtomicInteger(0);
-    private volatile long nextReconnectTimeMs = 0;
-    private static final int RECONNECT_DELAY_STEP_MS = 10000;
-    private static final int RECONNECT_DELAY_MAX_MS = 300000; // 5 minutes
+    // Reconnect backoff for monitorSubscriptions(): without it a connector that's down for a long time would get a
+    // new reconnect attempt on every 30s housekeeping tick, forever.
+    final ReconnectBackoff reconnectBackoff = new ReconnectBackoff();
 
     {
         // AMQP 1.0 offers unsettled (at-least-once) and settled (at-most-once) delivery only;
@@ -504,8 +500,7 @@ public class AMQP10Client extends AConnectorClient {
 
     /** A successful connect: the next loss is retried at once, then backed off. */
     void markConnected() {
-        reconnectAttempt.set(0);
-        nextReconnectTimeMs = 0;
+        reconnectBackoff.reset();
     }
 
     /**
@@ -516,20 +511,18 @@ public class AMQP10Client extends AConnectorClient {
      * outbound notifications were held forever.</p>
      */
     boolean isReconnectDue(long now) {
-        return !isPhysicallyConnected() && shouldConnect() && !isConnectInProgress() && now >= nextReconnectTimeMs;
+        return !isPhysicallyConnected() && shouldConnect() && !isConnectInProgress() && reconnectBackoff.isDue(now);
     }
 
     @Override
     public void monitorSubscriptions() {
-        // Backed off like AMQTTClient's connectorSpecificHousekeeping(): without
-        // nextReconnectTimeMs gating this, a connector that's down for a long time would spawn a
-        // new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
+        // Backed off (see ReconnectBackoff): a connector that's down for a long time would otherwise spawn a new
+        // reconnect attempt on every 30s housekeeping tick, forever.
         long now = System.currentTimeMillis();
         if (isReconnectDue(now)) {
-            int attempt = reconnectAttempt.incrementAndGet();
-            long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
-            nextReconnectTimeMs = now + delay;
-            log.warn("{} - AMQP 1.0 connection lost, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+            ReconnectBackoff.Attempt attempt = reconnectBackoff.next(now);
+            log.warn("{} - AMQP 1.0 connection lost, reconnect attempt {} (next in {} ms)", tenant, attempt.number(),
+                    attempt.delayMs());
             // submitConnect() (not connect() directly): goes through AConnectorClient's
             // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
             // can't race a concurrent submitConnect()/submitDisconnect() triggered by a

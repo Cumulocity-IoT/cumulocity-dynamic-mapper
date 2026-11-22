@@ -119,7 +119,7 @@ public class HttpPollingConnector extends AConnectorClient {
     /** Consecutive poll failures (per connector instance) before escalating RETRYING -> FAILED. */
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
 
-    /** Cap on the linear backoff delay between retries, mirroring AMQTTClient.RECONNECT_DELAY_MAX_MS. */
+    /** Cap on the linear backoff delay between retries, mirroring ReconnectBackoff.MAX_MS. */
     private static final long BACKOFF_CAP_MS = 300_000L;
 
     /** Bounds every GET call, independent of TCP-level connect/socket timeouts. */
