@@ -437,11 +437,213 @@ class PulsarConnectorClientTest {
     }
 
     private static class TestPulsarConnectorClient extends PulsarConnectorClient {
+        /** The connector state is not wired in these tests: stands in for "connected, broker reachable". */
+        volatile boolean ready = true;
+
         TestPulsarConnectorClient(PulsarClient client, ConnectorConfiguration configuration) {
             pulsarClient = client;
             connectorConfiguration = configuration;
             serviceConfiguration = new ServiceConfiguration();
             tenant = "tenant";
         }
+
+        @Override
+        protected boolean isReadyToPublish() {
+            return ready;
+        }
+    }
+
+    // ---- outage behavior: one producer per topic, hold while the broker is down
+
+    private ConnectorConfiguration publicDefault() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "public", "pulsarNamespace", "default"));
+        return configuration;
+    }
+
+    private ProcessingContext<Object> contextFor(String topic) {
+        return ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .qos(Qos.AT_LEAST_ONCE)
+                .resolvedPublishTopic(topic)
+                .requests(List.of(DynamicMapperRequest.builder().request("{}").build()))
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private ProducerBuilder<byte[]> producerBuilderReturning(PulsarClient pulsarClient, Producer<byte[]> producer)
+            throws Exception {
+        ProducerBuilder<byte[]> producerBuilder = mock();
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.sendTimeout(anyInt(), any())).thenReturn(producerBuilder);
+        when(producerBuilder.create()).thenReturn(producer);
+        return producerBuilder;
+    }
+
+    @Test
+    void concurrentPublishesToOneTopicCreateOneProducer() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        Producer<byte[]> producer = mock();
+        when(producer.isConnected()).thenReturn(true);
+        ProducerBuilder<byte[]> producerBuilder = mock();
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.sendTimeout(anyInt(), any())).thenReturn(producerBuilder);
+        // a slow create, like one against a broker that is coming back: every thread is inside the race window
+        when(producerBuilder.create()).thenAnswer(inv -> {
+            Thread.sleep(200);
+            return producer;
+        });
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+
+        int threads = 16;
+        ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        List<java.util.concurrent.Future<?>> done = new java.util.ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            done.add(pool.submit(() -> {
+                start.await();
+                client.publishMEAO(contextFor("device/commands"));
+                return null;
+            }));
+        }
+        start.countDown();
+        for (java.util.concurrent.Future<?> f : done) {
+            f.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        pool.shutdown();
+
+        verify(producerBuilder, times(1)).create();
+        assertEquals(1, client.producers.size());
+    }
+
+    @Test
+    void aDisconnectedProducerIsNotReplacedAndThePublishIsRetried() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        Producer<byte[]> producer = mock();
+        when(producer.isConnected()).thenReturn(false); // the broker is down, the producer reconnects by itself
+        ProducerBuilder<byte[]> producerBuilder = producerBuilderReturning(pulsarClient, producer);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+
+        ProcessingContext<Object> first = contextFor("device/commands");
+        ProcessingContext<Object> second = contextFor("device/commands");
+        client.publishMEAO(first);
+        client.publishMEAO(second);
+
+        verify(producerBuilder, times(1)).create(); // it used to close and recreate on every publish
+        verify(producer, never()).close();
+        for (ProcessingContext<Object> context : List.of(first, second)) {
+            assertTrue(context.getRequests().get(0).getError()
+                    instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+            assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                    .getHttpStatusCode());
+        }
+    }
+
+    @Test
+    void aClosedProducerIsReplacedOnTheNextPublish() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        Producer<byte[]> producer = mock();
+        when(producer.isConnected()).thenReturn(true);
+        when(producer.send(any(byte[].class))).thenThrow(new PulsarClientException.AlreadyClosedException("closed"));
+        ProducerBuilder<byte[]> producerBuilder = producerBuilderReturning(pulsarClient, producer);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+
+        client.publishMEAO(contextFor("device/commands"));
+        client.publishMEAO(contextFor("device/commands"));
+
+        verify(producerBuilder, times(2)).create();
+    }
+
+    @Test
+    void nothingIsPublishedWhileTheConnectorIsNotReady() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        client.ready = false;
+
+        ProcessingContext<Object> context = contextFor("device/commands");
+        client.publishMEAO(context);
+
+        verify(pulsarClient, never()).newProducer();
+        assertTrue(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+    }
+
+    @Test
+    void theConnectorHoldsOutboundMessagesWhileDisconnected() {
+        assertTrue(new TestPulsarConnectorClient(mock(PulsarClient.class), publicDefault())
+                .holdsOutboundWhileDisconnected());
+    }
+
+    @Test
+    void theBrokerIsReachableWhenItAnswersEvenWithAnError() {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+
+        when(pulsarClient.getPartitionsForTopic(anyString()))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+        assertTrue(client.isBrokerReachable());
+
+        // an unknown topic or a missing permission is still an answer
+        when(pulsarClient.getPartitionsForTopic(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new PulsarClientException.NotFoundException("no topic")));
+        assertTrue(client.isBrokerReachable());
+    }
+
+    @Test
+    void theBrokerIsNotReachableOnATimeoutOrALostConnection() {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+
+        when(pulsarClient.getPartitionsForTopic(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new PulsarClientException.TimeoutException("lookup")));
+        assertFalse(client.isBrokerReachable());
+
+        when(pulsarClient.getPartitionsForTopic(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new PulsarClientException.ConnectException("refused")));
+        assertFalse(client.isBrokerReachable());
+
+        when(pulsarClient.isClosed()).thenReturn(true);
+        assertFalse(client.isBrokerReachable());
+    }
+
+    @Test
+    void housekeepingReplacesAProducerOnlyAfterItStaysDisconnected() {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        Producer<byte[]> stuck = mock();
+        when(stuck.isConnected()).thenReturn(false);
+        client.producers.put("device/commands", stuck);
+
+        for (int cycle = 1; cycle < PulsarConnectorClient.PRODUCER_REPLACE_AFTER_CYCLES; cycle++) {
+            client.connectorSpecificHousekeeping("tenant");
+            assertEquals(1, client.producers.size(), "kept in cycle " + cycle);
+        }
+        client.connectorSpecificHousekeeping("tenant");
+
+        assertTrue(client.producers.isEmpty());
+    }
+
+    @Test
+    void housekeepingForgetsAProducerThatReconnected() {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        Producer<byte[]> producer = mock();
+        when(producer.isConnected()).thenReturn(false);
+        client.producers.put("device/commands", producer);
+
+        client.connectorSpecificHousekeeping("tenant");
+        client.connectorSpecificHousekeeping("tenant");
+        when(producer.isConnected()).thenReturn(true); // it came back before the limit
+        client.connectorSpecificHousekeeping("tenant");
+        when(producer.isConnected()).thenReturn(false);
+        client.connectorSpecificHousekeeping("tenant");
+        client.connectorSpecificHousekeeping("tenant");
+
+        assertEquals(1, client.producers.size(), "the count started over after the reconnect");
     }
 }

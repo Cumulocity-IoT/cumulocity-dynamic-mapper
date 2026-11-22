@@ -38,7 +38,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
-import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +63,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
 /**
@@ -91,6 +91,15 @@ public class PulsarConnectorClient extends AConnectorClient {
     // Consumer and producer management
     protected final Map<String, Consumer<byte[]>> consumers = new ConcurrentHashMap<>();
     protected final Map<String, Producer<byte[]>> producers = new ConcurrentHashMap<>();
+    // One lock per topic, so a producer is created once: without it every thread that found no (or a disconnected)
+    // producer created its own, the last one stayed in the map and the others were never closed (185 publishers on
+    // one topic after a broker outage)
+    private final Map<String, ReentrantLock> producerLocks = new ConcurrentHashMap<>();
+    // Housekeeping cycles a producer has been disconnected while the broker is reachable
+    private final Map<String, Integer> producerDownCycles = new ConcurrentHashMap<>();
+    /** A producer that stays disconnected this many housekeeping cycles with the broker reachable is replaced. */
+    static final int PRODUCER_REPLACE_AFTER_CYCLES = 3;
+    private static final int HEALTH_PROBE_TIMEOUT_SECONDS = 5;
 
     // Sparkplug Host support
     protected SparkplugCertificateManager sparkplugCertificateManager;
@@ -644,11 +653,10 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (pulsarClient == null || pulsarClient.isClosed()) {
-            log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
-            reconnect();
-            // Retry the message instead of acknowledging it unpublished
-            failAllRequestsUnavailable(context, new ConnectorNotConnectedException(connectorName));
+        // Not ready (client closed, or the broker could not be reached): retry the message instead of acknowledging
+        // it unpublished. The device WebSockets of the connector are paused meanwhile, see
+        // holdsOutboundWhileDisconnected(). A closed client is reconnected by the housekeeping.
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 
@@ -689,14 +697,19 @@ public class PulsarConnectorClient extends AConnectorClient {
                     log.debug("{} - Published message ({}/{}): topic={}", tenant, i + 1, requests.size(), topic);
                 } else {
                     log.error("{} - No connected producer for topic: {} ({}/{})", tenant, topic, i + 1, requests.size());
-                    failPublishUnavailable(context, request,
-                            new Exception("No connected producer for topic: " + topic));
+                    Exception notConnected = new Exception("No connected producer for topic: " + topic);
+                    markBrokerUnavailable(notConnected);
+                    failPublishUnavailable(context, request, notConnected);
                 }
 
             } catch (Exception e) {
                 log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
+                discardProducerIfClosed(topic, e);
                 if (isBrokerUnavailable(e)) {
-                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it. The
+                    // connector is not available until the housekeeping reaches the broker again, which pauses the
+                    // device WebSockets instead of letting every message wait for its send timeout.
+                    markBrokerUnavailable(e);
                     failPublishUnavailable(context, request, e);
                 } else {
                     request.setError(e);
@@ -728,28 +741,90 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
-     * Get or create producer with retry logic
+     * Get the producer of a topic, creating it once.
+     *
+     * <p>A producer that is merely disconnected is returned as it is: the Pulsar client reconnects it by itself,
+     * and replacing it (which is what this used to do) made every concurrent publisher during an outage create
+     * and leak one. The caller sees {@code isConnected() == false} and fails the publish as retryable. A producer
+     * that is closed is dropped by {@link #discardProducerIfClosed}, and one that stays disconnected for a long
+     * time by the housekeeping.</p>
      */
     private Producer<byte[]> getOrCreateProducer(String topic, Qos qos) throws PulsarClientException {
-        Producer<byte[]> producer = producers.get(topic);
-
-        if (producer == null || !producer.isConnected()) {
-            if (producer != null) {
-                producers.remove(topic);
-                try {
-                    producer.close();
-                } catch (PulsarClientException e) {
-                    log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
-                }
+        Producer<byte[]> existing = producers.get(topic);
+        if (existing != null) {
+            return existing;
+        }
+        ReentrantLock lock = producerLocks.computeIfAbsent(topic, t -> new ReentrantLock());
+        lock.lock();
+        try {
+            existing = producers.get(topic); // another thread may have created it while this one waited
+            if (existing != null) {
+                return existing;
             }
+            Producer<byte[]> created = createProducerWithRetry(topic, qos);
+            if (created != null) {
+                producers.put(topic, created);
+            }
+            return created;
+        } finally {
+            lock.unlock();
+        }
+    }
 
-            producer = createProducerWithRetry(topic, qos);
-            if (producer != null) {
-                producers.put(topic, producer);
+    /** Drops (and closes) a producer whose publish failed because it is closed, so the next publish creates a new one. */
+    private void discardProducerIfClosed(String topic, Throwable error) {
+        for (Throwable current = error, last = null; current != null && current != last; last = current, current = current.getCause()) {
+            if (current instanceof PulsarClientException.AlreadyClosedException) {
+                Producer<byte[]> closed = producers.remove(topic);
+                producerDownCycles.remove(topic);
+                if (closed != null) {
+                    try {
+                        closed.close();
+                    } catch (Exception e) {
+                        log.debug("{} - Error closing closed producer for topic {}: {}", tenant, topic, e.getMessage());
+                    }
+                }
+                return;
             }
         }
+    }
 
-        return producer;
+    /**
+     * The broker could not be reached: report the connector as disconnected, so the availability sync pauses the
+     * device WebSockets. The housekeeping reports it connected again when the broker answers.
+     */
+    private void markBrokerUnavailable(Throwable cause) {
+        if (connectionStateManager != null && connectionStateManager.isConnected()) {
+            log.warn("{} - Pulsar broker is not reachable, connector: {}: {}", tenant, connectorName, cause.getMessage());
+            connectionStateManager.setConnected(false, cause);
+        }
+    }
+
+    /**
+     * Whether the broker answers. A lookup of a topic in the connector's own namespace: an error answer (unknown
+     * topic, not authorized) still proves the broker is reachable, a timeout or a lost connection does not.
+     */
+    boolean isBrokerReachable() {
+        PulsarClient client = pulsarClient;
+        if (client == null || client.isClosed()) {
+            return false;
+        }
+        try {
+            client.getPartitionsForTopic(healthProbeTopic()).get(HEALTH_PROBE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            return true;
+        } catch (java.util.concurrent.ExecutionException e) {
+            return !isBrokerUnavailable(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String healthProbeTopic() {
+        String[] location = resolveTopicLocation();
+        return location[0] + "://" + location[1] + "/" + location[2] + "/dm-health-probe";
     }
 
     /**
@@ -887,20 +962,61 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
     protected void connectorSpecificHousekeeping(String tenant) {
-        // Monitor producers and remove disconnected ones
-        producers.entrySet().removeIf(entry -> {
-            if (!entry.getValue().isConnected()) {
-                log.warn("{} - Producer for topic {} disconnected, will recreate on next publish",
-                        tenant, entry.getKey());
-                try {
-                    entry.getValue().close();
-                } catch (PulsarClientException e) {
-                    log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
-                }
-                return true;
+        PulsarClient client = pulsarClient;
+
+        // A closed client is not coming back by itself. publishMEAO used to reconnect from inside a publish, which
+        // tore down every consumer and producer because of one message.
+        if (client != null && client.isClosed()) {
+            if (shouldConnect() && !isConnectInProgress()) {
+                log.warn("{} - Pulsar client is closed, reconnecting connector: {}", tenant, connectorName);
+                virtualThreadPool.submit(this::submitConnect);
             }
-            return false;
+            return;
+        }
+
+        // The Pulsar client reconnects by itself and never reports the connection as lost: the connector was marked
+        // disconnected when a publish found the broker unreachable. Mark it connected again once the broker answers.
+        final boolean reachable;
+        if (client != null && connectionStateManager != null && !connectionStateManager.isConnected()
+                && shouldConnect() && !isConnectInProgress()) {
+            reachable = isBrokerReachable();
+            if (reachable) {
+                log.info("{} - Pulsar broker is reachable again, connector: {}", tenant, connectorName);
+                connectionStateManager.setConnected(true);
+            } else {
+                log.debug("{} - Pulsar broker still unreachable, connector: {}", tenant, connectorName);
+            }
+        } else {
+            reachable = true;
+        }
+
+        // Producers reconnect by themselves too. Replace one only if it stays disconnected while the broker is
+        // reachable, which means it is stuck: closing it for an outage would only make the publishers create more.
+        producers.entrySet().removeIf(entry -> {
+            String topic = entry.getKey();
+            if (entry.getValue().isConnected() || !reachable) {
+                producerDownCycles.remove(topic);
+                return false;
+            }
+            int cycles = producerDownCycles.merge(topic, 1, Integer::sum);
+            if (cycles < PRODUCER_REPLACE_AFTER_CYCLES) {
+                return false;
+            }
+            log.warn("{} - Producer for topic {} stayed disconnected for {} cycles, replacing it",
+                    tenant, topic, cycles);
+            producerDownCycles.remove(topic);
+            try {
+                entry.getValue().close();
+            } catch (PulsarClientException e) {
+                log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
+            }
+            return true;
         });
     }
 
