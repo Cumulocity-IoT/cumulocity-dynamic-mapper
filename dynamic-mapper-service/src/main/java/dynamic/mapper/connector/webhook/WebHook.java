@@ -240,6 +240,7 @@ public class WebHook extends AConnectorClient {
                         tenant, connectorName);
             }
 
+            downByPublish = false;
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
@@ -427,6 +428,7 @@ public class WebHook extends AConnectorClient {
         }
 
         log.info("{} - Disconnecting WebHook connector", tenant);
+        downByPublish = false;
         connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
 
         try {
@@ -452,10 +454,56 @@ public class WebHook extends AConnectorClient {
         }
     }
 
+    /**
+     * Set when a publish found the endpoint unreachable and the connector was marked disconnected for it (only
+     * possible with a health endpoint, which tells when it is back). Housekeeping clears it.
+     */
+    private volatile boolean downByPublish;
+
+    /** An unreachable endpoint holds the outbound messages in Cumulocity instead of dropping them. */
+    @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
+    protected boolean isReadyToPublish() {
+        return webhookClient != null && isConnected();
+    }
+
+    private boolean hasHealthEndpoint() {
+        return connectorConfiguration != null && !StringUtils.isEmpty(
+                (String) connectorConfiguration.getProperties().get("baseUrlHealthEndpoint"));
+    }
+
+    /**
+     * Whether the endpoint could not be reached (connection refused, DNS, a timeout), as opposed to a request it
+     * answered. An answer, even an error status, means it is reachable, and is handled by its status.
+     */
+    static boolean isEndpointUnreachable(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof ProcessingException processing && processing.getHttpStatusCode() > 0) {
+                return false;
+            }
+            if (current instanceof java.io.IOException
+                    || current instanceof java.util.concurrent.TimeoutException
+                    || current instanceof io.netty.handler.timeout.TimeoutException
+                    || current instanceof org.springframework.web.reactive.function.client.WebClientRequestException) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (webhookClient == null) {
-            log.error("{} - WebClient is not initialized", tenant);
+        // Not connected, or no client: retry the message instead of acknowledging it unpublished
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 
@@ -564,6 +612,16 @@ public class WebHook extends AConnectorClient {
 
             } catch (Exception e) {
                 String error = String.format("Error publishing to %s (%d/%d): %s", fullPath, i + 1, requests.size(), e.getMessage());
+                if (isEndpointUnreachable(e)) {
+                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it
+                    log.warn("{} - {}", tenant, error);
+                    if (hasHealthEndpoint()) {
+                        downByPublish = true;
+                        markUnavailable(e);
+                    }
+                    failPublishUnavailable(context, request, e);
+                    continue;
+                }
                 log.error("{} - {} - Payload: {}", tenant, error, payload, e);
                 request.setError(e);
                 context.addError(new ProcessingException(error, e));
@@ -937,6 +995,22 @@ public class WebHook extends AConnectorClient {
     protected void connectorSpecificHousekeeping(String tenant) {
         // Optional: Periodic health check
         String healthEndpoint = (String) connectorConfiguration.getProperties().get("baseUrlHealthEndpoint");
+
+        // A publish found the endpoint unreachable and marked the connector disconnected: the health endpoint says
+        // when it is back, and the connector reports itself connected again, which resumes its device WebSockets.
+        if (downByPublish && !StringUtils.isEmpty(healthEndpoint) && webhookClient != null
+                && shouldConnect() && !isConnectInProgress()) {
+            try {
+                checkHealth().timeout(REQUEST_TIMEOUT).block();
+                downByPublish = false;
+                log.info("{} - WebHook endpoint is reachable again, connector: {}", tenant, connectorName);
+                connectionStateManager.setConnected(true);
+            } catch (Exception e) {
+                log.debug("{} - WebHook endpoint still unreachable: {}", tenant, e.getMessage());
+            }
+            return;
+        }
+
         if (!StringUtils.isEmpty(healthEndpoint) && isConnected()) {
             try {
                 checkHealth().subscribe(

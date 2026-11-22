@@ -243,6 +243,7 @@ public class GooglePubSubClient extends AConnectorClient {
             subscribers.clear();
 
             credentialsProvider = null;
+            downByPublish = false;
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
@@ -428,10 +429,54 @@ public class GooglePubSubClient extends AConnectorClient {
         }
     }
 
+    /**
+     * Set when a publish found Pub/Sub unreachable and the connector was marked disconnected for it. There is no
+     * probe, so the housekeeping tries again after one cycle: the next publish finds out whether it is back.
+     */
+    private volatile boolean downByPublish;
+
+    /** An unreachable Pub/Sub holds the outbound messages in Cumulocity instead of dropping them. */
+    @Override
+    public boolean holdsOutboundWhileDisconnected() {
+        return true;
+    }
+
+    @Override
+    protected boolean isReadyToPublish() {
+        return credentialsProvider != null && isConnected();
+    }
+
+    /**
+     * Whether a publish failed because Pub/Sub could not be reached (UNAVAILABLE, DEADLINE_EXCEEDED, a timeout
+     * waiting for the result, a refused connection), as opposed to a problem of the message or of the credentials.
+     */
+    static boolean isPublishUnavailable(Throwable error) {
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof com.google.api.gax.rpc.ApiException api) {
+                com.google.api.gax.rpc.StatusCode.Code code = api.getStatusCode().getCode();
+                if (code == com.google.api.gax.rpc.StatusCode.Code.UNAVAILABLE
+                        || code == com.google.api.gax.rpc.StatusCode.Code.DEADLINE_EXCEEDED) {
+                    return true;
+                }
+            }
+            if (current instanceof java.util.concurrent.TimeoutException
+                    || current instanceof java.net.ConnectException
+                    || current instanceof java.net.UnknownHostException) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        if (credentialsProvider == null) {
-            log.warn("{} - Cannot publish: Google Pub/Sub connector not connected", tenant);
+        // Not connected: retry the message instead of acknowledging it unpublished
+        if (failPublishIfNotConnected(context)) {
             return;
         }
 
@@ -505,6 +550,23 @@ public class GooglePubSubClient extends AConnectorClient {
                         "Publish interrupted at message " + (i + 1) + "/" + requests.size(), e));
                 break;
             } catch (Exception e) {
+                if (isPublishUnavailable(e)) {
+                    // Not a problem of the message: retry it, do not count it, and do not acknowledge it. The
+                    // connector is not available for now, which pauses the device WebSockets instead of letting
+                    // every message wait for its publish timeout. The requests not attempted yet get the same
+                    // error, so none of them looks published.
+                    log.warn("{} - Pub/Sub not reachable publishing to topic: {} ({}/{}): {}", tenant, topic, i + 1,
+                            requests.size(), e.getMessage());
+                    downByPublish = true;
+                    markUnavailable(e);
+                    failPublishUnavailable(context, request, e);
+                    for (int rest = i + 1; rest < requests.size(); rest++) {
+                        if (requests.get(rest) != null) {
+                            failPublishUnavailable(context, requests.get(rest), e);
+                        }
+                    }
+                    break;
+                }
                 log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
                 request.setError(e);
                 context.addError(new ProcessingException(
@@ -565,6 +627,15 @@ public class GooglePubSubClient extends AConnectorClient {
     protected void connectorSpecificHousekeeping(String tenant) {
         // No per-publisher health signal is exposed by the Pub/Sub client library to prune on;
         // publishers are recreated on demand in getOrCreatePublisher() if a publish call fails.
+
+        // A publish found Pub/Sub unreachable and marked the connector disconnected. There is nothing to probe, so
+        // report it connected again after one cycle: the device WebSockets resume, and the next publish either
+        // succeeds or finds it down again and pauses once more.
+        if (downByPublish && shouldConnect() && !isConnectInProgress()) {
+            downByPublish = false;
+            log.info("{} - Retrying Pub/Sub after an unreachable publish, connector: {}", tenant, connectorName);
+            connectionStateManager.setConnected(true);
+        }
     }
 
     @Override

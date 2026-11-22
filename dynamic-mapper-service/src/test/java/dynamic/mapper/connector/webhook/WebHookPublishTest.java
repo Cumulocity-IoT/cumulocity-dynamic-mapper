@@ -22,6 +22,7 @@ package dynamic.mapper.connector.webhook;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
@@ -57,6 +59,8 @@ class WebHookPublishTest {
     private final AtomicReference<String> method = new AtomicReference<>();
     private final AtomicReference<String> contentType = new AtomicReference<>();
     private final AtomicReference<byte[]> body = new AtomicReference<>();
+    private final AtomicInteger status = new AtomicInteger(200);
+    private volatile boolean ready = true;
     private WebHook webHook;
 
     @BeforeEach
@@ -66,7 +70,7 @@ class WebHookPublishTest {
             method.set(exchange.getRequestMethod());
             contentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
             body.set(exchange.getRequestBody().readAllBytes());
-            exchange.sendResponseHeaders(200, -1);
+            exchange.sendResponseHeaders(status.get(), -1);
             exchange.close();
         });
         server.start();
@@ -74,7 +78,17 @@ class WebHookPublishTest {
 
         ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
         when(configuration.getProperties()).thenReturn(Map.of("cumulocityInternal", false));
-        webHook = new WebHook();
+        // the connection state is not wired in this test: stands in for "connected"
+        webHook = new WebHook() {
+            @Override
+            protected boolean isReadyToPublish() {
+                return ready && webhookClientPresent();
+            }
+
+            private boolean webhookClientPresent() {
+                return ReflectionTestUtils.getField(this, "webhookClient") != null;
+            }
+        };
         ReflectionTestUtils.setField(webHook, "tenant", "t1");
         ReflectionTestUtils.setField(webHook, "connectorName", "webhook");
         ReflectionTestUtils.setField(webHook, "connectorConfiguration", configuration);
@@ -148,5 +162,76 @@ class WebHookPublishTest {
         publish(RequestMethod.PATCH, DynamicMapperRequest.builder().request("raw-patch").contentType("text/plain"));
         assertEquals("PATCH", method.get());
         assertEquals("raw-patch", new String(body.get(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    // ---- an unreachable endpoint is retried, not acknowledged
+
+    private ProcessingContext<Object> publishRaw() {
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .serviceConfiguration(new ServiceConfiguration())
+                .resolvedPublishTopic("device/out")
+                .requests(List.of(DynamicMapperRequest.builder().request("{\"a\":1}").method(RequestMethod.POST)
+                        .publishTopic("device/out").build()))
+                .build();
+        webHook.publishMEAO(context);
+        return context;
+    }
+
+    @Test
+    void anUnreachableEndpointIsRetriedNotAcknowledged() {
+        server.stop(0); // connection refused
+
+        ProcessingContext<Object> context = publishRaw();
+
+        assertTrue(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException,
+                String.valueOf(context.getRequests().get(0).getError()));
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+    }
+
+    @Test
+    void anEndpointThatAnswersWithAnErrorStatusIsReachable() {
+        status.set(500);
+
+        ProcessingContext<Object> context = publishRaw();
+
+        assertFalse(context.getErrors().isEmpty());
+        assertFalse(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        // the status travels on the cause, where the acknowledgement rule reads it
+        assertEquals(500, dynamic.mapper.processor.util.ProcessingResultHelper.httpStatusOf(context.getErrors().get(0)));
+    }
+
+    @Test
+    void nothingIsSentWhileTheConnectorIsNotReady() {
+        ready = false;
+
+        ProcessingContext<Object> context = publishRaw();
+
+        assertEquals(null, method.get(), "no request reached the endpoint");
+        assertTrue(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+    }
+
+    @Test
+    void theConnectorHoldsOutboundMessagesWhileDisconnected() {
+        assertTrue(webHook.holdsOutboundWhileDisconnected());
+    }
+
+    @Test
+    void unreachableMeansNoAnswerNotAnErrorAnswer() {
+        assertTrue(WebHook.isEndpointUnreachable(new java.net.ConnectException("refused")));
+        assertTrue(WebHook.isEndpointUnreachable(new java.util.concurrent.TimeoutException("30s")));
+        assertTrue(WebHook.isEndpointUnreachable(
+                new RuntimeException("wrapped by block()", new java.net.UnknownHostException("no.such.host"))));
+        // an answer, however bad, means the endpoint is there
+        assertFalse(WebHook.isEndpointUnreachable(new dynamic.mapper.processor.ProcessingException("Server error", 503)));
+        assertFalse(WebHook.isEndpointUnreachable(new dynamic.mapper.processor.ProcessingException("Client error",
+                new java.io.IOException("body"), 400)));
+        assertFalse(WebHook.isEndpointUnreachable(new IllegalStateException("not a network problem")));
     }
 }

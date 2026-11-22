@@ -348,6 +348,20 @@ public abstract class AConnectorClient {
         return true;
     }
 
+    /**
+     * The peer could not be reached while publishing: report the connector as disconnected, so the availability sync
+     * pauses its device WebSockets and the notifications stay queued in Cumulocity, instead of every message
+     * waiting for its own timeout and being redelivered every few seconds. The connector reports itself connected
+     * again when its housekeeping finds the peer reachable. Only for a connector that has a way to do that, and that
+     * holds outbound messages while disconnected ({@link #holdsOutboundWhileDisconnected()}).
+     */
+    protected void markUnavailable(Throwable cause) {
+        if (connectionStateManager != null && connectionStateManager.isConnected()) {
+            log.warn("{} - Connector {} is not reachable: {}", tenant, connectorName, cause.getMessage());
+            connectionStateManager.setConnected(false, cause);
+        }
+    }
+
     /** Records the same retryable error on every request of the context and on the context. No requests: no-op. */
     protected void failAllRequestsUnavailable(ProcessingContext<?> context, ConnectorNotConnectedException error) {
         var requests = context.getRequests();

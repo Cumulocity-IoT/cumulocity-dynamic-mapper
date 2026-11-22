@@ -698,7 +698,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 } else {
                     log.error("{} - No connected producer for topic: {} ({}/{})", tenant, topic, i + 1, requests.size());
                     Exception notConnected = new Exception("No connected producer for topic: " + topic);
-                    markBrokerUnavailable(notConnected);
+                    markUnavailable(notConnected);
                     failPublishUnavailable(context, request, notConnected);
                 }
 
@@ -709,7 +709,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     // Not a problem of the message: retry it, do not count it, and do not acknowledge it. The
                     // connector is not available until the housekeeping reaches the broker again, which pauses the
                     // device WebSockets instead of letting every message wait for its send timeout.
-                    markBrokerUnavailable(e);
+                    markUnavailable(e);
                     failPublishUnavailable(context, request, e);
                 } else {
                     request.setError(e);
@@ -786,17 +786,6 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
                 return;
             }
-        }
-    }
-
-    /**
-     * The broker could not be reached: report the connector as disconnected, so the availability sync pauses the
-     * device WebSockets. The housekeeping reports it connected again when the broker answers.
-     */
-    private void markBrokerUnavailable(Throwable cause) {
-        if (connectionStateManager != null && connectionStateManager.isConnected()) {
-            log.warn("{} - Pulsar broker is not reachable, connector: {}: {}", tenant, connectorName, cause.getMessage());
-            connectionStateManager.setConnected(false, cause);
         }
     }
 

@@ -158,6 +158,53 @@ public class GooglePubSubClientTest {
         assertEquals("event", API.EVENT.toC8yObjectType());
     }
 
+    // ---- outbound while Pub/Sub is not reachable
+
+    @Test
+    public void testPublishUnavailable_classifiesUnreachableNotMessageProblems() {
+        com.google.api.gax.rpc.StatusCode unavailable =
+                com.google.api.gax.grpc.GrpcStatusCode.of(io.grpc.Status.Code.UNAVAILABLE);
+        com.google.api.gax.rpc.StatusCode deadline =
+                com.google.api.gax.grpc.GrpcStatusCode.of(io.grpc.Status.Code.DEADLINE_EXCEEDED);
+        com.google.api.gax.rpc.StatusCode invalid =
+                com.google.api.gax.grpc.GrpcStatusCode.of(io.grpc.Status.Code.INVALID_ARGUMENT);
+
+        assertTrue(GooglePubSubClient.isPublishUnavailable(
+                new com.google.api.gax.rpc.UnavailableException(new RuntimeException("down"), unavailable, true)));
+        assertTrue(GooglePubSubClient.isPublishUnavailable(
+                new java.util.concurrent.ExecutionException(
+                        new com.google.api.gax.rpc.DeadlineExceededException(new RuntimeException("slow"), deadline, true))));
+        assertTrue(GooglePubSubClient.isPublishUnavailable(new java.util.concurrent.TimeoutException("publish")));
+        assertTrue(GooglePubSubClient.isPublishUnavailable(new java.net.ConnectException("refused")));
+
+        // a problem of the message or of the credentials is not an outage
+        assertFalse(GooglePubSubClient.isPublishUnavailable(
+                new com.google.api.gax.rpc.InvalidArgumentException(new RuntimeException("bad"), invalid, false)));
+        assertFalse(GooglePubSubClient.isPublishUnavailable(new IllegalStateException("config")));
+    }
+
+    @Test
+    public void testHoldsOutboundMessagesWhileDisconnected() {
+        assertTrue(new GooglePubSubClient().holdsOutboundWhileDisconnected());
+    }
+
+    @Test
+    public void testPublishWhileNotConnected_isRetriedNotAcknowledged() {
+        GooglePubSubClient client = new GooglePubSubClient(); // no credentials: never connected
+        DynamicMapperRequest request = DynamicMapperRequest.builder().request("{}").publishTopic("t").build();
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(dynamic.mapper.model.Mapping.builder().name("outbound").debug(false).build())
+                .requests(List.of(request))
+                .build();
+
+        client.publishMEAO(context);
+
+        assertTrue(request.getError() instanceof dynamic.mapper.processor.ConnectorNotConnectedException,
+                "returning silently would acknowledge the notification and lose the message");
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+    }
+
     // ── Inbound ack/nack tests ──────────────────────────────────────────────
 
     /**
