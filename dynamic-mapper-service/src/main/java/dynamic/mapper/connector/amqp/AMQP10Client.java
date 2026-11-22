@@ -221,8 +221,7 @@ public class AMQP10Client extends AConnectorClient {
             session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
             physicallyConnected = true;
-            reconnectAttempt.set(0);
-            nextReconnectTimeMs = Long.MAX_VALUE;
+            markConnected();
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
@@ -503,30 +502,45 @@ public class AMQP10Client extends AConnectorClient {
         return physicallyConnected && connection != null && session != null;
     }
 
+    /** A successful connect: the next loss is retried at once, then backed off. */
+    void markConnected() {
+        reconnectAttempt.set(0);
+        nextReconnectTimeMs = 0;
+    }
+
+    /**
+     * Whether the housekeeping must reconnect now: the connection is lost and the backoff has elapsed.
+     *
+     * <p>The gate used to be set to {@code Long.MAX_VALUE} on connect and never reset. The JMS exception listener
+     * reports the loss, nothing else reconnects an AMQP 1.0 connection, so it stayed down for good and the
+     * outbound notifications were held forever.</p>
+     */
+    boolean isReconnectDue(long now) {
+        return !isPhysicallyConnected() && shouldConnect() && !isConnectInProgress() && now >= nextReconnectTimeMs;
+    }
+
     @Override
     public void monitorSubscriptions() {
         // Backed off like AMQTTClient's connectorSpecificHousekeeping(): without
         // nextReconnectTimeMs gating this, a connector that's down for a long time would spawn a
         // new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
-        if (!isPhysicallyConnected() && shouldConnect() && !isConnectInProgress()) {
-            long now = System.currentTimeMillis();
-            if (now >= nextReconnectTimeMs) {
-                int attempt = reconnectAttempt.incrementAndGet();
-                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
-                nextReconnectTimeMs = now + delay;
-                log.warn("{} - AMQP 1.0 connection lost, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
-                // submitConnect() (not connect() directly): goes through AConnectorClient's
-                // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
-                // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
-                // user operation or another health check.
-                virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
-                    try {
-                        submitConnect();
-                    } catch (Exception e) {
-                        log.error("{} - Error during AMQP 1.0 reconnection", tenant, e);
-                    }
-                }));
-            }
+        long now = System.currentTimeMillis();
+        if (isReconnectDue(now)) {
+            int attempt = reconnectAttempt.incrementAndGet();
+            long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+            nextReconnectTimeMs = now + delay;
+            log.warn("{} - AMQP 1.0 connection lost, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+            // submitConnect() (not connect() directly): goes through AConnectorClient's
+            // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
+            // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
+            // user operation or another health check.
+            virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
+                try {
+                    submitConnect();
+                } catch (Exception e) {
+                    log.error("{} - Error during AMQP 1.0 reconnection", tenant, e);
+                }
+            }));
         }
     }
 

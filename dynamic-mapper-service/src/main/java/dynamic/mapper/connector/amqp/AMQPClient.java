@@ -168,35 +168,46 @@ public class AMQPClient extends AConnectorClient {
             // Create channel
             channel = connection.createChannel();
 
-            // Set up recovery listener
-            ((Recoverable) connection).addRecoveryListener(new RecoveryListener() {
-                @Override
-                public void handleRecovery(Recoverable recoverable) {
-                    log.info("{} - AMQP connection recovered", tenant);
-                    reconnectAttempt.set(0);
-                    nextReconnectTimeMs = Long.MAX_VALUE;
-                    connectionStateManager.setConnected(true);
-                    connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-                }
+            if (connection instanceof Recoverable recoverableConnection) {
+                // Automatic recovery on: the library brings the connection back by itself, and the housekeeping
+                // leaves it alone while it does (see isReconnectDue). Only the state has to follow.
+                recoverableConnection.addRecoveryListener(new RecoveryListener() {
+                    @Override
+                    public void handleRecovery(Recoverable recoverable) {
+                        log.info("{} - AMQP connection recovered", tenant);
+                        markConnected();
+                        connectionStateManager.setConnected(true);
+                        connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
+                    }
 
-                @Override
-                public void handleRecoveryStarted(Recoverable recoverable) {
-                    boolean intentional = isDisconnectIntentional();
-                    if (intentional) {
-                        // disconnect() already reports DISCONNECTED itself. Guards against the same
-                        // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
-                        // addDisconnectedListener) in case RabbitMQ's client ever fires recovery
-                        // machinery as a side effect of our own graceful, client-initiated close.
-                        log.debug("{} - AMQP recovery-started listener fired during our own disconnect, skipping duplicate report", tenant);
+                    @Override
+                    public void handleRecoveryStarted(Recoverable recoverable) {
+                        boolean intentional = isDisconnectIntentional();
+                        if (intentional) {
+                            // disconnect() already reports DISCONNECTED itself. Guards against the same
+                            // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
+                            // addDisconnectedListener) in case RabbitMQ's client ever fires recovery
+                            // machinery as a side effect of our own graceful, client-initiated close.
+                            log.debug("{} - AMQP recovery-started listener fired during our own disconnect, skipping duplicate report", tenant);
+                            return;
+                        }
+                        log.warn("{} - AMQP connection recovery started", tenant);
+                        connectionStateManager.setConnected(false);
+                    }
+                });
+            } else {
+                // automaticRecovery=false: the connection is a plain one, not Recoverable (casting it failed every
+                // connect). Nothing brings it back, so report the loss and let the housekeeping reconnect.
+                connection.addShutdownListener(cause -> {
+                    if (isDisconnectIntentional()) {
                         return;
                     }
-                    log.warn("{} - AMQP connection recovery started", tenant);
+                    log.warn("{} - AMQP connection lost: {}", tenant, cause.getMessage());
                     connectionStateManager.setConnected(false);
-                }
-            });
+                });
+            }
 
-            reconnectAttempt.set(0);
-            nextReconnectTimeMs = Long.MAX_VALUE;
+            markConnected();
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
@@ -450,30 +461,59 @@ public class AMQPClient extends AConnectorClient {
         log.info("{} - AMQP client closed", tenant);
     }
 
+    /** A successful connect or recovery: the next loss is retried at once, then backed off. */
+    void markConnected() {
+        reconnectAttempt.set(0);
+        nextReconnectTimeMs = 0;
+    }
+
+    /**
+     * Whether the housekeeping must reconnect now: the connection, or its channel, is lost, the library is not
+     * already bringing the connection back, and the backoff has elapsed.
+     *
+     * <p>The gate used to be set to {@code Long.MAX_VALUE} on connect and never reset, so a lost connection was
+     * never reconnected: with automatic recovery off nothing else does it. A channel closed by a channel-level
+     * error (publishing to a missing exchange) leaves the connection open and is not recovered by the library
+     * either, which the old check ({@code !connection.isOpen()}) did not notice.</p>
+     */
+    boolean isReconnectDue(long now) {
+        Connection currentConnection = connection;
+        Channel currentChannel = channel;
+        if (currentConnection == null) {
+            return false;
+        }
+        boolean connectionDown = !currentConnection.isOpen();
+        boolean channelDown = !connectionDown && currentChannel != null && !currentChannel.isOpen();
+        // A recoverable connection that is down is being recovered by the library: leave it alone
+        boolean libraryRecovering = connectionDown && currentConnection instanceof Recoverable;
+        if (libraryRecovering || !(connectionDown || channelDown)) {
+            return false;
+        }
+        return shouldConnect() && !isConnectInProgress() && now >= nextReconnectTimeMs;
+    }
+
     @Override
     public void monitorSubscriptions() {
-        // Check connection health. Backed off like AMQTTClient's connectorSpecificHousekeeping():
-        // without nextReconnectTimeMs gating this, a connector that's down for a long time would
-        // spawn a new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
-        if (connection != null && !connection.isOpen() && shouldConnect() && !isConnectInProgress()) {
-            long now = System.currentTimeMillis();
-            if (now >= nextReconnectTimeMs) {
-                int attempt = reconnectAttempt.incrementAndGet();
-                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
-                nextReconnectTimeMs = now + delay;
-                log.warn("{} - AMQP connection is closed, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
-                // submitConnect() (not connect() directly): goes through AConnectorClient's
-                // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
-                // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
-                // user operation or another health check.
-                virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
-                    try {
-                        submitConnect();
-                    } catch (Exception e) {
-                        log.error("{} - Error during reconnection", tenant, e);
-                    }
-                }));
-            }
+        // Backed off like AMQTTClient's connectorSpecificHousekeeping(): without nextReconnectTimeMs gating this,
+        // a connector that's down for a long time would spawn a new reconnect attempt on every 30s housekeeping
+        // tick, forever, with no backoff.
+        long now = System.currentTimeMillis();
+        if (isReconnectDue(now)) {
+            int attempt = reconnectAttempt.incrementAndGet();
+            long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+            nextReconnectTimeMs = now + delay;
+            log.warn("{} - AMQP connection is lost, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+            // submitConnect() (not connect() directly): goes through AConnectorClient's
+            // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
+            // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
+            // user operation or another health check.
+            virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
+                try {
+                    submitConnect();
+                } catch (Exception e) {
+                    log.error("{} - Error during reconnection", tenant, e);
+                }
+            }));
         }
     }
 
