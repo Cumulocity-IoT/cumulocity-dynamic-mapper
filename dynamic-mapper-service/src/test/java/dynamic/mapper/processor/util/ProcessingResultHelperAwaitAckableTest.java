@@ -171,4 +171,70 @@ class ProcessingResultHelperAwaitAckableTest {
         assertEquals(AckOutcome.RETRY,
                 ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, true));
     }
+
+    // ---- failures below 500 that are still worth another attempt
+
+    @SuppressWarnings("unchecked")
+    private ProcessingResultWrapper<Object> withContextError(Exception error) {
+        ProcessingContext<Object> context = mock(ProcessingContext.class);
+        when(context.hasError()).thenReturn(true);
+        when(context.getErrors()).thenReturn(List.of(error));
+        when(context.getRequests()).thenReturn(List.of());
+        return ProcessingResultHelper.success(List.of(context));
+    }
+
+    private boolean ackable(Exception error) {
+        return ProcessingResultHelper.awaitAckable(withContextError(error), "t", "topic", LOG);
+    }
+
+    @Test
+    void aRateLimitOrTimeoutAnswerIsRetriedNotAcknowledged() {
+        // 408, 425 and 429 are client errors that a later attempt fixes. They were acknowledged, which dropped
+        // the message while Cumulocity was rate limiting.
+        for (int status : new int[] { 408, 425, 429 }) {
+            assertFalse(ackable(new ProcessingException("limited", new SDKException(status, "answer"))),
+                    "status " + status);
+        }
+    }
+
+    @Test
+    void otherClientErrorsAreStillAcknowledgedBecauseARetryWouldRepeatThem() {
+        for (int status : new int[] { 400, 401, 403, 404, 409, 422 }) {
+            assertTrue(ackable(new ProcessingException("rejected", new SDKException(status, "answer"))),
+                    "status " + status);
+        }
+    }
+
+    @Test
+    void aNetworkErrorWithoutAStatusIsRetried() {
+        // the platform could not be reached: there is no status to read, and the message is fine
+        assertFalse(ackable(new ProcessingException("c8y", new java.net.ConnectException("refused"))));
+        assertFalse(ackable(new ProcessingException("c8y", new java.net.SocketTimeoutException("read timed out"))));
+        assertFalse(ackable(new ProcessingException("c8y", new java.net.UnknownHostException("tenant.example"))));
+        assertFalse(ackable(new ProcessingException("c8y",
+                new RuntimeException("wrapped", new java.net.SocketException("connection reset")))));
+    }
+
+    @Test
+    void aProblemOfThePayloadIsNotANetworkErrorEvenThoughJacksonParseErrorsAreIoExceptions() {
+        assertTrue(ackable(new ProcessingException("bad payload",
+                new com.fasterxml.jackson.core.JsonParseException(null, "Unexpected character"))));
+        assertTrue(ackable(new ProcessingException("template error")));
+        assertTrue(ackable(new IllegalStateException("not a network problem")));
+    }
+
+    @Test
+    void aStatusDecidesEvenWhenANetworkErrorIsInTheChain() {
+        assertTrue(ackable(new ProcessingException("rejected", new java.net.ConnectException("c"), 400)));
+        assertFalse(ackable(new ProcessingException("limited", new java.net.ConnectException("c"), 429)));
+    }
+
+    @Test
+    void aRateLimitOnARequestIsRetriedWhenRequestErrorsAreCounted() {
+        ProcessingResultWrapper<Object> result = withRequestError(
+                new ProcessingException("webhook limited", new SDKException(429, "Too Many Requests")));
+
+        assertEquals(AckOutcome.RETRY, ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, true));
+        assertEquals(AckOutcome.ACK, ProcessingResultHelper.awaitOutcome(result, "t", "topic", LOG, null, false));
+    }
 }

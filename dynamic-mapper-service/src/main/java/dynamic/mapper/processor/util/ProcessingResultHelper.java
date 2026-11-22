@@ -406,8 +406,10 @@ public class ProcessingResultHelper {
      *
      * <ul>
      *   <li>{@code RETRY}: the pipeline timed out, was interrupted or cancelled (for example a Smart
-     *       Function stopped by the CPU limit), threw, or reported a server-side (5xx) error.</li>
-     *   <li>{@code ACK}: everything else, including no errors, errors without an HTTP status, and client
+     *       Function stopped by the CPU limit), threw, reported a server-side (5xx) error, a client error that a
+     *       later attempt fixes (408, 425, 429), or a network problem without a status (see
+     *       {@link #isRetryableFailure}).</li>
+     *   <li>{@code ACK}: everything else, including no errors, other errors without an HTTP status, and client
      *       errors (4xx), which a redelivery would only repeat, and messages the dispatcher skipped
      *       without a pipeline.</li>
      * </ul>
@@ -445,7 +447,8 @@ public class ProcessingResultHelper {
                 log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
                 return AckOutcome.RETRY;
             }
-            if (extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500) {
+            if (extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500
+                    && !hasRetryableFailure(results, includeRequestErrors)) {
                 return AckOutcome.ACK;
             }
             return hasConnectorNotConnectedError(results)
@@ -525,6 +528,64 @@ public class ProcessingResultHelper {
             }
         }
         return anyError ? maxStatus : -1;
+    }
+
+    /** Client errors that a later attempt can fix: the request timed out, was too early, or hit a rate limit. */
+    private static boolean isRetryableClientStatus(int status) {
+        return status == 408 || status == 425 || status == 429;
+    }
+
+    /**
+     * Whether a failure below 500 is still worth another attempt. Such a failure used to be acknowledged, which
+     * drops the message:
+     * <ul>
+     *   <li>408, 425 and 429 (a timeout, a request that came too early, the Cumulocity rate limit). They are
+     *       client errors that a retry later fixes, unlike a 400 or 404, which a retry would only repeat.</li>
+     *   <li>No status at all and a network problem as the cause: the platform could not be reached (connection
+     *       refused, reset or timed out, an unknown host). A payload problem is not one: Jackson's parse errors
+     *       are {@code IOException}s too, and are left out.</li>
+     * </ul>
+     * The retry is counted toward the poison-pill limit, with a delay between attempts, so a failure that never
+     * clears still ends.
+     */
+    private static boolean hasRetryableFailure(List<? extends ProcessingContext<?>> results,
+                                               boolean includeRequestErrors) {
+        if (results == null) return false;
+        for (ProcessingContext<?> context : results) {
+            if (context == null) continue;
+            for (Exception error : context.getErrors()) {
+                if (isRetryableFailure(error)) return true;
+            }
+            if (includeRequestErrors) {
+                for (DynamicMapperRequest request : context.getRequests()) {
+                    if (request.hasError() && isRetryableFailure(request.getError())) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    static boolean isRetryableFailure(Throwable error) {
+        int status = httpStatusOf(error);
+        if (status > 0) {
+            return isRetryableClientStatus(status);
+        }
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof com.fasterxml.jackson.core.JacksonException) {
+                return false; // a problem of the payload, whatever else is in the chain
+            }
+            if (current instanceof java.net.SocketException
+                    || current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.net.UnknownHostException
+                    || current instanceof java.nio.channels.ClosedChannelException
+                    || current instanceof java.util.concurrent.TimeoutException) {
+                return true;
+            }
+            if (current.getCause() == current) break;
+            current = current.getCause();
+        }
+        return false;
     }
 
     /** Whether any context or request error is a {@link ConnectorNotConnectedException}. */

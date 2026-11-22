@@ -435,9 +435,14 @@ per message, keyed by something that survives redelivery (a message id, an offse
 topic and payload, never a delivery tag), cleared as soon as the message succeeds, and bounded in
 memory (the oldest 10,000 are forgotten). `CustomWebSocketClient` (outbound notifications) uses the same tracker; `HttpPollingConnector` uses the tracker for a
 polled page that keeps failing, which it skips after the limit (server errors do not count there) (its own limit of 5 only drives the connector status,
-`RETRYING` to `FAILED`, for failed fetches); AMQP 1.0 has no limit because an unacknowledged message is not redelivered
-until the session restarts. Errors that a retry would only repeat (client errors, mapping errors
-without an HTTP status) are acknowledged at once and never counted. An outbound publish that fails
+`RETRYING` to `FAILED`, for failed fetches); AMQP 1.0 counts too, and recovers the session to redeliver a failed message
+(an unacknowledged one is not redelivered until the session restarts). Errors that a retry would only repeat (client
+errors such as a 400 or 404, mapping errors without an HTTP status) are acknowledged at once and never counted. Two
+kinds of failure below 500 are retried, and counted, because a later attempt can succeed: the statuses 408, 425 and 429
+(a timeout, a request that came too early, the Cumulocity rate limit), and a network problem with no status at all (the
+platform could not be reached: connection refused, reset or timed out, an unknown host). A parse error of the payload is
+never one of them, although Jackson's are `IOException`s. A status decides over a network error found deeper in the
+chain. An outbound publish that fails
 because the broker connection is down is not counted either: it says nothing about the message (see
 [Outbound during a broker outage](#outbound-during-a-broker-outage)).
 
@@ -455,7 +460,8 @@ Note the two counters are per different things: the poison-pill counter is **per
   incremented by the *processor* that failed, for every failure. Whether the *message* is
   then redelivered is a separate decision made by the connector callback from the HTTP
   status class: `< 500` (client error, e.g. a malformed payload) is acknowledged —
-  redelivering would not help — while `>= 500` triggers a redelivery. The status is taken from
+  redelivering would not help, except 408, 425 and 429 and a network error without a status, which are retried —
+  while `>= 500` triggers a redelivery. The status is taken from
   an `SDKException` wrapped in a `ProcessingException`
   (`ProcessingResultHelper.extractMaxHttpStatus`); a failure without one (JSONata or Smart
   Function error, template error, a network error that is not an `SDKException`) counts as
