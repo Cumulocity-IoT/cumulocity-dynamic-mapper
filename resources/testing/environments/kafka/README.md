@@ -52,6 +52,9 @@ docker compose logs -f broker
 > resolves inside the `kafka-network` Docker network — it is not reachable
 > from a dynamic-mapper-service running locally on the host.
 
+> Kafka UI uses host port `9090`, the same as the Pulsar environment's admin port. Do not run both
+> at once, or start Kafka without the UI: `docker compose up -d broker`.
+
 ### Stop Kafka
 
 ```bash
@@ -113,6 +116,50 @@ c8y api --method POST --url /service/dynamic-mapper-service/configuration/connec
 Since Cumulocity Cloud (where the connector config lives, but not where the
 service runs yet) cannot reach `localhost:9093`, leaving `enabled: false` here
 avoids a doomed connection attempt before the local service is even running.
+
+### Ready-made connector and mappings
+
+Instead of the `curl` body above you can import the files in this directory:
+
+| File | Purpose |
+|------|---------|
+| [connector/kafka-connector.json](connector/kafka-connector.json) | Connector configuration (disabled): `localhost:9093`, group `dynamic-mapper-test`, no auth |
+| [mappings/sample-mappings.json](mappings/sample-mappings.json) | Two Smart Function mappings (inbound + outbound), import via the UI |
+
+UI: **Connectors → Import**, select `connector/kafka-connector.json` (a flat JSON array; the import gives
+the connector a new random identifier and keeps it disabled). Or REST, keeping the identifier
+`test-kafka-connector`:
+
+```bash
+jq '.[0]' connector/kafka-connector.json | c8y api --method POST \
+  --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' --data -
+```
+
+Mappings: **Mapping → Inbound → Import** (and the same under **Outbound**), select
+`mappings/sample-mappings.json`, assign each mapping to the Kafka connector and **Activate** it.
+Topics: inbound reads `kafka-test-inbound`, outbound writes `kafka-test-outbound` with the device's
+external ID as the message key (Kafka topic names cannot contain `/`).
+
+Inbound test, with a key as the device ID:
+
+```bash
+docker exec -i broker /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 \
+  --topic kafka-test-inbound --property parse.key=true --property key.separator=:
+# then type:  kafka-dev-001:{"temperature":21.5}
+```
+
+Outbound test: create a device with external ID `kafka-dev-001`, subscribe it for `MEASUREMENT`, then
+
+```bash
+docker exec broker /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic kafka-test-outbound --from-beginning --property print.key=true
+c8y measurements create --device <deviceId> --type c8y_TemperatureMeasurement \
+  --data 'c8y_TemperatureMeasurement.T.value=23.4,c8y_TemperatureMeasurement.T.unit=C'
+```
+
+To check that outbound messages survive a broker outage, see
+[../../reliability/broker-outage/README.md](../../reliability/broker-outage/README.md).
 
 ## 3. Start the dynamic-mapper-service locally
 

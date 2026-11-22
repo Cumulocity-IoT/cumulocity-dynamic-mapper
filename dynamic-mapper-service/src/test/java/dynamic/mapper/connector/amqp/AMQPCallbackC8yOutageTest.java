@@ -50,7 +50,7 @@ import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 /**
  * Cumulocity is unavailable while AMQP 0-9-1 messages arrive (Path E of
- * {@code resources/testing/reliability/TEST-SETUP-C8Y-UNAVAILABLE.md}): the pipeline fails with a 502 from the
+ * {@code resources/testing/reliability/c8y-unavailable/TEST-SETUP-C8Y-UNAVAILABLE.md}): the pipeline fails with a 502 from the
  * platform. A requeued message comes back with a new delivery tag and the same message id.
  */
 class AMQPCallbackC8yOutageTest {

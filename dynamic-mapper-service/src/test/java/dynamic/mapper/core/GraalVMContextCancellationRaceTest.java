@@ -69,7 +69,7 @@ import org.graalvm.polyglot.Context;
 
 /**
  * Exercises the race described in
- * {@code resources/testing/reliability/TEST-INSTRUCTIONS-GRAALVM-CANCEL-RACE.md}: a per-mapping
+ * {@code resources/testing/reliability/graalvm-cancel-race/TEST-INSTRUCTIONS-GRAALVM-CANCEL-RACE.md}: a per-mapping
  * worker thread that is genuinely interrupted (via
  * {@link ProcessingResultWrapper#cancelProcessing()}) while it is in the middle of running
  * uncooperative JavaScript inside a real, pool-borrowed GraalVM {@link Context}.

@@ -1,0 +1,17 @@
+[
+  {
+    "identifier": "test-kafka-connector",
+    "connectorType": "KAFKA",
+    "name": "Local Kafka (test)",
+    "description": "Local Kafka broker from resources/testing/environments/kafka",
+    "enabled": false,
+    "properties": {
+      "bootstrapServers": "localhost:9093",
+      "username": "",
+      "password": "",
+      "groupId": "dynamic-mapper-test",
+      "defaultPropertiesProducer": {},
+      "defaultPropertiesConsumer": {}
+    }
+  }
+]

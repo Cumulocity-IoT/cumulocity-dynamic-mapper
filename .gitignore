@@ -82,6 +82,6 @@ tmp/
 
 # Local, machine-specific developer files.
 resources/testing/environments/amqp/setup.sh
-resources/testing/reliability/backend_test.argfile
-resources/testing/reliability/start.md
+resources/testing/reliability/tools/backend_test.argfile
+resources/testing/reliability/tools/start.md
 resources/samples/mappings-INBOUND copy.json

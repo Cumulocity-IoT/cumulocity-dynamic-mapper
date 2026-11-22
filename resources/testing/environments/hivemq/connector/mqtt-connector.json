@@ -1,0 +1,19 @@
+[
+  {
+    "identifier": "test-mqtt-connector",
+    "connectorType": "MQTT",
+    "name": "Local HiveMQ (test)",
+    "description": "Local HiveMQ CE from resources/testing/environments/hivemq",
+    "enabled": false,
+    "properties": {
+      "version": "3.1.1",
+      "protocol": "mqtt://",
+      "mqttHost": "localhost",
+      "mqttPort": 1883,
+      "clientId": "dynamic_mapper_local_test",
+      "cleanSession": true,
+      "supportsWildcardInTopicInbound": true,
+      "supportsWildcardInTopicOutbound": false
+    }
+  }
+]

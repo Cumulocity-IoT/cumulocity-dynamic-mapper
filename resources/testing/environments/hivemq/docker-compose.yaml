@@ -1,0 +1,20 @@
+services:
+  hivemq:
+    image: hivemq/hivemq-ce:${HIVEMQ_VERSION:-latest}
+    container_name: hivemq
+    hostname: hivemq
+    ports:
+      # Plain MQTT, no auth. Override if the port is taken (for example by an SSH tunnel or a local
+      # Mosquitto): HIVEMQ_MQTT_PORT=1884 docker compose up -d
+      - "${HIVEMQ_MQTT_PORT:-1883}:1883"
+      - "${HIVEMQ_MQTTS_PORT:-8883}:8883"   # MQTT over TLS (keystore.jks, password "changeme")
+    volumes:
+      - ./hivemq-conf/config.xml:/opt/hivemq/conf/config.xml:ro
+      - ./hivemq-conf/keystore.jks:/opt/hivemq/conf/keystore.jks:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/1883"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped

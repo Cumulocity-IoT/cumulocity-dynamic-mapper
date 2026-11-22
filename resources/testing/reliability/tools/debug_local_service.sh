@@ -1,6 +1,6 @@
 #!/bin/zsh
 SCRIPT_DIR="${0:A:h}"
-REPO_ROOT="${SCRIPT_DIR:h:h:h}"
+REPO_ROOT="${SCRIPT_DIR:h:h:h:h}"
 SERVICE_DIR="$REPO_ROOT/dynamic-mapper-service"
 
 # Resolve the JVM Maven itself will use to compile/build the classpath, so the

@@ -81,7 +81,7 @@ Relevant call chain for the 502 case:
 ### Path A — Unit test: subscription-init retry/backoff (the 502/503/504 case) — DONE
 
 Implemented in
-[`AConnectorClientSubscriptionInitRetryTest`](../../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/core/client/AConnectorClientSubscriptionInitRetryTest.java),
+[`AConnectorClientSubscriptionInitRetryTest`](../../../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/core/client/AConnectorClientSubscriptionInitRetryTest.java),
 in `dynamic-mapper-service/src/test/java/dynamic/mapper/connector/core/client/`. It follows
 `MQTT3ClientTest`'s setup style and `SubscriptionManagerTest`'s fault-injection idiom
 (`doThrow(new SDKException(502, "Bad Gateway")).when(mappingService).rebuildMappingCaches(...)`).
@@ -162,21 +162,21 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
              -s fault_inject.py
    ```
 4. Point the microservice at the proxy **without editing the gitignored
-   `application-dev.properties`** — use [`debug_local_service.sh`](debug_local_service.sh), which
+   `application-dev.properties`** — use [`debug_local_service.sh`](../tools/debug_local_service.sh), which
    is already set up for exactly this: it builds the classpath into an argfile, launches
    `dynamic.mapper.App` with `-Dspring.profiles.active=dev`, and takes the Cumulocity base URL as
    the `C8Y_BASE_URL` env var (defaulting to `http://localhost:8888`, i.e. this proxy's default
    listen port, so no override is needed if you kept step 3's `--listen-port 8888`):
    ```bash
    cd "$REPO_ROOT" # or wherever the repo root is
-   ./resources/testing/reliability/debug_local_service.sh
+   ./resources/testing/reliability/tools/debug_local_service.sh
    ```
    It always opens a debug socket in **listen mode** (`server=y`, `suspend=n` by default) on port
    `54346`, so the JVM starts immediately whether or not a debugger ever attaches — no separate
    "skip the debugger" variant is needed. Override via env vars if required:
    ```bash
    C8Y_BASE_URL=http://localhost:8888 DEBUG_PORT=54346 DEBUG_SUSPEND=n \
-     ./resources/testing/reliability/debug_local_service.sh
+     ./resources/testing/reliability/tools/debug_local_service.sh
    ```
    Set `DEBUG_SUSPEND=y` if you need the JVM to block at startup until a debugger attaches (e.g.
    to catch early bootstrap code).
@@ -273,7 +273,7 @@ Two unrelated observations surfaced during this run, both explicitly out of scop
 Independent of the 502 path. Two layers:
 
 1. **1002-vs-401 detection (unit-level, pre-existing):**
-   [`NotificationCallbackTest`](../../../dynamic-mapper-service/src/test/java/dynamic/mapper/notification/NotificationCallbackTest.java)
+   [`NotificationCallbackTest`](../../../../dynamic-mapper-service/src/test/java/dynamic/mapper/notification/NotificationCallbackTest.java)
    already covers both `onClose(401, ...)` and `onClose(1002, "...401...")` triggering
    `setManagementConnectionStatus(tenant, 401)` / `setCacheInventoryConnectionStatus(tenant, 401)`,
    and confirms a normal close (`1000`) whose reason happens to contain "401" does **not** false-positive.
@@ -285,7 +285,7 @@ Independent of the 502 path. Two layers:
    "storing `null` removes the entry" contract of `storeManagementToken`/`storeCacheInventoryToken`/
    `storeDeviceToken` — this is the piece of the fix that's testable without a live WebSocket, and
    it had no test coverage. Added to
-   [`TokenManagerTest`](../../../dynamic-mapper-service/src/test/java/dynamic/mapper/notification/service/TokenManagerTest.java):
+   [`TokenManagerTest`](../../../../dynamic-mapper-service/src/test/java/dynamic/mapper/notification/service/TokenManagerTest.java):
    getter round-trips for all three token kinds, `null`-clears-the-entry for all three, that
    clearing one device/connector token doesn't affect another, and that clearing a
    never-stored token is a no-op rather than throwing (the fallback path calls
@@ -341,7 +341,7 @@ add `fault.on` to also fail the inventory call that creates the source. Then:
 Paths A to D check that the connector and its helpers recover. This path checks the data: what happens to the
 messages that arrive during the outage. A 502, 503, or 504 from Cumulocity while the pipeline runs is a server
 error, so the connector does **not** acknowledge the message and the broker redelivers it (see
-[reliability.md](../../../docs/feature/reliability.md#the-poison-pill-guard)). Each redelivery counts toward
+[reliability.md](../../../../docs/feature/reliability.md#the-poison-pill-guard)). Each redelivery counts toward
 `maxProcessingAttempts` (**default 5**, Service configuration, Processing tab). The failure that reaches the
 limit is acknowledged and dropped. For MQTT every redelivery is a reconnect, with a back-off of 0 s, then 60 s,
 120 s, and so on up to 300 s, unless the connector property `reconnectOnProcessingError` is off.
