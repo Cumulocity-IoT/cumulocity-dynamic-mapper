@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,17 @@ public class PulsarConnectorClient extends AConnectorClient {
     // producer created its own, the last one stayed in the map and the others were never closed (185 publishers on
     // one topic after a broker outage)
     private final Map<String, ReentrantLock> producerLocks = new ConcurrentHashMap<>();
+    // QoS of each consumer, to subscribe again with the same one when a stuck consumer is replaced
+    protected final Map<String, Qos> consumerQos = new ConcurrentHashMap<>();
+    // Housekeeping cycles a consumer has been disconnected
+    private final Map<String, Integer> consumerDownCycles = new ConcurrentHashMap<>();
+    // Topics whose consumer was closed for being stuck and could not be subscribed again yet: retried every cycle
+    private final Map<String, Qos> consumersToRestore = new ConcurrentHashMap<>();
+    /**
+     * A consumer that stays disconnected this many housekeeping cycles (5 minutes) while the broker answers is
+     * replaced. The Pulsar client reconnects a consumer by itself, so this is only for one that is stuck.
+     */
+    static final int CONSUMER_REPLACE_AFTER_CYCLES = 10;
     // Housekeeping cycles a producer has been disconnected while the broker is reachable
     private final Map<String, Integer> producerDownCycles = new ConcurrentHashMap<>();
     /** A producer that stays disconnected this many housekeeping cycles with the broker reachable is replaced. */
@@ -575,6 +587,7 @@ public class PulsarConnectorClient extends AConnectorClient {
             }
 
             consumers.put(topic, consumer);
+            consumerQos.put(topic, qos);
             sendSubscriptionEvents(topic, "Subscribed");
 
         } catch (PulsarClientException e) {
@@ -587,6 +600,9 @@ public class PulsarConnectorClient extends AConnectorClient {
         log.debug("{} - Unsubscribing from topic: [{}]", tenant, topic);
 
         Consumer<byte[]> consumer = consumers.remove(topic);
+        consumerQos.remove(topic);
+        consumerDownCycles.remove(topic);
+        consumersToRestore.remove(topic);
         if (consumer != null) {
             try {
                 consumer.close();
@@ -618,6 +634,9 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             });
             consumers.clear();
+            consumerQos.clear();
+            consumerDownCycles.clear();
+            consumersToRestore.clear();
 
             // Close producers
             producers.values().forEach(producer -> {
@@ -933,21 +952,72 @@ public class PulsarConnectorClient extends AConnectorClient {
         return readWildcardFlag(direction, true, false);
     }
 
+    /**
+     * Keeps the consumers alive. A consumer that reports itself disconnected was closed and dropped here every
+     * cycle, which includes every consumer during a broker outage, and nothing subscribed again: the inbound
+     * messages of the topic were not consumed after the broker came back, until a mapping change or a reconnect.
+     * The Pulsar client reconnects a consumer by itself, so it is left alone. One that stays disconnected for
+     * {@value #CONSUMER_REPLACE_AFTER_CYCLES} cycles while the broker answers is stuck: it is closed and subscribed
+     * again with its QoS, and retried every cycle if that fails.
+     */
     @Override
     public void monitorSubscriptions() {
-        // Monitor consumers and remove disconnected ones
-        consumers.entrySet().removeIf(entry -> {
-            if (!entry.getValue().isConnected()) {
-                log.warn("{} - Consumer for topic {} disconnected, removing", tenant, entry.getKey());
-                try {
-                    entry.getValue().close();
-                } catch (PulsarClientException e) {
-                    log.error("{} - Error closing disconnected consumer: {}", tenant, e.getMessage(), e);
-                }
-                return true;
+        restoreConsumers();
+
+        List<String> stuck = new ArrayList<>();
+        for (Map.Entry<String, Consumer<byte[]>> entry : consumers.entrySet()) {
+            String topic = entry.getKey();
+            if (entry.getValue().isConnected()) {
+                consumerDownCycles.remove(topic);
+                continue;
             }
-            return false;
-        });
+            if (consumerDownCycles.merge(topic, 1, Integer::sum) >= CONSUMER_REPLACE_AFTER_CYCLES) {
+                stuck.add(topic);
+            }
+        }
+        if (stuck.isEmpty()) {
+            return;
+        }
+        // Down because the broker is down is not stuck: the consumer reconnects when it is back
+        if (!isBrokerReachable()) {
+            log.debug("{} - {} consumer(s) disconnected, broker not reachable: not replacing them", tenant, stuck.size());
+            return;
+        }
+        for (String topic : stuck) {
+            Consumer<byte[]> consumer = consumers.remove(topic);
+            consumerDownCycles.remove(topic);
+            if (consumer == null) {
+                continue;
+            }
+            log.warn("{} - Consumer for topic {} stayed disconnected for {} cycles, replacing it", tenant, topic,
+                    CONSUMER_REPLACE_AFTER_CYCLES);
+            try {
+                consumer.close();
+            } catch (PulsarClientException e) {
+                log.warn("{} - Error closing stuck consumer for topic {}: {}", tenant, topic, e.getMessage());
+            }
+            consumersToRestore.put(topic, consumerQos.getOrDefault(topic, Qos.AT_LEAST_ONCE));
+        }
+        restoreConsumers();
+    }
+
+    /** Subscribes again the topics whose consumer was closed for being stuck. A failure is retried next cycle. */
+    private void restoreConsumers() {
+        for (Map.Entry<String, Qos> entry : consumersToRestore.entrySet()) {
+            String topic = entry.getKey();
+            try {
+                subscribe(topic, entry.getValue());
+            } catch (Exception e) {
+                log.warn("{} - Could not subscribe again to topic {}, retrying next cycle: {}", tenant, topic,
+                        e.getMessage());
+                continue;
+            }
+            // subscribe() returns silently while the connector is not connected: only a consumer in the map counts
+            if (consumers.containsKey(topic)) {
+                consumersToRestore.remove(topic);
+                log.info("{} - Subscribed again to topic: [{}]", tenant, topic);
+            }
+        }
     }
 
     @Override

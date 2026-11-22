@@ -451,6 +451,20 @@ class PulsarConnectorClientTest {
         protected boolean isReadyToPublish() {
             return ready;
         }
+
+        /** The connector state is not wired here either, so the real subscribe() would return without doing anything. */
+        final List<String> subscribed = new java.util.ArrayList<>();
+        volatile boolean subscribeFails;
+
+        @Override
+        @SuppressWarnings("unchecked")
+        protected void subscribe(String topic, Qos qos) throws dynamic.mapper.connector.core.client.ConnectorException {
+            if (subscribeFails) {
+                throw new dynamic.mapper.connector.core.client.ConnectorException("broker down");
+            }
+            subscribed.add(topic + "@" + qos);
+            consumers.put(topic, mock(Consumer.class));
+        }
     }
 
     // ---- outage behavior: one producer per topic, hold while the broker is down
@@ -645,5 +659,115 @@ class PulsarConnectorClientTest {
         client.connectorSpecificHousekeeping("tenant");
 
         assertEquals(1, client.producers.size(), "the count started over after the reconnect");
+    }
+
+    // ---- consumers: left alone while disconnected, replaced only when stuck
+
+    @SuppressWarnings("unchecked")
+    private Consumer<byte[]> disconnectedConsumer(TestPulsarConnectorClient client, String topic, Qos qos) {
+        Consumer<byte[]> consumer = mock(Consumer.class);
+        when(consumer.isConnected()).thenReturn(false);
+        client.consumers.put(topic, consumer);
+        client.consumerQos.put(topic, qos);
+        return consumer;
+    }
+
+    private void brokerAnswers(PulsarClient pulsarClient, boolean answers) {
+        when(pulsarClient.getPartitionsForTopic(anyString())).thenReturn(answers
+                ? CompletableFuture.completedFuture(List.of())
+                : CompletableFuture.failedFuture(new PulsarClientException.TimeoutException("lookup")));
+    }
+
+    @Test
+    void aDisconnectedConsumerIsKeptWhileTheBrokerIsDown() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        brokerAnswers(pulsarClient, false);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        Consumer<byte[]> consumer = disconnectedConsumer(client, "device/data", Qos.AT_LEAST_ONCE);
+
+        // it used to be closed and dropped on the first cycle, and nothing subscribed again
+        for (int cycle = 0; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES + 5; cycle++) {
+            client.monitorSubscriptions();
+        }
+
+        assertTrue(client.consumers.containsKey("device/data"));
+        verify(consumer, never()).close();
+        assertTrue(client.subscribed.isEmpty());
+    }
+
+    @Test
+    void aStuckConsumerIsReplacedAndSubscribedAgainWithItsQos() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        brokerAnswers(pulsarClient, true);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        Consumer<byte[]> stuck = disconnectedConsumer(client, "device/data", Qos.EXACTLY_ONCE);
+
+        for (int cycle = 1; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES; cycle++) {
+            client.monitorSubscriptions();
+            assertTrue(client.subscribed.isEmpty(), "kept in cycle " + cycle);
+        }
+        client.monitorSubscriptions();
+
+        verify(stuck).close();
+        assertEquals(List.of("device/data@EXACTLY_ONCE"), client.subscribed);
+        assertTrue(client.consumers.containsKey("device/data"));
+    }
+
+    @Test
+    void aConsumerThatReconnectedStartsTheCountOver() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        brokerAnswers(pulsarClient, true);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        Consumer<byte[]> consumer = disconnectedConsumer(client, "device/data", Qos.AT_LEAST_ONCE);
+
+        for (int cycle = 1; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES; cycle++) {
+            client.monitorSubscriptions();
+        }
+        when(consumer.isConnected()).thenReturn(true); // it came back just before the limit
+        client.monitorSubscriptions();
+        when(consumer.isConnected()).thenReturn(false);
+        for (int cycle = 1; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES; cycle++) {
+            client.monitorSubscriptions();
+        }
+
+        verify(consumer, never()).close();
+        assertTrue(client.subscribed.isEmpty());
+    }
+
+    @Test
+    void aFailedSubscribeAgainIsRetriedNextCycle() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        brokerAnswers(pulsarClient, true);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        disconnectedConsumer(client, "device/data", Qos.AT_LEAST_ONCE);
+        client.subscribeFails = true;
+
+        for (int cycle = 0; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES; cycle++) {
+            client.monitorSubscriptions();
+        }
+        assertFalse(client.consumers.containsKey("device/data"), "closed, not yet subscribed again");
+
+        client.subscribeFails = false;
+        client.monitorSubscriptions();
+
+        assertEquals(List.of("device/data@AT_LEAST_ONCE"), client.subscribed);
+        assertTrue(client.consumers.containsKey("device/data"));
+    }
+
+    @Test
+    void aConnectedConsumerIsLeftAlone() throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(pulsarClient, publicDefault());
+        @SuppressWarnings("unchecked")
+        Consumer<byte[]> consumer = mock(Consumer.class);
+        when(consumer.isConnected()).thenReturn(true);
+        client.consumers.put("device/data", consumer);
+
+        for (int cycle = 0; cycle < PulsarConnectorClient.CONSUMER_REPLACE_AFTER_CYCLES * 2; cycle++) {
+            client.monitorSubscriptions();
+        }
+
+        verify(consumer, never()).close();
+        assertTrue(client.subscribed.isEmpty());
     }
 }
