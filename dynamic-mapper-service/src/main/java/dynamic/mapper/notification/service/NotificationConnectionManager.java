@@ -106,6 +106,35 @@ public class NotificationConnectionManager {
     // Thread-safe collections
     private final Map<String, Map<String, CustomWebSocketClient>> staticDeviceClients = new ConcurrentHashMap<>();
     private final Map<String, Map<String, CustomWebSocketClient>> dynamicDeviceClients = new ConcurrentHashMap<>();
+
+    /**
+     * The two kinds of device WebSocket a connector has: the one for devices subscribed one by one (static) and the one
+     * for groups and types that resolve to devices (dynamic). They differ only in the subscription they read, the
+     * subscriber name their token is made for, and the key their token and failed connects are kept under.
+     */
+    private enum DeviceBucket {
+        STATIC("static", Utils.STATIC_DEVICE_SUBSCRIPTION, Utils.STATIC_DEVICE_SUBSCRIBER),
+        DYNAMIC("dynamic", Utils.DYNAMIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
+
+        final String label;
+        final String subscription;
+        final String subscriberPrefix;
+
+        DeviceBucket(String label, String subscription, String subscriberPrefix) {
+            this.label = label;
+            this.subscription = subscription;
+            this.subscriberPrefix = subscriberPrefix;
+        }
+
+        /** The key the connector's token is stored under. */
+        String tokenKey(String connectorId) {
+            return connectorId + "_" + label;
+        }
+    }
+
+    private Map<String, Map<String, CustomWebSocketClient>> clientsOf(DeviceBucket bucket) {
+        return bucket == DeviceBucket.STATIC ? staticDeviceClients : dynamicDeviceClients;
+    }
     private final Map<String, CustomWebSocketClient> managementClients = new ConcurrentHashMap<>();
     private final Map<String, CustomWebSocketClient> cacheInventoryClients = new ConcurrentHashMap<>();
     // Explorer: one WebSocket per session (keyed by sessionId)
@@ -250,44 +279,28 @@ public class NotificationConnectionManager {
     }
 
     public void initializeStaticDeviceClient(String tenant) {
-        staticDeviceClients.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
-
-        try {
-            List<NotificationSubscriptionRepresentation> staticDeviceSubs = queryService
-                    .getNotificationSubscriptionForDevices(tenant, null, Utils.STATIC_DEVICE_SUBSCRIPTION)
-                    .get(30, TimeUnit.SECONDS);
-
-            log.info("{} - Initializing {} static device subscriptions", tenant, staticDeviceSubs.size());
-
-            if (!staticDeviceSubs.isEmpty()) {
-                initializeStaticDeviceConnections(tenant);
-                activateDeviceConnections(tenant, staticDeviceSubs);
-            } else {
-                log.info("{} - No existing static device subscriptions found", tenant);
-            }
-        } catch (InterruptedException e) {
-            log.error("{} - Interrupted while initializing device client", tenant);
-            Thread.currentThread().interrupt();
-        } catch (ExecutionException | TimeoutException | URISyntaxException e) {
-            log.error("{} - Error initializing device client: {}", tenant, e.getMessage(), e);
-        }
+        initializeDeviceClient(tenant, DeviceBucket.STATIC);
     }
 
     public void initializeDynamicDeviceClient(String tenant) {
-        dynamicDeviceClients.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+        initializeDeviceClient(tenant, DeviceBucket.DYNAMIC);
+    }
+
+    private void initializeDeviceClient(String tenant, DeviceBucket bucket) {
+        clientsOf(bucket).computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
 
         try {
-            List<NotificationSubscriptionRepresentation> dynamicDeviceSubs = queryService
-                    .getNotificationSubscriptionForDevices(tenant, null, Utils.DYNAMIC_DEVICE_SUBSCRIPTION)
+            List<NotificationSubscriptionRepresentation> deviceSubs = queryService
+                    .getNotificationSubscriptionForDevices(tenant, null, bucket.subscription)
                     .get(30, TimeUnit.SECONDS);
 
-            log.info("{} - Initializing {} dynamic device subscriptions", tenant, dynamicDeviceSubs.size());
+            log.info("{} - Initializing {} {} device subscriptions", tenant, deviceSubs.size(), bucket.label);
 
-            if (!dynamicDeviceSubs.isEmpty()) {
-                initializeDynamicDeviceConnections(tenant);
-                activateDeviceConnections(tenant, dynamicDeviceSubs);
+            if (!deviceSubs.isEmpty()) {
+                initializeDeviceConnections(tenant, bucket);
+                activateDeviceConnections(tenant, deviceSubs);
             } else {
-                log.info("{} - No existing dynamic device subscriptions found", tenant);
+                log.info("{} - No existing {} device subscriptions found", tenant, bucket.label);
             }
         } catch (InterruptedException e) {
             log.error("{} - Interrupted while initializing device client", tenant);
@@ -373,57 +386,34 @@ public class NotificationConnectionManager {
      * initial messages after the reconnect completes.
      */
     public void reconnectStaticDeviceClientsForNewSubscription(String tenant) {
-        if (tenant == null) {
-            return;
-        }
-        Map<String, CustomWebSocketClient> clients = staticDeviceClients.get(tenant);
-        if (clients == null || clients.isEmpty()) {
-            // No existing clients yet — initialize from scratch
-            try {
-                initializeStaticDeviceConnections(tenant);
-            } catch (URISyntaxException e) {
-                log.error("{} - Error initializing static device connections after subscription: {}", tenant,
-                        e.getMessage(), e);
-            }
-            return;
-        }
-        for (Map.Entry<String, CustomWebSocketClient> entry : clients.entrySet()) {
-            CustomWebSocketClient client = entry.getValue();
-            if (client != null && client.isOpen()) {
-                try {
-                    client.reconnect();
-                    log.info("{} - Triggered static device WebSocket reconnect for connector {} after new subscription",
-                            tenant, entry.getKey());
-                } catch (Exception e) {
-                    log.warn("{} - Error reconnecting static device client after subscription: {}", tenant,
-                            e.getMessage());
-                }
-            }
-        }
+        reconnectDeviceClientsForNewSubscription(tenant, DeviceBucket.STATIC);
     }
 
     /**
      * Reconnects existing dynamic device WebSocket clients so they pick up pending
      * notifications from a newly created device subscription (e.g. a group or type
      * resolving to this device) without waiting for the 60-second {@link #reconnectAll()}
-     * cycle. Mirrors {@link #reconnectStaticDeviceClientsForNewSubscription(String)} —
-     * see that method's Javadoc for why an immediate reconnect is needed: without it, a
-     * dynamic client that is already open from an earlier subscription never learns about
-     * devices added afterward, since {@link #initializeDynamicDeviceConnections(String)}
-     * skips any client that is already open.
+     * cycle. See {@link #reconnectStaticDeviceClientsForNewSubscription(String)} for why an
+     * immediate reconnect is needed: without it, a dynamic client that is already open from
+     * an earlier subscription never learns about devices added afterward, since
+     * {@code initializeDeviceConnections} skips any client that is already open.
      */
     public void reconnectDynamicDeviceClientsForNewSubscription(String tenant) {
+        reconnectDeviceClientsForNewSubscription(tenant, DeviceBucket.DYNAMIC);
+    }
+
+    private void reconnectDeviceClientsForNewSubscription(String tenant, DeviceBucket bucket) {
         if (tenant == null) {
             return;
         }
-        Map<String, CustomWebSocketClient> clients = dynamicDeviceClients.get(tenant);
+        Map<String, CustomWebSocketClient> clients = clientsOf(bucket).get(tenant);
         if (clients == null || clients.isEmpty()) {
             // No existing clients yet — initialize from scratch
             try {
-                initializeDynamicDeviceConnections(tenant);
+                initializeDeviceConnections(tenant, bucket);
             } catch (URISyntaxException e) {
-                log.error("{} - Error initializing dynamic device connections after subscription: {}", tenant,
-                        e.getMessage(), e);
+                log.error("{} - Error initializing {} device connections after subscription: {}", tenant,
+                        bucket.label, e.getMessage(), e);
             }
             return;
         }
@@ -432,11 +422,11 @@ public class NotificationConnectionManager {
             if (client != null && client.isOpen()) {
                 try {
                     client.reconnect();
-                    log.info("{} - Triggered dynamic device WebSocket reconnect for connector {} after new subscription",
-                            tenant, entry.getKey());
+                    log.info("{} - Triggered {} device WebSocket reconnect for connector {} after new subscription",
+                            tenant, bucket.label, entry.getKey());
                 } catch (Exception e) {
-                    log.warn("{} - Error reconnecting dynamic device client after subscription: {}", tenant,
-                            e.getMessage());
+                    log.warn("{} - Error reconnecting {} device client after subscription: {}", tenant,
+                            bucket.label, e.getMessage());
                 }
             }
         }
@@ -551,45 +541,16 @@ public class NotificationConnectionManager {
 
     public void initializeConnectionsIfNeeded(String tenant) {
         try {
-            // Check if static device connections need initialization
-            boolean needStaticInit = false;
-            Map<String, CustomWebSocketClient> staticClientsForTenant = staticDeviceClients.get(tenant);
-            if (staticClientsForTenant == null || staticClientsForTenant.isEmpty()) {
-                needStaticInit = true;
-            } else {
-                // Check if any static client is connected
-                boolean hasConnectedStatic = staticClientsForTenant.values().stream()
-                        .anyMatch(client -> client != null && client.isOpen());
-                if (!hasConnectedStatic) {
-                    needStaticInit = true;
+            for (DeviceBucket bucket : DeviceBucket.values()) {
+                // Initialize only what is needed: a bucket with no client, or none that is connected
+                Map<String, CustomWebSocketClient> clientsForTenant = clientsOf(bucket).get(tenant);
+                boolean needInit = clientsForTenant == null || clientsForTenant.isEmpty()
+                        || clientsForTenant.values().stream().noneMatch(client -> client != null && client.isOpen());
+                if (needInit) {
+                    log.info("{} - Initializing {} device connections", tenant, bucket.label);
+                    initializeDeviceConnections(tenant, bucket);
                 }
             }
-
-            // Check if dynamic device connections need initialization
-            boolean needDynamicInit = false;
-            Map<String, CustomWebSocketClient> dynamicClientsForTenant = dynamicDeviceClients.get(tenant);
-            if (dynamicClientsForTenant == null || dynamicClientsForTenant.isEmpty()) {
-                needDynamicInit = true;
-            } else {
-                // Check if any dynamic client is connected
-                boolean hasConnectedDynamic = dynamicClientsForTenant.values().stream()
-                        .anyMatch(client -> client != null && client.isOpen());
-                if (!hasConnectedDynamic) {
-                    needDynamicInit = true;
-                }
-            }
-
-            // Initialize only what's needed
-            if (needStaticInit) {
-                log.info("{} - Initializing static device connections", tenant);
-                initializeStaticDeviceConnections(tenant);
-            }
-
-            if (needDynamicInit) {
-                log.info("{} - Initializing dynamic device connections", tenant);
-                initializeDynamicDeviceConnections(tenant);
-            }
-
         } catch (URISyntaxException e) {
             log.error("{} - Error initializing device connections: {}", tenant, e.getMessage(), e);
         }
@@ -604,33 +565,20 @@ public class NotificationConnectionManager {
         log.info("{} - Handling removal of connector {}", tenant, connectorIdentifier);
 
         // Close WebSocket connection for this connector
-        Map<String, CustomWebSocketClient> staticDeviceClientsForTenant = staticDeviceClients.get(tenant);
-        if (staticDeviceClientsForTenant != null) {
-            CustomWebSocketClient client = staticDeviceClientsForTenant.remove(connectorIdentifier);
-            if (client != null) {
-                try {
-                    client.close();
-                    log.info("{} - Closed WebSocket associated static device subscriptions for connector {}", tenant,
-                            connectorIdentifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error closing WebSocket associated static device subscriptions for connector {}: {}",
-                            tenant, connectorIdentifier, e.getMessage());
-                }
+        for (DeviceBucket bucket : DeviceBucket.values()) {
+            Map<String, CustomWebSocketClient> clientsForTenant = clientsOf(bucket).get(tenant);
+            if (clientsForTenant == null) {
+                continue;
             }
-        }
-
-        Map<String, CustomWebSocketClient> dynamicDeviceClientsForTenant = dynamicDeviceClients.get(tenant);
-        if (dynamicDeviceClientsForTenant != null) {
-            CustomWebSocketClient client = dynamicDeviceClientsForTenant.remove(connectorIdentifier);
+            CustomWebSocketClient client = clientsForTenant.remove(connectorIdentifier);
             if (client != null) {
                 try {
                     client.close();
-                    log.info("{} - Closed WebSocket associated dynamic device subscriptions for connector {}", tenant,
-                            connectorIdentifier);
+                    log.info("{} - Closed WebSocket associated {} device subscriptions for connector {}", tenant,
+                            bucket.label, connectorIdentifier);
                 } catch (Exception e) {
-                    log.warn(
-                            "{} - Error closing WebSocket associated dynamic device subscriptions for connector {}: {}",
-                            tenant, connectorIdentifier, e.getMessage());
+                    log.warn("{} - Error closing WebSocket associated {} device subscriptions for connector {}: {}",
+                            tenant, bucket.label, connectorIdentifier, e.getMessage());
                 }
             }
         }
@@ -758,7 +706,7 @@ public class NotificationConnectionManager {
 
     // === Private Helper Methods ===
 
-    private void initializeStaticDeviceConnections(String tenant) throws URISyntaxException {
+    private void initializeDeviceConnections(String tenant, DeviceBucket bucket) throws URISyntaxException {
         Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
@@ -780,27 +728,30 @@ public class NotificationConnectionManager {
 
             String connectorId = dispatcher.getConnectorClient().getConnectorIdentifier();
 
-            Map<String, CustomWebSocketClient> staticClientsForTenant = staticDeviceClients.get(tenant);
-            if (staticClientsForTenant != null) {
-                CustomWebSocketClient existingClient = staticClientsForTenant.get(connectorId);
+            Map<String, CustomWebSocketClient> clientsForTenant = clientsOf(bucket).get(tenant);
+            if (clientsForTenant != null) {
+                CustomWebSocketClient existingClient = clientsForTenant.get(connectorId);
                 if (existingClient != null && existingClient.isOpen()) {
-                    log.debug("{} - Static device client already connected for connector {}, skipping", tenant, connectorId);
+                    log.debug("{} - {} device client already connected for connector {}, skipping", tenant,
+                            bucket.label, connectorId);
                     continue;
                 }
             }
 
-            String tokenSeedForStatic = Utils.STATIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
+            String tokenSeed = bucket.subscriberPrefix + connectorId + additionalSubscriptionIdTest;
+            String tokenKey = bucket.tokenKey(connectorId);
 
             try {
-                String storedToken = tokenManager.getDeviceToken(tenant, connectorId + "_static");
+                String storedToken = tokenManager.getDeviceToken(tenant, tokenKey);
                 boolean usingStoredToken = storedToken != null;
                 String token = usingStoredToken
                         ? storedToken
-                        : tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
+                        : tokenManager.createToken(bucket.subscription, tokenSeed);
                 if (!usingStoredToken) {
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
+                    tokenManager.storeDeviceToken(tenant, tokenKey, token);
                 } else {
-                    log.debug("{} - Reusing refreshed static device token for connector {}", tenant, connectorId);
+                    log.debug("{} - Reusing refreshed {} device token for connector {}", tenant, bucket.label,
+                            connectorId);
                 }
 
                 ConnectorId connectorInfo = new ConnectorId(
@@ -809,99 +760,26 @@ public class NotificationConnectionManager {
 
                 CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
                 if (client == null && usingStoredToken) {
-                    log.warn("{} - Stored static device token failed to connect for connector {}, retrying with fresh token",
-                            tenant, connectorId);
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", null);
-                    token = tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
+                    log.warn("{} - Stored {} device token failed to connect for connector {}, retrying with fresh token",
+                            tenant, bucket.label, connectorId);
+                    tokenManager.storeDeviceToken(tenant, tokenKey, null);
+                    token = tokenManager.createToken(bucket.subscription, tokenSeed);
+                    tokenManager.storeDeviceToken(tenant, tokenKey, token);
                     client = connect(tenant, token, dispatcher, connectorInfo);
                 }
                 if (client != null) {
-                    staticDeviceClients.get(tenant).put(connectorId, client);
-                    failedDeviceConnects.remove(connectKey(tenant, connectorId, "static"));
-                    log.info("{} - Initialized device connection for connector: {}", tenant, connectorId);
+                    clientsOf(bucket).get(tenant).put(connectorId, client);
+                    failedDeviceConnects.remove(connectKey(tenant, connectorId, bucket.label));
+                    log.info("{} - Initialized {} device connection for connector: {}", tenant, bucket.label,
+                            connectorId);
                 } else {
-                    failedDeviceConnects.add(connectKey(tenant, connectorId, "static"));
+                    failedDeviceConnects.add(connectKey(tenant, connectorId, bucket.label));
                 }
             } catch (Exception e) {
-                failedDeviceConnects.add(connectKey(tenant, connectorId, "static"));
-                log.error("{} - Failed to initialize static device connection for connector {}: {}",
-                        tenant, connectorId, e.getMessage(), e);
+                failedDeviceConnects.add(connectKey(tenant, connectorId, bucket.label));
+                log.error("{} - Failed to initialize {} device connection for connector {}: {}",
+                        tenant, bucket.label, connectorId, e.getMessage(), e);
             }
-        }
-    }
-
-        private void initializeDynamicDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
-        if (dispatchers == null || dispatchers.isEmpty()) {
-            log.warn("{} - No outbound dispatchers registered", tenant);
-            return;
-        }
-
-        for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
-            if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)) {
-                continue;
-            }
-            if (isHeldWhileDisconnected(dispatcher)) {
-                // Do not consume while the broker connection is down: the unacked messages stay queued in
-                // Cumulocity and are delivered once syncConnectorAvailability() sees the connector connected.
-                pausedConnectors.add(pauseKey(tenant, dispatcher.getConnectorClient().getConnectorIdentifier()));
-                log.info("{} - Not opening device WebSocket for connector {}: broker connection is down",
-                        tenant, dispatcher.getConnectorClient().getConnectorIdentifier());
-                continue;
-            }
-
-            String connectorId = dispatcher.getConnectorClient().getConnectorIdentifier();
-
-            Map<String, CustomWebSocketClient> dynamicClientsForTenant = dynamicDeviceClients.get(tenant);
-            if (dynamicClientsForTenant != null) {
-                CustomWebSocketClient existingClient = dynamicClientsForTenant.get(connectorId);
-                if (existingClient != null && existingClient.isOpen()) {
-                    log.debug("{} - Dynamic device client already connected for connector {}, skipping", tenant, connectorId);
-                    continue;
-                }
-            }
-
-            String tokenSeedForDynamic = Utils.DYNAMIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
-
-            try {
-                String storedToken = tokenManager.getDeviceToken(tenant, connectorId + "_dynamic");
-                boolean usingStoredToken = storedToken != null;
-                String token = usingStoredToken
-                        ? storedToken
-                        : tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
-                if (!usingStoredToken) {
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
-                } else {
-                    log.debug("{} - Reusing refreshed dynamic device token for connector {}", tenant, connectorId);
-                }
-
-                ConnectorId connectorInfo = new ConnectorId(
-                        dispatcher.getConnectorClient().getConnectorName(),
-                        connectorId);
-
-                CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
-                if (client == null && usingStoredToken) {
-                    log.warn("{} - Stored dynamic device token failed to connect for connector {}, retrying with fresh token",
-                            tenant, connectorId);
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", null);
-                    token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
-                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
-                    client = connect(tenant, token, dispatcher, connectorInfo);
-                }
-                if (client != null) {
-                    dynamicDeviceClients.get(tenant).put(connectorId, client);
-                    failedDeviceConnects.remove(connectKey(tenant, connectorId, "dynamic"));
-                    log.info("{} - Initialized dynamic connection for connector: {}", tenant, connectorId);
-                } else {
-                    failedDeviceConnects.add(connectKey(tenant, connectorId, "dynamic"));
-                }
-            } catch (Exception e) {
-                failedDeviceConnects.add(connectKey(tenant, connectorId, "dynamic"));
-                log.error("{} - Failed to initialize dynamic device connection for connector {}: {}",
-                        tenant, connectorId, e.getMessage(), e);
-            }
-
         }
     }
 
@@ -1093,38 +971,24 @@ public class NotificationConnectionManager {
 
     private void disconnectDeviceClients(String tenant) {
         failedDeviceConnects.removeIf(k -> k.startsWith(tenant + "|"));
-        Map<String, CustomWebSocketClient> staticDeviceClientsForTenant = staticDeviceClients.get(tenant);
-        if (staticDeviceClientsForTenant != null) {
+        for (DeviceBucket bucket : DeviceBucket.values()) {
+            Map<String, CustomWebSocketClient> clientsForTenant = clientsOf(bucket).get(tenant);
+            if (clientsForTenant == null) {
+                continue;
+            }
             int disconnectedCount = 0;
-            for (CustomWebSocketClient client : staticDeviceClientsForTenant.values()) {
+            for (CustomWebSocketClient client : clientsForTenant.values()) {
                 if (client != null && client.isOpen()) {
                     try {
                         client.close();
                         disconnectedCount++;
                     } catch (Exception e) {
-                        log.warn("{} - Error closing static device client: {}", tenant, e.getMessage());
+                        log.warn("{} - Error closing {} device client: {}", tenant, bucket.label, e.getMessage());
                     }
                 }
             }
-            staticDeviceClientsForTenant.clear();
-            log.info("{} - Disconnected {} device static WebSocket clients", tenant, disconnectedCount);
-        }
-
-        Map<String, CustomWebSocketClient> dynamicDeviceClientsForTenant = dynamicDeviceClients.get(tenant);
-        if (dynamicDeviceClientsForTenant != null) {
-            int disconnectedCount = 0;
-            for (CustomWebSocketClient client : dynamicDeviceClientsForTenant.values()) {
-                if (client != null && client.isOpen()) {
-                    try {
-                        client.close();
-                        disconnectedCount++;
-                    } catch (Exception e) {
-                        log.warn("{} - Error closing dynamic device client: {}", tenant, e.getMessage());
-                    }
-                }
-            }
-            dynamicDeviceClientsForTenant.clear();
-            log.info("{} - Disconnected {} device dynamic WebSocket clients", tenant, disconnectedCount);
+            clientsForTenant.clear();
+            log.info("{} - Disconnected {} device {} WebSocket clients", tenant, disconnectedCount, bucket.label);
         }
     }
 
@@ -1212,8 +1076,8 @@ public class NotificationConnectionManager {
         }
         if (resume) {
             try {
-                initializeStaticDeviceConnections(tenant);
-                initializeDynamicDeviceConnections(tenant);
+                initializeDeviceConnections(tenant, DeviceBucket.STATIC);
+                initializeDeviceConnections(tenant, DeviceBucket.DYNAMIC);
             } catch (URISyntaxException e) {
                 log.error("{} - Error resuming device connections: {}", tenant, e.getMessage(), e);
             }
@@ -1292,66 +1156,39 @@ public class NotificationConnectionManager {
     }
 
     private void reconnectDeviceClients(String tenant) {
-        Map<String, CustomWebSocketClient> staticDeviceClientsForTenant = staticDeviceClients.get(tenant);
-        if (staticDeviceClientsForTenant == null) {
-            return;
-        }
+        for (DeviceBucket bucket : DeviceBucket.values()) {
+            Map<String, CustomWebSocketClient> clientsForTenant = clientsOf(bucket).get(tenant);
+            if (clientsForTenant == null) {
+                continue;
+            }
 
-        int reconnectedCount = 0;
-        for (Map.Entry<String, CustomWebSocketClient> entry : staticDeviceClientsForTenant.entrySet()) {
-            CustomWebSocketClient client = entry.getValue();
-            if (shouldReconnectClient(tenant, entry.getKey(), client)) {
-                try {
-                    if (client.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
-                            isUnauthorized(tenant, entry.getKey())) {
-                        log.info("{} - Re-initializing static device client", tenant);
-                        initializeStaticDeviceClient(tenant);
-                        // M6: don't break — continue so remaining CLOSED clients are also reconnected
-                    } else {
-                        client.reconnect();
-                        reconnectedCount++;
-                        log.info("{} - Reconnected static device client", tenant);
+            int reconnectedCount = 0;
+            for (Map.Entry<String, CustomWebSocketClient> entry : clientsForTenant.entrySet()) {
+                CustomWebSocketClient client = entry.getValue();
+                if (shouldReconnectClient(tenant, entry.getKey(), client)) {
+                    try {
+                        if (client.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
+                                isUnauthorized(tenant, entry.getKey())) {
+                            log.info("{} - Re-initializing {} device client", tenant, bucket.label);
+                            initializeDeviceClient(tenant, bucket);
+                            // Don't break: it covers all connectors in one call, but continue so the
+                            // remaining closed or stale clients are also inspected
+                        } else {
+                            client.reconnect();
+                            reconnectedCount++;
+                            log.info("{} - Reconnected {} device client", tenant, bucket.label);
+                        }
+                    } catch (Exception e) {
+                        log.warn("{} - Error reconnecting {} device client: {}", tenant, bucket.label,
+                                e.getMessage());
                     }
-                } catch (Exception e) {
-                    log.warn("{} - Error reconnecting static device client: {}", tenant, e.getMessage());
                 }
             }
-        }
 
-        if (reconnectedCount > 0) {
-            log.info("{} - Reconnected {} static device clients", tenant, reconnectedCount);
-        }
-
-        Map<String, CustomWebSocketClient> dynamicDeviceClientsForTenant = dynamicDeviceClients.get(tenant);
-        if (dynamicDeviceClientsForTenant == null) {
-            return;
-        }
-
-        reconnectedCount = 0;
-        for (Map.Entry<String, CustomWebSocketClient> entry : dynamicDeviceClientsForTenant.entrySet()) {
-            CustomWebSocketClient client = entry.getValue();
-            if (shouldReconnectClient(tenant, entry.getKey(), client)) {
-                try {
-                    if (client.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
-                            isUnauthorized(tenant, entry.getKey())) {
-                        log.info("{} - Re-initializing dynamic device client", tenant);
-                        initializeDynamicDeviceClient(tenant);
-                        // L5: don't break — initializeDynamic covers all connectors in one call,
-                        // but continue so any remaining stale-state clients are also inspected
-                    } else {
-                        client.reconnect();
-                        reconnectedCount++;
-                        log.info("{} - Reconnected dynamic device client", tenant);
-                    }
-                } catch (Exception e) {
-                    log.warn("{} - Error reconnecting dynamic device client: {}", tenant, e.getMessage());
-                }
+            if (reconnectedCount > 0) {
+                log.info("{} - Reconnected {} {} device clients", tenant, reconnectedCount, bucket.label);
             }
         }
-        if (reconnectedCount > 0) {
-            log.info("{} - Reconnected {} dynamic device clients", tenant, reconnectedCount);
-        }
-
     }
 
     private void reconnectManagementClients(String tenant) {

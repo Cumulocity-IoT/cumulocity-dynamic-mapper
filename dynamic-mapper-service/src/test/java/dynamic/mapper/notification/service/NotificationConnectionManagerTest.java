@@ -531,4 +531,102 @@ class NotificationConnectionManagerTest {
                 org.springframework.test.util.ReflectionTestUtils.invokeMethod(manager,
                         "syncConnectorAvailabilityAllTenants"));
     }
+
+    // ------------------------------------------------------------------
+    // The static and the dynamic device WebSockets are handled by one code path per operation
+    // ------------------------------------------------------------------
+
+    @SuppressWarnings("unchecked")
+    private void putClient(String field, String connectorId, CustomWebSocketClient client) throws Exception {
+        ((Map<String, Map<String, CustomWebSocketClient>>) getField(field))
+                .computeIfAbsent(TENANT, t -> new ConcurrentHashMap<>()).put(connectorId, client);
+    }
+
+    private CustomWebSocketClient openClient() {
+        CustomWebSocketClient client = mock(CustomWebSocketClient.class);
+        when(client.isOpen()).thenReturn(true);
+        return client;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void removingAConnectorClosesItsDeviceWebSocketsOfBothKindsAndLeavesTheOthers() throws Exception {
+        dispatcherFor("connB", true, true); // another connector remains, so the tenant stays connected
+        CustomWebSocketClient staticA = openClient();
+        CustomWebSocketClient dynamicA = openClient();
+        CustomWebSocketClient staticB = openClient();
+        putClient("staticDeviceClients", "connA", staticA);
+        putClient("dynamicDeviceClients", "connA", dynamicA);
+        putClient("staticDeviceClients", "connB", staticB);
+
+        manager.handleConnectorRemoval(TENANT, "connA");
+
+        verify(staticA).close();
+        verify(dynamicA).close();
+        verify(staticB, org.mockito.Mockito.never()).close();
+        assertFalse(((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .get(TENANT).containsKey("connA"));
+        assertFalse(((Map<String, Map<String, CustomWebSocketClient>>) getField("dynamicDeviceClients"))
+                .get(TENANT).containsKey("connA"));
+        assertTrue(((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .get(TENANT).containsKey("connB"));
+    }
+
+    @Test
+    void aNewSubscriptionReconnectsTheOpenDeviceClientsOfBothKinds() throws Exception {
+        CustomWebSocketClient staticOpen = openClient();
+        CustomWebSocketClient staticClosed = mock(CustomWebSocketClient.class);
+        CustomWebSocketClient dynamicOpen = openClient();
+        putClient("staticDeviceClients", "connA", staticOpen);
+        putClient("staticDeviceClients", "connB", staticClosed);
+        putClient("dynamicDeviceClients", "connA", dynamicOpen);
+
+        manager.reconnectStaticDeviceClientsForNewSubscription(TENANT);
+        manager.reconnectDynamicDeviceClientsForNewSubscription(TENANT);
+
+        verify(staticOpen).reconnect();
+        verify(dynamicOpen).reconnect();
+        verify(staticClosed, org.mockito.Mockito.never()).reconnect(); // only an open client picks up the queue
+    }
+
+    @Test
+    void aNewSubscriptionWithoutATenantDoesNothing() {
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> {
+            manager.reconnectStaticDeviceClientsForNewSubscription(null);
+            manager.reconnectDynamicDeviceClientsForNewSubscription(null);
+        });
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void disconnectingTheDeviceClientsClosesAndClearsBothKinds() throws Exception {
+        CustomWebSocketClient staticClient = openClient();
+        CustomWebSocketClient dynamicClient = openClient();
+        putClient("staticDeviceClients", "connA", staticClient);
+        putClient("dynamicDeviceClients", "connA", dynamicClient);
+        ((Set<String>) getField("failedDeviceConnects")).add(TENANT + "|connA|static");
+
+        org.springframework.test.util.ReflectionTestUtils.invokeMethod(manager, "disconnectDeviceClients", TENANT);
+
+        verify(staticClient).close();
+        verify(dynamicClient).close();
+        assertTrue(((Map<String, Map<String, CustomWebSocketClient>>) getField("staticDeviceClients"))
+                .get(TENANT).isEmpty());
+        assertTrue(((Map<String, Map<String, CustomWebSocketClient>>) getField("dynamicDeviceClients"))
+                .get(TENANT).isEmpty());
+        assertFalse(((Set<String>) getField("failedDeviceConnects")).contains(TENANT + "|connA|static"));
+    }
+
+    @Test
+    void theDynamicClientsAreReconnectedEvenWhenThereIsNoStaticMap() throws Exception {
+        // the static loop used to return early when the tenant had no static map, which skipped the dynamic one
+        CustomWebSocketClient closed = mock(CustomWebSocketClient.class);
+        when(closed.isOpen()).thenReturn(false);
+        when(closed.getReadyState()).thenReturn(ReadyState.CLOSED);
+        putClient("dynamicDeviceClients", "connA", closed);
+
+        invokeReconnectDeviceClients(TENANT);
+
+        verify(closed, times(1)).reconnect();
+    }
 }
