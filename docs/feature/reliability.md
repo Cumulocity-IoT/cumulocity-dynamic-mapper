@@ -525,7 +525,7 @@ Closing a WebSocket keeps the Notification 2.0 subscription. Unsubscribing would
 pause never does that.
 
 A message that arrives in the window between the broker dropping and the next check takes the retry path. It is not
-acknowledged and does not count toward `maxProcessingAttempts`. Two guards make that hold:
+acknowledged and does not count toward `maxProcessingAttempts`. Three guards make that hold:
 
 - **The dispatcher does not return an empty result for a down connector.** `OutboundMessageDispatcher` checks the
   connector before processing. For a connector that holds outbound messages it returns
@@ -540,7 +540,15 @@ acknowledged and does not count toward `maxProcessingAttempts`. Two guards make 
   returns when `isOpen()` is false, before the failure is counted. Cumulocity keeps the message and delivers it
   when the manager opens a new WebSocket on resume.
 
-These two together are the failure that the Kafka run in
+- **The send step records the error too.** `SendOutboundProcessor` checks the connector again before it publishes,
+  because the connection can drop after the dispatcher's check. It used the probing `isConnected()` and, when the
+  connector was down, returned with a log line and no error. With nothing recorded the notification was acknowledged
+  and the operation was reported SUCCESSFUL, so the first message after a broker stopped was lost. It now uses the cheap
+  readiness check and, for a connector that holds outbound messages, records a `ConnectorNotConnectedException` on the
+  requests and the context, as `failPublishIfNotConnected` does, which also makes an auto-acknowledged operation FAILED
+  instead of SUCCESSFUL.
+
+The first two together are the failure that the first Kafka run in
 [`resources/testing/reliability/broker-outage`](../../resources/testing/reliability/broker-outage/README.md)
 exposed: 12 measurements created during a 70 second outage were acknowledged and discarded.
 

@@ -35,6 +35,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.status.MappingStatus;
+import dynamic.mapper.processor.ConnectorNotConnectedException;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
@@ -206,8 +207,23 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
-            if (!connectorClient.isConnected()) {
+            // The cheap check, as in the dispatcher: isConnected() can probe the broker (Kafka), once per message
+            if (!connectorClient.isReadyForOutbound()) {
                 log.warn("{} - Not sending messages: connector not connected", tenant);
+                if (connectorClient.holdsOutboundWhileDisconnected()) {
+                    // Returning without an error left nothing to say the message was not delivered: the
+                    // notification was acknowledged and the operation reported SUCCESSFUL, so the message was lost.
+                    // With the error it is not acknowledged and Cumulocity delivers it again when the connector is
+                    // back (see AConnectorClient.failPublishIfNotConnected).
+                    ConnectorNotConnectedException notConnected =
+                            new ConnectorNotConnectedException(connectorClient.getConnectorName());
+                    requests.forEach(request -> {
+                        if (request != null) {
+                            request.setError(notConnected);
+                        }
+                    });
+                    context.addError(notConnected);
+                }
                 return false;
             }
 

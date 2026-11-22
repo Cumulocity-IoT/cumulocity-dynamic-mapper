@@ -143,6 +143,7 @@ class OutboundAnyPayloadPipelineIntegrationTest {
 
         connector = mock(AConnectorClient.class);
         when(connector.isConnected()).thenReturn(true);
+        when(connector.isReadyForOutbound()).thenReturn(true);
         when(connector.isMappingOutboundDeployed(anyString())).thenReturn(true);
         doAnswer(invocation -> {
             ProcessingContext<?> context = invocation.getArgument(0);

@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -134,6 +135,7 @@ class SendOutboundProcessorTest {
 
         when(connectorRegistry.getClientForTenant(TEST_TENANT, TEST_CONNECTOR)).thenReturn(connectorClient);
         when(connectorClient.isConnected()).thenReturn(true);
+        when(connectorClient.isReadyForOutbound()).thenReturn(true);
     }
 
     @Test
@@ -247,5 +249,90 @@ class SendOutboundProcessorTest {
         assertTrue(context.hasError());
         assertTrue(context.getErrors().stream().anyMatch(e -> e.getMessage().contains("Broker A")
                 && e.getMessage().contains("socket closed")));
+    }
+
+    // ---- a connector that is not ready: the message must be retried, not acknowledged
+
+    @Test
+    void aConnectorThatIsNotReadyAndHoldsOutboundMakesTheMessageRetryable() throws Exception {
+        when(connectorClient.isReadyForOutbound()).thenReturn(false);
+        when(connectorClient.holdsOutboundWhileDisconnected()).thenReturn(true);
+        when(connectorClient.getConnectorName()).thenReturn("Local Kafka (test)");
+
+        processor.process(context, TEST_CONNECTOR);
+
+        // without an error nothing said the message was not delivered: it was acknowledged and lost
+        assertTrue(context.hasError());
+        assertTrue(context.getErrors().get(0) instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        assertEquals(503, ((dynamic.mapper.processor.ProcessingException) context.getErrors().get(0))
+                .getHttpStatusCode());
+        assertTrue(context.getRequests().get(0).getError()
+                instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        verify(connectorClient, never()).publishMEAO(any());
+    }
+
+    @Test
+    void theAcknowledgementRuleReadsThatAsRetryWithoutCounting() throws Exception {
+        when(connectorClient.isReadyForOutbound()).thenReturn(false);
+        when(connectorClient.holdsOutboundWhileDisconnected()).thenReturn(true);
+        when(connectorClient.getConnectorName()).thenReturn("Local Kafka (test)");
+        processor.process(context, TEST_CONNECTOR);
+
+        dynamic.mapper.processor.runtime.ProcessingResultWrapper<Object> result =
+                dynamic.mapper.processor.util.ProcessingResultHelper.success(List.of(context));
+
+        assertEquals(dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome.RETRY_CONNECTOR_UNAVAILABLE,
+                dynamic.mapper.processor.util.ProcessingResultHelper.awaitOutcome(result, TEST_TENANT, "topic",
+                        log, null, true));
+    }
+
+    @Test
+    void aConnectorThatDoesNotHoldOutboundKeepsIgnoringTheMessage() throws Exception {
+        when(connectorClient.isReadyForOutbound()).thenReturn(false);
+        when(connectorClient.holdsOutboundWhileDisconnected()).thenReturn(false);
+
+        processor.process(context, TEST_CONNECTOR);
+
+        assertFalse(context.hasError());
+        verify(connectorClient, never()).publishMEAO(any());
+    }
+
+    @Test
+    void theGuardDoesNotProbeTheBrokerForEveryMessage() throws Exception {
+        // isConnected() probes the broker for Kafka: once per message, on the processing thread
+        processor.process(context, TEST_CONNECTOR);
+
+        verify(connectorClient, never()).isConnected();
+    }
+
+    @Test
+    void anOperationIsNotReportedSuccessfulWhenTheConnectorIsNotReady() throws Exception {
+        // the operation was reported SUCCESSFUL although nothing had been published
+        when(connectorClient.isReadyForOutbound()).thenReturn(false);
+        when(connectorClient.holdsOutboundWhileDisconnected()).thenReturn(true);
+        when(connectorClient.getConnectorName()).thenReturn("Local Kafka (test)");
+        Mapping operationMapping = Mapping.builder()
+                .id("op-1").identifier("op").name("Operation mapping")
+                .targetAPI(API.OPERATION).direction(Direction.OUTBOUND)
+                .mappingType(MappingType.JSON).transformationType(TransformationType.JSONATA)
+                .autoAckOperation(true).debug(false).build();
+        ProcessingContext<Object> operationContext = ProcessingContext.<Object>builder()
+                .tenant(TEST_TENANT)
+                .mapping(operationMapping)
+                .serviceConfiguration(serviceConfiguration)
+                .api(API.OPERATION)
+                .sendPayload(true)
+                .testing(false)
+                .rawPayload("{\"id\":\"123\",\"deviceId\":\"456\",\"c8y_Restart\":{}}")
+                .build();
+        operationContext.setRequests(new ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .predecessor(-1).api(API.MEASUREMENT).request("{}").build())));
+
+        processor.process(operationContext, TEST_CONNECTOR);
+
+        verify(c8yAgent, never()).updateOperationStatus(any(), any(),
+                eq(com.cumulocity.model.operation.OperationStatus.SUCCESSFUL), any());
+        verify(c8yAgent).updateOperationStatus(any(), any(),
+                eq(com.cumulocity.model.operation.OperationStatus.FAILED), any());
     }
 }
