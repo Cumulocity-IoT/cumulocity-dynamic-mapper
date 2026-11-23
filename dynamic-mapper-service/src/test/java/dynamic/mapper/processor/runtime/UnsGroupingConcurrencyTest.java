@@ -52,6 +52,7 @@ class UnsGroupingConcurrencyTest {
     private static final String MAPPING = "uns";
     private static final int VALUES = 100;
     private static final Path SAMPLE = Path.of("../resources/samples/uns/uns-group-by-timestamp.js");
+    private static final Path FLUSH_SAMPLE = Path.of("../resources/samples/uns/uns-flush-on-next-timestamp.js");
 
     private final FlowStateStore store = new FlowStateStore();
 
@@ -151,5 +152,41 @@ class UnsGroupingConcurrencyTest {
         }
         assertEquals(0, lost, "groups never emitted");
         assertEquals(0, duplicated, "groups emitted more than once");
+    }
+
+    /** Runs the flush sample for one message and returns the JSON of what it emitted. */
+    private String flush(Context js, String source, String name, String time, int value) {
+        SmartFunctionContext ctx = new SmartFunctionContext(js, TENANT, null, false, store, MAPPING,
+                store.loadState(TENANT, MAPPING));
+        js.getBindings("js").putMember("context", ctx);
+        js.eval("js", source);
+        Value out = js.getBindings("js").getMember("onMessage").execute(
+                js.eval("js", "({topic:'unsFlush/p1/press7/" + name + "', payload:{time:'" + time + "', value:" + value + "}})"),
+                ctx);
+        ctx.persistState();
+        return js.eval("js", "(function(o){return JSON.stringify(o.map(function(x){return [x.payload.time,"
+                + "Object.keys(x.payload).filter(function(k){return k.indexOf('uns_')===0&&k!=='uns_Measurement'||false}).sort()];}))})")
+                .execute(out).asString();
+    }
+
+    @Test
+    void flushSampleEmitsEachEarlierTimestampWhenANewerOneArrives() throws Exception {
+        String source = Files.readString(FLUSH_SAMPLE);
+        try (Context js = newContext()) {
+            assertEquals("[]", flush(js, source, "a", "2026-01-01T10:00:00Z", 1));
+            assertEquals("[]", flush(js, source, "b", "2026-01-01T10:00:00Z", 2));
+            assertEquals("[]", flush(js, source, "c", "2026-01-01T10:00:00Z", 3));
+            // a newer timestamp (with a different number of values) flushes the three-value group
+            assertEquals("[[\"2026-01-01T10:00:00Z\",[\"uns_a\",\"uns_b\",\"uns_c\"]]]",
+                    flush(js, source, "a", "2026-01-01T10:01:00Z", 4));
+            assertEquals("[]", flush(js, source, "b", "2026-01-01T10:01:00Z", 5));
+            assertEquals("[[\"2026-01-01T10:01:00Z\",[\"uns_a\",\"uns_b\"]]]",
+                    flush(js, source, "a", "2026-01-01T10:02:00Z", 6));
+            // a late value of an older timestamp does not flush the newer group
+            assertEquals("[]", flush(js, source, "z", "2026-01-01T10:01:00Z", 7));
+        }
+        // the newest group, and the late value's own group, are still buffered
+        assertEquals(java.util.List.of("press7|2026-01-01T10:01:00Z", "press7|2026-01-01T10:02:00Z"),
+                store.openGroups(TENANT, MAPPING, "press7|").stream().sorted().toList());
     }
 }

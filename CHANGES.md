@@ -12,6 +12,13 @@ same timestamp from a Unified Namespace publisher into one measurement with 100 
 - **`context.collect(groupKey, itemKey, value, expectedCount)`** adds a value to a named group and, atomically, returns
   the whole group once it holds `expectedCount` values. It returns `null` before that. Exactly one message receives a
   complete group.
+- **Flexible completion:** the fourth argument is a number or an object with `count`, `keys` (all of these items are
+  present), `last` (this message is the last) and `maxAgeSeconds` (drop stale incomplete groups when a call arrives). The
+  first condition that holds completes the group.
+- **Samples:** *IN-20* collects a fixed count per timestamp; *IN-21* (`uns-flush-on-next-timestamp.js`) flushes the
+  previous timestamp when a newer one arrives, for publishers with a varying number of values.
+- **`context.take(groupKey)`** removes a group as it is, even if partial, and **`context.openGroups(prefix)`** lists the
+  open groups, so a function can flush the previous timestamp when a newer one arrives.
 - **Limits:** groups are kept in memory (lost on restart, not shared between instances), a mapping keeps at most 1,000
   incomplete groups, and a test run buffers nothing.
 - **Documentation and examples:** the Smart Function and Flow state references, the sample mapping *IN-20*

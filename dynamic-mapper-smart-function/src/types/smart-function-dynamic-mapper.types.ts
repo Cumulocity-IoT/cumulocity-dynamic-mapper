@@ -143,6 +143,24 @@ export interface DynamicMapperDeviceMessage {
 }
 
 /**
+ * When a group of {@link SmartFunctionContext.collect} is complete. Give at least one of `count`, `keys` or `last`;
+ * the group is handed out as soon as any one of them holds.
+ */
+export interface CollectOptions {
+  /** Complete when the group holds this many distinct item keys, from 1 to 10,000. */
+  count?: number;
+  /** Complete when all of these item keys are present. Other item keys are allowed and are returned too. */
+  keys?: string[];
+  /** Complete now: this message carries the last value. Hands out the group as it is, even if it is partial. */
+  last?: boolean;
+  /**
+   * Drop incomplete groups of this mapping that are older than this many seconds (1 to 86,400, counted from the
+   * first value). It is checked when a call with this option arrives; nothing runs on a timer.
+   */
+  maxAgeSeconds?: number;
+}
+
+/**
  * Dynamic Mapper's enhanced runtime context.
  * Extends standard IDP DataPrepContext with additional capabilities for:
  * - Persistent state across message invocations (per mapping)
@@ -433,32 +451,58 @@ export interface SmartFunctionContext extends DataPrepContext {
   isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
 
   /**
-   * Adds one value to a named group and returns the whole group once it holds `expectedCount` values; returns
-   * `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the
-   * same timestamp into one measurement.
+   * Adds one value to a named group and returns the whole group once it is complete; returns `null` until then.
+   * Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into
+   * one measurement.
+   *
+   * The group is complete when its number of distinct item keys reaches `count`, when all `keys` are present, or
+   * when this call has `last: true`. Pass a number as shorthand for `{ count }`.
    *
    * Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and
    * written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count
-   * made from state never reaches 100. `collect` adds the value and checks the count in one step: exactly one
-   * message receives a given complete group, and the group is removed when it is handed out.
+   * made from state never reaches 100. `collect` adds the value and checks the condition in one step: exactly one
+   * message receives a given group, and the group is removed when it is handed out.
    *
    * A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not
    * shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A
    * mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`,
-   * and adds a warning, if an argument is missing or `expectedCount` is not a whole number from 1 to 10,000. In
-   * a test run it returns `null` and buffers nothing.
+   * and adds a warning, if an argument is missing or invalid; the value is then not collected. In a test run it
+   * returns `null` and buffers nothing.
    *
    * @param groupKey - What belongs together, for example device ID and timestamp joined with `"|"`.
    * @param itemKey - Which value of the group this is, for example the measurement name.
    * @param value - The value to store.
-   * @param expectedCount - How many distinct item keys complete the group, from 1 to 10,000.
-   * @returns The complete group as an object of item key to value, or `null` while it is incomplete.
+   * @param completeWhen - A number (same as `{ count }`) or {@link CollectOptions}.
+   * @returns The group as an object of item key to value, or `null` while it is incomplete.
    *
    * @example
    * const values = context.collect(deviceId + "|" + payload.time, name, payload.value, 100);
    * if (!values) return [];
+   *
+   * @example
+   * // a known set of fragments, or an end marker in the payload
+   * context.collect(key, name, value, { keys: ["temperature", "pressure"], last: payload.last === true });
    */
-  collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null;
+  collect(groupKey: string, itemKey: string, value: unknown, completeWhen: number | CollectOptions): Record<string, unknown> | null;
+
+  /**
+   * Removes a collected group and returns it as it is, complete or not; `null` if there is none. Atomic with
+   * `collect`: a value added at the same moment lands either in the returned group or in a new one, never in
+   * both. Use it to flush a partial group, for example when a message with a newer timestamp shows that the
+   * previous one will get no more values.
+   *
+   * @example
+   * context.openGroups(deviceId + "|").forEach((key) => {
+   *   if (key !== currentKey) { const partial = context.take(key); /* build a measurement from partial *\/ }
+   * });
+   */
+  take(groupKey: string): Record<string, unknown> | null;
+
+  /**
+   * Lists the keys of the incomplete collected groups that start with `prefix`, oldest first. Pair it with `take`.
+   * A group that completes while the list is built can still be in it; `take` then returns `null`.
+   */
+  openGroups(prefix: string): string[];
 }
 
 // ============================================================================
@@ -1587,10 +1631,16 @@ export interface SmartFunctionContextV2<
   isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
 
   /**
-   * Adds one value to a named group and returns the whole group once it holds `expectedCount` values, `null`
-   * before. Atomic, memory only. See `SmartFunctionContext`.
+   * Adds one value to a named group and returns the whole group once it is complete (`count`, `keys` or `last`),
+   * `null` before. Atomic, memory only. See `SmartFunctionContext`.
    */
-  collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null;
+  collect(groupKey: string, itemKey: string, value: unknown, completeWhen: number | CollectOptions): Record<string, unknown> | null;
+
+  /** Removes a collected group and returns it as it is, `null` if none. See `SmartFunctionContext`. */
+  take(groupKey: string): Record<string, unknown> | null;
+
+  /** Lists the keys of the incomplete collected groups starting with `prefix`, oldest first. */
+  openGroups(prefix: string): string[];
 }
 
 /**
@@ -1949,26 +1999,61 @@ function mockIsDuplicate(
 }
 
 /**
- * In-memory stand-in for `context.collect` in the mock contexts: same rules as the runtime (a group completes at
- * `expectedCount` distinct item keys, is removed when handed out, `null` for bad arguments).
+ * In-memory stand-in for `context.collect`, `take` and `openGroups` in the mock contexts: same rules as the runtime
+ * (complete at `count`, all `keys`, or `last`; the group is removed when handed out; `null` for bad arguments).
  */
+interface MockGroup {
+  created: number;
+  items: Map<string, unknown>;
+}
+
 function mockCollect(
-  groups: Map<string, Map<string, unknown>>,
+  groups: Map<string, MockGroup>,
   groupKey: string,
   itemKey: string,
   value: unknown,
-  expectedCount: number
+  completeWhen: number | CollectOptions
 ): Record<string, unknown> | null {
   if (groupKey == null || itemKey == null || value == null) return null;
-  if (!Number.isInteger(expectedCount) || expectedCount < 1 || expectedCount > 10000) return null;
-  const group = groups.get(groupKey) ?? new Map<string, unknown>();
-  group.set(itemKey, value);
-  if (group.size < expectedCount) {
-    groups.set(groupKey, group);
-    return null;
+  const options: CollectOptions = typeof completeWhen === 'number' ? { count: completeWhen } : completeWhen;
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) return null;
+  const validCount = (n: unknown) => Number.isInteger(n) && (n as number) >= 1 && (n as number) <= 10000;
+  if (options.count !== undefined && !validCount(options.count)) return null;
+  if (options.keys !== undefined && (!Array.isArray(options.keys) || options.keys.length < 1 || options.keys.some((k) => typeof k !== 'string'))) return null;
+  if (options.last !== undefined && typeof options.last !== 'boolean') return null;
+  if (options.maxAgeSeconds !== undefined && (!Number.isInteger(options.maxAgeSeconds) || options.maxAgeSeconds < 1 || options.maxAgeSeconds > 86400)) return null;
+  if (options.count === undefined && options.keys === undefined && options.last === undefined) return null;
+
+  const now = Date.now();
+  const maxAge = options.maxAgeSeconds === undefined ? undefined : options.maxAgeSeconds * 1000;
+  let group = groups.get(groupKey);
+  if (group && maxAge !== undefined && now - group.created > maxAge) group = undefined;
+  if (!group) group = { created: now, items: new Map<string, unknown>() };
+  group.items.set(itemKey, value);
+  const complete =
+    options.last === true ||
+    (options.count !== undefined && group.items.size >= options.count) ||
+    (options.keys !== undefined && options.keys.every((k) => group!.items.has(k)));
+  if (maxAge !== undefined) {
+    for (const [k, g] of groups) if (now - g.created > maxAge) groups.delete(k);
   }
+  if (complete) {
+    groups.delete(groupKey);
+    return Object.fromEntries(group.items);
+  }
+  groups.set(groupKey, group);
+  return null;
+}
+
+function mockTake(groups: Map<string, MockGroup>, groupKey: string): Record<string, unknown> | null {
+  const group = groups.get(groupKey);
+  if (!group) return null;
   groups.delete(groupKey);
-  return Object.fromEntries(group);
+  return Object.fromEntries(group.items);
+}
+
+function mockOpenGroups(groups: Map<string, MockGroup>, prefix: string): string[] {
+  return [...groups.keys()].filter((k) => k.startsWith(prefix ?? ''));
 }
 
 /**
@@ -1999,7 +2084,7 @@ export function createMockRuntimeContextV2<
 }): SmartFunctionContextV2<TConfig, TState> {
   const state = {} as TState;
   const seen = new Map<string, number>();
-  const groups = new Map<string, Map<string, unknown>>();
+  const groups = new Map<string, MockGroup>();
 
   return {
     runtime: 'dynamic-mapper',
@@ -2052,8 +2137,14 @@ export function createMockRuntimeContextV2<
     isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
       return mockIsDuplicate(seen, key, windowSeconds);
     },
-    collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null {
-      return mockCollect(groups, groupKey, itemKey, value, expectedCount);
+    collect(groupKey: string, itemKey: string, value: unknown, completeWhen: number | CollectOptions): Record<string, unknown> | null {
+      return mockCollect(groups, groupKey, itemKey, value, completeWhen);
+    },
+    take(groupKey: string): Record<string, unknown> | null {
+      return mockTake(groups, groupKey);
+    },
+    openGroups(prefix: string): string[] {
+      return mockOpenGroups(groups, prefix);
     }
   };
 }
@@ -2082,7 +2173,7 @@ export function createMockRuntimeContext(options: {
 }): SmartFunctionContext {
   const state: Record<string, any> = {};
   const seen = new Map<string, number>();
-  const groups = new Map<string, Map<string, unknown>>();
+  const groups = new Map<string, MockGroup>();
 
   return {
     runtime: "dynamic-mapper",
@@ -2135,8 +2226,14 @@ export function createMockRuntimeContext(options: {
     isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
       return mockIsDuplicate(seen, key, windowSeconds);
     },
-    collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null {
-      return mockCollect(groups, groupKey, itemKey, value, expectedCount);
+    collect(groupKey: string, itemKey: string, value: unknown, completeWhen: number | CollectOptions): Record<string, unknown> | null {
+      return mockCollect(groups, groupKey, itemKey, value, completeWhen);
+    },
+    take(groupKey: string): Record<string, unknown> | null {
+      return mockTake(groups, groupKey);
+    },
+    openGroups(prefix: string): string[] {
+      return mockOpenGroups(groups, prefix);
     }
   };
 }

@@ -50,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SmartFunctionContext implements DataPrepContext {
 
     private static final int MAX_EXPECTED_COUNT = 10_000;
+    private static final int MAX_AGE_SECONDS = 86_400;
 
     private final Map<String, Object> state;
     private final Context graalContext;
@@ -209,12 +210,13 @@ public class SmartFunctionContext implements DataPrepContext {
 
     /**
      * Atomic N:1 collection; see {@link FlowStateStore#collect}. Called by a Smart Function as
-     * {@code context.collect(groupKey, itemKey, value, expectedCount)}. Fails open: it returns null, and adds a
-     * warning, when an argument is missing or {@code expectedCount} is not a whole number from 1 to
-     * {@value #MAX_EXPECTED_COUNT}. A test run has no store and returns null, so nothing is buffered.
+     * {@code context.collect(groupKey, itemKey, value, expectedCount)} or with an options object
+     * {@code {count, keys, last, maxAgeSeconds}}. Fails open: it returns null, and adds a warning, when an argument
+     * is missing or invalid, with the value not collected. A test run has no store and returns null, so nothing is
+     * buffered.
      */
     @Override
-    public Value collect(String groupKey, String itemKey, Value value, Value expectedCount) {
+    public Value collect(String groupKey, String itemKey, Value value, Value expectedCountOrOptions) {
         if (stateStore == null || mappingIdentifier == null || graalContext == null) {
             return null;
         }
@@ -222,15 +224,111 @@ public class SmartFunctionContext implements DataPrepContext {
             addWarning("collect: groupKey, itemKey and value are required, the message was not collected");
             return null;
         }
-        if (expectedCount == null || !expectedCount.fitsInInt() || expectedCount.asInt() < 1
-                || expectedCount.asInt() > MAX_EXPECTED_COUNT) {
-            addWarning("collect: expectedCount must be a whole number from 1 to " + MAX_EXPECTED_COUNT
-                    + ", the message was not collected");
+        FlowStateStore.CollectOptions options = parseCollectOptions(expectedCountOrOptions);
+        if (options == null) {
             return null;
         }
         Map<String, Object> group = stateStore.collect(tenant, mappingIdentifier, groupKey, itemKey,
-                convertValueToJavaObject(value), expectedCount.asInt());
+                convertValueToJavaObject(value), options);
         return group == null ? null : graalContext.asValue(JavaScriptInteropHelper.toJsInterop(group));
+    }
+
+    private FlowStateStore.CollectOptions parseCollectOptions(Value arg) {
+        String bad = "collect: the fourth argument must be a whole number from 1 to " + MAX_EXPECTED_COUNT
+                + " or an object with count, keys, last or maxAgeSeconds, the message was not collected";
+        if (arg == null || arg.isNull()) {
+            addWarning(bad);
+            return null;
+        }
+        if (arg.isNumber()) {
+            if (!arg.fitsInInt() || arg.asInt() < 1 || arg.asInt() > MAX_EXPECTED_COUNT) {
+                addWarning(bad);
+                return null;
+            }
+            return FlowStateStore.CollectOptions.count(arg.asInt());
+        }
+        if (!arg.hasMembers() || arg.hasArrayElements()) {
+            addWarning(bad);
+            return null;
+        }
+        Integer count = null;
+        java.util.Set<String> keys = null;
+        boolean last = false;
+        Integer maxAge = null;
+        boolean anyCondition = false;
+        if (arg.hasMember("count") && !arg.getMember("count").isNull()) {
+            Value c = arg.getMember("count");
+            if (!c.fitsInInt() || c.asInt() < 1 || c.asInt() > MAX_EXPECTED_COUNT) {
+                addWarning("collect: count must be a whole number from 1 to " + MAX_EXPECTED_COUNT
+                        + ", the message was not collected");
+                return null;
+            }
+            count = c.asInt();
+            anyCondition = true;
+        }
+        if (arg.hasMember("keys") && !arg.getMember("keys").isNull()) {
+            Value k = arg.getMember("keys");
+            if (!k.hasArrayElements() || k.getArraySize() < 1 || k.getArraySize() > MAX_EXPECTED_COUNT) {
+                addWarning("collect: keys must be a list of 1 to " + MAX_EXPECTED_COUNT
+                        + " item keys, the message was not collected");
+                return null;
+            }
+            keys = new java.util.HashSet<>();
+            for (long i = 0; i < k.getArraySize(); i++) {
+                Value e = k.getArrayElement(i);
+                if (!e.isString()) {
+                    addWarning("collect: keys must be strings, the message was not collected");
+                    return null;
+                }
+                keys.add(e.asString());
+            }
+            anyCondition = true;
+        }
+        if (arg.hasMember("last") && !arg.getMember("last").isNull()) {
+            Value l = arg.getMember("last");
+            if (!l.isBoolean()) {
+                addWarning("collect: last must be true or false, the message was not collected");
+                return null;
+            }
+            last = l.asBoolean();
+            anyCondition = true;
+        }
+        if (arg.hasMember("maxAgeSeconds") && !arg.getMember("maxAgeSeconds").isNull()) {
+            Value m = arg.getMember("maxAgeSeconds");
+            if (!m.fitsInInt() || m.asInt() < 1 || m.asInt() > MAX_AGE_SECONDS) {
+                addWarning("collect: maxAgeSeconds must be a whole number from 1 to " + MAX_AGE_SECONDS
+                        + ", the message was not collected");
+                return null;
+            }
+            maxAge = m.asInt();
+        }
+        if (!anyCondition) {
+            addWarning("collect: give count, keys or last, otherwise the group never completes; the message was not collected");
+            return null;
+        }
+        return new FlowStateStore.CollectOptions(count, keys, last, maxAge);
+    }
+
+    /** Removes a collected group and returns it as it is; see {@link FlowStateStore#take}. */
+    @Override
+    public Value take(String groupKey) {
+        if (stateStore == null || mappingIdentifier == null || graalContext == null || groupKey == null) {
+            return null;
+        }
+        Map<String, Object> group = stateStore.take(tenant, mappingIdentifier, groupKey);
+        return group == null ? null : graalContext.asValue(JavaScriptInteropHelper.toJsInterop(group));
+    }
+
+    /** Lists the keys of the open collected groups starting with the prefix; see {@link FlowStateStore#openGroups}. */
+    @Override
+    public Value openGroups(String prefix) {
+        if (graalContext == null) {
+            return null;
+        }
+        java.util.List<String> keys = stateStore == null || mappingIdentifier == null
+                ? java.util.List.of()
+                : stateStore.openGroups(tenant, mappingIdentifier, prefix);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(new java.util.ArrayList<>(keys)));
     }
 
     @Override

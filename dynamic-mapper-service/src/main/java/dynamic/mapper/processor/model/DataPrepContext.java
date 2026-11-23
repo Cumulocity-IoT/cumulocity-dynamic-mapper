@@ -214,16 +214,36 @@ public interface DataPrepContext {
     }
 
     /**
-     * Adds one item to a named group and returns the whole group, as an object, once it holds
-     * {@code expectedCount} items; returns null until then. Smart Functions call it as
-     * {@code context.collect(groupKey, itemKey, value, expectedCount)} to turn several messages into one.
+     * Adds one item to a named group and returns the whole group, as an object of item key to value, once it is
+     * complete; returns null until then. Smart Functions call it as
+     * {@code context.collect(groupKey, itemKey, value, expectedCount)} or
+     * {@code context.collect(groupKey, itemKey, value, {count, keys, last, maxAgeSeconds})} to turn several
+     * messages into one. The group is complete when its item count reaches {@code count}, or all {@code keys} are
+     * present, or {@code last} is true.
      *
      * <p>Unlike {@code getState}/{@code setState} the step is atomic, so exactly one of several concurrent
-     * messages receives a given complete group. Declared here for the same reason as {@link #isDuplicate}.</p>
+     * messages receives a given group. Declared here for the same reason as {@link #isDuplicate}.</p>
      *
-     * @return the complete group (item key to value), or null while it is incomplete or where no store is available
+     * @return the group (item key to value), or null while it is incomplete or where no store is available
      */
-    default Value collect(String groupKey, String itemKey, Value value, Value expectedCount) {
+    default Value collect(String groupKey, String itemKey, Value value, Value expectedCountOrOptions) {
+        return null;
+    }
+
+    /**
+     * Removes a collected group and returns it as it is, complete or not; null if there is none. Smart Functions
+     * call it as {@code context.take(groupKey)}, for example to flush the group of the previous timestamp when a
+     * newer one arrives.
+     */
+    default Value take(String groupKey) {
+        return null;
+    }
+
+    /**
+     * Lists the keys of the incomplete collected groups that start with the prefix, oldest first. Smart Functions
+     * call it as {@code context.openGroups(prefix)}; pair it with {@link #take}.
+     */
+    default Value openGroups(String prefix) {
         return null;
     }
 }

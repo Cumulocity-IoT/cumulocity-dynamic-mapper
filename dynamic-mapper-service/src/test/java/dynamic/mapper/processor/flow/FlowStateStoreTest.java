@@ -270,4 +270,74 @@ class FlowStateStoreTest {
         assertEquals(Map.of("a", 1, "b", 2),
                 store.collect(TENANT, MAPPING, "g" + FlowStateStore.MAX_OPEN_GROUPS, "b", 2, 2));
     }
+
+    private static FlowStateStore.CollectOptions keys(String... keys) {
+        return new FlowStateStore.CollectOptions(null, Set.of(keys), false, null);
+    }
+
+    @Test
+    void collectCompletesWhenAllRequiredKeysArePresentAndIgnoresExtras() {
+        assertNull(store.collect(TENANT, MAPPING, "g", "other", 0, keys("a", "b")));
+        assertNull(store.collect(TENANT, MAPPING, "g", "a", 1, keys("a", "b")));
+        assertEquals(Map.of("other", 0, "a", 1, "b", 2), store.collect(TENANT, MAPPING, "g", "b", 2, keys("a", "b")));
+    }
+
+    @Test
+    void collectCompletesAtOnceOnTheLastItem() {
+        store.collect(TENANT, MAPPING, "g", "a", 1, FlowStateStore.CollectOptions.count(100));
+        var last = new FlowStateStore.CollectOptions(null, null, true, null);
+        assertEquals(Map.of("a", 1, "b", 2), store.collect(TENANT, MAPPING, "g", "b", 2, last));
+    }
+
+    @Test
+    void collectConditionsAreAlternatives() {
+        var either = new FlowStateStore.CollectOptions(3, Set.of("x"), false, null);
+        store.collect(TENANT, MAPPING, "g", "a", 1, either);
+        assertEquals(Map.of("a", 1, "x", 9), store.collect(TENANT, MAPPING, "g", "x", 9, either)); // keys met first
+    }
+
+    @Test
+    void takeReturnsAPartialGroupOnceAndLeavesNoGroup() {
+        store.collect(TENANT, MAPPING, "g", "a", 1, 3);
+        store.collect(TENANT, MAPPING, "g", "b", 2, 3);
+
+        assertEquals(Map.of("a", 1, "b", 2), store.take(TENANT, MAPPING, "g"));
+        assertNull(store.take(TENANT, MAPPING, "g"));
+        assertNull(store.collect(TENANT, MAPPING, "g", "c", 3, 3)); // starts a new group
+        assertNull(store.take(TENANT, "nobody", "g"));
+    }
+
+    @Test
+    void openGroupsListsIncompleteGroupsByPrefixOldestFirst() {
+        store.collect(TENANT, MAPPING, "dev1|t2", "a", 1, 2);
+        store.collect(TENANT, MAPPING, "dev1|t1", "a", 1, 2);
+        store.collect(TENANT, MAPPING, "dev2|t1", "a", 1, 2);
+        store.collect(TENANT, MAPPING, "dev1|t3", "a", 1, 1); // complete: not open
+
+        assertEquals(java.util.List.of("dev1|t2", "dev1|t1"), store.openGroups(TENANT, MAPPING, "dev1|"));
+        assertEquals(3, store.openGroups(TENANT, MAPPING, "").size());
+        assertTrue(store.openGroups(TENANT, "nobody", "").isEmpty());
+    }
+
+    @Test
+    void maxAgeDropsStaleGroupsWhenACallWithThatOptionArrives() {
+        Instant[] now = { Instant.parse("2026-01-01T00:00:00Z") };
+        Clock clock = new Clock() {
+            public ZoneOffset getZone() { return ZoneOffset.UTC; }
+            public Clock withZone(java.time.ZoneId z) { return this; }
+            public Instant instant() { return now[0]; }
+        };
+        FlowStateStore s = new FlowStateStore(clock);
+        var aged = new FlowStateStore.CollectOptions(2, null, false, 60);
+
+        s.collect(TENANT, MAPPING, "old", "a", 1, aged);
+        s.collect(TENANT, MAPPING, "same", "a", 1, aged);
+        now[0] = now[0].plusSeconds(61);
+
+        // another group's call sweeps "old"; a late value of "same" finds its group stale and starts over
+        assertNull(s.collect(TENANT, MAPPING, "other", "a", 1, aged));
+        assertEquals(java.util.List.of("other"), s.openGroups(TENANT, MAPPING, ""));
+        assertNull(s.collect(TENANT, MAPPING, "same", "b", 2, aged));
+        assertEquals(Map.of("b", 2), s.take(TENANT, MAPPING, "same"));
+    }
 }

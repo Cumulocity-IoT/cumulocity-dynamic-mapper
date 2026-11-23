@@ -95,9 +95,11 @@ class SmartFunctionApiContractTest {
             "getTesting",
             "isDuplicate",
             "logMessage",
+            "openGroups",
             "setClientId",
             "setConfig",
-            "setState");
+            "setState",
+            "take");
 
     private static final List<String> PROMPTS = List.of(
             "prompts/smartfunction_prompt.txt",

@@ -360,20 +360,37 @@ object:
   memory, are lost on a service restart, and are not shared between service instances. A dropped inbound message
   counts under **Repeated** in the monitoring table. It shares its store with the `$isDuplicate` function of the
   execution filter. See [Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
-- `context.collect(groupKey, itemKey, value, expectedCount)` - Adds one value to a named group and returns the
-  whole group, as an object of item key to value, once it holds `expectedCount` values (1 to 10,000). It returns
-  `null` until then. Use it to turn several messages into one, for example 100 single-value messages of one
-  timestamp, as a Unified Namespace publisher sends them, into one measurement with 100 fragments:
-  `var values = context.collect(deviceId + "|" + time, name, value, 100); if (!values) { return []; }`. Unlike
-  `getState` and `setState`, the step is atomic. State is read when a message starts and written back when it
-  ends, so of 100 messages that run at the same time none sees the other 99; `collect` adds the value and checks
-  the count in one step, and exactly one message receives the complete group. A repeated `itemKey` replaces the
-  earlier value. The group is removed when it is handed out, so a function that fails afterwards loses it. Groups
-  are kept in memory, are lost on a service restart, and are not shared between service instances. A mapping
-  keeps at most 1,000 incomplete groups and drops the oldest when one more opens. `clearState()` and deleting the
-  mapping remove them. It returns `null` and adds a warning when an argument is missing or `expectedCount` is
-  not a whole number from 1 to 10,000. In Dry Run and Live Test it returns `null` and buffers nothing, so a
-  test shows only the incomplete case. A complete example is `resources/samples/uns/uns-group-by-timestamp.js`.
+- `context.collect(groupKey, itemKey, value, completeWhen)` - Adds one value to a named group and returns the whole
+  group, as an object of item key to value, once it is complete. It returns `null` until then. Use it to turn several
+  messages into one, for example 100 single-value messages of one timestamp, as a Unified Namespace publisher sends
+  them, into one measurement with 100 fragments:
+  `var values = context.collect(deviceId + "|" + time, name, value, 100); if (!values) { return []; }`.
+  `completeWhen` is a number, or an object with at least one of these. The first condition that holds completes the
+  group:
+  - `count` - the group holds this many different item keys (1 to 10,000). A plain number is the same as `{count: n}`.
+  - `keys` - all of these item keys are present, for example `{keys: ["temperature", "pressure"]}`. Other item keys are
+    allowed and are returned too.
+  - `last` - `true` when this message is the last one, for example `{last: payload.last === true}`. The group is handed
+    out as it is, even if it holds fewer values than you expected.
+  - `maxAgeSeconds` - not a condition. Incomplete groups older than this (1 to 86,400 seconds, counted from their first
+    value) are dropped when a call with this option arrives. Nothing runs on a timer.
+
+  Unlike `getState` and `setState`, the step is atomic. State is read when a message starts and written back when it
+  ends, so of 100 messages that run at the same time none sees the other 99; `collect` adds the value and checks the
+  condition in one step, and exactly one message receives the group. A repeated `itemKey` replaces the earlier value.
+  The group is removed when it is handed out, so a function that fails afterwards loses it. Groups are kept in memory,
+  are lost on a service restart, and are not shared between service instances. A mapping keeps at most 1,000
+  incomplete groups and drops the oldest when one more opens. `clearState()` and deleting the mapping remove them.
+  It returns `null` and adds a warning when an argument is missing or invalid, and the value is then not collected. In
+  Dry Run and Live Test it returns `null` and buffers nothing, so a test shows only the incomplete case. A complete
+  example is `resources/samples/uns/uns-group-by-timestamp.js`.
+- `context.take(groupKey)` - Removes a collected group and returns it as it is, complete or not, or `null` if there is
+  none. Use it to flush a partial group, for example when a message with a newer timestamp shows that the previous one
+  gets no more values. It is atomic with `collect`: a value added at the same moment lands in the returned group or in
+  a new one, never in both.
+- `context.openGroups(prefix)` - Returns the keys of the incomplete collected groups that start with `prefix`, oldest
+  first, as a list of strings. Pair it with `take`. A group that completes while the list is built can still be in it,
+  and `take` then returns `null`.
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
 - `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not

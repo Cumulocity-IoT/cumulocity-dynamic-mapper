@@ -346,10 +346,26 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "groupKey",
           "itemKey",
           "value",
-          "expectedCount"
+          "completeWhen"
         ],
         "returnType": "Record<string, unknown>",
-        "documentation": "Adds one value to a named group and returns the whole group once it holds `expectedCount` values; returns `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into one measurement. Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count made from state never reaches 100. `collect` adds the value and checks the count in one step: exactly one message receives a given complete group, and the group is removed when it is handed out. A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`, and adds a warning, if an argument is missing or `expectedCount` is not a whole number from 1 to 10,000. In a test run it returns `null` and buffers nothing."
+        "documentation": "Adds one value to a named group and returns the whole group once it is complete; returns `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into one measurement. The group is complete when its number of distinct item keys reaches `count`, when all `keys` are present, or when this call has `last: true`. Pass a number as shorthand for `{ count }`. Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count made from state never reaches 100. `collect` adds the value and checks the condition in one step: exactly one message receives a given group, and the group is removed when it is handed out. A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`, and adds a warning, if an argument is missing or invalid; the value is then not collected. In a test run it returns `null` and buffers nothing."
+      },
+      {
+        "name": "take",
+        "parameters": [
+          "groupKey"
+        ],
+        "returnType": "Record<string, unknown>",
+        "documentation": "Removes a collected group and returns it as it is, complete or not; `null` if there is none. Atomic with `collect`: a value added at the same moment lands either in the returned group or in a new one, never in both. Use it to flush a partial group, for example when a message with a newer timestamp shows that the previous one will get no more values."
+      },
+      {
+        "name": "openGroups",
+        "parameters": [
+          "prefix"
+        ],
+        "returnType": "string[]",
+        "documentation": "Lists the keys of the incomplete collected groups that start with `prefix`, oldest first. Pair it with `take`. A group that completes while the list is built can still be in it; `take` then returns `null`."
       },
       {
         "name": "getState",

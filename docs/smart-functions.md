@@ -75,7 +75,10 @@ context.clearState()                 // drop all state for this mapping
 ### N:1 collection (many messages into one)
 
 ```ts
-context.collect(groupKey, itemKey, value, expectedCount)  // → object of itemKey→value once complete, else null
+context.collect(groupKey, itemKey, value, completeWhen)  // → object of itemKey→value once complete, else null
+//   completeWhen: n  |  { count?, keys?, last?, maxAgeSeconds? }   (first condition that holds completes the group)
+context.take(groupKey)           // remove a group as it is (partial allowed), or null
+context.openGroups(prefix)       // keys of the open groups starting with prefix, oldest first
 ```
 
 Atomic, unlike `getState`/`setState`: state is a snapshot loaded when a message starts and committed when it ends,

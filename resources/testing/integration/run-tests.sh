@@ -113,6 +113,7 @@ declare -a TESTS=(
     "smartfunction|mqtt|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"
     "smartfunction|mqtt|test-inbound-smartfunction-custom-route|Inbound: cumulocityType custom → /service/ route (API.CUSTOM)"
     "smartfunction|mqtt|test-inbound-smartfunction-uns-group|Inbound: UNS N:1 — many single-value messages into one measurement (context.collect)"
+    "smartfunction|mqtt|test-inbound-smartfunction-uns-flush|Inbound: UNS N:1 — a newer timestamp flushes the previous group (context.take)"
 
     # ── Extensions (Java processor extensions, inbound + outbound) ───
     "extension|mqtt|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"

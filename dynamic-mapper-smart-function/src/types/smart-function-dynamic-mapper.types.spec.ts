@@ -587,3 +587,37 @@ describe('mock context.collect', () => {
     expect(ctx.collect('g3', 'a', 1, 10001)).toBeNull();
   });
 });
+
+describe('mock context.collect options, take and openGroups', () => {
+  it('completes on keys, ignoring extra items', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.collect('g', 'x', 0, { keys: ['a', 'b'] })).toBeNull();
+    expect(ctx.collect('g', 'a', 1, { keys: ['a', 'b'] })).toBeNull();
+    expect(ctx.collect('g', 'b', 2, { keys: ['a', 'b'] })).toEqual({ x: 0, a: 1, b: 2 });
+  });
+
+  it('completes at once on last, even when partial', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.collect('g', 'a', 1, { count: 5 })).toBeNull();
+    expect(ctx.collect('g', 'b', 2, { count: 5, last: true })).toEqual({ a: 1, b: 2 });
+  });
+
+  it('takes a partial group once and lists open groups by prefix', () => {
+    const ctx = createMockRuntimeContext({});
+    ctx.collect('dev|t1', 'a', 1, 9);
+    ctx.collect('dev|t2', 'a', 1, 9);
+    ctx.collect('other|t1', 'a', 1, 9);
+    expect(ctx.openGroups('dev|')).toEqual(['dev|t1', 'dev|t2']);
+    expect(ctx.take('dev|t1')).toEqual({ a: 1 });
+    expect(ctx.take('dev|t1')).toBeNull();
+    expect(ctx.openGroups('dev|')).toEqual(['dev|t2']);
+  });
+
+  it('rejects an options object with no condition or a bad value', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.collect('g', 'a', 1, {})).toBeNull();
+    expect(ctx.collect('g', 'a', 1, { keys: [] })).toBeNull();
+    expect(ctx.collect('g', 'a', 1, { count: 2, maxAgeSeconds: 0 })).toBeNull();
+    expect(ctx.openGroups('')).toEqual([]);
+  });
+});

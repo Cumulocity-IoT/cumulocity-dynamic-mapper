@@ -15,6 +15,10 @@
  * so a count made from state never reaches 100. context.collect adds the value and checks the count
  * in one atomic step, so exactly one message receives the complete group.
  *
+ * Other ways to complete a group: pass {keys: ["temperature", "pressure"]} instead of the number to complete when a
+ * known set of values is present, or {last: payload.last === true} when the publisher marks the final value. For
+ * publishers that send a varying number of values, see uns-flush-on-next-timestamp.js.
+ *
  * Limits: the buffer is in memory only (lost on restart, not shared between service instances),
  * a group that never completes is dropped after 1,000 newer open groups, and a group is removed
  * when it is handed out, so a failure after that point loses it.

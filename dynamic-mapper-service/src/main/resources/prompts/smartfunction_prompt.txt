@@ -353,16 +353,24 @@ interface SmartFunctionContext {
     isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
 
     /**
-     * Adds one value to a named group and returns the whole group (object of itemKey to value) once it holds
-     * expectedCount values (1 to 10000); null before. Atomic, so exactly one of several concurrent messages receives a
-     * complete group. Use it for N:1 mappings (many single-value messages into one measurement); getState/setState
-     * cannot do this because concurrent messages read a stale snapshot. Memory only. Null in a test run.
+     * Adds one value to a named group and returns the whole group (object of itemKey to value) once it is complete;
+     * null before. Complete when the item count reaches completeWhen (a number from 1 to 10000, same as {count}), or all
+     * completeWhen.keys are present, or completeWhen.last is true. Optional completeWhen.maxAgeSeconds (1 to 86400) drops
+     * stale incomplete groups when a call arrives. Atomic, so exactly one of several concurrent messages receives a group.
+     * Use it for N:1 mappings (many single-value messages into one measurement); getState/setState cannot do this
+     * because concurrent messages read a stale snapshot. Memory only. Null in a test run.
      *
      * @example
      * var values = context.collect(deviceId + "|" + payload.time, name, payload.value, 100);
      * if (!values) { return []; }
      */
-    collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null;
+    collect(groupKey: string, itemKey: string, value: unknown, completeWhen: number | { count?: number; keys?: string[]; last?: boolean; maxAgeSeconds?: number }): Record<string, unknown> | null;
+
+    /** Removes a collected group and returns it as it is, complete or not; null if none. Use it to flush a partial group. */
+    take(groupKey: string): Record<string, unknown> | null;
+
+    /** Lists the keys of the incomplete collected groups that start with prefix, oldest first. Pair with take. */
+    openGroups(prefix: string): string[];
 }
 ```
 
@@ -881,5 +889,7 @@ context.getDTMAsset(assetId)                             → DTM asset propertie
 context.addWarning(message)                              → surface a non-fatal warning in the UI
 context.getTesting()                                     → true when running in test mode (skip side-effects)
 context.isDuplicate(key, windowSeconds)                  → true if key was seen within windowSeconds (1-3600); use to drop repeated messages: return []
-context.collect(groupKey, itemKey, value, expectedCount) → atomic N:1: object of all values once expectedCount are collected, else null; return [] while null
+context.collect(groupKey, itemKey, value, completeWhen) → atomic N:1: object of all values once complete (count, or {count, keys, last, maxAgeSeconds}), else null; return [] while null
+context.take(groupKey)                                → remove a collected group as it is (partial allowed), or null
+context.openGroups(prefix)                            → keys of the open collected groups starting with prefix, oldest first
 ```

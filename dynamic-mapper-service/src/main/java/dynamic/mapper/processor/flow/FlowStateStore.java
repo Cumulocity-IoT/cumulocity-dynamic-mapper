@@ -69,6 +69,8 @@ public class FlowStateStore {
     private static final String GROUP_PREFIX = "\u0000group:";
     static final int MAX_OPEN_GROUPS = 1000;
 
+    private final java.util.concurrent.atomic.AtomicLong groupSequence = new java.util.concurrent.atomic.AtomicLong();
+
     private final Clock clock;
 
     public FlowStateStore() {
@@ -109,42 +111,124 @@ public class FlowStateStore {
     }
 
     /**
-     * Adds one item to a named group and, in the same atomic step, returns and removes the whole group when it
-     * reaches {@code expected} items. This is the one operation a Smart Function cannot build from
-     * {@code getState}/{@code setState}: those work on a snapshot taken when the message started and commit when
-     * it ends, so of {@code expected} messages that run at the same time none sees all the others' items.
+     * When a group is complete. Any one condition that holds hands the group out; at least one must be given.
      *
-     * <p>Exactly one caller receives a given complete group; every other call returns {@code null}. A repeated
-     * {@code itemKey} replaces the earlier value. A group lives in memory only, is dropped with the mapping's
-     * state (mapping deleted, {@code clearState()}, retention expiry), and a mapping keeps at most
-     * {@value #MAX_OPEN_GROUPS} incomplete groups: the oldest is dropped when one more opens.</p>
-     *
-     * @return the complete group (item key to value), or {@code null} while it is still incomplete
+     * @param count         complete at this many distinct items, or {@code null}
+     * @param keys          complete when all of these item keys are present, or {@code null}
+     * @param last          complete now: this call carries the last item
+     * @param maxAgeSeconds incomplete groups older than this (measured from their first item) are dropped when
+     *                      a call with this option arrives, or {@code null}
      */
+    public record CollectOptions(Integer count, java.util.Set<String> keys, boolean last, Integer maxAgeSeconds) {
+        public static CollectOptions count(int count) {
+            return new CollectOptions(count, null, false, null);
+        }
+    }
+
+    /** Shorthand for {@link #collect(String, String, String, String, Object, CollectOptions)} with a count. */
     public Map<String, Object> collect(String tenant, String mappingIdentifier, String groupKey, String itemKey,
             Object value, int expected) {
-        if (tenant == null || mappingIdentifier == null || groupKey == null || itemKey == null || value == null) {
+        return collect(tenant, mappingIdentifier, groupKey, itemKey, value, CollectOptions.count(expected));
+    }
+
+    /**
+     * Adds one item to a named group and, in the same atomic step, returns and removes the whole group when it is
+     * complete. This is the one operation a Smart Function cannot build from {@code getState}/{@code setState}:
+     * those work on a snapshot taken when the message started and commit when it ends, so of {@code expected}
+     * messages that run at the same time none sees all the others' items.
+     *
+     * <p>A group is complete when its item count reaches {@link CollectOptions#count()}, or all of
+     * {@link CollectOptions#keys()} are present, or this call has {@link CollectOptions#last()}. Exactly one
+     * caller receives a given group; every other call returns {@code null}. A repeated {@code itemKey} replaces
+     * the earlier value. A group lives in memory only, is dropped with the mapping's state (mapping deleted,
+     * {@code clearState()}, retention expiry), and a mapping keeps at most {@value #MAX_OPEN_GROUPS} incomplete
+     * groups: the oldest is dropped when one more opens. Groups can also be flushed early with {@link #take}.</p>
+     *
+     * @return the group (item key to value), or {@code null} while it is incomplete
+     */
+    public Map<String, Object> collect(String tenant, String mappingIdentifier, String groupKey, String itemKey,
+            Object value, CollectOptions options) {
+        if (tenant == null || mappingIdentifier == null || groupKey == null || itemKey == null || value == null
+                || options == null) {
             return null;
         }
         ConcurrentHashMap<String, Object> mappingState = store
                 .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
                 .computeIfAbsent(mappingIdentifier, k -> new ConcurrentHashMap<>());
         String key = GROUP_PREFIX + groupKey;
+        long now = clock.millis();
+        Long maxAgeMillis = options.maxAgeSeconds() == null ? null : options.maxAgeSeconds() * 1000L;
         Map<String, Object>[] completed = new Map[1];
         mappingState.compute(key, (k, existing) -> {
-            Group group = existing instanceof Group g ? g : new Group();
+            Group group = existing instanceof Group g ? g : new Group(now, groupSequence.incrementAndGet());
+            if (maxAgeMillis != null && now - group.created > maxAgeMillis) {
+                group = new Group(now, groupSequence.incrementAndGet()); // the earlier values are stale: start over
+            }
             group.items.put(itemKey, value);
-            if (group.items.size() >= expected) {
+            boolean complete = options.last()
+                    || (options.count() != null && group.items.size() >= options.count())
+                    || (options.keys() != null && group.items.keySet().containsAll(options.keys()));
+            if (complete) {
                 completed[0] = group.items;
                 return null;
             }
             return group;
         });
         markSaved(tenant, mappingIdentifier);
+        if (maxAgeMillis != null) {
+            mappingState.entrySet().removeIf(e -> e.getValue() instanceof Group g && now - g.created > maxAgeMillis);
+        }
         if (completed[0] == null) {
             evictOldestGroups(mappingState);
         }
         return completed[0];
+    }
+
+    /**
+     * Removes a group and returns it as it is, complete or not. Atomic with {@link #collect}: a value added at the
+     * same time lands either in the returned group or in a new one, never in both and never nowhere.
+     *
+     * @return the group (item key to value), or {@code null} if there is no such group
+     */
+    public Map<String, Object> take(String tenant, String mappingIdentifier, String groupKey) {
+        if (tenant == null || mappingIdentifier == null || groupKey == null) {
+            return null;
+        }
+        ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> tenantStore = store.get(tenant);
+        ConcurrentHashMap<String, Object> mappingState = tenantStore == null ? null : tenantStore.get(mappingIdentifier);
+        if (mappingState == null) {
+            return null;
+        }
+        Map<String, Object>[] taken = new Map[1];
+        mappingState.computeIfPresent(GROUP_PREFIX + groupKey, (k, existing) -> {
+            if (existing instanceof Group g) {
+                taken[0] = g.items;
+                return null;
+            }
+            return existing;
+        });
+        return taken[0];
+    }
+
+    /**
+     * Lists the keys of the incomplete groups whose key starts with the prefix, oldest first. A group that
+     * completes while the list is built may still appear in it; {@link #take} then returns {@code null}.
+     */
+    public java.util.List<String> openGroups(String tenant, String mappingIdentifier, String prefix) {
+        if (tenant == null || mappingIdentifier == null) {
+            return java.util.List.of();
+        }
+        ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> tenantStore = store.get(tenant);
+        ConcurrentHashMap<String, Object> mappingState = tenantStore == null ? null : tenantStore.get(mappingIdentifier);
+        if (mappingState == null) {
+            return java.util.List.of();
+        }
+        String wanted = prefix == null ? "" : prefix;
+        return mappingState.entrySet().stream()
+                .filter(e -> e.getValue() instanceof Group && e.getKey().startsWith(GROUP_PREFIX + wanted))
+                .sorted(java.util.Comparator.comparingLong(e -> ((Group) e.getValue()).sequence))
+                .map(e -> e.getKey().substring(GROUP_PREFIX.length()))
+                .toList();
     }
 
     private static void evictOldestGroups(ConcurrentHashMap<String, Object> mappingState) {
@@ -153,8 +237,8 @@ public class FlowStateStore {
             String oldest = null;
             long oldestCreated = Long.MAX_VALUE;
             for (Map.Entry<String, Object> entry : mappingState.entrySet()) {
-                if (entry.getValue() instanceof Group g && g.created < oldestCreated) {
-                    oldestCreated = g.created;
+                if (entry.getValue() instanceof Group g && g.sequence < oldestCreated) {
+                    oldestCreated = g.sequence;
                     oldest = entry.getKey();
                 }
             }
@@ -166,8 +250,14 @@ public class FlowStateStore {
     }
 
     private static final class Group {
-        final long created = System.nanoTime();
+        final long created;
+        final long sequence; // opening order: clock milliseconds tie within a burst
         final Map<String, Object> items = new java.util.LinkedHashMap<>();
+
+        Group(long created, long sequence) {
+            this.created = created;
+            this.sequence = sequence;
+        }
     }
 
     /**

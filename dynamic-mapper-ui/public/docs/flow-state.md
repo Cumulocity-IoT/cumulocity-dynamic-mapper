@@ -112,13 +112,55 @@ function onMessage(msg, context) {
 }
 ```
 
-`context.collect(groupKey, itemKey, value, expectedCount)` returns `null` until the group holds `expectedCount`
-different item keys. The call that adds the last one receives the complete group as an object of item key to value, and
-the group is removed. A repeated item key replaces the earlier value and does not count twice.
+`context.collect(groupKey, itemKey, value, completeWhen)` returns `null` until the group is complete. The call that
+completes it receives the group as an object of item key to value, and the group is removed. A repeated item key
+replaces the earlier value and does not count twice. `completeWhen` is a number (the group holds that many different
+item keys) or an object, where the first condition that holds completes the group:
+
+| Option | The group is complete when |
+|---|---|
+| `count` | it holds this many different item keys |
+| `keys` | all of these item keys are present, for example `["temperature", "pressure"]` |
+| `last` | this message says it is the last one, for example `payload.last === true` |
+| `maxAgeSeconds` | not a condition: incomplete groups older than this are dropped when a call with this option arrives |
+
+**Publishers that do not send a fixed count.** If the number of values changes, flush when a newer timestamp shows
+that the previous group is finished. `context.openGroups(prefix)` lists the open groups of a device and
+`context.take(groupKey)` removes one as it is, even if it is partial:
+
+```javascript
+function onMessage(msg, context) {
+  const parts = msg.topic.split("/");
+  const name = parts[parts.length - 1];
+  const deviceId = parts[parts.length - 2];
+  const current = deviceId + "|" + msg.payload.time;
+
+  // A group of this device that is not the current one will get no more values: flush it
+  const out = [];
+  context.openGroups(deviceId + "|").forEach(function (key) {
+    if (key !== current) {
+      const partial = context.take(key);
+      if (partial) {
+        out.push(toMeasurement(deviceId, key.split("|")[1], partial));  // your function
+      }
+    }
+  });
+
+  // Never complete by count: the next timestamp flushes it
+  context.collect(current, name, msg.payload.value, { last: false, count: 10000, maxAgeSeconds: 3600 });
+  return out;
+}
+```
+
+A complete mapping is in the sample set as *IN-21 Smart Function - flush the previous UNS timestamp when a newer one
+arrives*. It assumes that the values of one timestamp arrive before the values of the next.
+
+The last group stays in memory until the next timestamp arrives or `maxAgeSeconds` passes. A partial group is
+created only when the next timestamp arrives, so a device that stops sending leaves its last group unsent.
 
 :::caution
 - Groups are held **in memory**. They are lost on a restart and are not shared between service instances.
-- The mapper does not know when a group is "finished" unless the count is reached. A group that never completes stays
+- The mapper does not know when a group is "finished" unless a condition is met. A group that never completes stays
   in memory until the mapping's state expires, the mapping is deleted, or `clearState()` is called. A mapping keeps at
   most 1,000 incomplete groups and drops the oldest when one more opens.
 - The group is removed when it is handed out. If the function fails afterwards, those values are lost.
