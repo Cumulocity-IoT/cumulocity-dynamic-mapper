@@ -1941,6 +1941,9 @@ msgstr ""
 msgid "Note"
 msgstr ""
 
+msgid "Note: the Live Test overrides the device type with \"d11r_testDevice\" so that test devices can be told apart from productive devices; the type from your mapping is not applied."
+msgstr ""
+
 msgid "NOTE: this level is not supported by: {{connectors}}."
 msgstr ""
 

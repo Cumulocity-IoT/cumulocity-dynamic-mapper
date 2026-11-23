@@ -601,6 +601,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       text += ' ' + (result.testDeviceCreated === false
         ? this.t(gettext('Reused test device {{testDevice}} from an earlier Live Test.'), { testDevice })
         : this.t(gettext('Test device {{testDevice}} created; remove it under Monitoring > Test device.'), { testDevice }));
+      text += ' ' + this.t(gettext('Note: the Live Test overrides the device type with "d11r_testDevice" so that test devices can be told apart from productive devices; the type from your mapping is not applied.'));
     }
     return text;
   }

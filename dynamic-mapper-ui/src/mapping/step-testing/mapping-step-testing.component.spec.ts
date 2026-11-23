@@ -271,6 +271,13 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
         { testDeviceId: '491713288', testDeviceCreated: false, testDeviceExternalId: 'd11r_liveTest_862' }));
       expect(text).toContain('Reused test device 491713288 (c8y_Serial d11r_liveTest_862) from an earlier Live Test.');
     });
+
+    it('warns that the device type is replaced by d11r_testDevice', () => {
+      const text = component.describeSendResult(sent(
+        { api: 'MEASUREMENT', sourceId: '7', response: { id: '1' } },
+        { testDeviceId: '7', testDeviceCreated: true, testDeviceExternalId: 'd11r_liveTest_abc' }));
+      expect(text).toContain('overrides the device type with "d11r_testDevice"');
+    });
   });
 
   describe('describeSendResult for an outbound Live Test', () => {
