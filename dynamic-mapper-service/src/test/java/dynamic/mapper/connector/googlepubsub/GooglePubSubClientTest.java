@@ -354,6 +354,63 @@ public class GooglePubSubClientTest {
         return clientWithMocks(dispatcher, sc);
     }
 
+    // ---- the wait before a nack (the test run sets the delay step to 0, so a removed call would go unnoticed)
+
+    private dynamic.mapper.connector.core.callback.MessageFailureTracker spyTrackerOf(GooglePubSubClient client)
+            throws Exception {
+        dynamic.mapper.connector.core.callback.MessageFailureTracker spy = org.mockito.Mockito.spy(
+                new dynamic.mapper.connector.core.callback.MessageFailureTracker(() -> 3));
+        Field field = findField(client.getClass(), "failureTracker");
+        field.setAccessible(true);
+        field.set(client, spy);
+        return spy;
+    }
+
+    @Test
+    public void testProcessPubSubMessage_waitsBeforeTheNack() throws Exception {
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
+        ServiceConfiguration sc = mock(ServiceConfiguration.class);
+        when(sc.getLogPayload()).thenReturn(false);
+        doReturn(serverErrorWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
+        GooglePubSubClient client = clientWithMocks(dispatcher, sc);
+        dynamic.mapper.connector.core.callback.MessageFailureTracker tracker = spyTrackerOf(client);
+        AckReplyConsumer consumer = mock(AckReplyConsumer.class);
+        PubsubMessage message = PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("{}"))
+                .setMessageId("msg-wait").build();
+
+        client.processPubSubMessage(message, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+
+        // Pub/Sub redelivers a nacked message at once: the wait has to come first
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(tracker, consumer);
+        order.verify(tracker).awaitRetryDelay("msg-wait");
+        order.verify(consumer).nack();
+    }
+
+    @Test
+    public void testProcessPubSubMessage_doesNotWaitOnSuccessOrWhenTheMessageIsDropped() throws Exception {
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
+        ServiceConfiguration sc = mock(ServiceConfiguration.class);
+        when(sc.getLogPayload()).thenReturn(false);
+        GooglePubSubClient client = clientWithMocks(dispatcher, sc);
+        dynamic.mapper.connector.core.callback.MessageFailureTracker tracker = spyTrackerOf(client);
+        AckReplyConsumer consumer = mock(AckReplyConsumer.class);
+        PubsubMessage ok = PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("{}"))
+                .setMessageId("msg-ok").build();
+
+        doReturn(successWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
+        client.processPubSubMessage(ok, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+        org.mockito.Mockito.verify(tracker, org.mockito.Mockito.never()).awaitRetryDelay("msg-ok");
+
+        // three failures of one message (the limit is 3): the first two wait, the third is dropped at once
+        PubsubMessage poison = PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("{}"))
+                .setMessageId("msg-poison").build();
+        doReturn(serverErrorWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
+        for (int i = 0; i < 3; i++) {
+            client.processPubSubMessage(poison, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+        }
+        org.mockito.Mockito.verify(tracker, org.mockito.Mockito.times(2)).awaitRetryDelay("msg-poison");
+    }
+
     @Test
     public void testProcessPubSubMessage_atLeastOnce_acksAMappingErrorWithoutHttpStatus() throws Exception {
         // a retry would repeat a mapping error, so it is acked like on every other connector

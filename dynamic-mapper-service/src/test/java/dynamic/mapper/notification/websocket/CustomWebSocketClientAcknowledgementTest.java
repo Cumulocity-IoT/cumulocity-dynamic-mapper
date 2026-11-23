@@ -42,6 +42,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -234,5 +235,38 @@ class CustomWebSocketClientAcknowledgementTest {
 
         verify(client, never()).send(ACK); // 2 counted failures, below the limit of 3: not dropped
         verify(client, times(2)).reconnect();
+    }
+
+    // ---- the wait before the reconnect that makes Cumulocity redeliver (the test run sets the step to 0)
+
+    @Test
+    void waitsBeforeReconnectingAfterAFailure() {
+        ReflectionTestUtils.setField(client, "failureTracker",
+                new dynamic.mapper.connector.core.callback.MessageFailureTracker(() -> 3, 150, 150));
+        returning(() -> atLeastOnce(failed()));
+
+        long start = System.nanoTime();
+        client.onMessage(RAW);
+        long waitedMs = (System.nanoTime() - start) / 1_000_000;
+
+        verify(client).reconnect();
+        org.junit.jupiter.api.Assertions.assertTrue(waitedMs >= 120,
+                "a reconnect redelivers at once: it must wait first, waited " + waitedMs + " ms");
+    }
+
+    @Test
+    void doesNotWaitWhenTheMessageIsDroppedAtTheLimit() {
+        // the limit is 1: the first failure drops the message, there is nothing to redeliver and nothing to wait for
+        ReflectionTestUtils.setField(client, "failureTracker",
+                new dynamic.mapper.connector.core.callback.MessageFailureTracker(() -> 1, 5_000, 5_000));
+        returning(() -> atLeastOnce(failed()));
+
+        long start = System.nanoTime();
+        client.onMessage(RAW);
+        long waitedMs = (System.nanoTime() - start) / 1_000_000;
+
+        verify(client).send(ACK);
+        verify(client, never()).reconnect();
+        org.junit.jupiter.api.Assertions.assertTrue(waitedMs < 1_000, "waited " + waitedMs + " ms");
     }
 }

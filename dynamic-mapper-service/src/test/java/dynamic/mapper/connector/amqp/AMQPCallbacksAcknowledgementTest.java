@@ -30,6 +30,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+
+import org.mockito.InOrder;
+import org.springframework.test.util.ReflectionTestUtils;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +43,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Envelope;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Qos;
@@ -229,5 +233,104 @@ class AMQPCallbacksAcknowledgementTest {
                 .onMessage(message);
 
         verify(message).acknowledge();
+    }
+
+    // ---- the wait before a redelivery: each path must call awaitRetryDelay, and before the redelivery
+    // (the test run sets the delay step to 0, so a removed call would otherwise go unnoticed)
+
+    private MessageFailureTracker spyTrackerOf(Object callback) {
+        MessageFailureTracker spy = org.mockito.Mockito.spy(new MessageFailureTracker(() -> 3));
+        ReflectionTestUtils.setField(callback, "failureTracker", spy);
+        return spy;
+    }
+
+    @Test
+    void amqp091WaitsBeforeRequeuingAFailedMessage() throws Exception {
+        Channel channel = mock(Channel.class);
+        when(dispatcher.onMessage(any())).thenAnswer(inv -> failed());
+        AMQPCallback callback = new AMQPCallback(channel, false, "t1", serviceRegistry, dispatcher, "id", "name");
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        deliver(callback, channel);
+
+        InOrder order = org.mockito.Mockito.inOrder(tracker, channel);
+        order.verify(tracker).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+        order.verify(channel).basicNack(7L, false, true);
+    }
+
+    @Test
+    void amqp091WaitsBeforeRequeuingAfterAnException() throws Exception {
+        Channel channel = mock(Channel.class);
+        when(dispatcher.onMessage(any())).thenThrow(new IllegalStateException("boom"));
+        AMQPCallback callback = new AMQPCallback(channel, false, "t1", serviceRegistry, dispatcher, "id", "name");
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        deliver(callback, channel);
+
+        InOrder order = org.mockito.Mockito.inOrder(tracker, channel);
+        order.verify(tracker).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+        order.verify(channel).basicNack(7L, false, true);
+    }
+
+    @Test
+    void amqp091DoesNotWaitOnSuccessOrWhenTheMessageIsDropped() throws Exception {
+        Channel channel = mock(Channel.class);
+        AMQPCallback callback = new AMQPCallback(channel, false, "t1", serviceRegistry, dispatcher, "id", "name");
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        when(dispatcher.onMessage(any())).thenAnswer(inv -> succeeded());
+        deliver(callback, channel);
+        verify(tracker, never()).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+
+        // three failures of the same message: the first two wait, the third is dropped at once
+        when(dispatcher.onMessage(any())).thenAnswer(inv -> failed());
+        AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder().messageId("poison").build();
+        for (long tag = 1; tag <= 3; tag++) {
+            callback.handleDelivery("tag", new Envelope(tag, true, "exchange", "a.b"), properties, "x".getBytes());
+        }
+        verify(tracker, org.mockito.Mockito.times(2)).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void amqp10WaitsBeforeRecoveringTheSessionForAFailedMessage() throws Exception {
+        BytesMessage message = jmsMessage();
+        when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) failed());
+        AMQP10Callback callback = new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr",
+                Qos.AT_LEAST_ONCE, session);
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        callback.onMessage(message);
+
+        InOrder order = org.mockito.Mockito.inOrder(tracker, session);
+        order.verify(tracker).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+        order.verify(session).recover();
+    }
+
+    @Test
+    void amqp10WaitsBeforeRecoveringTheSessionAfterAnException() throws Exception {
+        BytesMessage message = jmsMessage();
+        when(dispatcher.onMessage(any())).thenThrow(new IllegalStateException("boom"));
+        AMQP10Callback callback = new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr",
+                Qos.AT_LEAST_ONCE, session);
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        callback.onMessage(message);
+
+        InOrder order = org.mockito.Mockito.inOrder(tracker, session);
+        order.verify(tracker).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
+        order.verify(session).recover();
+    }
+
+    @Test
+    void amqp10DoesNotWaitOnSuccess() throws Exception {
+        BytesMessage message = jmsMessage();
+        when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) succeeded());
+        AMQP10Callback callback = new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr",
+                Qos.AT_LEAST_ONCE, session);
+        MessageFailureTracker tracker = spyTrackerOf(callback);
+
+        callback.onMessage(message);
+
+        verify(tracker, never()).awaitRetryDelay(org.mockito.ArgumentMatchers.anyString());
     }
 }
