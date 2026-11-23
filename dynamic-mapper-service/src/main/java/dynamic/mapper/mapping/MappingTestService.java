@@ -136,16 +136,22 @@ public class MappingTestService {
         // Reset mock caches for this tenant so state from previous test runs does not leak
         clearMockCaches(tenant);
 
+        // A Live Test creates its test device through the pipeline's implicit device creation, whatever the
+        // mapping's createNonExistingDevice says; the setting is put back in the finally below.
+        Boolean originalCreateNonExistingDevice = mapping.getCreateNonExistingDevice();
+
         try {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
             // Set for a live test of an inbound mapping: used to recover from a stale cached device ID.
             ID liveTestIdentity = null;
+            // Whether the test device existed before this run: the pipeline creates it when it did not.
+            boolean testDeviceExisted = false;
 
-            // A live test (send=true) of an inbound mapping only ever runs against a test device:
-            // created if the external ID is unknown, otherwise the existing device is used. It must
-            // not create devices through the mapping's createNonExistingDevice setting, which would
-            // leave an untagged real device behind.
+            // A live test (send=true) of an inbound mapping only ever runs against a test device, found or
+            // created under a prefixed external ID. The pipeline creates it (the name and fragments the mapping
+            // defines are applied, the type stays the test device type); an object that is not a test device
+            // is never written to.
             // Run a dry-run first so we can extract the actual externalId produced by the
             // mapping's substitution, rather than guessing from the static source template.
             if (Boolean.TRUE.equals(send) && mapping.getDirection().equals(Direction.INBOUND)) {
@@ -166,20 +172,17 @@ public class MappingTestService {
                 // device sends its first message, that message would be written to the test device.
                 String testExternalId = ProcessingContext.TEST_EXTERNAL_ID_PREFIX + externalId;
                 liveTestIdentity = new ID(externalIdType, testExternalId);
-                C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, testExternalId, testExternalId,
-                        externalIdType);
-                if (testDevice != null) {
-                    result.setTestDeviceId(testDevice.id());
-                    result.setTestDeviceCreated(testDevice.created());
-                    result.setTestDeviceExternalId(testExternalId);
-                    log.info("{} - {} test device: id={}, externalId={}, type={}", tenant,
-                            testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), testExternalId,
-                            externalIdType);
-                } else {
+                // Only look: the pipeline creates the device, with the name and fragments the mapping defines,
+                // like it does for any implicit device. An object that owns the ID but is not a test device
+                // stops the run before anything is written.
+                C8YAgent.TestDeviceLookup lookup = c8YAgent.lookupTestDevice(tenant, externalIdType, testExternalId);
+                if (lookup.foreign()) {
                     return liveTestFailure(result, tenant,
-                            "The test device for external ID '" + testExternalId + "' could not be created or found, "
-                                    + "so the live test was not run.");
+                            "The external ID '" + testExternalId + "' is owned by an object that is not a test "
+                                    + "device, so the live test was not run.");
                 }
+                testDeviceExisted = lookup.id() != null;
+                mapping.setCreateNonExistingDevice(true);
             }
 
             ProcessingResultWrapper<?> processingResultWrapper = null;
@@ -223,21 +226,31 @@ public class MappingTestService {
                     log.warn("{} - Live test hit a deleted test device ({}), evicting the cached ID and retrying once",
                             tenant, liveTestIdentity.getValue());
                     c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
-                    C8YAgent.TestDevice recreated = c8YAgent.ensureTestDevice(tenant, liveTestIdentity.getValue(),
-                            liveTestIdentity.getValue(), liveTestIdentity.getType());
-                    if (recreated != null) {
-                        result.setTestDeviceId(recreated.id());
-                        result.setTestDeviceCreated(recreated.created());
-                        ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient, mapping,
-                                mapping.getMappingTopicSample(), send, payload);
-                        retryMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
-                        ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
-                                .onTestMessage(retryMessage, mapping);
-                        if (retryWrapper != null && retryWrapper.getProcessingResult() != null) {
-                            processingResult = awaitContexts(retryWrapper);
-                        }
+                    // The pipeline creates the deleted device again when the run is repeated.
+                    testDeviceExisted = false;
+                    ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient, mapping,
+                            mapping.getMappingTopicSample(), send, payload);
+                    retryMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+                    ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
+                            .onTestMessage(retryMessage, mapping);
+                    if (retryWrapper != null && retryWrapper.getProcessingResult() != null) {
+                        processingResult = awaitContexts(retryWrapper);
                     }
                     staleTestDevice = containsDeviceNotFound(processingResult);
+                }
+
+                if (liveTestIdentity != null) {
+                    // The pipeline created the test device (or found the existing one): report which.
+                    C8YAgent.TestDeviceLookup testDevice = c8YAgent.lookupTestDevice(tenant,
+                            liveTestIdentity.getType(), liveTestIdentity.getValue());
+                    if (testDevice.id() != null && !testDevice.foreign()) {
+                        result.setTestDeviceId(testDevice.id());
+                        result.setTestDeviceCreated(!testDeviceExisted);
+                        result.setTestDeviceExternalId(liveTestIdentity.getValue());
+                        log.info("{} - {} test device: id={}, externalId={}", tenant,
+                                testDeviceExisted ? "Reused" : "Created", testDevice.id(),
+                                liveTestIdentity.getValue());
+                    }
                 }
 
                 if (processingResult != null && !processingResult.isEmpty()) {
@@ -334,6 +347,7 @@ public class MappingTestService {
             // say) used to reach the UI as an empty message and show only "Could not be tested!".
             throw new MappingTestException(Kind.BAD_REQUEST, "The test could not be run: " + describeError(ex));
         } finally {
+            mapping.setCreateNonExistingDevice(originalCreateNonExistingDevice);
             // Leave nothing behind, whatever the outcome: devices created in the mock by this run
             // must not be found by the next one, and the mock should not hold memory between runs.
             try {

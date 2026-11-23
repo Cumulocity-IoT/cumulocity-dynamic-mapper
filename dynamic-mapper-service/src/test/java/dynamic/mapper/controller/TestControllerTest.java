@@ -386,11 +386,71 @@ class TestControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
+    /** No test device before the run; the pipeline creates it, so the lookup after the run finds it. */
+    private void stubTestDeviceCreatedByPipeline(String id) {
+        when(c8YAgent.lookupTestDevice(eq(TENANT), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDeviceLookup(null, false), new C8YAgent.TestDeviceLookup(id, false));
+    }
+
+    /** A test device from an earlier Live Test: found before and after the run. */
+    private void stubReusedTestDevice(String id) {
+        when(c8YAgent.lookupTestDevice(eq(TENANT), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDeviceLookup(id, false));
+    }
+
+    @Test
+    void testMapping_liveTest_neverCreatesTheTestDeviceItself() throws Exception {
+        stubDispatcherResult(contextWithExternalId());
+        stubTestDeviceCreatedByPipeline("77");
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        controller.testMapping(ctx);
+
+        // the pipeline creates it, like any implicit device: the service only looks
+        verify(c8YAgent, org.mockito.Mockito.never()).upsertDevice(anyString(), any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void testMapping_liveTest_letsThePipelineCreateTheDeviceWhateverTheMappingSaysAndRestoresTheSetting() throws Exception {
+        stubDispatcherResult(contextWithExternalId()); // connector and dispatcher wiring
+        stubTestDeviceCreatedByPipeline("77");
+        java.util.List<Boolean> seenByThePipeline = new java.util.ArrayList<>();
+        when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenAnswer(inv -> {
+            seenByThePipeline.add(((Mapping) inv.getArgument(1)).getCreateNonExistingDevice());
+            return wrapperOf(contextWithExternalId());
+        });
+
+        TestContext ctx = dryRunContext();
+        ctx.getMapping().setCreateNonExistingDevice(false);
+        ctx.setSend(true);
+        controller.testMapping(ctx);
+
+        // dry run (derives the external ID) sees the mapping as it is, the live run may create the device
+        assertEquals(java.util.List.of(false, true), seenByThePipeline);
+        assertEquals(Boolean.FALSE, ctx.getMapping().getCreateNonExistingDevice(), "the mapping is left as it was");
+    }
+
+    @Test
+    void testMapping_dryRun_leavesCreateNonExistingDeviceAlone() throws Exception {
+        stubDispatcherResult(contextWithExternalId()); // connector and dispatcher wiring
+        java.util.List<Boolean> seenByThePipeline = new java.util.ArrayList<>();
+        when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenAnswer(inv -> {
+            seenByThePipeline.add(((Mapping) inv.getArgument(1)).getCreateNonExistingDevice());
+            return wrapperOf(contextWithExternalId());
+        });
+
+        TestContext ctx = dryRunContext();
+        ctx.getMapping().setCreateNonExistingDevice(false);
+        controller.testMapping(ctx);
+
+        assertEquals(java.util.List.of(false), seenByThePipeline);
+    }
+
     @Test
     void testMapping_liveTest_reportsWhetherTheTestDeviceWasCreatedOrReused() throws Exception {
         stubDispatcherResult(contextWithExternalId());
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", false));
+        stubReusedTestDevice("77");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -400,8 +460,7 @@ class TestControllerTest {
         assertEquals(Boolean.FALSE, reused.getTestDeviceCreated(),
                 "an existing device is used as is and must not be reported as a created test device");
 
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("78", true));
+        stubTestDeviceCreatedByPipeline("78");
         TestResult created = controller.testMapping(ctx).getBody();
 
         assertEquals("78", created.getTestDeviceId());
@@ -411,8 +470,7 @@ class TestControllerTest {
     @Test
     void testMapping_liveTest_alwaysUsesATestDevice_evenWhenTheLegacyFlagIsOff() throws Exception {
         stubDispatcherResult(contextWithExternalId());
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", true));
+        stubTestDeviceCreatedByPipeline("77");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -420,7 +478,7 @@ class TestControllerTest {
 
         controller.testMapping(ctx);
 
-        verify(c8YAgent).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+        verify(c8YAgent, times(2)).lookupTestDevice(eq(TENANT), anyString(), anyString());
     }
 
     @Test
@@ -429,20 +487,21 @@ class TestControllerTest {
 
         controller.testMapping(dryRunContext());
 
-        verify(c8YAgent, org.mockito.Mockito.never()).ensureTestDevice(anyString(), anyString(), anyString(), anyString());
+        verify(c8YAgent, org.mockito.Mockito.never()).lookupTestDevice(anyString(), anyString(), anyString());
     }
 
     @Test
-    void testMapping_liveTest_failsWithoutSendingWhenTheTestDeviceCannotBeProvided() throws Exception {
+    void testMapping_liveTest_failsWithoutSendingWhenARealDeviceOwnsTheTestExternalId() throws Exception {
         stubDispatcherResult(contextWithExternalId());
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString())).thenReturn(null);
+        when(c8YAgent.lookupTestDevice(eq(TENANT), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDeviceLookup("99", true)); // owned by a real device
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
         TestResult result = controller.testMapping(ctx).getBody();
 
         assertTrue(!result.getSuccess());
-        assertTrue(result.getErrors().get(0).contains("could not be created or found"));
+        assertTrue(result.getErrors().get(0).contains("not a test device"), String.valueOf(result.getErrors()));
         // Only the dry run that derives the external ID ran; the live message was never dispatched, so
         // the mapping did not get the chance to create a device itself.
         verify(dispatcher, times(1)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
@@ -451,8 +510,7 @@ class TestControllerTest {
     @Test
     void testMapping_liveTest_registersTheTestDeviceUnderAPrefixedExternalId() throws Exception {
         stubDispatcherResult(contextWithExternalId());
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", true));
+        stubTestDeviceCreatedByPipeline("77");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -461,7 +519,7 @@ class TestControllerTest {
         // The device must not own the external ID the real device will use, or the real device's
         // first message would be written to the test device.
         org.mockito.ArgumentCaptor<String> externalId = org.mockito.ArgumentCaptor.forClass(String.class);
-        verify(c8YAgent).ensureTestDevice(eq(TENANT), externalId.capture(), externalId.capture(), anyString());
+        verify(c8YAgent, times(2)).lookupTestDevice(eq(TENANT), anyString(), externalId.capture());
         externalId.getAllValues().forEach(v -> assertTrue(v.startsWith(ProcessingContext.TEST_EXTERNAL_ID_PREFIX), v));
 
         // ...and the live message is processed against that same prefix
@@ -489,8 +547,7 @@ class TestControllerTest {
     @Test
     void testMapping_liveTest_isMarkedAsATestRunEvenThoughItUsesRealServices() throws Exception {
         stubDispatcherResult(contextWithExternalId());
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", true));
+        stubTestDeviceCreatedByPipeline("77");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -523,8 +580,10 @@ class TestControllerTest {
                 wrapperOf(contextWithExternalId()),
                 wrapperOf(contextFailingWithDeletedDevice()),
                 wrapperOf(contextWithExternalId()));
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("old", false), new C8YAgent.TestDevice("new", true));
+        // before the run the device exists (and its cached ID turns out stale); after the retry the
+        // pipeline has created it again under a new ID
+        when(c8YAgent.lookupTestDevice(eq(TENANT), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDeviceLookup("old", false), new C8YAgent.TestDeviceLookup("new", false));
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -534,7 +593,7 @@ class TestControllerTest {
         assertEquals("new", result.getTestDeviceId());
         assertEquals(Boolean.TRUE, result.getTestDeviceCreated());
         verify(c8YAgent).evictExternalIdFromCaches(eq(TENANT), any(com.cumulocity.model.ID.class));
-        verify(c8YAgent, times(2)).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+        verify(c8YAgent, times(2)).lookupTestDevice(eq(TENANT), anyString(), anyString());
         verify(dispatcher, times(3)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
     }
 
@@ -545,8 +604,7 @@ class TestControllerTest {
                 wrapperOf(contextWithExternalId()),
                 wrapperOf(contextFailingWithDeletedDevice()),
                 wrapperOf(contextFailingWithDeletedDevice()));
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("old", false));
+        stubReusedTestDevice("old");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -580,7 +638,7 @@ class TestControllerTest {
 
         assertTrue(!result.getSuccess());
         assertTrue(result.getErrors().get(0).contains("does not identify its device by an external ID"));
-        verify(c8YAgent, org.mockito.Mockito.never()).ensureTestDevice(anyString(), anyString(), anyString(), anyString());
+        verify(c8YAgent, org.mockito.Mockito.never()).lookupTestDevice(anyString(), anyString(), anyString());
         // only the dry run ran; nothing was sent
         verify(dispatcher, times(1)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
     }
@@ -629,7 +687,7 @@ class TestControllerTest {
 
         controller.testMapping(ctx);
 
-        verify(c8YAgent, org.mockito.Mockito.never()).ensureTestDevice(anyString(), anyString(), anyString(), anyString());
+        verify(c8YAgent, org.mockito.Mockito.never()).lookupTestDevice(anyString(), anyString(), anyString());
         org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
         verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
         assertEquals(Boolean.FALSE, sent.getValue().getSendPayload());
@@ -683,8 +741,7 @@ class TestControllerTest {
         stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
         Mapping mapping = makeInboundMapping();
         mapping.setSourceTemplate("{\"_IDENTITY_\":{\"externalId\":\"any_SerialNumber\"}}");
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", true));
+        stubTestDeviceCreatedByPipeline("77");
 
         TestContext ctx = new TestContext();
         ctx.setMapping(mapping);
@@ -692,8 +749,8 @@ class TestControllerTest {
         ctx.setSend(true);
         controller.testMapping(ctx);
 
-        verify(c8YAgent).ensureTestDevice(eq(TENANT), eq("d11r_liveTest_any_SerialNumber"),
-                eq("d11r_liveTest_any_SerialNumber"), anyString());
+        verify(c8YAgent, times(2)).lookupTestDevice(eq(TENANT), anyString(),
+                eq("d11r_liveTest_any_SerialNumber"));
     }
 
     @Test
@@ -704,8 +761,7 @@ class TestControllerTest {
                 new com.cumulocity.sdk.client.SDKException(404, "Event attachment not found")));
         when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenReturn(
                 wrapperOf(contextWithExternalId()), wrapperOf(failed));
-        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
-                .thenReturn(new C8YAgent.TestDevice("77", true));
+        stubTestDeviceCreatedByPipeline("77");
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
@@ -714,7 +770,7 @@ class TestControllerTest {
         assertTrue(!result.getSuccess());
         // no eviction, no second ensure, no resend of requests that may already have succeeded
         verify(c8YAgent, org.mockito.Mockito.never()).evictExternalIdFromCaches(anyString(), any());
-        verify(c8YAgent, times(1)).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+        verify(c8YAgent, times(2)).lookupTestDevice(eq(TENANT), anyString(), anyString());
         verify(dispatcher, times(2)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
     }
 

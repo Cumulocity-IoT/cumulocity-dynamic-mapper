@@ -162,6 +162,31 @@ class MockIsolationRegressionTest {
     }
 
     @Test
+    void testIdentityResolutionService_inALiveTest_checksAnExistingDeviceIsATestDevice() throws Exception {
+        ID identity = new ID(EXTERNAL_ID_TYPE, "d11r_liveTest_" + EXTERNAL_ID_VAL);
+        ExternalIDRepresentation existing = new ExternalIDRepresentation();
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        mor.setId(new GId("900"));
+        existing.setManagedObject(mor);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(false))).thenReturn(existing);
+        ProcessingContext<Object> live = ProcessingContext.<Object>builder().tenant(TEST_TENANT)
+                .mapping(Mapping.builder().createNonExistingDevice(true).build())
+                .testExternalIdPrefix("d11r_liveTest_").testing(false).build();
+
+        String id = identityResolutionService.getOrCreateDeviceThreadSafe(
+                TEST_TENANT, EXTERNAL_ID_TYPE, identity.getValue(), identity, live);
+        assertEquals("900", id);
+        verify(c8yAgent).assertLiveTestMayUse(TEST_TENANT, live, "900");
+
+        // and a refusal stops the message instead of writing to the device
+        org.mockito.Mockito.doThrow(new dynamic.mapper.processor.ProcessingException("Live Test refused"))
+                .when(c8yAgent).assertLiveTestMayUse(TEST_TENANT, live, "900");
+        org.junit.jupiter.api.Assertions.assertThrows(dynamic.mapper.processor.ProcessingException.class,
+                () -> identityResolutionService.getOrCreateDeviceThreadSafe(
+                        TEST_TENANT, EXTERNAL_ID_TYPE, identity.getValue(), identity, live));
+    }
+
+    @Test
     void testC8YAgentResolveExternalId2GlobalId_testingTrue_skipsInboundCache() {
         InboundExternalIdCache inboundCache = mock(InboundExternalIdCache.class);
         when(cacheManager.getInboundExternalIdCache(TEST_TENANT)).thenReturn(inboundCache);
@@ -387,83 +412,199 @@ class MockIsolationRegressionTest {
 
     // ── Test device ───────────────────────────────────────────────────────
 
-    @Test
-    void testEnsureTestDevice_createsADeviceOfTypeD11rTestDeviceTaggedWithTheFragment() throws Exception {
-        InventoryFacade inventoryFacade = mock(InventoryFacade.class);
-        IdentityFacade identityFacade = mock(IdentityFacade.class);
-        com.cumulocity.microservice.context.ContextService<com.cumulocity.microservice.context.credentials.MicroserviceCredentials> contextService =
-                mock(com.cumulocity.microservice.context.ContextService.class);
-        com.cumulocity.microservice.context.credentials.MicroserviceCredentials credentials =
-                new com.cumulocity.microservice.context.credentials.MicroserviceCredentials(TEST_TENANT, "u", "p", null, null, null, null);
-        when(contextService.getContext()).thenReturn(credentials);
-        when(contextService.callWithinContext(any(), any())).thenAnswer(inv -> {
-            Callable<?> callable = inv.getArgument(1);
-            return callable.call();
-        });
-        // no device registered under the test external ID yet
-        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(null);
-        when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false))).thenAnswer(inv -> {
-            ManagedObjectRepresentation created = inv.getArgument(0);
-            created.setId(new GId("4711"));
-            return created;
-        });
-        when(cacheManager.getInboundExternalIdCache(TEST_TENANT)).thenReturn(mock(InboundExternalIdCache.class));
-        ServiceConfiguration configuration = new ServiceConfiguration();
-        configuration.setExternalIdBinding(false);
-        tenantRegistry.addServiceConfiguration(TEST_TENANT, configuration);
+    private InventoryFacade inventoryFacade;
+    private IdentityFacade identityFacade;
 
-        C8YAgent agent = new C8YAgent(
-                null, inventoryFacade, identityFacade, null, null, null, null, null,
-                subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
-                "1.0.0", 10);
-
-        C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, "d11r_liveTest_x", "d11r_liveTest_x", "c8y_Serial");
-
-        assertEquals("4711", device.id());
-        assertEquals(true, device.created());
-        org.mockito.ArgumentCaptor<ManagedObjectRepresentation> created =
-                org.mockito.ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
-        verify(inventoryFacade).create(created.capture(), eq(false));
-        assertEquals("d11r_testDevice", created.getValue().getType(), "the managed object type");
-        assertNotNull(created.getValue().get("d11r_testDevice"), "the fragment the Test Devices grid queries");
-        assertEquals("d11r_liveTest_x", created.getValue().getName());
-    }
-
-    @Test
-    void testEnsureTestDevice_neverTrustsAStaleCachedIdOfADeletedTestDevice() throws Exception {
-        String externalId = "d11r_liveTest_x";
-        String key = TEST_TENANT + "|c8y_Serial|" + externalId;
-        tenantRegistry.cacheExternalId(key, "581685638"); // device was deleted, the entry was not
-
-        InventoryFacade inventoryFacade = mock(InventoryFacade.class);
-        IdentityFacade identityFacade = mock(IdentityFacade.class);
+    /** A C8YAgent over mocked facades; {@code externalIdBinding} selects the atomic creation path. */
+    private C8YAgent newAgent(boolean externalIdBinding) throws Exception {
+        inventoryFacade = mock(InventoryFacade.class);
+        identityFacade = mock(IdentityFacade.class);
         com.cumulocity.microservice.context.ContextService<com.cumulocity.microservice.context.credentials.MicroserviceCredentials> contextService =
                 mock(com.cumulocity.microservice.context.ContextService.class);
         when(contextService.getContext()).thenReturn(
                 new com.cumulocity.microservice.context.credentials.MicroserviceCredentials(TEST_TENANT, "u", "p", null, null, null, null));
         when(contextService.callWithinContext(any(), any())).thenAnswer(inv -> ((Callable<?>) inv.getArgument(1)).call());
-        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(null); // truly gone
         when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false))).thenAnswer(inv -> {
             ManagedObjectRepresentation created = inv.getArgument(0);
             created.setId(new GId("4711"));
             return created;
         });
+        when(inventoryFacade.update(any(ManagedObjectRepresentation.class), eq(false))).thenAnswer(inv -> inv.getArgument(0));
         when(cacheManager.getInboundExternalIdCache(TEST_TENANT)).thenReturn(mock(InboundExternalIdCache.class));
         ServiceConfiguration configuration = new ServiceConfiguration();
-        configuration.setExternalIdBinding(false);
+        configuration.setExternalIdBinding(externalIdBinding);
         tenantRegistry.addServiceConfiguration(TEST_TENANT, configuration);
-        C8YAgent agent = new C8YAgent(
+        return new C8YAgent(
                 null, inventoryFacade, identityFacade, null, null, null, null, null,
                 subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
+                managedObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
+    }
 
-        C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, externalId, externalId, "c8y_Serial");
+    /** Reads the fragments of a managed object from its top level, as the platform's mapper does. */
+    abstract static class FragmentsAtTopLevel {
+        @com.fasterxml.jackson.annotation.JsonAnySetter
+        abstract void setProperty(String name, Object value);
+    }
 
-        assertEquals("4711", device.id());
-        assertEquals(true, device.created(), "the stale cached id must not make a deleted device look reused");
+    private static ObjectMapper managedObjectMapper() {
+        return new ObjectMapper().addMixIn(ManagedObjectRepresentation.class, FragmentsAtTopLevel.class);
+    }
+
+    /** A processing context with one INVENTORY request; a Live Test when {@code livePrefix} is set. */
+    private ProcessingContext<Object> contextWithDeviceRequest(String livePrefix, String body, String sourceId) {
+        ProcessingContext<Object> context = ProcessingContext.<Object>builder()
+                .tenant(TEST_TENANT).testExternalIdPrefix(livePrefix).testing(false).build();
+        context.addRequest(dynamic.mapper.model.DynamicMapperRequest.builder()
+                .api(dynamic.mapper.model.API.INVENTORY)
+                .method(org.springframework.web.bind.annotation.RequestMethod.POST)
+                .sourceId(sourceId).externalIdType("c8y_Serial").externalId("d11r_liveTest_x")
+                .request(body).build());
+        return context;
+    }
+
+    private static final String ISSUE_700_DEVICE = "{\"name\":\"issue700-name\",\"type\":\"issue700_Type\","
+            + "\"c8y_IsDevice\":{},\"d11r_testDevice\":\"overwritten\","
+            + "\"dmtest_Custom\":{\"flag\":\"from-contextData\"}}";
+
+    private ManagedObjectRepresentation ownerOf(String id, String type) {
+        ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
+        mo.setId(new GId(id));
+        mo.setType(type);
+        return mo;
+    }
+
+    private ExternalIDRepresentation externalId(String deviceId) {
+        ExternalIDRepresentation representation = new ExternalIDRepresentation();
+        representation.setManagedObject(ownerOf(deviceId, null));
+        return representation;
+    }
+
+    @Test
+    void testUpsertDevice_inALiveTest_createsTheDeviceWithTheMappingsNameAndFragmentsButAsATestDevice() throws Exception {
+        C8YAgent agent = newAgent(false);
+        ProcessingContext<Object> context = contextWithDeviceRequest("d11r_liveTest_", ISSUE_700_DEVICE, null);
+
+        ManagedObjectRepresentation device = agent.upsertDevice(TEST_TENANT,
+                new ID("c8y_Serial", "d11r_liveTest_x"), context, 0);
+
+        assertEquals("4711", device.getId().getValue());
+        org.mockito.ArgumentCaptor<ManagedObjectRepresentation> created =
+                org.mockito.ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
+        verify(inventoryFacade).create(created.capture(), eq(false));
+        ManagedObjectRepresentation mo = created.getValue();
+        assertEquals("issue700-name", mo.getName(), "the name the mapping defined");
+        assertEquals(Map.of("flag", "from-contextData"), mo.get("dmtest_Custom"), "a fragment the mapping defined");
+        assertEquals("d11r_testDevice", mo.getType(), "the type stays the test device type");
+        assertEquals(Map.of(), mo.get("d11r_testDevice"), "the marker the Test Devices grid queries");
+    }
+
+    @Test
+    void testUpsertDevice_notInALiveTest_keepsTheMappingsTypeAndAddsNoMarker() throws Exception {
+        C8YAgent agent = newAgent(false);
+        ProcessingContext<Object> context = contextWithDeviceRequest(null,
+                "{\"name\":\"issue700-name\",\"type\":\"issue700_Type\"}", null);
+
+        agent.upsertDevice(TEST_TENANT, new ID("c8y_Serial", "issue700-device-1"), context, 0);
+
+        org.mockito.ArgumentCaptor<ManagedObjectRepresentation> created =
+                org.mockito.ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
+        verify(inventoryFacade).create(created.capture(), eq(false));
+        assertEquals("issue700_Type", created.getValue().getType(), "a productive device keeps the mapping's type");
+        assertNull(created.getValue().get("d11r_testDevice"), "and is not marked as a test device");
+    }
+
+    @Test
+    void testUpsertDevice_inALiveTest_anUpdateKeepsTheTestDeviceType() throws Exception {
+        C8YAgent agent = newAgent(false);
+        // the mapping updates a device that already exists (an INVENTORY mapping): the type must not change
+        ProcessingContext<Object> context = contextWithDeviceRequest("d11r_liveTest_", ISSUE_700_DEVICE, "4711");
+
+        agent.upsertDevice(TEST_TENANT, new ID("c8y_Serial", "d11r_liveTest_x"), context, 0);
+
+        org.mockito.ArgumentCaptor<ManagedObjectRepresentation> updated =
+                org.mockito.ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
+        verify(inventoryFacade).update(updated.capture(), eq(false));
+        assertEquals("d11r_testDevice", updated.getValue().getType());
+        assertEquals(Map.of(), updated.getValue().get("d11r_testDevice"));
+    }
+
+    @Test
+    void testUpsertDevice_inALiveTest_refusesARealDeviceThatWonTheCreationRace() throws Exception {
+        C8YAgent agent = newAgent(true); // atomic creation: a lost race is an HTTP 409
+        when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false)))
+                .thenThrow(new com.cumulocity.sdk.client.SDKException(409, "already bound"));
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(externalId("555"));
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("555", "c8y_RealDevice"));
+        ProcessingContext<Object> context = contextWithDeviceRequest("d11r_liveTest_", ISSUE_700_DEVICE, null);
+
+        dynamic.mapper.processor.ProcessingException e = org.junit.jupiter.api.Assertions.assertThrows(
+                dynamic.mapper.processor.ProcessingException.class,
+                () -> agent.upsertDevice(TEST_TENANT, new ID("c8y_Serial", "d11r_liveTest_x"), context, 0));
+
+        assertTrue(e.getMessage().contains("not a mapper test device"), e.getMessage());
+    }
+
+    @Test
+    void testUpsertDevice_inALiveTest_acceptsATestDeviceThatWonTheCreationRace() throws Exception {
+        C8YAgent agent = newAgent(true);
+        when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false)))
+                .thenThrow(new com.cumulocity.sdk.client.SDKException(409, "already bound"));
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(externalId("556"));
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("556", "d11r_testDevice"));
+        ProcessingContext<Object> context = contextWithDeviceRequest("d11r_liveTest_", ISSUE_700_DEVICE, null);
+
+        ManagedObjectRepresentation device = agent.upsertDevice(TEST_TENANT,
+                new ID("c8y_Serial", "d11r_liveTest_x"), context, 0);
+
+        assertEquals("556", device.getId().getValue());
+    }
+
+    @Test
+    void testLookupTestDevice_neverTrustsAStaleCachedIdOfADeletedTestDevice() throws Exception {
+        String externalId = "d11r_liveTest_x";
+        String key = TEST_TENANT + "|c8y_Serial|" + externalId;
+        tenantRegistry.cacheExternalId(key, "581685638"); // device was deleted, the entry was not
+        C8YAgent agent = newAgent(false);
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(null); // truly gone
+
+        C8YAgent.TestDeviceLookup lookup = agent.lookupTestDevice(TEST_TENANT, "c8y_Serial", externalId);
+
+        assertNull(lookup.id(), "the stale cached id must not make a deleted device look like it exists");
+        assertEquals(false, lookup.foreign());
         assertNull(tenantRegistry.getCachedExternalId(key), "the stale cache entry must be evicted");
         verify(cacheManager).removeDeviceFromInboundExternalIdCache(eq(TEST_TENANT), any(ID.class));
+        verify(inventoryFacade, never()).create(any(ManagedObjectRepresentation.class), anyBoolean());
+    }
+
+    @Test
+    void testLookupTestDevice_findsAnExistingTestDeviceAndFlagsAForeignObject() throws Exception {
+        C8YAgent agent = newAgent(false);
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(externalId("700"));
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("700", "d11r_testDevice"));
+        C8YAgent.TestDeviceLookup own = agent.lookupTestDevice(TEST_TENANT, "c8y_Serial", "d11r_liveTest_a");
+        assertEquals("700", own.id());
+        assertEquals(false, own.foreign());
+
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("700", "c8y_RealDevice"));
+        C8YAgent.TestDeviceLookup foreign = agent.lookupTestDevice(TEST_TENANT, "c8y_Serial", "d11r_liveTest_a");
+        assertEquals("700", foreign.id());
+        assertEquals(true, foreign.foreign(), "a real device must never be reused by a Live Test");
+    }
+
+    @Test
+    void testAssertLiveTestMayUse_onlyChecksALiveTestAndOnlyAllowsTestDevices() throws Exception {
+        C8YAgent agent = newAgent(false);
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("800", "c8y_RealDevice"));
+        ProcessingContext<Object> live = contextWithDeviceRequest("d11r_liveTest_", "{}", null);
+        ProcessingContext<Object> productive = contextWithDeviceRequest(null, "{}", null);
+
+        agent.assertLiveTestMayUse(TEST_TENANT, productive, "800"); // a productive run is not restricted
+        verify(inventoryFacade, never()).get(any(GId.class), anyBoolean());
+        org.junit.jupiter.api.Assertions.assertThrows(dynamic.mapper.processor.ProcessingException.class,
+                () -> agent.assertLiveTestMayUse(TEST_TENANT, live, "800"));
+
+        when(inventoryFacade.get(any(GId.class), eq(false))).thenReturn(ownerOf("801", "d11r_testDevice"));
+        agent.assertLiveTestMayUse(TEST_TENANT, live, "801");
     }
 }

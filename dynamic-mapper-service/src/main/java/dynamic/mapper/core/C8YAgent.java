@@ -609,23 +609,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /**
-     * Creates a real managed object in C8Y inventory tagged with {@code d11r_testDevice} so it
-     * is visible in the Test Devices grid and can be cleaned up after testing.
-     *
-     * @return the internal C8Y ID of the created managed object, or {@code null} on failure
+     * Outcome of {@link #lookupTestDevice}: the internal ID of the object that owns the Live Test external
+     * ID ({@code null} if there is none), and whether that object is <em>not</em> a mapper test device. A
+     * foreign object is never written to: a Live Test must not touch a real device.
      */
-    public String createTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
-        TestDevice device = ensureTestDevice(tenant, deviceName, externalId, externalIdType);
-        return device == null ? null : device.id();
-    }
-
-    /**
-     * Outcome of {@link #ensureTestDevice}: the device's internal ID, and whether this call created
-     * it. A device that already existed under that external ID is reused as is — it is not re-tagged. Only a device already
-     * tagged {@code d11r_testDevice} is reused; any other object owning the external ID is refused
-     * (the result is {@code null}), so a live test never writes to a real device.
-     */
-    public record TestDevice(String id, boolean created) {
+    public record TestDeviceLookup(String id, boolean foreign) {
     }
 
     /**
@@ -639,7 +627,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /** True if the managed object carries the {@code d11r_testDevice} tag; false if not or if it cannot be read. */
-    private boolean isMapperTestDevice(String tenant, String deviceId) {
+    public boolean isMapperTestDevice(String tenant, String deviceId) {
         return Boolean.TRUE.equals(subscriptionsService.callForTenant(tenant, () -> {
             try {
                 ManagedObjectRepresentation mor = inventoryApi.get(GId.asGId(deviceId), false);
@@ -654,69 +642,50 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /**
-     * Like {@link #createTestDevice} but reports whether the device was created or already existed.
+     * Looks up, without creating anything, the object that owns the Live Test external ID. Never trusts a
+     * cached answer: a test device is deleted by hand from time to time and nothing evicts a deleted test
+     * device from the external-ID caches (it is not subscribed for inventory updates), so the caches are
+     * dropped first and the platform is asked.
      *
-     * @return the device, or {@code null} on failure
+     * <p>The device itself is created by the processing pipeline, like any implicit device (see
+     * {@code ProcessingResultHelper#createImplicitDevice}); this lookup is the guard that runs before it.
      */
-    public TestDevice ensureTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
+    public TestDeviceLookup lookupTestDevice(String tenant, String externalIdType, String externalId) {
         String resolvedType = (externalIdType != null && !externalIdType.isEmpty()) ? externalIdType : "c8y_Serial";
-        // Upsert: if the externalId is already registered, return the existing device ID
         ID id = new ID();
         id.setType(resolvedType);
         id.setValue(externalId);
-        // A test device is deleted by hand from time to time, and nothing evicts a deleted test device
-        // from the external-ID caches (it is not subscribed for inventory updates). Never trust a cached
-        // answer here: ask the platform, and let the lookup below repopulate the caches.
         evictExternalIdFromCaches(tenant, id);
         ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
-        if (existing != null) {
-            String existingId = existing.getManagedObject().getId().getValue();
-            if (!isMapperTestDevice(tenant, existingId)) {
-                // Never write live-test data to a device the mapper did not create for testing.
-                log.error("{} - Object {} owns external ID {} but is not a mapper test device, refusing to reuse it",
-                        tenant, existingId, externalId);
-                return null;
-            }
-            log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
-                    existingId);
-            return new TestDevice(existingId, false);
+        if (existing == null) {
+            return new TestDeviceLookup(null, false);
         }
+        String existingId = existing.getManagedObject().getId().getValue();
+        if (!isMapperTestDevice(tenant, existingId)) {
+            log.error("{} - Object {} owns external ID {} but is not a mapper test device", tenant, existingId,
+                    externalId);
+            return new TestDeviceLookup(existingId, true);
+        }
+        return new TestDeviceLookup(existingId, false);
+    }
 
-        boolean supportsExternalIdBinding = Boolean.TRUE.equals(
-                tenantRegistry.getServiceConfiguration(tenant).getExternalIdBinding());
-        return subscriptionsService.callForTenant(tenant, () -> {
-            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
-            return contextService.callWithinContext(contextCredentials, () -> {
-                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-                mor.setName(deviceName);
-                mor.set(new IsDevice());
-                // Both the fragment (what the Test Devices grid queries) and the object type, so the device
-                // is recognisable as a test device in the inventory as well.
-                mor.setType(MAPPING_TEST_DEVICE_TYPE);
-                mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
-                ExternalIdConflictException conflict;
-                boolean acquired = false;
-                try {
-                    c8ySemaphore.acquire();
-                    acquired = true;
-                    mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
-                    log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
-                    return new TestDevice(mor.getId().getValue(), true);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
-                    return null;
-                } catch (ExternalIdConflictException e) {
-                    conflict = e;
-                } finally {
-                    if (acquired) {
-                        c8ySemaphore.release();
-                    }
-                }
-                // Semaphore released: the lookup acquires it again.
-                return new TestDevice(resolveExistingDevice(tenant, id, conflict).getId().getValue(), false);
-            });
-        });
+    /**
+     * In a Live Test, only a device the mapper created for testing may be written to. Called wherever the
+     * pipeline resolves an existing device, so a Smart Function that addresses several devices cannot reach a
+     * real one: its external IDs are prefixed, but an object may own a prefixed ID.
+     *
+     * @throws ProcessingException if this is a Live Test and the device is not a mapper test device
+     */
+    public void assertLiveTestMayUse(String tenant, ProcessingContext<?> context, String deviceId)
+            throws ProcessingException {
+        if (context.getTestExternalIdPrefix() == null || deviceId == null) {
+            return;
+        }
+        if (!isMapperTestDevice(tenant, deviceId)) {
+            throw new ProcessingException("Live Test refused: object " + deviceId + " owns the test external ID "
+                    + context.getExternalId() + " but is not a mapper test device. A Live Test only writes to "
+                    + "devices tagged " + MAPPING_TEST_DEVICE_TYPE + ".");
+        }
     }
 
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
@@ -730,12 +699,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
         String clientId = context.getClientId();
+        boolean liveTest = context.getTestExternalIdPrefix() != null;
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
                 ManagedObjectRepresentation mor = objectMapper.readValue(
                         currentRequest.getRequest(),
                         ManagedObjectRepresentation.class);
+                if (liveTest) {
+                    // Whatever the mapping defines, a Live Test device stays a test device, on create and on
+                    // update: the object type and the fragment the Test Devices grid queries.
+                    mor.setType(MAPPING_TEST_DEVICE_TYPE);
+                    mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                }
                 try {
                     // ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity,
                     // context);
@@ -785,6 +761,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         if (conflict != null) {
                             // Semaphore released: the lookup acquires it again.
                             mor = resolveExistingDevice(tenant, identity, conflict);
+                            if (liveTest && !isMapperTestDevice(tenant, mor.getId().getValue())) {
+                                // Another creator bound the ID first and it is not a test device: never write to it.
+                                pe.set(new ProcessingException("Live Test refused: object " + mor.getId().getValue()
+                                        + " owns the test external ID " + identity.getValue()
+                                        + " but is not a mapper test device."));
+                                return mor;
+                            }
                         }
                     } else {
                         // Device exists - update needed

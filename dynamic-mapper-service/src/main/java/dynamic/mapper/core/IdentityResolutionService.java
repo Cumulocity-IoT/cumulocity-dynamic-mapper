@@ -65,9 +65,12 @@ public class IdentityResolutionService {
             ID identity, ProcessingContext<?> context) throws Exception {
         String cacheKey = tenant + "|" + externalIdType + "|" + externalIdValue;
         boolean isTesting = Boolean.TRUE.equals(context.isTesting());
+        // A Live Test never takes a device from the cache: the cached ID may be stale (a deleted test device),
+        // and a cache hit would skip the check that the device is a test device.
+        boolean skipCache = isTesting || context.getTestExternalIdPrefix() != null;
 
         // First check: quick cache hit (skip in test mode to avoid leaking real devices into tests)
-        String cached = isTesting ? null : tenantRegistry.getCachedExternalId(cacheKey);
+        String cached = skipCache ? null : tenantRegistry.getCachedExternalId(cacheKey);
         if (cached != null) {
             log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
             return cached;
@@ -78,7 +81,7 @@ public class IdentityResolutionService {
 
         synchronized (lock) {
             // Double-check after acquiring lock: another thread may have created it
-            cached = isTesting ? null : tenantRegistry.getCachedExternalId(cacheKey);
+            cached = skipCache ? null : tenantRegistry.getCachedExternalId(cacheKey);
             if (cached != null) {
                 log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
                 return cached;
@@ -89,6 +92,8 @@ public class IdentityResolutionService {
                     c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
             if (resolved != null) {
                 String internalId = resolved.getManagedObject().getId().getValue();
+                // A Live Test only writes to devices the mapper created for testing.
+                c8yAgent.assertLiveTestMayUse(tenant, context, internalId);
                 // Only cache the resolved ID in production — during dry-run tests
                 // resolveExternalId2GlobalId routes to MockIdentity and returns a
                 // synthetic ID (e.g. "10000") that must never enter the production cache.

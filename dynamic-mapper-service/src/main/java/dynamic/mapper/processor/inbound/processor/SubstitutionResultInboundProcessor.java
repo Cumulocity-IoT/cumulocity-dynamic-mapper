@@ -194,7 +194,10 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                         }
                     }
                 } else {
-                    sourceId.setValue(resolvedSourceId.getManagedObject().getId().getValue());
+                    String resolvedId = resolvedSourceId.getManagedObject().getId().getValue();
+                    // A Live Test only writes to devices the mapper created for testing.
+                    c8yAgent.assertLiveTestMayUse(tenant, context, resolvedId);
+                    sourceId.setValue(resolvedId);
                 }
 
                 if (sourceId.getValue() == null) {

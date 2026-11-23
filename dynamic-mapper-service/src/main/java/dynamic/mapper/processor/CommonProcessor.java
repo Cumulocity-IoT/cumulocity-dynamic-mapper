@@ -185,13 +185,18 @@ public abstract class CommonProcessor {
             context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {
-                return globalId.getManagedObject().getId().getValue();
+                String resolvedId = globalId.getManagedObject().getId().getValue();
+                // A Live Test only writes to devices the mapper created for testing.
+                c8yAgent.assertLiveTestMayUse(tenant, context, resolvedId);
+                return resolvedId;
             } else {
                 return null;
                 // throw new ProcessingException("Could not resolve external ID: " +
                 // externalSource.getExternalId());
             }
 
+        } catch (ProcessingException e) {
+            throw e;
         } catch (Exception e) {
             throw new ProcessingException("Failed to resolve external ID: " + externalSource.getExternalId(), e);
         }
