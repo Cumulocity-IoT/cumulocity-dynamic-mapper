@@ -54,11 +54,12 @@ shared code templates.
 | Import connectors (exporting is open to everyone) | – | – | ✓ |
 | **Configuration** | | | |
 | Read service configuration | ✓ | ✓ | ✓ |
-| Edit, export, or import service configuration | – | – | ✓ |
+| Export service configuration | ✓ | ✓ | ✓ |
+| Edit or import service configuration | – | – | ✓ |
 | Read code templates | ✓ | ✓ | ✓ |
 | Create / edit / delete code templates, reset system templates | – | – | ✓ |
 | Read processor extensions | – | ✓ | ✓ |
-| Delete a processor extension, reload extensions | – | – | ✓ |
+| Upload or delete a processor extension, reload extensions | – | – | ✓ |
 | **Monitoring** | | | |
 | Read the [service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs) of your tenant | – | – | ✓ |
 | **Maintenance** | | | |

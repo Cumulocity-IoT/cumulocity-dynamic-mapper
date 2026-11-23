@@ -153,10 +153,24 @@ dm_wait 3
 
 # ── Control: with the broker up, an event is published ─────────────────────────
 dm_step "Control: event while the broker is up ..."
-mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -C 1 -W 30 >"$WORK_DIR/control.txt" 2>/dev/null &
+: >"$WORK_DIR/control.txt"
+mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -W 60 >"$WORK_DIR/control.txt" 2>/dev/null &
 SUB_PID=$!
-sleep 1
+# A public broker can take several seconds to accept the subscriber, and a message published before
+# that is not delivered to it: publish a marker until the subscriber receives it, then send the event.
+CONTROL_READY=false
+for _i in $(seq 1 20); do
+    mosquitto_pub -h "$BROKER_HOST" -p "$BROKER_PORT" -t "$TOPIC" -q 1 -m "subscriber-ready" 2>/dev/null || true
+    sleep 1
+    if grep -q "subscriber-ready" "$WORK_DIR/control.txt"; then CONTROL_READY=true; break; fi
+done
+[ "$CONTROL_READY" = "true" ] || dm_error "Control subscriber did not connect to $BROKER_HOST:$BROKER_PORT"
 c8y events create --device "$DEVICE_ID" --type "c8y_OutageEvent" --text "outage-0" --output json >/dev/null
+for _i in $(seq 1 20); do
+    grep -q '"outage-0"' "$WORK_DIR/control.txt" && break
+    sleep 1
+done
+kill "$SUB_PID" 2>/dev/null || true
 wait "$SUB_PID" 2>/dev/null || true
 SUB_PID=""
 dm_assert_eq "control message published" "1" "$(grep -c '"outage-0"' "$WORK_DIR/control.txt" || true)"

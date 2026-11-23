@@ -6,6 +6,18 @@ title: Kafka connector
 
 ![Kafka connector settings](../../../resources/image/Dynamic_Mapper_Connector_Kafka.png "Kafka connector configuration properties.")
 
+#### Connection {#kafka-connection}
+
+| Property | Effect |
+|---|---|
+| **Bootstrap servers** (required) | The Kafka brokers the connector connects to. |
+| **Consumer group ID** (required in the form) | If empty at runtime, the connector uses `dynamic-mapper-<identifier>`. |
+| **Predefined producer properties**, **Predefined consumer properties** | Extra Kafka client properties passed through as configured. |
+
+The Kafka connector supports QoS 0 (at most once) and QoS 1 (at least once).
+
+#### Security {#kafka-security}
+
 The Kafka connector derives its `security.protocol` automatically. You do not set it directly:
 
 | Credentials set? | Custom CA trusted? | Resulting protocol |

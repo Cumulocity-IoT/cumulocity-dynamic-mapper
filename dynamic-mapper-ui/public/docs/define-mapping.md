@@ -29,7 +29,7 @@ Start adding a mapping with [**Mapping → Inbound**](/c8y-pkg-dynamic-mapper/no
 - **Transformation Type**: shown in Expert Mode only. Otherwise the mapping uses a Smart Function.
 - **Smart Function Source** (JSONata: **Substitutions Source**): shown when an AI agent is deployed for that
   transformation type. Choose **Generate with AI** to create the code in the Transformation step, or **Choose Code
-  Template** to start from an existing [code template](/c8y-pkg-dynamic-mapper/introduction/code-templates). Without
+  Template** (for JSONata: **Define Manually**) to start from an existing [code template](/c8y-pkg-dynamic-mapper/introduction/code-templates). Without
   an AI agent, the dialog shows the **JavaScript Code Template** selector only. See
   [AI-assisted mapping](/c8y-pkg-dynamic-mapper/introduction/ai-assisted).
 - For a Java Extension: the **Extensions** and **Events** selectors.
@@ -88,9 +88,9 @@ Cumulocity object; only what it sends is free-form, and your Smart Function or J
 
 ![Connector selection](../../../resources/image/Dynamic_Mapper_Connector_Select.png "Selecting the connector(s) a mapping is deployed to.")
 
-In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping Name,
-Target API, Mapping Topic (topic to which this mapping should listen for, this supports wildcards: `#`, `+`). The
-Mapping Topic Sample is a sample topic replacing all wildcards from the Mapping Topic, e.g. `datalogger/+` becomes
+In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping name,
+Target API, Mapping topic (topic to which this mapping should listen for, this supports wildcards: `#`, `+`). The
+Mapping topic sample is a sample topic replacing all wildcards from the Mapping topic, e.g. `datalogger/+` becomes
 `datalogger/logger_13579`, this helps in the later steps to use concrete values instead of the abstract wildcards.
 
 ![Mapping stepper properties](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png "Screenshot of second wizard step to define general properties.")
@@ -100,13 +100,13 @@ The remaining fields of the **General settings** step depend on the direction an
 | Field | Applies to | What it does |
 |---|---|---|
 | **Target API** (inbound) or **Source API** (outbound) | Both | The Cumulocity API the mapping creates data in (inbound), or the kind of change that triggers the mapping (outbound). |
-| **Publish Topic** and **Publish Topic Sample** | Outbound | The topic the message is published to. A Smart Function can override it per message. |
+| **Publish topic** and **Publish topic sample** | Outbound | The topic the message is published to. A Smart Function can override it per message. |
 | **Create device** | Inbound, except Inventory | Creates the device when a message arrives for an unknown external ID. |
-| **Update Existing Device** | Inbound, Inventory API | Updates the device when it already exists. |
+| **Update existing device** | Inbound, Inventory API | Updates the device when it already exists. |
 | **Auto acknowledge** | Outbound, Operation API | Sets the operation to `EXECUTING` before sending, then to `SUCCESSFUL`, or `FAILED` when the transformation fails. |
 | **Event contains attachment** | Inbound, Event API | Handles an event with a binary attachment that is stored separately. |
-| **Use external id** and **External Id type** | Both | Addresses the device by external ID (default type `c8y_Serial`) instead of the Cumulocity ID. Live Test and `context.getExternalId()` need it. |
-| **Execution filter** | Outbound | Writes the **Filter execution mapping** of the Templates step: **Filter by type** (`type = '<value>'`), **Filter by fragment** (`$exists(<value>)`), or **Custom filter** (empty, enter the expression in the Templates step). The choice is required: a new mapping has none selected, and **Filter by type** and **Filter by fragment** also need a value. When you create a mapping from the Message Explorer, the type of the selected message is prefilled. An existing mapping opens with the option that matches its expression. |
+| **Use external id** and **External id type** | Both | Addresses the device by external ID (default type `c8y_Serial`) instead of the Cumulocity ID. Live Test and `context.getExternalId()` need it. |
+| **Execution filter** | Outbound | Writes the **Filter execution mapping** of the Templates step: **Filter by type** (`type = '<value>'`), **Filter by fragment** (`$exists(<value>)`), or **Custom filter** (empty, enter the expression in the Templates step). The choice is required: a new mapping has none selected, and **Filter by type** and **Filter by fragment** also need a value, entered in a field labeled **Type** or **Fragment**. **Custom filter** shows a **Filter expression** field instead, where you enter a JSONata expression such as `type = 'c8y_Event' and $exists(c8y_Temperature)`. The expression is checked as you type. When you create a mapping from the Message Explorer, the type of the selected message is prefilled. An existing mapping opens with the option that matches its expression. |
 | **Inventory filter** | Outbound | Shown when **Expert Mode** is on (on by default when a filter is set). JSONata filter on the device. See [Outbound mapping](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound#inventory-filter). |
 | **QoS** | Both | Delivery guarantee. Outbound offers at most once and at least once. See [Reliability settings](/c8y-pkg-dynamic-mapper/introduction/reliability-settings). |
 | **Max failure count** | Both | Consecutive failures after which the mapping is deactivated automatically. `0` (the default) means no limit. The counter resets after one message is processed without error, and when you reactivate the mapping. |
@@ -118,7 +118,7 @@ are followed in parallel, so a single message can match more than one mapping (e
 [Mapping processing (inbound)](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/docs/feature/mapping-processing-inbound.md)
 in the developer documentation.
 
-The levels of the Mapping Topic are split and added to the source payload as `_TOPIC_LEVEL_`, e.g.
+The levels of the Mapping topic are split and added to the source payload as `_TOPIC_LEVEL_`, e.g.
 `["device", "express", "berlin_01"]` for topic `device/express/berlin_01`. See
 [Using metadata in source templates](/c8y-pkg-dynamic-mapper/introduction/metadata).
 
@@ -126,8 +126,9 @@ The levels of the Mapping Topic are split and added to the source payload as `_T
 step 5 to verify that your substitutions produce the expected Cumulocity format. This helps catch errors early and
 ensures smooth operation.
 
-The following screenshot shows the **Transformation** step for transformation type **Substitution as JSONata
-Expression**. This step shows a JavaScript editor if you choose **Smart Function (JavaScript)**.
+The following screenshot shows the **Transformation** step with the substitution editor of a JSONata mapping, which
+is available in Expert Mode. For the default Smart Function transformation type, the step shows a JavaScript editor
+instead.
 
 ![Substitution stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot of fourth wizard step to define substitutions using JSONata expressions.")
 
@@ -200,6 +201,13 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
   first. Your changes are saved as a **draft** alongside the running, active configuration and only take effect
   once you publish and activate that draft. See [Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning)
   for the full draft, publish, and activate flow, including rollback to a previous version.
+- An existing mapping opens in the editor as a row of tabs instead of the creation wizard: **Connector**,
+  **General Settings**, **Subscription** (outbound only), **Templates**, **Transformation**, and **Testing**. They match
+  the wizard steps **Select templates** and **Test mapping**, which are named **Templates** and **Testing** here. A
+  trailing * on **Connector** or **General Settings** means a required value is still missing. The editor shows no
+  tab for a step that does not apply to the mapping.
+- The footer of the editor has a **Close** button and a split **Save** button. The arrow beside it offers **Save**,
+  **Save & Activate**, and **Check on server**. See [Saving from the editor](#editor-save).
 - The **Activate** column switches a mapping on or off. A mapping that is not activated never runs.
 - The row menu offers **Duplicate**, **Publish draft** (only while a draft exists), **Versions**, **Enable
   debugging** or **Disable debugging**, and **Export mapping**.
@@ -211,6 +219,21 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
   [outbound](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/samples/mappings-OUTBOUND.json).
 
 ![Import mappings](../../../resources/image/Dynamic_Mapper_Mapping_Table_Import.png "The import dialog for adding mappings from a JSON file.")
+
+#### Saving from the editor {#editor-save}
+
+The split button in the editor footer remembers your last choice and uses it as its main action.
+
+| Choice | What happens |
+|---|---|
+| **Save** | Writes your changes to the draft. The running mapping does not change. |
+| **Save & Activate** | Saves the draft, then opens the publish dialog and activates the new version. If you cancel the dialog, the changes stay a draft and a message tells you so. If you changed only the connector, there is nothing to publish, and an inactive mapping is switched on. |
+| **Check on server** | Runs the server validation on the mapping as it is now, without saving anything. Problems open the same list that a rejected save shows. |
+
+The right side of the footer shows the active version, a **debug** badge while debug logging is on, and a **draft**
+badge when the mapping has unpublished changes. **Save** is disabled for users without the Mapping Admin or Mapping
+Create role, in read-only views, and while the inventory filter does not return a boolean. See
+[Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning).
 
 #### Testing a mapping {#testing-a-mapping}
 

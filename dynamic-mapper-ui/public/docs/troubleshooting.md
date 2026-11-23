@@ -181,7 +181,7 @@ exist yet logs exactly that, and names the mapping it applies to:
 
 ```text
 WARN  d.m.p.i.p.FlowResultInboundProcessor - Device with externalId 'ctrlx-48FC8D56…' (type 'c8y_Serial')
-      not found in inventory and createNonExistingDevice is disabled — no request created for mapping
+      not found in inventory and createNonExistingDevice is disabled - no request created for mapping
       'a9gzy85q'. Enable createNonExistingDevice or use an existing externalId.
 ```
 

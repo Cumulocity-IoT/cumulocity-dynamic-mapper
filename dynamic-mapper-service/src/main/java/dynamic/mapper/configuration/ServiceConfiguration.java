@@ -75,7 +75,7 @@ public class ServiceConfiguration implements Cloneable {
         this.supportESM = true;
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
-        this.mappingVersionRetention = 5;
+        this.mappingVersionRetention = 10;
         this.engineRotationThreshold = 1000;
         this.contextPoolSize = 20;
         this.serviceLogs = new ServiceLogsConfiguration();

@@ -60,6 +60,6 @@ to the connectors it should run on, because a mapping that is not deployed to a 
 [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting).
 
 For screenshots of the connector form and the connector and connection-log tables, see the
-[**Connector Reference**](/c8y-pkg-dynamic-mapper/introduction/connectors) page. It links to a page for each connector with
-specific setup: HTTP, Webhook, REST Polling, Kafka, and Pulsar.
+[**Connector Reference**](/c8y-pkg-dynamic-mapper/introduction/connectors) page. It links to a page for each connector type with
+its specific setup.
 

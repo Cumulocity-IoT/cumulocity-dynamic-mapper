@@ -309,6 +309,17 @@ function onMessage(msg, context) {
 The `type` field in each metric entry is case-insensitive and supports: `Int8`, `Int16`, `Int32`, `Int64`,
 `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float`, `Double`, `Boolean`, `String`, `DateTime`, `Text`, `UUID`, `Bytes`.
 
+`DataSet`, `File`, and `Template` metrics are decoded on inbound messages only. An outbound metric with another
+`type` is not supported.
+
+:::caution
+A `Bytes` metric needs a Java `byte[]` as its `value`. The serializer does not convert a Base64 string or a
+JavaScript array. For such a value it logs a warning, `type Bytes but value is not byte[], skipping value`, and sends the
+metric without a value. Inbound `Bytes` metrics arrive as Base64 strings, so do not return that string unchanged in
+an outbound command. How to build a `byte[]` inside a Smart Function is not yet documented here: check the
+microservice log for the warning after your first test.
+:::
+
 #### Sparkplug Host Mode {#sparkplug-host-mode}
 
 Separately from mapping-level inbound/outbound decoding above, an **MQTT connector** can act as a

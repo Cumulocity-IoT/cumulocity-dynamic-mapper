@@ -70,12 +70,65 @@ State is read when a message starts, and the keys the message changed with `setS
 finishes. Messages of the same mapping that are processed at the same time do not see each other's changes while they
 run. A message that only reads state, or writes other keys, does not affect them. If two messages write the **same**
 key, the last one to finish wins, so counters and other read-modify-write patterns can lose updates under concurrent
-load. Use state for values where an occasional lost update is acceptable, or for per-device keys that one device
+load. To combine several messages into one, use [`context.collect`](#collect), which is atomic. Use state for values where an occasional lost update is acceptable, or for per-device keys that one device
 writes in sequence.
 
 `context.getState(key)` returns a copy. Changing the returned object does not change the state: call `setState`
 with the new value.
 :::
+
+#### Many messages into one: `context.collect` {#collect}
+
+Some devices send one MQTT message per value. A Unified Namespace publisher, for example, sends 100 messages for the
+same timestamp, with the measurement name in the topic and only `time` and `value` in the payload. To create **one**
+measurement with 100 fragments, the mapping must collect the values until the group is complete.
+
+Do not build this with `getState` and `setState`. Of 100 messages that run at the same time, none sees the other 99,
+so a count made from state never reaches 100 and no measurement is created. Use `context.collect` instead. It adds a
+value to a named group and checks the count in one atomic step.
+
+```javascript
+function onMessage(msg, context) {
+  const parts = msg.topic.split("/");           // uns/plant1/press7/temperature
+  const name = parts[parts.length - 1];
+  const deviceId = parts[parts.length - 2];
+
+  // One group per device and timestamp, complete after 100 values
+  const values = context.collect(deviceId + "|" + msg.payload.time, name, msg.payload.value, 100);
+  if (!values) {
+    return [];                                  // group still incomplete
+  }
+
+  const measurement = { time: msg.payload.time, type: "uns_Measurement" };
+  Object.keys(values).forEach(function (n) {
+    measurement["uns_" + n] = { [n]: { value: values[n] } };
+  });
+  return [{
+    cumulocityType: "measurement",
+    action: "create",
+    payload: measurement,
+    externalSource: [{ type: "c8y_Serial", externalId: deviceId }]
+  }];
+}
+```
+
+`context.collect(groupKey, itemKey, value, expectedCount)` returns `null` until the group holds `expectedCount`
+different item keys. The call that adds the last one receives the complete group as an object of item key to value, and
+the group is removed. A repeated item key replaces the earlier value and does not count twice.
+
+:::caution
+- Groups are held **in memory**. They are lost on a restart and are not shared between service instances.
+- The mapper does not know when a group is "finished" unless the count is reached. A group that never completes stays
+  in memory until the mapping's state expires, the mapping is deleted, or `clearState()` is called. A mapping keeps at
+  most 1,000 incomplete groups and drops the oldest when one more opens.
+- The group is removed when it is handed out. If the function fails afterwards, those values are lost.
+- In Dry Run and Live Test, `collect` returns `null` and buffers nothing, so a test shows only the incomplete case.
+  Send the real messages to see the grouped measurement.
+- A license counts the larger of the incoming messages and the created measurements, so 100 messages in and one
+  measurement out still count as 100.
+:::
+
+A complete mapping is in the sample set as *IN-20 Smart Function - group single-value UNS messages into one measurement*.
 
 #### State in Java Extensions {#state-in-java-extensions}
 

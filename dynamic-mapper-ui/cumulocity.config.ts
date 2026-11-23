@@ -119,8 +119,8 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Processor_Extension_Plugin_Installed.png',
@@ -211,8 +211,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Subscription_Dynamic.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Outbound_Subscription.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Outbound_Subscription.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Statistic.png',

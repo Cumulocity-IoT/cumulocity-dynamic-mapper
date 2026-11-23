@@ -431,6 +431,34 @@ export interface SmartFunctionContext extends DataPrepContext {
    * }
    */
   isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
+
+  /**
+   * Adds one value to a named group and returns the whole group once it holds `expectedCount` values; returns
+   * `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the
+   * same timestamp into one measurement.
+   *
+   * Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and
+   * written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count
+   * made from state never reaches 100. `collect` adds the value and checks the count in one step: exactly one
+   * message receives a given complete group, and the group is removed when it is handed out.
+   *
+   * A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not
+   * shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A
+   * mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`,
+   * and adds a warning, if an argument is missing or `expectedCount` is not a whole number from 1 to 10,000. In
+   * a test run it returns `null` and buffers nothing.
+   *
+   * @param groupKey - What belongs together, for example device ID and timestamp joined with `"|"`.
+   * @param itemKey - Which value of the group this is, for example the measurement name.
+   * @param value - The value to store.
+   * @param expectedCount - How many distinct item keys complete the group, from 1 to 10,000.
+   * @returns The complete group as an object of item key to value, or `null` while it is incomplete.
+   *
+   * @example
+   * const values = context.collect(deviceId + "|" + payload.time, name, payload.value, 100);
+   * if (!values) return [];
+   */
+  collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null;
 }
 
 // ============================================================================
@@ -1557,6 +1585,12 @@ export interface SmartFunctionContextV2<
    * otherwise. Atomic, memory only, shared with the `$isDuplicate` filter function. See `SmartFunctionContext`.
    */
   isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean;
+
+  /**
+   * Adds one value to a named group and returns the whole group once it holds `expectedCount` values, `null`
+   * before. Atomic, memory only. See `SmartFunctionContext`.
+   */
+  collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null;
 }
 
 /**
@@ -1915,6 +1949,29 @@ function mockIsDuplicate(
 }
 
 /**
+ * In-memory stand-in for `context.collect` in the mock contexts: same rules as the runtime (a group completes at
+ * `expectedCount` distinct item keys, is removed when handed out, `null` for bad arguments).
+ */
+function mockCollect(
+  groups: Map<string, Map<string, unknown>>,
+  groupKey: string,
+  itemKey: string,
+  value: unknown,
+  expectedCount: number
+): Record<string, unknown> | null {
+  if (groupKey == null || itemKey == null || value == null) return null;
+  if (!Number.isInteger(expectedCount) || expectedCount < 1 || expectedCount > 10000) return null;
+  const group = groups.get(groupKey) ?? new Map<string, unknown>();
+  group.set(itemKey, value);
+  if (group.size < expectedCount) {
+    groups.set(groupKey, group);
+    return null;
+  }
+  groups.delete(groupKey);
+  return Object.fromEntries(group);
+}
+
+/**
  * Mock V2 runtime context for testing V2 Smart Functions.
  * Returns a {@link SmartFunctionContextV2} with fully typed config and state.
  *
@@ -1942,6 +1999,7 @@ export function createMockRuntimeContextV2<
 }): SmartFunctionContextV2<TConfig, TState> {
   const state = {} as TState;
   const seen = new Map<string, number>();
+  const groups = new Map<string, Map<string, unknown>>();
 
   return {
     runtime: 'dynamic-mapper',
@@ -1993,6 +2051,9 @@ export function createMockRuntimeContextV2<
     },
     isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
       return mockIsDuplicate(seen, key, windowSeconds);
+    },
+    collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null {
+      return mockCollect(groups, groupKey, itemKey, value, expectedCount);
     }
   };
 }
@@ -2021,6 +2082,7 @@ export function createMockRuntimeContext(options: {
 }): SmartFunctionContext {
   const state: Record<string, any> = {};
   const seen = new Map<string, number>();
+  const groups = new Map<string, Map<string, unknown>>();
 
   return {
     runtime: "dynamic-mapper",
@@ -2072,6 +2134,9 @@ export function createMockRuntimeContext(options: {
     },
     isDuplicate(key: string | number | boolean | object, windowSeconds: number): boolean {
       return mockIsDuplicate(seen, key, windowSeconds);
+    },
+    collect(groupKey: string, itemKey: string, value: unknown, expectedCount: number): Record<string, unknown> | null {
+      return mockCollect(groups, groupKey, itemKey, value, expectedCount);
     }
   };
 }

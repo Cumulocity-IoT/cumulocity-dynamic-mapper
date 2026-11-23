@@ -568,3 +568,22 @@ describe('DeviceMessage payload', () => {
     expect(msg.contentType).toBe('application/x-protobuf');
   });
 });
+
+describe('mock context.collect', () => {
+  it('returns null until the group is complete, then the whole group once', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.collect('d1|t1', 'a', 1, 3)).toBeNull();
+    expect(ctx.collect('d1|t1', 'b', 2, 3)).toBeNull();
+    expect(ctx.collect('d1|t1', 'c', 3, 3)).toEqual({ a: 1, b: 2, c: 3 });
+    expect(ctx.collect('d1|t1', 'a', 1, 3)).toBeNull(); // group was handed out and removed
+  });
+
+  it('keeps groups apart and ignores bad arguments', () => {
+    const ctx = createMockRuntimeContext({});
+    expect(ctx.collect('g1', 'a', 1, 2)).toBeNull();
+    expect(ctx.collect('g2', 'a', 1, 2)).toBeNull();
+    expect(ctx.collect('g1', 'b', 2, 2)).toEqual({ a: 1, b: 2 });
+    expect(ctx.collect('g3', 'a', 1, 0)).toBeNull();
+    expect(ctx.collect('g3', 'a', 1, 10001)).toBeNull();
+  });
+});

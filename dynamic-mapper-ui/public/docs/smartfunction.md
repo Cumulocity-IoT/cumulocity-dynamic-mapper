@@ -322,7 +322,7 @@ The same value is available to **Java Extensions** as `message.getTransportField
 | `mappingName` | All | The name of the mapping. |
 | `mappingId` | All | The internal ID of the mapping. |
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
-| `aliasMap` / `isActive` | Outbound only | SparkPlug B-specific context properties (`aliasMap` and `isActive`) are available for **outbound** SparkPlug B mappings only. See the *Metadata Properties for Outbound Smart Functions* table for details. |
+| `aliasMap` / `isActive` / `deviceActiveMap` | Outbound only | SparkPlug B-specific context properties (`aliasMap`, `isActive`, and `deviceActiveMap`) are available for **outbound** SparkPlug B mappings only. See the *Metadata Properties for Outbound Smart Functions* table for details. |
 
 ##### Context methods for accessing metadata
 
@@ -348,7 +348,7 @@ object:
 - `context.getExternalId()` - Returns the resolved external ID of the source device. This is the recommended way
   to identify the device in an **outbound** function, an operation carries the device under `deviceId`, not
   `source`, so reading `payload["source"]["id"]` is unreliable and throws when absent. Requires **Use external
-  id** and an **External Id type** on the mapping.
+  id** and an **External id type** on the mapping.
 - `context.isDuplicate(key, windowSeconds)` - Returns `true` if the same key was seen for this mapping less than
   `windowSeconds` ago (1 to 3600), and records it otherwise. Use it to drop a message that a broker or gateway
   delivered twice: `if (context.isDuplicate(deviceId + "|" + time, 60)) { return []; }`. Unlike `getState` and
@@ -360,6 +360,20 @@ object:
   memory, are lost on a service restart, and are not shared between service instances. A dropped inbound message
   counts under **Repeated** in the monitoring table. It shares its store with the `$isDuplicate` function of the
   execution filter. See [Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
+- `context.collect(groupKey, itemKey, value, expectedCount)` - Adds one value to a named group and returns the
+  whole group, as an object of item key to value, once it holds `expectedCount` values (1 to 10,000). It returns
+  `null` until then. Use it to turn several messages into one, for example 100 single-value messages of one
+  timestamp, as a Unified Namespace publisher sends them, into one measurement with 100 fragments:
+  `var values = context.collect(deviceId + "|" + time, name, value, 100); if (!values) { return []; }`. Unlike
+  `getState` and `setState`, the step is atomic. State is read when a message starts and written back when it
+  ends, so of 100 messages that run at the same time none sees the other 99; `collect` adds the value and checks
+  the count in one step, and exactly one message receives the complete group. A repeated `itemKey` replaces the
+  earlier value. The group is removed when it is handed out, so a function that fails afterwards loses it. Groups
+  are kept in memory, are lost on a service restart, and are not shared between service instances. A mapping
+  keeps at most 1,000 incomplete groups and drops the oldest when one more opens. `clearState()` and deleting the
+  mapping remove them. It returns `null` and adds a warning when an argument is missing or `expectedCount` is
+  not a whole number from 1 to 10,000. In Dry Run and Live Test it returns `null` and buffers nothing, so a
+  test shows only the incomplete case. A complete example is `resources/samples/uns/uns-group-by-timestamp.js`.
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
 - `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not
@@ -597,7 +611,8 @@ Kafka (the `content-type` record header). Other connectors send the bytes withou
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
 | `externalId` | All | The resolved external ID of the source device (present when `useExternalId` is enabled on the mapping). |
 | `aliasMap` | SparkPlug B only | A `{ metricName → alias }` map loaded from the `sparkPlugB_NBIRTH` (or `sparkPlugB_DBIRTH`) fragment stored on the device managed object during inbound BIRTH processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node can match them without a full name lookup: <br>`const aliasMap = context.getConfig().aliasMap \|\| {};`<br>`function metric(name, type, value) {`<br>`  const m = { name, type, value };`<br>`  if (aliasMap[name] !== undefined)`<br>`    m.alias = parseInt(aliasMap[name], 10);`<br>`  return m;`<br>`}` |
-| `isActive` | SparkPlug B only | Boolean flag reflecting the current online/offline state of the target Edge Node or Device. Set to `true` when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and `false` after a NDEATH / DDEATH message. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to devices that have gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // device offline, suppress command`<br>`}` |
+| `isActive` | SparkPlug B only | Boolean flag reflecting the online/offline state of the **Edge Node** (fragment `sparkPlugB_isActive`). `true` after NBIRTH / NDATA, `false` after NDEATH. It does not describe an individual device: use `deviceActiveMap` for that. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to an Edge Node that has gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // node offline, suppress command`<br>`}` |
+| `deviceActiveMap` | SparkPlug B only | A `{ deviceId → boolean }` map built from the `sparkPlugB_isActive_<deviceId>` fragments on the Edge Node managed object. Use it to check the status of one device before building a DCMD. A device without a recorded status counts as active. See [SparkPlug B](/c8y-pkg-dynamic-mapper/introduction/sparkplugb). |
 
 :::important Important: Webhook with Cumulocity Internal
 **Using Webhook connectors with Cumulocity Internal enabled:**
@@ -754,7 +769,7 @@ When your Smart Function receives a message, you can access metadata information
   **Note:** The publisher must include the `clientId` as a user property when publishing. Not available for MQTT
   3.1.1 connections.
 - **External ID** (outbound only): Access the device's external ID using `context.getExternalId()` or
-  `context.getConfig().externalId`. This requires **Use external id** and an **External Id type** on the mapping.
+  `context.getConfig().externalId`. This requires **Use external id** and an **External id type** on the mapping.
   Smart Functions do not receive an `_IDENTITY_` payload node.
 - **Cumulocity Source ID** (outbound only): Access the device's internal Cumulocity ID using `msg.sourceId`.
 

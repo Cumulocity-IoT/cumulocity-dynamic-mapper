@@ -11,7 +11,6 @@ is about, not in a general "scripts" folder — that grouping is what this layou
 | [`testing/integration/`](testing/integration/) | End-to-end shell tests driven by `run-tests.sh`. Needs the `c8y` CLI and a deployed microservice. See [docs/testing.md](../docs/testing.md). |
 | [`testing/performance/`](testing/performance/) | Load and profiling assets: JMeter profile, Python MQTT generators, async-profiler scripts, and the mappings they drive. |
 | [`testing/environments/`](testing/environments/) | Docker Compose environments for the brokers the tests run against — AMQP, HiveMQ, Kafka, Pulsar, Webhook — plus a local microservice setup. |
-| [`testing/fixtures/`](testing/fixtures/) | Setup scripts that create the devices and subscriptions tests expect. |
 | [`testing/reliability/`](testing/reliability/) | Reliability testing, one directory per scenario: a Pulsar, Kafka or MQTT broker outage with a measurement publisher and gap watcher ([`broker-outage/`](testing/reliability/broker-outage/)), Cumulocity unavailable with a mitmproxy fault injector ([`c8y-unavailable/`](testing/reliability/c8y-unavailable/)), and instructions for a not-yet-implemented GraalVM cancel-race test ([`graalvm-cancel-race/`](testing/reliability/graalvm-cancel-race/)). See [`testing/reliability/README.md`](testing/reliability/README.md). |
 | [`tools/mgmt/`](tools/mgmt/) | `dm.sh`, the CLI for managing a deployed mapper. |
 | [`tools/protobuf/`](tools/protobuf/) | Regenerates the Protobuf descriptors used by the SparkPlug B and Protobuf sample extensions. |

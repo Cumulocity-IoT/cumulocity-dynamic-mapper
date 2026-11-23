@@ -32,6 +32,9 @@ The full flow when working with a mapping is:
    away, since it would otherwise process no messages. An already-active mapping picks the new version up
    immediately. To **roll back**, simply activate an older version; newer versions are kept and remain available.
 
+In the mapping editor, **Save & Activate** runs steps 1 to 3 in one action. See
+[Saving from the editor](/c8y-pkg-dynamic-mapper/introduction/define-mapping#editor-save).
+
 The first time you publish or activate a mapping that has no version history yet, its current active configuration
 is automatically captured as a version, so no history is lost. It keeps its current version label if that is valid
 semver, and uses **1.0.0** otherwise. Existing mappings that previously used sequential integer version numbers

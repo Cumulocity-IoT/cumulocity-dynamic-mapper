@@ -341,6 +341,17 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
         "documentation": "Reports whether the same key was seen for this mapping less than `windowSeconds` ago, and records it if not. Use it to drop a message that a broker or gateway delivered twice. Unlike `getState`/`setState`, the check is atomic: of two copies of a message that run at the same time, exactly one gets `false`. Keys expire after the window, and a mapping holds at most 100,000 of them. The store is the one behind the `$isDuplicate` function of the mapping filter, so a key used in both places counts once. Keys live in memory only: they are lost on restart and are not shared between service instances. The window starts at the first message and does not restart when a repeat arrives. The check fails open: it returns `false`, and adds a warning, if the key has no value or the window is not a number of seconds from 1 to 3600. In a test run it always returns `false` and records nothing. Join several fields with a separator, such as `\"|\"`, so that `a` and `bc` differ from `ab` and `c`. Prefer a string key."
       },
       {
+        "name": "collect",
+        "parameters": [
+          "groupKey",
+          "itemKey",
+          "value",
+          "expectedCount"
+        ],
+        "returnType": "Record<string, unknown>",
+        "documentation": "Adds one value to a named group and returns the whole group once it holds `expectedCount` values; returns `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into one measurement. Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count made from state never reaches 100. `collect` adds the value and checks the count in one step: exactly one message receives a given complete group, and the group is removed when it is handed out. A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`, and adds a warning, if an argument is missing or `expectedCount` is not a whole number from 1 to 10,000. In a test run it returns `null` and buffers nothing."
+      },
+      {
         "name": "getState",
         "parameters": [
           "key",

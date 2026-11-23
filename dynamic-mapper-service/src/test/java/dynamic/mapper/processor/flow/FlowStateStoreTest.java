@@ -240,4 +240,34 @@ class FlowStateStoreTest {
 
         assertEquals(Map.of("new", 2), s.loadState(TENANT, MAPPING));
     }
+
+    @Test
+    void collectReturnsTheGroupOnceCompleteAndOnlyOnce() {
+        assertNull(store.collect(TENANT, MAPPING, "g", "a", 1, 3));
+        assertNull(store.collect(TENANT, MAPPING, "g", "b", 2, 3));
+        assertNull(store.collect(TENANT, MAPPING, "g", "b", 22, 3)); // repeated item replaces, does not count twice
+        assertEquals(Map.of("a", 1, "b", 22, "c", 3), store.collect(TENANT, MAPPING, "g", "c", 3, 3));
+        assertNull(store.collect(TENANT, MAPPING, "g", "a", 1, 3)); // a new group starts after hand-out
+    }
+
+    @Test
+    void collectedGroupsAreInvisibleToStateAndGoWithTheMapping() {
+        store.collect(TENANT, MAPPING, "g", "a", 1, 2);
+        assertTrue(store.loadState(TENANT, MAPPING).isEmpty());
+
+        store.clearMappingState(TENANT, MAPPING);
+
+        assertNull(store.collect(TENANT, MAPPING, "g", "b", 2, 2)); // "a" is gone, so 1 of 2
+    }
+
+    @Test
+    void collectDropsTheOldestIncompleteGroupBeyondTheCap() {
+        for (int i = 0; i <= FlowStateStore.MAX_OPEN_GROUPS; i++) {
+            store.collect(TENANT, MAPPING, "g" + i, "a", 1, 2);
+        }
+        // g0 was evicted: completing it now finds only one item; the newest group is still open
+        assertNull(store.collect(TENANT, MAPPING, "g0", "b", 2, 2));
+        assertEquals(Map.of("a", 1, "b", 2),
+                store.collect(TENANT, MAPPING, "g" + FlowStateStore.MAX_OPEN_GROUPS, "b", 2, 2));
+    }
 }

@@ -23,7 +23,7 @@ connector must be disabled before you can edit it. The **Status** is one of `UNK
 is connected, but a temporary platform error delays the start of its subscriptions, and the service retries
 automatically. A mapping runs on a connector only while the connector is enabled and `CONNECTED`.
 
-For connector types that support it (Webhook, Cumulocity API, and REST Polling), the **Test connection** button in
+For connector types that support it (Webhook, REST Polling, MQTT, Kafka, Pulsar, and Cumulocity MQTT Service), the **Test connection** button in
 the connector form checks the configuration before you save it.
 
 The **⋮** menu of the page also holds **Reconnect Subscription outbound**, **Export all connectors**, and

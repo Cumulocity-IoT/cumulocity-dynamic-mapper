@@ -12,7 +12,7 @@ version in **MQTT version**.
 
 | Property | Description |
 |---|---|
-| **MQTT version** (required) | `3.1.1` (default) or `5.0`. |
+| **MQTT version** (required) | `3.1.1` or `5.0`. The default is `3.1.1` for the **MQTT** connector type and `5.0` for the **MQTT 5.0** type. |
 | **protocol** (required) | `mqtt://` (default, plain TCP), `mqtts://` (TCP with TLS), `ws://` (WebSocket), or `wss://` (WebSocket with TLS). |
 | **Host**, **Port** (required) | Address of the broker, for example port 1883 for `mqtt://` or 8883 for `mqtts://`. |
 | **Server path** | Path of the WebSocket endpoint, for example `/mqtt`. Shown only for `ws://` and `wss://`. |

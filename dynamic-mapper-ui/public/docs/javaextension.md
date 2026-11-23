@@ -66,10 +66,10 @@ Each step in detail:
 
 ##### Selecting Java Extensions in the mapping stepper
 
-When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The
-mapping stepper displays all available extensions along with their associated templates:
+When creating a mapping, you can select from installed Java Extensions that define the transformation logic. In the
+**Select templates** step, choose the **Java Extension**, then pick one of its events:
 
-![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
+![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png "The Select templates step of the mapping stepper for a Java Extension mapping. The Java Extension selector shows the installed extension, and the Events list below it shows the processors it provides, each with a short description. No target template is shown because the extension code produces the target payload.")
 
 ##### Uploading a Java Extension
 
@@ -326,8 +326,8 @@ no per-mapping override is provided:
 
 ```yaml
 extensions:
-  - eventName: SparkplugBWithConfigMeasurement
-    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBWithConfigMeasurement
+  - eventName: SparkplugBMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement
     description: Sparkplug B processor with configurable fragment and unit
     version: "1.0"
     parameter:

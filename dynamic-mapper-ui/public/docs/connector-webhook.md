@@ -10,6 +10,10 @@ transformed MEA, for example to receive an `EVENT` of type `c8y_Uplink` and use 
 payload and transform it into a `MEASUREMENT`. With the setting on, the connector uses the microservice credentials
 and the endpoint of the tenant, and the settings **Base URL**, **Authentication**, and the other connection
 settings are hidden. Otherwise, set the **Base URL** and choose **Authentication** `None`, `Basic`, or `Bearer`.
+Further properties are available when **Use Cumulocity API of this tenant** is off: **Accept header**
+(default `application/json`), **Health endpoint** (called with GET by **Test connection**), and a **headers** map. The
+Webhook connector supports QoS 1 (at least once) only.
+
 The separate **Cumulocity API** connector type is a preconfigured variant of this connector for the same purpose.
 
 ![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_Webhook.png "Webhook connector configuration properties.")

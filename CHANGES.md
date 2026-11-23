@@ -2,6 +2,21 @@
 
 ## Release 6.6.1 (in development)
 
+### Combine many messages into one: `context.collect` (new feature)
+
+A Smart Function can now turn several inbound messages into one object, for example 100 single-value messages of the
+same timestamp from a Unified Namespace publisher into one measurement with 100 fragments.
+
+- **Why a new method:** `getState`/`setState` work on a snapshot taken when a message starts, so of 100 concurrent
+  messages none sees the others and a count never completes (all 20 groups were lost in a 100-message concurrent test).
+- **`context.collect(groupKey, itemKey, value, expectedCount)`** adds a value to a named group and, atomically, returns
+  the whole group once it holds `expectedCount` values. It returns `null` before that. Exactly one message receives a
+  complete group.
+- **Limits:** groups are kept in memory (lost on restart, not shared between instances), a mapping keeps at most 1,000
+  incomplete groups, and a test run buffers nothing.
+- **Documentation and examples:** the Smart Function and Flow state references, the sample mapping *IN-20*
+  (`resources/samples/uns/uns-group-by-timestamp.js`), and the integration test `test-inbound-smartfunction-uns-group`.
+
 ### Outbound payload formats: text and binary (new feature)
 
 An outbound mapping can now send more than JSON. With the payload type **Any Payload** (now offered outbound) and the

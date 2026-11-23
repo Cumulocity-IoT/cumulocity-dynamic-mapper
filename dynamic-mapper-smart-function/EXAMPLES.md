@@ -539,5 +539,3 @@ describe('Inbound Basic', () => {
 
 For more information, see:
 - [README.md](README.md) - Complete documentation
-- [QUICK_START.md](QUICK_START.md) - Get started quickly
-- [../SMART_FUNCTION_TYPINGS.md](../SMART_FUNCTION_TYPINGS.md) - Type system documentation
