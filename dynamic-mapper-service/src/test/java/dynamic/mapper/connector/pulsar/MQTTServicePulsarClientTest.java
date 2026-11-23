@@ -268,6 +268,7 @@ class MQTTServicePulsarClientTest {
         mapping.setDebug(false);
 
         when(context.getCurrentRequest()).thenReturn(request);
+        when(context.getRequests()).thenReturn(java.util.List.of(request));
         when(context.getResolvedPublishTopic()).thenReturn("test/topic");
         when(context.getMapping()).thenReturn(mapping);
 
@@ -808,4 +809,112 @@ class MQTTServicePulsarClientTest {
         assertTrue(spec.getProperties().containsKey("sparkplugHostId"));
     }
 
+    // ---- every request of the context is produced, not only the last
+
+    private ProcessingContext<?> contextWith(DynamicMapperRequest... requests) {
+        ProcessingContext<?> context = mock(ProcessingContext.class);
+        Mapping mapping = new Mapping();
+        mapping.setIdentifier("test-mapping");
+        mapping.setName("Test Mapping");
+        mapping.setQos(Qos.AT_LEAST_ONCE);
+        mapping.setDebug(false);
+        when(context.getRequests()).thenReturn(java.util.List.of(requests));
+        when(context.getCurrentRequest()).thenReturn(requests[requests.length - 1]);
+        when(context.getResolvedPublishTopic()).thenReturn("context/topic");
+        when(context.getMapping()).thenReturn(mapping);
+        return context;
+    }
+
+    private void readyToPublish() throws PulsarClientException {
+        setupMocksForPublish();
+        mqttServicePulsarClient = new MQTTServicePulsarClient(
+                serviceRegistry, clientServices, connectorRegistry, connectorConfiguration, dispatcher,
+                TEST_SUBSCRIPTION_ID, TEST_TENANT);
+        injectPulsarClient(mqttServicePulsarClient, pulsarClient);
+        injectConsumerAndProducer(mqttServicePulsarClient, platformConsumer, deviceProducer);
+        injectTopicNames(mqttServicePulsarClient);
+        when(deviceProducer.isConnected()).thenReturn(true);
+        when(pulsarClient.isClosed()).thenReturn(false);
+    }
+
+    @Test
+    void everyRequestOfTheContextIsProduced() throws PulsarClientException {
+        readyToPublish();
+        DynamicMapperRequest first = new DynamicMapperRequest();
+        first.setRequest("{\"n\":1}");
+        DynamicMapperRequest second = new DynamicMapperRequest();
+        second.setRequest("{\"n\":2}");
+        DynamicMapperRequest third = new DynamicMapperRequest();
+        third.setRequest("{\"n\":3}");
+
+        mqttServicePulsarClient.publishMEAO(contextWith(first, second, third));
+
+        // only the last was produced; the first two were acknowledged and lost without an error
+        verify(messageBuilder, org.mockito.Mockito.times(3)).send();
+        verify(messageBuilder).value("{\"n\":1}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        verify(messageBuilder).value("{\"n\":2}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        verify(messageBuilder).value("{\"n\":3}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void aRequestsOwnTopicWinsOverTheContextsAndOthersUseTheContextsTopic() throws PulsarClientException {
+        readyToPublish();
+        DynamicMapperRequest own = new DynamicMapperRequest();
+        own.setRequest("{}");
+        own.setPublishTopic("device/7/command");
+        DynamicMapperRequest plain = new DynamicMapperRequest();
+        plain.setRequest("{}");
+
+        mqttServicePulsarClient.publishMEAO(contextWith(own, plain));
+
+        verify(messageBuilder).property(MQTTServicePulsarClient.PULSAR_PROPERTY_TOPIC, "device/7/command");
+        verify(messageBuilder).property(MQTTServicePulsarClient.PULSAR_PROPERTY_TOPIC, "context/topic");
+    }
+
+    @Test
+    void aClosedClientMakesEveryRequestRetryableNotJustTheLast() {
+        mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
+                serviceRegistry, clientServices, connectorRegistry, connectorConfiguration, dispatcher,
+                TEST_SUBSCRIPTION_ID, TEST_TENANT));
+        injectPulsarClient(mqttServicePulsarClient, pulsarClient);
+        doReturn(null).when(mqttServicePulsarClient).reconnect();
+        when(pulsarClient.isClosed()).thenReturn(true);
+        DynamicMapperRequest first = new DynamicMapperRequest();
+        first.setRequest("{}");
+        DynamicMapperRequest second = new DynamicMapperRequest();
+        second.setRequest("{}");
+        ProcessingContext<?> context = contextWith(first, second);
+
+        mqttServicePulsarClient.publishMEAO(context);
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                first.getError() instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                second.getError() instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+    }
+
+    @Test
+    void aRequestWithoutAPayloadIsSkippedAndTheOthersAreProduced() throws PulsarClientException {
+        readyToPublish();
+        DynamicMapperRequest empty = new DynamicMapperRequest();
+        DynamicMapperRequest ok = new DynamicMapperRequest();
+        ok.setRequest("{}");
+
+        mqttServicePulsarClient.publishMEAO(contextWith(empty, ok));
+
+        verify(messageBuilder, org.mockito.Mockito.times(1)).send();
+    }
+
+    @Test
+    void aLostConnectionIsRetryableAndDoesNotFlipTheConnectorState() throws PulsarClientException {
+        readyToPublish();
+        when(messageBuilder.send()).thenThrow(new PulsarClientException.TimeoutException("send timed out"));
+        DynamicMapperRequest request = new DynamicMapperRequest();
+        request.setRequest("{}");
+
+        mqttServicePulsarClient.publishMEAO(contextWith(request));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                request.getError() instanceof dynamic.mapper.processor.ConnectorNotConnectedException);
+    }
 }

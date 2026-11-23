@@ -571,13 +571,14 @@ also report its connection state correctly, because the pause follows `isConnect
 A failure caused by the message, for example a message that is too large, is not retried. It stays a normal error and
 is acknowledged, as before.
 
-The publish loop is shared: `AConnectorClient.forEachPublishable` skips a request without a payload or for an API the
+The publish loop is shared (Kafka, Pulsar, the Cumulocity MQTT Service, MQTT 3 and 5, AMQP 0-9-1):
+`AConnectorClient.forEachPublishable` skips a request without a payload or for an API the
 connector does not publish, resolves the payload bytes and the topic, records the error of a request without a topic, and
 hands the rest to the connector's send. A failure of one request does not stop the next. What counts as "the peer is
 unavailable" is the connector's `isBrokerUnavailable` override: Kafka (retriable errors and timeouts), Pulsar (timeouts,
 a lost or closed connection), and the MQTT clients (the HiveMQ client's not-connected, closed and failed connection
-exceptions, which is the connection dropping between the readiness check and the publish). AMQP, AMQP 1.0, WebHook and
-Pub/Sub keep their own handling.
+exceptions, which is the connection dropping between the readiness check and the publish). The Cumulocity MQTT Service
+inherits Pulsar's. AMQP 1.0, WebHook and Pub/Sub keep their own loop and handling.
 
 ##### Limits
 

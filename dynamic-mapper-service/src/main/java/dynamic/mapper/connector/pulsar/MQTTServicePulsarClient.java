@@ -734,21 +734,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
             reconnect();
             // Retry the message instead of acknowledging it unpublished
-            failPublishUnavailable(context, context.getCurrentRequest(),
-                    new IllegalStateException("Pulsar client is closed"));
+            failAllRequestsUnavailable(context, new dynamic.mapper.processor.ConnectorNotConnectedException(connectorName));
             return;
         }
 
-        DynamicMapperRequest request = context.getCurrentRequest();
-
-        if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
-            return;
-        }
-        byte[] payloadBytes = request.getBinaryPayload() != null
-                ? request.getBinaryPayload()
-                : request.getRequest().getBytes(StandardCharsets.UTF_8);
-        String originalMqttTopic = context.getResolvedPublishTopic();
         // NOTE on layering: this connector does not perform an MQTT PUBLISH — it produces to
         // the Pulsar topic persistent://<tenant>/mqtt/to-device, and MQTT Service relays from
         // there to the device. So this QoS selects the *Pulsar producer* send mode
@@ -759,7 +748,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // send. EXACTLY_ONCE is clamped to AT_LEAST_ONCE by supportedQos.
         Qos qos = effectivePublishQos(context);
 
-        try {
+        // Every request of the context is produced. This used to produce only the last one
+        // (context.getCurrentRequest()), so a mapping that generated several requests had all but one acknowledged
+        // and lost, with no error. A request's own topic wins over the context's, as on the other connectors.
+        forEachPublishable(context, item -> {
             // Check/recreate producer if needed. The whole decision is made under
             // pulsarChannelLock (createTowardsDeviceProducer() already does its own
             // check-close-create under the same lock) so that two concurrent publishMEAO()
@@ -779,18 +771,16 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 pulsarChannelLock.unlock();
             }
 
-            sendMessageToDevice(producerToUse, payloadBytes, originalMqttTopic, qos, context);
+            sendMessageToDevice(producerToUse, item.payload(), item.topic(), qos, context);
+        });
+    }
 
-        } catch (Exception e) {
-            log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
-            if (isBrokerUnavailable(e)) {
-                // Not a problem of the message: retry it, do not count it, and do not acknowledge it
-                failPublishUnavailable(context, request, e);
-            } else {
-                context.addError(new dynamic.mapper.processor.ProcessingException(
-                        "Failed to publish message", e));
-            }
-        }
+    /**
+     * This connector keeps its own connection state (see {@link #isPhysicallyConnected()}, which sets it from the
+     * client, the consumer and the producer), so a failed publish must not flip it: the next check would flip it back.
+     */
+    @Override
+    protected void onBrokerUnavailable(Throwable error) {
     }
 
     /**
