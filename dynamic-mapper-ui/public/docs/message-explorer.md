@@ -82,7 +82,7 @@ The most powerful feature of the Message Explorer is the ability to instantly bu
 
 1. Start a session on a connector and topic that your devices publish to.
 2. Wait for at least one message to appear in the list.
-3. Click the "add" button on the message row you want to use as a template.
+3. Select **Create mapping** on the message row you want to use as a template.
 4. The **Add Mapping** dialog opens with the captured payload pre-loaded as the source template, and the topic
    pre-filled from the captured message. If the message carried a **key**, it is carried over too: for JSONata
    mappings as `_CONTEXT_DATA_.key` in the source template (toggle **Show metadata** to see it), and for Smart

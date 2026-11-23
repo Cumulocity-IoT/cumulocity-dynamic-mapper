@@ -111,7 +111,7 @@ property is empty does the mapping QoS decide:
 | Setting | Meaning |
 |---|---|
 | Mapping topic | Kafka topic name, used as written. There is no tenant or namespace. |
-| `groupId` (required) | The consumer group. It plays the role of the Pulsar subscription. Committed offsets are kept per group. |
+| **Consumer group ID** (`groupId`, required) | The consumer group. It plays the role of the Pulsar subscription. Committed offsets are kept per group. |
 | Record key | Read from `_CONTEXT_DATA_.key` (JSONata) or transport field `key` (Smart Functions, Java extensions). Outbound, a string mapped to `_CONTEXT_DATA_.key` becomes the record key. |
 | Partitions | Handled by Kafka and the consumer group. Not visible in the mapping. |
 

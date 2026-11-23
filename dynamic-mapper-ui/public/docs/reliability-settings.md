@@ -106,9 +106,8 @@ When a connector loses the connection to its broker, the Dynamic Mapper stops re
 messages from Cumulocity. It neither publishes nor discards them. Cumulocity keeps the messages and delivers them
 after the connector is connected again. The Dynamic Mapper stores nothing itself.
 
-This applies to the MQTT, AMQP 0-9-1, AMQP 1.0, Kafka, and Cumulocity MQTT-Service connectors. For the Apache Pulsar
-connector, the Dynamic Mapper does not acknowledge an outbound message that it cannot publish, and Cumulocity
-delivers the message again every few seconds until the broker is back. Other connectors behave as before.
+This applies to the MQTT, AMQP 0-9-1, AMQP 1.0, Kafka, Apache Pulsar, Google Pub/Sub, Webhook, and Cumulocity
+MQTT-Service connectors. Other connectors behave as before.
 
 - The Dynamic Mapper checks the connectors every 10 seconds. If a message arrives before the next check, the
   connector does not acknowledge it and Cumulocity delivers it again. These retries do not count toward
@@ -219,7 +218,7 @@ for messages the Dynamic Mapper sends to it (outbound).
 |:---:|---|---|
 | 0 | Acknowledged immediately | Asynchronous send, no acknowledgment |
 | 1 | Acknowledged after successful processing, negative acknowledgment on failure | Blocking send |
-| 2 | As QoS 1, plus broker-side duplicate suppression | Blocking send |
+| 2 | As QoS 1, but with an Exclusive subscription (one consumer). No duplicate suppression | Blocking send |
 
 ##### Cumulocity MQTT-Service (device isolation)
 

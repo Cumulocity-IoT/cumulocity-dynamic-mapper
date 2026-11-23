@@ -208,6 +208,9 @@ msgstr ""
 msgid "Added to the inventory cache. Devices that are already cached get it when their cache entry is refreshed."
 msgstr ""
 
+msgid "Administrator guide"
+msgstr ""
+
 msgid "advanced setting(s) hidden. Enable \"Expert settings\" to show them."
 msgstr ""
 

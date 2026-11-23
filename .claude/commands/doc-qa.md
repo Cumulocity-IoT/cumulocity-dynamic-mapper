@@ -49,7 +49,7 @@ Extract image references the same way — these are tracked for file-existence o
 
 A. List every file in `resources/image/` (all extensions: `.png`, `.jpg`, `.gif`, `.svg`).
 
-B. Parse `dynamic-mapper-ui/cumulocity.config.ts` and extract every filename from the `buildTime.copy` array `from` paths (strip the `../resources/image/` prefix to get bare filenames).
+B. Parse `dynamic-mapper-ui/cumulocity.config.ts` and extract every filename from the `buildTime.copy` array `from` paths (the `from` path is `../resources/image-optimized/<name>`, generated from `resources/image/` by the prebuild `scripts/optimize-images.js`; strip the prefix to get bare filenames; accept both `image/` and `image-optimized/`). Compare filenames case-sensitively: macOS hides case mismatches that 404 on Linux.
 
 ## Step 3 — Run the image audit
 
@@ -82,7 +82,7 @@ Scan every markdown file in scope for internal links: `[text](relative/path.md)`
 For each link:
 - Resolve the path relative to the markdown file's directory.
 - Check that the target file exists on disk.
-- Anchors: check that the heading exists in the target file (convert heading text to GitHub-style anchor — lowercase, spaces → hyphens, strip punctuation).
+- Anchors: check that the heading exists in the target file (an explicit `{#custom-id}` suffix on a heading, which `DocMarkdownService` renders as the element id, wins; otherwise convert heading text to a GitHub-style anchor — lowercase, spaces → hyphens, strip punctuation). In `public/docs/*.md`, absolute links `/c8y-pkg-dynamic-mapper/introduction/<page>[#id]` are app routes: resolve `<page>` to `public/docs/<page>.md` (or a page in `MARKDOWN_PAGES` / the navigation factory), not to the filesystem.
 
 Report: doc file + line number, broken link target. Fix = "update or remove the link".
 

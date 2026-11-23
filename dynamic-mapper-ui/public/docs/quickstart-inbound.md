@@ -55,10 +55,10 @@ The wizard has five steps. The first two are configuration:
 
 1. **Connector**: select the `quickstart` connector you just created.
 2. **General settings**: fill in:
-   - **Mapping Name**: `Quickstart temperature`
+   - **Mapping name**: `Quickstart temperature`
    - **Target API**: `Measurement`
-   - **Mapping Topic**: `quickstart/+`
-   - **Mapping Topic Sample**: `quickstart/device_01`
+   - **Mapping topic**: `quickstart/+`
+   - **Mapping topic sample**: `quickstart/device_01`
    - Switch on **Create device**, so the mapper creates the device for you the first time a message
      arrives.
 
@@ -207,7 +207,7 @@ topic the message arrived on.
 Two things are worth adjusting before you continue:
 
 - The topic is filled in as the concrete `quickstart/device_01`. Widen it to `quickstart/+` so the mapping serves
-  every device, and set the **Mapping Topic Sample** to `quickstart/device_01`.
+  every device, and set the **Mapping topic sample** to `quickstart/device_01`.
 - Set **Target API** to `Measurement` and switch on **Create device**, as in Step 3.
 
 Then continue at [Step 5](#step-5) and write the Smart Function exactly as described.

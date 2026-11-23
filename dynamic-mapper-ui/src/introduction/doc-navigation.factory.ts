@@ -103,6 +103,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 800,
       preventDuplicates: true
     }),
+    administrationGuideNode: new NavigatorNode({
+      parent: gettext('Guides'),
+      icon: 'wrench',
+      label: gettext('Administrator guide'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/administration-guide',
+      priority: 794,
+      preventDuplicates: true
+    }),
     managingConnectorsNode: new NavigatorNode({
       parent: gettext('Guides'),
       icon: 'plug',

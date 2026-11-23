@@ -13,7 +13,7 @@ The settings are grouped into tabs (**General**, **Processing**, **Caching**, **
 **Save** applies the changes. **Export** and **Import** move the whole configuration in and out as a file, which is
 the quickest way to reproduce a tenant's setup elsewhere. **Expert settings** reveals additional advanced options
 that are hidden by default. The choice is remembered in your browser, and each tab shows how many settings it
-hides. Everyone can read the configuration, but editing it, saving it, and the buttons on the **Processing** and
+hides. Everyone can read and export the configuration, but editing it, saving it, importing it, and the buttons on the **Processing** and
 **Caching** tabs need the `ROLE_DYNAMIC_MAPPER_ADMIN` role. See
 [Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
 
@@ -24,7 +24,7 @@ hides. Everyone can read the configuration, but editing it, saving it, and the b
 | **Outbound mappings** (Expert settings) | Enables the Cumulocity → broker direction. On by default. Changing it requires unsubscribing and re-subscribing the Dynamic Mapper microservice for the tenant. |
 | **Device Isolation Cumulocity MQTT Service** (Expert settings) | When enabled, only registered MQTT clients receive outbound MQTT messages. Off by default. Also requires a re-subscribe to take effect. |
 | **External ID binding during MO creation** | Binds external IDs atomically while the managed object is created, in a single request. Requires a Cumulocity platform of May 2026 or later. Disable it on older instances such as Cumulocity Edge. |
-| **Number of mapping versions to retain** | How many versions are kept per mapping. Publishing a new version deletes the oldest ones beyond this limit. The active version is never deleted. See [Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning). |
+| **Number of mapping versions to retain** | How many versions are kept per mapping. Default 10, minimum 1. Publishing a new version deletes the oldest ones beyond this limit. The active version is never deleted. See [Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning). |
 
 Two of these settings, **Outbound mappings** and **Device Isolation Cumulocity MQTT Service**, do not take
 effect until the microservice is unsubscribed and subscribed again for the tenant. The rest apply on **Save**.
@@ -35,7 +35,7 @@ Cumulocity MQTT Service** is off, the client relation page is hidden.
 
 | Setting | Effect |
 |---|---|
-| **Maximum CPU time for Smart Function JavaScript code** | Default 5000 ms. The service stops a Smart Function that uses more CPU time than this. |
+| **Maximum CPU time for Smart Function JavaScript code** | Default 5000 ms, range 100 to 30000. The service stops a Smart Function that uses more CPU time than this. |
 | **Maximum end-to-end processing time for Smart Functions** | Default 8000 ms (1000 to 120000). Covers the JavaScript and the Cumulocity API calls that follow. When it expires, the message is not acknowledged (QoS above 0) and the broker redelivers it. Must be greater than the CPU time limit, otherwise the form does not save. |
 | **Maximum processing attempts per message** | Default 5, minimum 1. How many times a message may fail before the connector drops it instead of asking the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, and outbound notifications. For REST polling, a page of polled data that keeps failing is skipped after this many attempts: the cursor moves on and the skip is recorded as the mapping's last error. Failures with a server error (HTTP 5xx) do not count there, so an outage does not skip data. |
 | **Support ESM modules** (Expert settings) | Allows `export function` syntax in mapping code. |
@@ -50,10 +50,10 @@ interact.
 
 | Setting | Effect |
 |---|---|
-| **Size inbound Id cache**, **Size outbound Id cache**, **Size inventory cache** | Maximum entries per cache. Clear the cache after you change a size. |
-| **Days lifetime inbound Id cache**, **Days lifetime outbound Id cache**, **Days lifetime inventory cache** | Number of days after which the whole cache is cleared. |
+| **Size inbound Id cache**, **Size outbound Id cache**, **Size inventory cache** | Maximum entries per cache. Default 100000. A size of 0 is replaced by the default when the service starts. Clear the cache after you change a size. |
+| **Days lifetime inbound Id cache**, **Days lifetime outbound Id cache**, **Days lifetime inventory cache** | Number of days after which the whole cache is cleared. Default 1, minimum 1. |
 | **Fragments from inventory to cache** | Fragments of the managed object that Smart Functions and `filterInventory` can read. Each entry is an exact name or a glob pattern such as `sparkPlugB_DBIRTH_*`. |
-| **Minutes lifetime flow state** (Expert settings) | Minutes after which the flow state of a Smart Function or Java Extension mapping is cleared when that mapping has not written it. Each mapping expires on its own. 0 disables the limit. |
+| **Minutes lifetime flow state** (Expert settings) | Minutes after which the flow state of a Smart Function or Java Extension mapping is cleared when that mapping has not written it. Each mapping expires on its own. Default 1440 (24 hours). 0 disables the limit. |
 | **Cache alias maps for SparkPlug B mappings** (Expert settings) | Adds the SparkPlug B birth fragments to the inventory cache automatically. |
 
 The buttons **Clear inbound external ID cache**, **Clear outbound external ID cache**, **Clear inventory cache**,

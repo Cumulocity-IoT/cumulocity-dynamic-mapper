@@ -59,11 +59,11 @@ In the wizard:
 
 1. **Connector**: select `quickstart`.
 2. **General settings**:
-   - **Mapping Name**: `Quickstart command`
+   - **Mapping name**: `Quickstart command`
    - **Source API**: `Operation`. The mapping now listens for operations, not measurements
-   - **Publish Topic**: `quickstart/cmd/+`
-   - **Publish Topic Sample**: `quickstart/cmd/device_01`
-   - Switch on **Use external id** and set **External Id type** to `c8y_Serial`
+   - **Publish topic**: `quickstart/cmd/+`
+   - **Publish topic sample**: `quickstart/cmd/device_01`
+   - Switch on **Use external id** and set **External id type** to `c8y_Serial`
 
 **Use external id** is what lets the function address the device by `device_01` rather than by its internal
 Cumulocity ID. Without it, `context.getExternalId()` returns nothing.
@@ -114,7 +114,7 @@ Identify the device with `context.getExternalId()` or `msg.sourceId`, never with
 operation carries the device under `deviceId`, not `source`, so reading `source.id` throws for this target API.
 :::
 
-Returning the `topic` from the function is optional: leave it out and the mapping's **Publish Topic** is used. It
+Returning the `topic` from the function is optional: leave it out and the mapping's **Publish topic** is used. It
 is worth doing here because it routes each device's commands to its own topic from a single mapping.
 
 #### Step 5: Test, save, activate

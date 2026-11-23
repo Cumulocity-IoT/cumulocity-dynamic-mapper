@@ -6,6 +6,20 @@ title: Pulsar connector
 
 ![Pulsar connector settings](../../../resources/image/Dynamic_Mapper_Connector_Pulsar.png "Pulsar connector configuration properties, including Tenant, Namespace, and Topic type.")
 
+#### Connection and authentication {#pulsar-connection}
+
+| Property | Effect |
+|---|---|
+| **Service URL** | Default `pulsar://localhost:6650`. Use `pulsar+ssl://host:6651` for TLS. |
+| **Enable TLS** | Turns on TLS. The custom CA properties appear only when it is on. |
+| **Authentication method** | `none` (default), `token`, `oauth2`, `tls`, `basic`, or custom client credentials. |
+| **Authentication parameters** | Parameters for the selected method. |
+| **Client ID**, **Client secret** | Used only with custom client credentials. |
+| **Connection timeout (s)**, **Operation timeout (s)**, **Keep-alive interval (s)** | Client timeouts. |
+| **Subscription name** | Base name of the Pulsar subscription. The code default is `dynamic-mapper-subscription`. |
+
+The connector supports QoS 0, 1, and 2.
+
 A mapping contains only a logical, MQTT-style topic, for example `pulsar/test/inbound`. Everything that belongs to the
 Pulsar broker is connector configuration. The connector combines both into the full Pulsar topic name. To move a
 mapping to another broker layout, change the connector and leave the mapping as it is.
@@ -56,8 +70,8 @@ topics that you do not enter as a full Pulsar name.
 
 #### Wildcards and the reverse conversion
 
-Inbound mappings accept the MQTT wildcards `+` (exactly one level) and `#` (all remaining levels) when **Wildcards in
-inbound topics** is on. The connector translates the filter into a Pulsar topic regex. `#` must be the last character
+Inbound mappings accept the MQTT wildcards `+` (exactly one level) and `#` (all remaining levels) because **Wildcards in
+inbound topics** is always on for this connector (the property is read-only). Outbound wildcards are always off. The connector translates the filter into a Pulsar topic regex. `#` must be the last character
 and must follow a `/`. `+` must sit between two `/` characters.
 
 For an incoming message, the connector reverses the conversion when it can check the result against the mapping's topic

@@ -648,7 +648,7 @@ The tests **skip** (exit 42) when the mock or credentials are missing.
 
 ## Contributing New Tests
 
-1. Start from [TEST_TEMPLATE.sh](TEST_TEMPLATE.sh)
+1. Start from [tools/TEST_TEMPLATE.sh](tools/TEST_TEMPLATE.sh)
 2. Customize mapping JSON for your use case
 3. Add validation assertions
 4. Test with `--keep` flag to verify cleanup
