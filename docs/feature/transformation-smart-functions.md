@@ -182,6 +182,14 @@ once that mapping has not written it for `flowStateRetention` minutes (default 1
 disables expiry). When the run is a test (`!affectsMappingStatus()`), the context gets an empty state and no store, so
 nothing is read or written.
 
+`context.collect(groupKey, itemKey, value, expectedCount)` is the one state operation that does **not** use the load/commit
+cycle above. It calls `FlowStateStore.collect` immediately, which adds the item to a group held beside the mapping's
+state (under a reserved key prefix that `loadState` hides) inside one `ConcurrentHashMap.compute`, and removes and returns
+the group when it reaches `expectedCount`. That makes the N:1 case work under concurrency, where a count kept with
+`getState`/`setState` never completes because every message works from a stale snapshot (`UnsGroupingConcurrencyTest`).
+A mapping keeps at most `FlowStateStore.MAX_OPEN_GROUPS` (1,000) incomplete groups. In a test run there is no store, so
+`collect` returns `null`.
+
 ### Engine rotation and warm-up
 
 Each tenant's `Engine` is retired and replaced after `engineRotationThreshold` distinct source compilations (default
