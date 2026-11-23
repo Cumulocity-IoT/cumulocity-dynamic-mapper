@@ -112,6 +112,7 @@ declare -a TESTS=(
     "smartfunction|mqtt|test-inbound-smartfunction-04|Inbound: Pattern 04: Dual payload type + deduplication"
     "smartfunction|mqtt|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"
     "smartfunction|mqtt|test-inbound-smartfunction-custom-route|Inbound: cumulocityType custom → /service/ route (API.CUSTOM)"
+    "smartfunction|mqtt|test-inbound-smartfunction-uns-group|Inbound: UNS N:1 — many single-value messages into one measurement (context.collect)"
 
     # ── Extensions (Java processor extensions, inbound + outbound) ───
     "extension|mqtt|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"

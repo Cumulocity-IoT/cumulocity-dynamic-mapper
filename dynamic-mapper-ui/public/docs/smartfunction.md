@@ -360,6 +360,20 @@ object:
   memory, are lost on a service restart, and are not shared between service instances. A dropped inbound message
   counts under **Repeated** in the monitoring table. It shares its store with the `$isDuplicate` function of the
   execution filter. See [Message de-duplication](/c8y-pkg-dynamic-mapper/introduction/message-deduplication).
+- `context.collect(groupKey, itemKey, value, expectedCount)` - Adds one value to a named group and returns the
+  whole group, as an object of item key to value, once it holds `expectedCount` values (1 to 10,000). It returns
+  `null` until then. Use it to turn several messages into one, for example 100 single-value messages of one
+  timestamp, as a Unified Namespace publisher sends them, into one measurement with 100 fragments:
+  `var values = context.collect(deviceId + "|" + time, name, value, 100); if (!values) { return []; }`. Unlike
+  `getState` and `setState`, the step is atomic. State is read when a message starts and written back when it
+  ends, so of 100 messages that run at the same time none sees the other 99; `collect` adds the value and checks
+  the count in one step, and exactly one message receives the complete group. A repeated `itemKey` replaces the
+  earlier value. The group is removed when it is handed out, so a function that fails afterwards loses it. Groups
+  are kept in memory, are lost on a service restart, and are not shared between service instances. A mapping
+  keeps at most 1,000 incomplete groups and drops the oldest when one more opens. `clearState()` and deleting the
+  mapping remove them. It returns `null` and adds a warning when an argument is missing or `expectedCount` is
+  not a whole number from 1 to 10,000. In Dry Run and Live Test it returns `null` and buffers nothing, so a
+  test shows only the incomplete case. A complete example is `resources/samples/uns/uns-group-by-timestamp.js`.
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
 - `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not

@@ -49,6 +49,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartFunctionContext implements DataPrepContext {
 
+    private static final int MAX_EXPECTED_COUNT = 10_000;
+
     private final Map<String, Object> state;
     private final Context graalContext;
     private final String tenant;
@@ -203,6 +205,32 @@ public class SmartFunctionContext implements DataPrepContext {
         }
         String keyText = MessageDeduplicationService.keyText(convertValueToJavaObject(key));
         return duplicateCheck.test(MessageDeduplicationService.fingerprint(keyText), window);
+    }
+
+    /**
+     * Atomic N:1 collection; see {@link FlowStateStore#collect}. Called by a Smart Function as
+     * {@code context.collect(groupKey, itemKey, value, expectedCount)}. Fails open: it returns null, and adds a
+     * warning, when an argument is missing or {@code expectedCount} is not a whole number from 1 to
+     * {@value #MAX_EXPECTED_COUNT}. A test run has no store and returns null, so nothing is buffered.
+     */
+    @Override
+    public Value collect(String groupKey, String itemKey, Value value, Value expectedCount) {
+        if (stateStore == null || mappingIdentifier == null || graalContext == null) {
+            return null;
+        }
+        if (groupKey == null || itemKey == null || value == null || value.isNull()) {
+            addWarning("collect: groupKey, itemKey and value are required, the message was not collected");
+            return null;
+        }
+        if (expectedCount == null || !expectedCount.fitsInInt() || expectedCount.asInt() < 1
+                || expectedCount.asInt() > MAX_EXPECTED_COUNT) {
+            addWarning("collect: expectedCount must be a whole number from 1 to " + MAX_EXPECTED_COUNT
+                    + ", the message was not collected");
+            return null;
+        }
+        Map<String, Object> group = stateStore.collect(tenant, mappingIdentifier, groupKey, itemKey,
+                convertValueToJavaObject(value), expectedCount.asInt());
+        return group == null ? null : graalContext.asValue(JavaScriptInteropHelper.toJsInterop(group));
     }
 
     @Override

@@ -72,6 +72,17 @@ context.getStateKeySet()             // retrieve all state keys as string[]
 context.clearState()                 // drop all state for this mapping
 ```
 
+### N:1 collection (many messages into one)
+
+```ts
+context.collect(groupKey, itemKey, value, expectedCount)  // → object of itemKey→value once complete, else null
+```
+
+Atomic, unlike `getState`/`setState`: state is a snapshot loaded when a message starts and committed when it ends,
+so concurrent messages never see each other's writes. Use `collect` when one output depends on several inputs, for
+example a UNS publisher that sends one MQTT message per value. A complete sample is
+`resources/samples/uns/uns-group-by-timestamp.js`. Memory only; limits are in the in-app Smart Function reference.
+
 ### Mapping config (read-only, reset each message)
 
 ```ts

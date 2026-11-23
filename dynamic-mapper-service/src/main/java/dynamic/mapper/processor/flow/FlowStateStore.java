@@ -65,6 +65,10 @@ public class FlowStateStore {
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, Instant>> lastSavedAt =
             new ConcurrentHashMap<>();
 
+    // Group buffers of collect() live beside the mapping's state under this key prefix; loadState hides them.
+    private static final String GROUP_PREFIX = "\u0000group:";
+    static final int MAX_OPEN_GROUPS = 1000;
+
     private final Clock clock;
 
     public FlowStateStore() {
@@ -95,7 +99,75 @@ public class FlowStateStore {
         ConcurrentHashMap<String, Object> mappingState = store
                 .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
                 .computeIfAbsent(mappingIdentifier, k -> new ConcurrentHashMap<>());
-        return new HashMap<>(mappingState);
+        Map<String, Object> snapshot = new HashMap<>();
+        for (Map.Entry<String, Object> entry : mappingState.entrySet()) {
+            if (!entry.getKey().startsWith(GROUP_PREFIX)) {
+                snapshot.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return snapshot;
+    }
+
+    /**
+     * Adds one item to a named group and, in the same atomic step, returns and removes the whole group when it
+     * reaches {@code expected} items. This is the one operation a Smart Function cannot build from
+     * {@code getState}/{@code setState}: those work on a snapshot taken when the message started and commit when
+     * it ends, so of {@code expected} messages that run at the same time none sees all the others' items.
+     *
+     * <p>Exactly one caller receives a given complete group; every other call returns {@code null}. A repeated
+     * {@code itemKey} replaces the earlier value. A group lives in memory only, is dropped with the mapping's
+     * state (mapping deleted, {@code clearState()}, retention expiry), and a mapping keeps at most
+     * {@value #MAX_OPEN_GROUPS} incomplete groups: the oldest is dropped when one more opens.</p>
+     *
+     * @return the complete group (item key to value), or {@code null} while it is still incomplete
+     */
+    public Map<String, Object> collect(String tenant, String mappingIdentifier, String groupKey, String itemKey,
+            Object value, int expected) {
+        if (tenant == null || mappingIdentifier == null || groupKey == null || itemKey == null || value == null) {
+            return null;
+        }
+        ConcurrentHashMap<String, Object> mappingState = store
+                .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(mappingIdentifier, k -> new ConcurrentHashMap<>());
+        String key = GROUP_PREFIX + groupKey;
+        Map<String, Object>[] completed = new Map[1];
+        mappingState.compute(key, (k, existing) -> {
+            Group group = existing instanceof Group g ? g : new Group();
+            group.items.put(itemKey, value);
+            if (group.items.size() >= expected) {
+                completed[0] = group.items;
+                return null;
+            }
+            return group;
+        });
+        markSaved(tenant, mappingIdentifier);
+        if (completed[0] == null) {
+            evictOldestGroups(mappingState);
+        }
+        return completed[0];
+    }
+
+    private static void evictOldestGroups(ConcurrentHashMap<String, Object> mappingState) {
+        long open = mappingState.values().stream().filter(v -> v instanceof Group).count();
+        while (open > MAX_OPEN_GROUPS) {
+            String oldest = null;
+            long oldestCreated = Long.MAX_VALUE;
+            for (Map.Entry<String, Object> entry : mappingState.entrySet()) {
+                if (entry.getValue() instanceof Group g && g.created < oldestCreated) {
+                    oldestCreated = g.created;
+                    oldest = entry.getKey();
+                }
+            }
+            if (oldest == null || mappingState.remove(oldest) == null) {
+                break;
+            }
+            open--;
+        }
+    }
+
+    private static final class Group {
+        final long created = System.nanoTime();
+        final Map<String, Object> items = new java.util.LinkedHashMap<>();
     }
 
     /**

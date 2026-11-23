@@ -212,4 +212,18 @@ public interface DataPrepContext {
     default boolean isDuplicate(Value key, Value windowSeconds) {
         return false;
     }
+
+    /**
+     * Adds one item to a named group and returns the whole group, as an object, once it holds
+     * {@code expectedCount} items; returns null until then. Smart Functions call it as
+     * {@code context.collect(groupKey, itemKey, value, expectedCount)} to turn several messages into one.
+     *
+     * <p>Unlike {@code getState}/{@code setState} the step is atomic, so exactly one of several concurrent
+     * messages receives a given complete group. Declared here for the same reason as {@link #isDuplicate}.</p>
+     *
+     * @return the complete group (item key to value), or null while it is incomplete or where no store is available
+     */
+    default Value collect(String groupKey, String itemKey, Value value, Value expectedCount) {
+        return null;
+    }
 }

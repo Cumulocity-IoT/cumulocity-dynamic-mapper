@@ -82,6 +82,7 @@ class SmartFunctionApiContractTest {
             "addLogMessage",
             "addWarning",
             "clearState",
+            "collect",
             "getClientId",
             "getConfig",
             "getDTMAsset",
