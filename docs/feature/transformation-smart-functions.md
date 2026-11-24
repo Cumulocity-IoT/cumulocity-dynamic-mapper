@@ -187,7 +187,7 @@ cycle above. It calls `FlowStateStore.collect` immediately, which adds the item 
 state (under a reserved key prefix that `loadState` hides) inside one `ConcurrentHashMap.compute`, and removes and returns
 the group when it reaches `expectedCount`. That makes the N:1 case work under concurrency, where a count kept with
 `getState`/`setState` never completes because every message works from a stale snapshot (`UnsGroupingConcurrencyTest`).
-The group is complete when any of `count`, `keys` (all present) or `last` holds (`FlowStateStore.CollectOptions`);
+The group is complete when any of `count`, `keys` (all present) or `last` holds (`CollectOptions`);
 `maxAgeSeconds` is not a condition but a sweep of stale groups on each call that carries it (the clock is the store's
 `Clock`, so tests can move time). `context.take` removes a group in the same `compute` on the same key, so it is atomic
 with `collect`, and `context.openGroups` lists group keys ordered by an opening sequence number (clock milliseconds tie

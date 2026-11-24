@@ -21,9 +21,10 @@
 
 package dynamic.mapper.processor.extension.external.inbound;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.model.CollectOptions;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
@@ -31,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Java Extension demonstrating N:1 collection with {@code context.collectNative} (since 6.3).
@@ -90,8 +90,7 @@ public class ProcessorExtensionCollectMeasurement implements ProcessorExtensionI
                 return new CumulocityObject[0];
             }
 
-            FlowStateStore.CollectOptions options = new FlowStateStore.CollectOptions(
-                    null, Set.of(TEMPERATURE, HUMIDITY), false, MAX_AGE_SECONDS);
+            CollectOptions options = CollectOptions.keys(TEMPERATURE, HUMIDITY).withMaxAgeSeconds(MAX_AGE_SECONDS);
             Map<String, Object> group = context.collectNative(clientId + "|" + time, (String) sensor, value, options);
             if (group == null) {
                 log.debug("{} - Waiting for the partner of {} at {}", context.getTenant(), sensor, time);

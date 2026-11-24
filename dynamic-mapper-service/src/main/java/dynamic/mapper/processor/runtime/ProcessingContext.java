@@ -288,6 +288,12 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     private Runnable deferredStateCommit;
 
+    /**
+     * Undoes what the extension already did to shared state while it ran, when the result was not delivered:
+     * puts back the collected groups it received. Run by the send processors instead of the commit.
+     */
+    private Runnable deferredStateRollback;
+
     private DataPrepContext flowContext;
 
     private Map<String, Object> flowState;
@@ -316,8 +322,19 @@ public class ProcessingContext<O> implements AutoCloseable {
     public void runDeferredStateCommit() {
         Runnable commit = deferredStateCommit;
         deferredStateCommit = null;
+        deferredStateRollback = null;
         if (commit != null) {
             commit.run();
+        }
+    }
+
+    /** Runs the rollback instead of the commit, once, when the result was not delivered. */
+    public void runDeferredStateRollback() {
+        Runnable rollback = deferredStateRollback;
+        deferredStateRollback = null;
+        deferredStateCommit = null;
+        if (rollback != null) {
+            rollback.run();
         }
     }
 

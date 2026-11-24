@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.flow;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -259,52 +260,6 @@ public class FlowStateStore {
         return snapshot;
     }
 
-    /**
-     * When a group is complete. Any one condition that holds hands the group out; at least one must be given.
-     *
-     * @param count         complete at this many distinct items, or {@code null}
-     * @param keys          complete when all of these item keys are present, or {@code null}
-     * @param last          complete now: this call carries the last item
-     * @param maxAgeSeconds incomplete groups older than this (measured from their first item) are dropped when
-     *                      a call with this option arrives, or {@code null}
-     */
-    public record CollectOptions(Integer count, java.util.Set<String> keys, boolean last, Integer maxAgeSeconds) {
-        /** The most items a group may be told to wait for. */
-        public static final int MAX_EXPECTED_COUNT = 10_000;
-        /** The longest {@code maxAgeSeconds} accepted: one day. */
-        public static final int MAX_AGE_SECONDS = 86_400;
-
-        public static CollectOptions count(int count) {
-            return new CollectOptions(count, null, false, null);
-        }
-
-        /**
-         * Checks the options the way {@code context.collect} of a Smart Function does.
-         *
-         * @return what is wrong with them, or {@code null} if they are valid
-         */
-        public String problem() {
-            if (count != null && (count < 1 || count > MAX_EXPECTED_COUNT)) {
-                return "count must be a whole number from 1 to " + MAX_EXPECTED_COUNT;
-            }
-            if (keys != null) {
-                if (keys.isEmpty() || keys.size() > MAX_EXPECTED_COUNT) {
-                    return "keys must be a list of 1 to " + MAX_EXPECTED_COUNT + " item keys";
-                }
-                if (keys.stream().anyMatch(java.util.Objects::isNull)) {
-                    return "keys must be strings";
-                }
-            }
-            if (maxAgeSeconds != null && (maxAgeSeconds < 1 || maxAgeSeconds > MAX_AGE_SECONDS)) {
-                return "maxAgeSeconds must be a whole number from 1 to " + MAX_AGE_SECONDS;
-            }
-            if (count == null && keys == null && !last) {
-                return "give count, keys or last, otherwise the group never completes";
-            }
-            return null;
-        }
-    }
-
     /** Shorthand for {@link #collect(String, String, String, String, Object, CollectOptions)} with a count. */
     public Map<String, Object> collect(String tenant, String mappingIdentifier, String groupKey, String itemKey,
             Object value, int expected) {
@@ -433,6 +388,47 @@ public class FlowStateStore {
             return existing;
         });
         return taken[0];
+    }
+
+    /**
+     * Puts a group back that {@link #collect} completed or {@link #take} removed, because the message that
+     * received it failed before its result was delivered. Items that arrived meanwhile win over the restored
+     * ones with the same item key. Limits are not checked: the items fitted before.
+     */
+    public void restoreGroup(String tenant, String mappingIdentifier, String groupKey, Map<String, Object> items,
+            Integer maxAgeSeconds) {
+        if (tenant == null || mappingIdentifier == null || groupKey == null || items == null || items.isEmpty()) {
+            return;
+        }
+        ConcurrentHashMap<String, Object> mappingState = store
+                .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(mappingIdentifier, k -> new ConcurrentHashMap<>());
+        Stats st = stats(tenant, mappingIdentifier);
+        long now = clock.millis();
+        mappingState.compute(GROUP_PREFIX + groupKey, (k, existing) -> {
+            Group group = existing instanceof Group g ? g : null;
+            boolean counted = group != null;
+            if (group == null) {
+                group = new Group(now, groupSequence.incrementAndGet());
+            }
+            if (maxAgeSeconds != null) {
+                group.maxAgeMillis = maxAgeSeconds * 1000L;
+            }
+            long delta = 0;
+            for (Map.Entry<String, Object> e : items.entrySet()) {
+                if (group.items.putIfAbsent(e.getKey(), e.getValue()) == null) {
+                    delta += 16L + 2L * e.getKey().length() + estimateBytes(e.getValue());
+                }
+            }
+            group.bytes += delta;
+            st.groupBytes.addAndGet(delta);
+            if (!counted) {
+                st.openGroups.incrementAndGet();
+            }
+            return group;
+        });
+        markSaved(tenant, mappingIdentifier);
+        evictOldestGroups(mappingState, st);
     }
 
     /**

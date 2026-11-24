@@ -21,10 +21,11 @@
 
 package dynamic.mapper.processor.extension.external.outbound;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.processor.model.CollectOptions;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
@@ -46,9 +47,13 @@ import java.util.TreeMap;
  *   <li>The group key is {@code batch|<source id>}: each device collects its own batch.</li>
  *   <li>The item key is the measurement time, so a redelivered measurement replaces itself and is not counted
  *       twice.</li>
- *   <li>{@code maxAgeSeconds} drops a batch that did not fill within {@value #MAX_AGE_SECONDS} seconds. Its
- *       measurements are lost, so use {@code takeNative} and {@code openGroupsNative} to flush partial batches
- *       instead if that is not acceptable.</li>
+ *   <li>No {@code maxAgeSeconds} is set on purpose: it would silently drop the readings of a device that sends
+ *       fewer than {@value #BATCH_SIZE} within the limit. A partial batch stays until it is full. To send partial
+ *       batches after some time, call {@code openGroupsNative("batch|")} and {@code takeNative} from a later
+ *       message.</li>
+ *   <li>Two measurements with the same time count once (the second replaces the first), so a batch never
+ *       fills with duplicates.</li>
+ *   <li>If the publish fails, the batch is put back and the redelivered measurement completes it again.</li>
  * </ul>
  *
  * <p>Input (Cumulocity measurement, three times for one device):</p>
@@ -72,7 +77,6 @@ import java.util.TreeMap;
 public class ProcessorExtensionBatchMeasurements implements ProcessorExtensionOutbound<Object> {
 
     static final int BATCH_SIZE = 3;
-    static final int MAX_AGE_SECONDS = 300;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -99,7 +103,7 @@ public class ProcessorExtensionBatchMeasurements implements ProcessorExtensionOu
             reading.put("unit", series.get("unit"));
 
             Map<String, Object> batch = context.collectNative("batch|" + sourceId, time.toString(), reading,
-                    new FlowStateStore.CollectOptions(BATCH_SIZE, null, false, MAX_AGE_SECONDS));
+                    CollectOptions.count(BATCH_SIZE));
             if (batch == null) {
                 return new DeviceMessage[0]; // the batch is not full yet
             }

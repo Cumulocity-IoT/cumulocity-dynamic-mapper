@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.flow;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DataPrepContext;
@@ -478,6 +479,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         }
         changedNativeKeys.clear();
         wipeRequested = false;
+        receivedGroups.clear(); // delivered: the groups are consumed for good
     }
 
     // ==================== Native (Java) State Methods ====================
@@ -547,20 +549,18 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
 
     @Override
     public Map<String, Object> collectNative(String groupKey, String itemKey, Object value, int expectedCount) {
-        if (expectedCount < 1 || expectedCount > FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT) {
+        if (expectedCount < 1 || expectedCount > CollectOptions.MAX_EXPECTED_COUNT) {
             addWarning("collectNative: count must be a whole number from 1 to "
-                    + FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT + ", the message was not collected");
+                    + CollectOptions.MAX_EXPECTED_COUNT + ", the message was not collected");
             return null;
         }
-        return collectNative(groupKey, itemKey, value, FlowStateStore.CollectOptions.count(expectedCount));
+        return collectNative(groupKey, itemKey, value, CollectOptions.count(expectedCount));
     }
 
     @Override
     public Map<String, Object> collectNative(String groupKey, String itemKey, Object value,
-            FlowStateStore.CollectOptions options) {
-        if (flowStateStore == null || mappingIdentifier == null) {
-            // A test run keeps no groups: without a word the extension looks broken in the test UI.
-            addWarning("collectNative: not evaluated in a test run, nothing is collected and the result is always null");
+            CollectOptions options) {
+        if (!groupsAvailable("collectNative")) {
             return null;
         }
         if (groupKey == null || itemKey == null || value == null) {
@@ -574,28 +574,76 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             addWarning("collectNative: " + problem + ", the message was not collected");
             return null;
         }
+        Map<String, Object> group;
         try {
-            return flowStateStore.collect(tenant, mappingIdentifier, groupKey, itemKey, deepCopy(value), options);
+            group = flowStateStore.collect(tenant, mappingIdentifier, groupKey, itemKey, deepCopy(value), options);
         } catch (FlowStateStore.StateLimitExceededException e) {
             addWarning("collectNative: " + e.getMessage() + ", the message was not collected");
             return null;
         }
+        if (group != null) {
+            remember(groupKey, group, options.maxAgeSeconds());
+        }
+        return group;
     }
 
     @Override
     public Map<String, Object> takeNative(String groupKey) {
-        if (flowStateStore == null || mappingIdentifier == null || groupKey == null) {
+        if (!groupsAvailable("takeNative") || groupKey == null) {
             return null;
         }
-        return flowStateStore.take(tenant, mappingIdentifier, groupKey);
+        Map<String, Object> group = flowStateStore.take(tenant, mappingIdentifier, groupKey);
+        if (group != null) {
+            remember(groupKey, group, null);
+        }
+        return group;
     }
 
     @Override
     public java.util.List<String> openGroupsNative(String prefix) {
-        if (flowStateStore == null || mappingIdentifier == null) {
+        if (!groupsAvailable("openGroupsNative")) {
             return java.util.List.of();
         }
         return flowStateStore.openGroups(tenant, mappingIdentifier, prefix);
+    }
+
+    /** Whether groups can be used; if not, says why in a warning, once per call. */
+    private boolean groupsAvailable(String method) {
+        if (flowStateStore == null) {
+            // A test run keeps no groups: without a word the extension looks broken in the test UI.
+            addWarning(method + ": not evaluated in a test run, nothing is collected and the result is always empty");
+            return false;
+        }
+        if (mappingIdentifier == null) {
+            addWarning(method + ": the mapping has no identifier, groups cannot be kept");
+            return false;
+        }
+        return true;
+    }
+
+    private record ReceivedGroup(String groupKey, Map<String, Object> items, Integer maxAgeSeconds) {
+    }
+
+    // Groups this message took out of the store; only the message's own thread touches the list.
+    private final java.util.List<ReceivedGroup> receivedGroups = new java.util.ArrayList<>();
+
+    private void remember(String groupKey, Map<String, Object> group, Integer maxAgeSeconds) {
+        receivedGroups.add(new ReceivedGroup(groupKey, new java.util.LinkedHashMap<>(group), maxAgeSeconds));
+    }
+
+    /**
+     * Puts back the groups this message received from {@code collectNative} or {@code takeNative}. Called when the
+     * extension threw or its result was not delivered: otherwise the items of those messages would be lost,
+     * and the redelivered message would start a new group with one item. Does nothing once the message was
+     * delivered, because {@link #persistNativeState} clears the list.
+     */
+    public void restoreCollectedGroups() {
+        if (flowStateStore != null && mappingIdentifier != null) {
+            for (ReceivedGroup g : receivedGroups) {
+                flowStateStore.restoreGroup(tenant, mappingIdentifier, g.groupKey(), g.items(), g.maxAgeSeconds());
+            }
+        }
+        receivedGroups.clear();
     }
 
     @Override

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.flow;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -71,16 +72,16 @@ class JavaExtensionContextCollectTest {
 
     @Test
     void aGroupCompletesWhenAllKeysArePresent() {
-        FlowStateStore.CollectOptions options = new FlowStateStore.CollectOptions(null, Set.of("a", "b"), false, null);
+        CollectOptions options = new CollectOptions(null, Set.of("a", "b"), false, null);
         assertNull(invocation().collectNative("g", "a", 1, options));
         assertEquals(Map.of("a", 1, "b", 2), invocation().collectNative("g", "b", 2, options));
     }
 
     @Test
     void theLastItemCompletesAnIncompleteGroup() {
-        assertNull(invocation().collectNative("g", "a", 1, new FlowStateStore.CollectOptions(5, null, false, null)));
+        assertNull(invocation().collectNative("g", "a", 1, new CollectOptions(5, null, false, null)));
         assertEquals(Map.of("a", 1, "b", 2),
-                invocation().collectNative("g", "b", 2, new FlowStateStore.CollectOptions(5, null, true, null)));
+                invocation().collectNative("g", "b", 2, new CollectOptions(5, null, true, null)));
     }
 
     @Test
@@ -112,13 +113,13 @@ class JavaExtensionContextCollectTest {
         JavaExtensionContextImpl ctx = invocation(store, processing);
 
         assertNull(ctx.collectNative("g", "a", 1, 0));
-        assertNull(ctx.collectNative("g", "a", 1, FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT + 1));
+        assertNull(ctx.collectNative("g", "a", 1, CollectOptions.MAX_EXPECTED_COUNT + 1));
         assertNull(ctx.collectNative(null, "a", 1, 2));
         assertNull(ctx.collectNative("g", null, 1, 2));
         assertNull(ctx.collectNative("g", "a", null, 2));
-        assertNull(ctx.collectNative("g", "a", 1, (FlowStateStore.CollectOptions) null));
-        assertNull(ctx.collectNative("g", "a", 1, new FlowStateStore.CollectOptions(null, null, false, null)));
-        assertNull(ctx.collectNative("g", "a", 1, new FlowStateStore.CollectOptions(2, null, false, 0)));
+        assertNull(ctx.collectNative("g", "a", 1, (CollectOptions) null));
+        assertNull(ctx.collectNative("g", "a", 1, new CollectOptions(null, null, false, null)));
+        assertNull(ctx.collectNative("g", "a", 1, new CollectOptions(2, null, false, 0)));
 
         assertEquals(8, processing.getWarnings().size(), processing.getWarnings().toString());
         assertTrue(processing.getWarnings().stream().allMatch(w -> w.startsWith("collectNative:")));
@@ -133,8 +134,48 @@ class JavaExtensionContextCollectTest {
         assertNull(ctx.collectNative("g", "a", 1, 1));
         assertNull(ctx.takeNative("g"));
         assertTrue(ctx.openGroupsNative("").isEmpty());
-        assertEquals(1, processing.getWarnings().size());
-        assertTrue(processing.getWarnings().get(0).contains("test run"));
+        // every group method says so, not only collectNative
+        assertEquals(3, processing.getWarnings().size());
+        assertTrue(processing.getWarnings().stream().allMatch(w -> w.contains("test run")));
+    }
+
+    @Test
+    void aGroupIsPutBackWhenTheMessageThatReceivedItFails() {
+        invocation().collectNative("g", "a", 1, 2);
+        JavaExtensionContextImpl failing = invocation();
+        assertEquals(Map.of("a", 1, "b", 2), failing.collectNative("g", "b", 2, 2));
+
+        failing.restoreCollectedGroups();
+
+        // the redelivered message completes the group again
+        assertEquals(Map.of("a", 1, "b", 2), invocation().collectNative("g", "b", 2, 2));
+    }
+
+    @Test
+    void aRestoredGroupKeepsItemsThatArrivedMeanwhile() {
+        invocation().collectNative("g", "a", 1, 2);
+        JavaExtensionContextImpl failing = invocation();
+        failing.collectNative("g", "b", 2, 2);
+        assertNull(invocation().collectNative("g", "a", 9, 3)); // new group opened after the first completed
+
+        failing.restoreCollectedGroups();
+
+        assertEquals(Map.of("a", 9, "b", 2, "c", 3), invocation().collectNative("g", "c", 3, 3));
+    }
+
+    @Test
+    void aTakenGroupIsPutBackAndADeliveredOneIsNot() {
+        invocation().collectNative("g", "a", 1, 5);
+        JavaExtensionContextImpl failing = invocation();
+        assertEquals(Map.of("a", 1), failing.takeNative("g"));
+        failing.restoreCollectedGroups();
+        assertEquals(List.of("g"), invocation().openGroupsNative(""));
+
+        JavaExtensionContextImpl delivered = invocation();
+        delivered.takeNative("g");
+        delivered.persistNativeState();
+        delivered.restoreCollectedGroups();
+        assertTrue(invocation().openGroupsNative("").isEmpty());
     }
 
     @Test

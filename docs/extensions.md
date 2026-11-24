@@ -779,8 +779,10 @@ with the method to use instead):
 | State per mapping, kept in memory of the service instance | `setNativeState`, `getNativeState`, `getNativeStateAll`, `clearState` |
 | Atomic counter; written at once, not after the send | `context.incrementNativeState(key, by)` |
 | De-duplication, shared with `$isDuplicate` and Smart Functions | `context.isDuplicate(key, windowSeconds)` |
-| Collect several messages into one (N:1), atomic; groups live in memory only | `context.collectNative(groupKey, itemKey, value, count)` or with `FlowStateStore.CollectOptions` (count, keys, last, maxAgeSeconds); `takeNative(groupKey)`, `openGroupsNative(prefix)` |
+| Collect several messages into one (N:1), atomic; groups live in memory only | `context.collectNative(groupKey, itemKey, value, count)` or with `CollectOptions` (count, keys, last, maxAgeSeconds); `takeNative(groupKey)`, `openGroupsNative(prefix)` |
 | Warnings and logs (500 of each per message) | `context.addWarning(msg)`, `context.addLog(msg)` |
+
+A group that `collectNative` or `takeNative` hands to a message is put back if that message fails (the extension throws or the result is not delivered), so a redelivery completes it again. After a restart, groups are gone. In a test run, the group methods add a warning and return null or an empty list.
 
 State limits are the same as for Smart Functions: 1,000 keys and about 8 MB per mapping.
 

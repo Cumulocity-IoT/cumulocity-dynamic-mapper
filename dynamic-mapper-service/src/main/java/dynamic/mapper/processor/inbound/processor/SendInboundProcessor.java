@@ -108,6 +108,8 @@ public class SendInboundProcessor extends BaseProcessor {
             if (!context.hasError() && (wrapper == null || !wrapper.getCancellationRequested().get())
                     && !Thread.currentThread().isInterrupted()) {
                 context.runDeferredStateCommit();
+            } else {
+                context.runDeferredStateRollback();
             }
 
             // At least one request failed above (recorded via context.addError, not thrown) —
@@ -130,6 +132,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
+            context.runDeferredStateRollback();
 
             if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

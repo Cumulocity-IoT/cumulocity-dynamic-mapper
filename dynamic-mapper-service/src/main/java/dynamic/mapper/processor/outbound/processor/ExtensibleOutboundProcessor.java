@@ -148,7 +148,14 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
             );
 
             // 3. Call new pattern method
-            DeviceMessage[] results = extension.onMessage(message, prepContext);
+            DeviceMessage[] results;
+            try {
+                results = extension.onMessage(message, prepContext);
+            } catch (Throwable t) {
+                // A group the extension took before it failed would otherwise be lost with the failed message
+                prepContext.restoreCollectedGroups();
+                throw t;
+            }
 
             // 4. Store results in context for processing by ExtensibleResultOutboundProcessor
             if (results != null && results.length > 0) {
@@ -157,6 +164,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
                 // Returning normally does not mean the publish succeeded: commit the state after
                 // sending, so a redelivery after a failure is not treated as a duplicate.
                 context.setDeferredStateCommit(prepContext::persistNativeState);
+            context.setDeferredStateRollback(prepContext::restoreCollectedGroups);
             } else {
                 String errorMsg = String.format(
                     "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to publish, ignoring",

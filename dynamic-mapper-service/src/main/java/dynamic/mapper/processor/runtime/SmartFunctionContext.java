@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.runtime;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import dynamic.mapper.processor.model.ExternalId;
 
 import dynamic.mapper.processor.model.DataPrepContext;
@@ -49,8 +50,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartFunctionContext implements DataPrepContext {
 
-    private static final int MAX_EXPECTED_COUNT = FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT;
-    private static final int MAX_AGE_SECONDS = FlowStateStore.CollectOptions.MAX_AGE_SECONDS;
+    private static final int MAX_EXPECTED_COUNT = CollectOptions.MAX_EXPECTED_COUNT;
+    private static final int MAX_AGE_SECONDS = CollectOptions.MAX_AGE_SECONDS;
     // Warnings and logs one message may collect; a loop must not be able to fill the heap with them.
     private static final int MAX_MESSAGES = 500;
 
@@ -241,7 +242,7 @@ public class SmartFunctionContext implements DataPrepContext {
             addWarning("collect: groupKey, itemKey and value are required, the message was not collected");
             return null;
         }
-        FlowStateStore.CollectOptions options = parseCollectOptions(expectedCountOrOptions);
+        CollectOptions options = parseCollectOptions(expectedCountOrOptions);
         if (options == null) {
             return null;
         }
@@ -256,7 +257,7 @@ public class SmartFunctionContext implements DataPrepContext {
         return group == null ? null : graalContext.asValue(JavaScriptInteropHelper.toJsInterop(group));
     }
 
-    private FlowStateStore.CollectOptions parseCollectOptions(Value arg) {
+    private CollectOptions parseCollectOptions(Value arg) {
         String bad = "collect: the fourth argument must be a whole number from 1 to " + MAX_EXPECTED_COUNT
                 + " or an object with count, keys, last or maxAgeSeconds, the message was not collected";
         if (arg == null || arg.isNull()) {
@@ -268,7 +269,7 @@ public class SmartFunctionContext implements DataPrepContext {
                 addWarning(bad);
                 return null;
             }
-            return FlowStateStore.CollectOptions.count(arg.asInt());
+            return CollectOptions.count(arg.asInt());
         }
         if (!arg.hasMembers() || arg.hasArrayElements()) {
             addWarning(bad);
@@ -278,20 +279,20 @@ public class SmartFunctionContext implements DataPrepContext {
         java.util.Set<String> keys = null;
         boolean last = false;
         Integer maxAge = null;
-        boolean anyCondition = false;
+        // Only the types are checked here; the ranges and the combination are checked by CollectOptions.problem(),
+        // the same check Java extensions get.
         if (arg.hasMember("count") && !arg.getMember("count").isNull()) {
             Value c = arg.getMember("count");
-            if (!c.fitsInInt() || c.asInt() < 1 || c.asInt() > MAX_EXPECTED_COUNT) {
+            if (!c.fitsInInt()) {
                 addWarning("collect: count must be a whole number from 1 to " + MAX_EXPECTED_COUNT
                         + ", the message was not collected");
                 return null;
             }
             count = c.asInt();
-            anyCondition = true;
         }
         if (arg.hasMember("keys") && !arg.getMember("keys").isNull()) {
             Value k = arg.getMember("keys");
-            if (!k.hasArrayElements() || k.getArraySize() < 1 || k.getArraySize() > MAX_EXPECTED_COUNT) {
+            if (!k.hasArrayElements()) {
                 addWarning("collect: keys must be a list of 1 to " + MAX_EXPECTED_COUNT
                         + " item keys, the message was not collected");
                 return null;
@@ -305,7 +306,6 @@ public class SmartFunctionContext implements DataPrepContext {
                 }
                 keys.add(e.asString());
             }
-            anyCondition = true;
         }
         if (arg.hasMember("last") && !arg.getMember("last").isNull()) {
             Value l = arg.getMember("last");
@@ -314,22 +314,23 @@ public class SmartFunctionContext implements DataPrepContext {
                 return null;
             }
             last = l.asBoolean();
-            anyCondition = true;
         }
         if (arg.hasMember("maxAgeSeconds") && !arg.getMember("maxAgeSeconds").isNull()) {
             Value m = arg.getMember("maxAgeSeconds");
-            if (!m.fitsInInt() || m.asInt() < 1 || m.asInt() > MAX_AGE_SECONDS) {
+            if (!m.fitsInInt()) {
                 addWarning("collect: maxAgeSeconds must be a whole number from 1 to " + MAX_AGE_SECONDS
                         + ", the message was not collected");
                 return null;
             }
             maxAge = m.asInt();
         }
-        if (!anyCondition) {
-            addWarning("collect: give count, keys or last, otherwise the group never completes; the message was not collected");
+        CollectOptions options = new CollectOptions(count, keys, last, maxAge);
+        String problem = options.problem();
+        if (problem != null) {
+            addWarning("collect: " + problem + ", the message was not collected");
             return null;
         }
-        return new FlowStateStore.CollectOptions(count, keys, last, maxAge);
+        return options;
     }
 
     /** Removes a collected group and returns it as it is; see {@link FlowStateStore#take}. */

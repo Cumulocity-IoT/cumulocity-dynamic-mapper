@@ -148,7 +148,13 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         // 3. Call new pattern method
         CumulocityObject[] results;
         try {
-            results = extension.onMessage(message, prepContext);
+            try {
+                results = extension.onMessage(message, prepContext);
+            } catch (Throwable t) {
+                // A group the extension took before it failed would otherwise be lost with the failed message
+                prepContext.restoreCollectedGroups();
+                throw t;
+            }
         } catch (AbstractMethodError e) {
             String errorMsg = String.format(
                 "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
@@ -175,6 +181,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             // Returning normally does not mean delivery succeeded: commit the state after the
             // requests were sent, so a redelivery after a failure is not treated as a duplicate.
             context.setDeferredStateCommit(prepContext::persistNativeState);
+            context.setDeferredStateRollback(prepContext::restoreCollectedGroups);
         } else {
             String errorMsg = String.format(
                 "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to process, ignoring",

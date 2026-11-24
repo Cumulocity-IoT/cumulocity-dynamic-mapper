@@ -93,6 +93,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
             if(context.hasError()) {
+                context.runDeferredStateRollback();
                 autoAckOperation(context, operation, tenant, mapping, OperationStatus.FAILED);
             } else {
                 // Commit extension state only for a fully published message; on failure the message
@@ -100,6 +101,8 @@ public class SendOutboundProcessor extends BaseProcessor {
                 // it: a connector can break off on interruption or record a failure only on the request.
                 if (delivered && publishedCompletely(context, wrapper)) {
                     context.runDeferredStateCommit();
+                } else {
+                    context.runDeferredStateRollback();
                 }
                 autoAckOperation(context, operation, tenant, mapping, OperationStatus.SUCCESSFUL);
             }
@@ -109,6 +112,7 @@ public class SendOutboundProcessor extends BaseProcessor {
                     tenant, mapping.getName(), e.getMessage());
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
+            context.runDeferredStateRollback();
 
             // Ensure the operation isn't left stuck in EXECUTING when send/alarm processing
             // itself throws before the normal FAILED/SUCCESSFUL ack above is reached.

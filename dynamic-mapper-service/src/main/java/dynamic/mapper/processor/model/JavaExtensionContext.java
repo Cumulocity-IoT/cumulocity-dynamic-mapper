@@ -144,7 +144,9 @@ public interface JavaExtensionContext extends DataPrepContext {
      *
      * <p>Groups are kept per mapping and in memory only, so they are lost on a restart. Unlike
      * {@link #setNativeState} the item is stored at once, not after the send succeeded: a redelivered message
-     * adds its item again. Fails open (returns null, adds a warning) for a missing argument, a count outside 1 to
+     * adds its item again. If the message fails after it received a complete group (the extension throws, or the
+     * result is not delivered), the group is put back, so no item is lost; items that arrived meanwhile win over
+     * restored ones with the same item key. Fails open (returns null, adds a warning) for a missing argument, a count outside 1 to
      * 10000, or when the mapping's state limits are reached. In a test run nothing is collected: it returns null
      * with a warning.</p>
      *
@@ -158,7 +160,7 @@ public interface JavaExtensionContext extends DataPrepContext {
      * {@code maxAgeSeconds} after which an incomplete group is dropped.
      */
     Map<String, Object> collectNative(String groupKey, String itemKey, Object value,
-            dynamic.mapper.processor.flow.FlowStateStore.CollectOptions options);
+            CollectOptions options);
 
     /**
      * Removes a collected group and returns it as it is, complete or not; null if there is none or in a test run.

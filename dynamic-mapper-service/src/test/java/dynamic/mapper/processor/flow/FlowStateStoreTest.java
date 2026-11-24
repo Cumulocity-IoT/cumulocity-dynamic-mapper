@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.flow;
 
+import dynamic.mapper.processor.model.CollectOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -225,9 +226,9 @@ class FlowStateStoreTest {
     void aMaxAgeCallDoesNotDropAGroupCollectedWithoutOne() {
         MutableClock clock = new MutableClock();
         FlowStateStore s = new FlowStateStore(clock);
-        s.collect(TENANT, MAPPING, "A", "x", 1, FlowStateStore.CollectOptions.count(3)); // no age limit
+        s.collect(TENANT, MAPPING, "A", "x", 1, CollectOptions.count(3)); // no age limit
         clock.advance(Duration.ofSeconds(60));
-        s.collect(TENANT, MAPPING, "B", "y", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+        s.collect(TENANT, MAPPING, "B", "y", 1, new CollectOptions(3, null, false, 10));
 
         assertEquals(java.util.List.of("A", "B"), s.openGroups(TENANT, MAPPING, ""));
     }
@@ -236,9 +237,9 @@ class FlowStateStoreTest {
     void aGroupIsStillDroppedByItsOwnMaxAge() {
         MutableClock clock = new MutableClock();
         FlowStateStore s = new FlowStateStore(clock);
-        s.collect(TENANT, MAPPING, "A", "x", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+        s.collect(TENANT, MAPPING, "A", "x", 1, new CollectOptions(3, null, false, 10));
         clock.advance(Duration.ofSeconds(60));
-        s.collect(TENANT, MAPPING, "B", "y", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+        s.collect(TENANT, MAPPING, "B", "y", 1, new CollectOptions(3, null, false, 10));
 
         assertEquals(java.util.List.of("B"), s.openGroups(TENANT, MAPPING, ""));
     }
@@ -247,7 +248,7 @@ class FlowStateStoreTest {
     void clearingStateLeavesCollectedGroupsAlone() {
         FlowStateStore s = new FlowStateStore();
         s.commitChanges(TENANT, MAPPING, false, Map.of("k", 1), Set.of());
-        s.collect(TENANT, MAPPING, "G", "x", 1, FlowStateStore.CollectOptions.count(3));
+        s.collect(TENANT, MAPPING, "G", "x", 1, CollectOptions.count(3));
 
         s.commitChanges(TENANT, MAPPING, true, Map.of(), Set.of());
 
@@ -317,8 +318,8 @@ class FlowStateStoreTest {
                 store.collect(TENANT, MAPPING, "g" + FlowStateStore.MAX_OPEN_GROUPS, "b", 2, 2));
     }
 
-    private static FlowStateStore.CollectOptions keys(String... keys) {
-        return new FlowStateStore.CollectOptions(null, Set.of(keys), false, null);
+    private static CollectOptions keys(String... keys) {
+        return new CollectOptions(null, Set.of(keys), false, null);
     }
 
     @Test
@@ -330,14 +331,14 @@ class FlowStateStoreTest {
 
     @Test
     void collectCompletesAtOnceOnTheLastItem() {
-        store.collect(TENANT, MAPPING, "g", "a", 1, FlowStateStore.CollectOptions.count(100));
-        var last = new FlowStateStore.CollectOptions(null, null, true, null);
+        store.collect(TENANT, MAPPING, "g", "a", 1, CollectOptions.count(100));
+        var last = new CollectOptions(null, null, true, null);
         assertEquals(Map.of("a", 1, "b", 2), store.collect(TENANT, MAPPING, "g", "b", 2, last));
     }
 
     @Test
     void collectConditionsAreAlternatives() {
-        var either = new FlowStateStore.CollectOptions(3, Set.of("x"), false, null);
+        var either = new CollectOptions(3, Set.of("x"), false, null);
         store.collect(TENANT, MAPPING, "g", "a", 1, either);
         assertEquals(Map.of("a", 1, "x", 9), store.collect(TENANT, MAPPING, "g", "x", 9, either)); // keys met first
     }
@@ -374,7 +375,7 @@ class FlowStateStoreTest {
             public Instant instant() { return now[0]; }
         };
         FlowStateStore s = new FlowStateStore(clock);
-        var aged = new FlowStateStore.CollectOptions(2, null, false, 60);
+        var aged = new CollectOptions(2, null, false, 60);
 
         s.collect(TENANT, MAPPING, "old", "a", 1, aged);
         s.collect(TENANT, MAPPING, "same", "a", 1, aged);
