@@ -157,7 +157,7 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
    same host you set in `REAL_HOST`). Use the interactive `mitmproxy` TUI (not headless
    `mitmdump`) since toggling the fault requires the `:` command bar:
    ```bash
-   mitmproxy --mode reverse:https://<your-tenant>.cumulocity.com \
+   REAL_HOST=mitmproxy --mode reverse:https://<your-tenant>.cumulocity.com \
              --listen-port 8888 \
              -s fault_inject.py
    ```
