@@ -1003,6 +1003,9 @@ msgstr ""
 msgid "Extension is required"
 msgstr ""
 
+msgid "Extension is still in use"
+msgstr ""
+
 msgid "Extension name"
 msgstr ""
 
@@ -1422,6 +1425,9 @@ msgid "If the source expression returns an array:<ul class=\"m-b-0 p-l-16\"><li>
 msgstr ""
 
 msgid "If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type."
+msgstr ""
+
+msgid "If you delete it anyway, these mappings fail until they use another extension. Delete anyway?"
 msgstr ""
 
 msgid "Import"

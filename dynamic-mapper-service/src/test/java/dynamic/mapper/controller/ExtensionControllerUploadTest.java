@@ -23,6 +23,7 @@ package dynamic.mapper.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -46,7 +47,10 @@ import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.ExtensionUploadException;
 import dynamic.mapper.core.ExtensionUploadException.Reason;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
 
 /** POST /extension: the name defaults to the file name, and each rejection reason has its own status. */
 class ExtensionControllerUploadTest {
@@ -133,5 +137,67 @@ class ExtensionControllerUploadTest {
 
         assertEquals(expected, e.getStatusCode());
         assertEquals("why", e.getReason());
+    }
+
+    private static Mapping mapping(String name, String id, Direction direction, boolean active, String extensionName) {
+        Mapping m = new Mapping();
+        m.setName(name);
+        m.setIdentifier(id);
+        m.setDirection(direction);
+        m.setActive(active);
+        m.setExtension(ExtensionEntry.builder().extensionName(extensionName).build());
+        return m;
+    }
+
+    @Test
+    void refusesToDeleteAnExtensionAndNamesEveryMappingThatUsesIt() {
+        MappingService mappingService = mock(MappingService.class);
+        ContextService<UserCredentials> contextService = mock(ContextService.class);
+        UserCredentials credentials = mock(UserCredentials.class);
+        when(credentials.getTenant()).thenReturn(TENANT);
+        when(contextService.getContext()).thenReturn(credentials);
+        Extension registered = new Extension();
+        registered.setExternal(true);
+        when(extensionManager.getProcessorExtension(TENANT, "ext")).thenReturn(registered);
+        when(mappingService.getMappings(TENANT, null)).thenReturn(java.util.List.of(
+                mapping("Zeta", "z-1", Direction.OUTBOUND, false, "ext"),
+                mapping("Alpha", "a-1", Direction.INBOUND, true, "ext"),
+                mapping("Other", "o-1", Direction.INBOUND, true, "different")));
+        ExtensionController c = new ExtensionController(contextService, extensionManager, mappingService);
+
+        ResponseEntity<?> response = c.deleteProcessorExtension("ext", false);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> body = (java.util.Map<String, Object>) response.getBody();
+        assertEquals(2, ((java.util.List<?>) body.get("mappings")).size());
+        String message = (String) body.get("message");
+        assertTrue(message.contains("2 mappings"), message);
+        assertTrue(message.contains("\"Alpha\" (inbound, id a-1)"), message);
+        assertTrue(message.contains("\"Zeta\" (outbound, id z-1, inactive)"), message);
+        assertTrue(message.indexOf("Alpha") < message.indexOf("Zeta"), "sorted by name");
+        assertTrue(!message.contains("Other"), message);
+        org.mockito.Mockito.verify(extensionManager, org.mockito.Mockito.never()).deleteProcessorExtension(any(), any());
+    }
+
+    @Test
+    void forceDeletesAnExtensionThatMappingsStillUse() {
+        MappingService mappingService = mock(MappingService.class);
+        ContextService<UserCredentials> contextService = mock(ContextService.class);
+        UserCredentials credentials = mock(UserCredentials.class);
+        when(credentials.getTenant()).thenReturn(TENANT);
+        when(contextService.getContext()).thenReturn(credentials);
+        Extension registered = new Extension();
+        registered.setExternal(true);
+        when(extensionManager.getProcessorExtension(TENANT, "ext")).thenReturn(registered);
+        when(extensionManager.deleteProcessorExtension(TENANT, "ext")).thenReturn(registered);
+        when(mappingService.getMappings(TENANT, null)).thenReturn(java.util.List.of(
+                mapping("Alpha", "a-1", Direction.INBOUND, true, "ext")));
+        ExtensionController c = new ExtensionController(contextService, extensionManager, mappingService);
+
+        ResponseEntity<?> response = c.deleteProcessorExtension("ext", true);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(extensionManager).deleteProcessorExtension(TENANT, "ext");
     }
 }

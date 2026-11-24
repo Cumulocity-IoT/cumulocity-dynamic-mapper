@@ -22,7 +22,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { ConfirmationModalComponent, ExtensionStatus, Feature, SharedService } from '../../shared';
-import { ExtensionService } from '../extension.service';
+import { ExtensionInUseError, ExtensionService } from '../extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
@@ -76,6 +76,26 @@ export class ExtensionCardComponent implements OnInit {
 
     try {
       await this.extensionService.deleteProcessorExtension(this.app());
+      this.appDeleted.emit();
+    } catch (error) {
+      if (error instanceof ExtensionInUseError) {
+        await this.deleteAnyway(error);
+        return;
+      }
+      this.alertService.warning(gettext('Failed to delete Java Extension'), error?.message);
+    }
+  }
+
+  /** Mappings still use the extension: show which ones and delete only if the user insists. */
+  private async deleteAnyway(inUse: ExtensionInUseError): Promise<void> {
+    const confirmed = await this.showConfirmationModal({
+      title: gettext('Extension is still in use'),
+      message: `${inUse.message}\n\n${gettext('If you delete it anyway, these mappings fail until they use another extension. Delete anyway?')}`,
+      labels: { ok: 'Delete anyway', cancel: 'Cancel' }
+    });
+    if (!confirmed) return;
+    try {
+      await this.extensionService.deleteProcessorExtension(this.app(), true);
       this.appDeleted.emit();
     } catch (error) {
       this.alertService.warning(gettext('Failed to delete Java Extension'), error?.message);

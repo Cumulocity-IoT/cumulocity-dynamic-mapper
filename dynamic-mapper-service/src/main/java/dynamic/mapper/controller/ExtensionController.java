@@ -160,19 +160,21 @@ public class ExtensionController {
 
             **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.
             """, parameters = {
-            @Parameter(name = "extensionName", description = "The unique name of the extension to delete", required = true, example = "custom-json-processor", schema = @Schema(type = "string"))
+            @Parameter(name = "extensionName", description = "The unique name of the extension to delete", required = true, example = "custom-json-processor", schema = @Schema(type = "string")),
+            @Parameter(name = "force", description = "Delete even if mappings still use the extension; those mappings then fail until they use another extension", schema = @Schema(type = "boolean", defaultValue = "false"))
     })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Extension deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Extension.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions to delete extensions", content = @Content),
             @ApiResponse(responseCode = "400", description = "Built-in extensions cannot be deleted", content = @Content),
             @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
-            @ApiResponse(responseCode = "409", description = "Extension is still used by mappings; the response message lists them", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Extension is still used by mappings; the body has a message and the list of mappings. Repeat with force=true to delete anyway", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
+    public ResponseEntity<?> deleteProcessorExtension(@PathVariable String extensionName,
+            @RequestParam(name = "force", defaultValue = "false") boolean force) {
         String tenant = contextService.getContext().getTenant();
         Extension registered = extensionManager.getProcessorExtension(tenant, extensionName);
         if (registered == null)
@@ -182,20 +184,58 @@ public class ExtensionController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Built-in extension " + extensionName + " cannot be deleted.");
 
-        List<String> usedBy = mappingService.getMappings(tenant, null).stream()
-                .filter(m -> m.getExtension() != null && extensionName.equals(m.getExtension().getExtensionName()))
-                .map(Mapping::getName)
-                .sorted()
-                .toList();
-        if (!usedBy.isEmpty())
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Extension " + extensionName + " is used by mapping(s): " + String.join(", ", usedBy)
-                            + ". Change or delete these mappings first.");
+        List<Mapping> usedBy = force ? List.of()
+                : mappingService.getMappings(tenant, null).stream()
+                        .filter(m -> m.getExtension() != null
+                                && extensionName.equals(m.getExtension().getExtensionName()))
+                        .sorted(java.util.Comparator.comparing(Mapping::getName,
+                                java.util.Comparator.nullsLast(String::compareTo)))
+                        .toList();
+        if (!usedBy.isEmpty()) {
+            // Built here, not with ResponseStatusException: the message must reach the UI whatever the
+            // container does with error pages.
+            java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("status", HttpStatus.CONFLICT.value());
+            body.put("error", HttpStatus.CONFLICT.getReasonPhrase());
+            body.put("message", usedByMessage(extensionName, usedBy));
+            body.put("mappings", usedBy.stream().map(m -> {
+                java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();
+                entry.put("name", m.getName());
+                entry.put("id", m.getId());
+                entry.put("identifier", m.getIdentifier());
+                entry.put("direction", m.getDirection());
+                entry.put("active", m.getActive());
+                return entry;
+            }).toList());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
+        if (force) {
+            log.warn("{} - Deleting extension {} with force: mappings that use it will fail", tenant, extensionName);
+        }
 
         Extension result = extensionManager.deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    private static final int MAX_LISTED_MAPPINGS = 10;
+
+    /** Names each mapping that blocks the delete, with its direction and identifier, so it can be found. */
+    static String usedByMessage(String extensionName, List<Mapping> usedBy) {
+        String list = usedBy.stream()
+                .limit(MAX_LISTED_MAPPINGS)
+                .map(m -> String.format("\"%s\" (%s, %s%s)", m.getName(),
+                        m.getDirection() == null ? "unknown direction"
+                                : m.getDirection().name().toLowerCase(),
+                        "id " + m.getIdentifier(),
+                        Boolean.TRUE.equals(m.getActive()) ? "" : ", inactive"))
+                .collect(java.util.stream.Collectors.joining("; "));
+        int more = usedBy.size() - MAX_LISTED_MAPPINGS;
+        return "Extension " + extensionName + " is used by " + usedBy.size()
+                + (usedBy.size() == 1 ? " mapping: " : " mappings: ") + list
+                + (more > 0 ? "; and " + more + " more" : "")
+                + ". Change the extension in these mappings or delete them first, or delete the extension anyway.";
     }
 }

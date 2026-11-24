@@ -41,6 +41,14 @@ interface ExtensionFilter {
   fragmentType: string;
 }
 
+/** The backend refuses to delete an extension that mappings still use; `message` names them. */
+export class ExtensionInUseError extends Error {
+  constructor(message: string, readonly mappings: { name: string; identifier: string; direction: string }[]) {
+    super(message);
+    this.name = 'ExtensionInUseError';
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
   // Configuration
@@ -120,13 +128,13 @@ export class ExtensionService {
     );
   }
 
-  async deleteProcessorExtension(app: IManagedObject): Promise<void> {
+  async deleteProcessorExtension(app: IManagedObject, force = false): Promise<void> {
     if (!app?.['name']) {
       throw new Error('Invalid extension: missing name');
     }
 
     try {
-      await this.deleteExtensionFromBackend(app['name']);
+      await this.deleteExtensionFromBackend(app['name'], force);
     } catch (error) {
       console.error(`Failed to delete extension ${app['name']}:`, error);
       throw error;
@@ -135,14 +143,14 @@ export class ExtensionService {
 
   // Private helper methods
 
-  private async deleteExtensionFromBackend(name: string): Promise<void> {
+  private async deleteExtensionFromBackend(name: string, force: boolean): Promise<void> {
     if (!name?.trim()) {
       throw new Error('Extension name is required');
     }
 
     try {
       const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${encodeURIComponent(name)}`,
+        `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${encodeURIComponent(name)}${force ? '?force=true' : ''}`,
         {
           headers: {
             accept: 'application/json',
@@ -155,7 +163,11 @@ export class ExtensionService {
       if (!response.ok) {
         // 409 carries the mappings that still use the extension, 400 the reason it cannot be deleted
         const body = await response.json().catch(() => undefined);
-        throw new Error(body?.message || `HTTP ${response.status}: ${response.statusText}`);
+        const message = body?.message || body?.error || `HTTP ${response.status}: ${response.statusText}`;
+        if (response.status === 409) {
+          throw new ExtensionInUseError(message, body?.mappings ?? []);
+        }
+        throw new Error(message);
       }
     } catch (error) {
       console.error(`Failed to delete processor extension ${name}:`, error);
