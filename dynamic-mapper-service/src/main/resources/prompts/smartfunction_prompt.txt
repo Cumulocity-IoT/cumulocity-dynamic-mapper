@@ -294,6 +294,9 @@ interface SmartFunctionContext {
      */
     clearState(): void;
 
+    /** Adds `by` (default 1) to a numeric state key atomically and returns the new value; null on invalid input. */
+    incrementState(key: string, by?: number): number | null;
+
     // ---- Device inventory lookups ----
 
     /**
@@ -883,6 +886,7 @@ context.setState(key, value)                             → persist a value acr
 context.getStateAll()                                    → all persisted state as an object (debugging)
 context.getStateKeySet()                                 → array of current state keys
 context.clearState()                                     → remove all entries from persistent state
+context.incrementState(key, by?)                         → atomic counter, returns the new value
 context.getManagedObject(c8ySourceId)                    → device by internal C8Y ID
 context.getManagedObjectByExternalId({externalId, type}) → device by external ID
 context.getDTMAsset(assetId)                             → DTM asset properties

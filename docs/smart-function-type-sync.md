@@ -57,7 +57,7 @@ rather than by reading — see [contract-sync.md §3](contract-sync.md).
 | `getTesting()` | `DataPrepContext.getTesting()` | skip side-effects in test cycle |
 | `getManagedObject(id)` | `SmartFunctionContext.getManagedObject(String)` | |
 | `getManagedObjectByExternalId(ext)` | `SmartFunctionContext.getManagedObjectByExternalId(ExternalId\|Value)` | |
-| `getDTMAsset(id)` | `DataPrepContext.getDTMAsset(String)` | placeholder |
+| `getDTMAsset(id)` | `DataPrepContext.getDTMAsset(String)` | placeholder: always `null` + warning |
 | `addWarning(msg)` | `DataPrepContext.addWarning(String)` / `SmartFunctionContext` override | stores under `_WARNINGS_` key |
 | `logMessage(msg)` | `DataPrepContext.logMessage(String)` | `@deprecated` — prefer `console.log` |
 | `addLogMessage(msg)` | `DataPrepContext.addLogMessage(String)` | `@deprecated` — prefer `console.log` |

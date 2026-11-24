@@ -132,15 +132,18 @@ class SmartFunctionContextStatePersistenceTest {
         ctx.addWarning("careful");
         ctx.clearState();
 
-        assertTrue(ctx.getState(DataPrepContext.LOGS) != null, "logs must survive clearState()");
-        assertTrue(ctx.getState(DataPrepContext.WARNINGS) != null, "warnings must survive clearState()");
+        assertEquals(java.util.List.of("hello"), ctx.collectedLogs(), "logs must survive clearState()");
+        assertEquals(java.util.List.of("careful"), ctx.collectedWarnings(), "warnings must survive clearState()");
     }
 
     @Test
-    void ephemeralKeysAreNeverPersisted() {
+    void logsAndWarningsAreNeverStateAndNeverPersisted() {
         SmartFunctionContext ctx = invocation();
         ctx.addLogMessage("hello");
+        ctx.addWarning("careful");
         ctx.setState("k", v(1));
+        assertEquals(java.util.Set.of("k"), ((Value) ctx.getStateKeySet()).getArraySize() == 1
+                ? java.util.Set.of("k") : java.util.Set.of("leaked"), "a script must not see them as keys");
         ctx.persistState();
 
         Map<String, Object> state = store.loadState(TENANT, MAPPING);

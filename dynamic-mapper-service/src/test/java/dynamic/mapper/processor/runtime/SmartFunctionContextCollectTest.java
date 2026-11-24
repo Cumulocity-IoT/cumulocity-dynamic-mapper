@@ -114,7 +114,7 @@ class SmartFunctionContextCollectTest {
         for (String arg : bad) {
             assertEquals("null", run(ctx, "context.collect('g','a',1," + arg + ")"), arg);
         }
-        assertEquals(bad.length, ((Value) ctx.getState(DataPrepContext.WARNINGS)).getArraySize());
+        assertEquals(bad.length, ctx.collectedWarnings().size());
         assertEquals("[]", run(ctx, "context.openGroups('')"), "nothing was collected");
     }
 

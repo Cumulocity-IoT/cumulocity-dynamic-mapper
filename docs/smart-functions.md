@@ -69,8 +69,27 @@ context.getState(key, defaultValue)  // retrieve with default
 context.setState(key, value)         // store value
 context.getStateAll()                // retrieve all state as object
 context.getStateKeySet()             // retrieve all state keys as string[]
-context.clearState()                 // drop all state for this mapping
+context.clearState()                 // drop all state for this mapping (open `collect` groups are kept)
+context.incrementState(key, by?)   // atomic add (default 1) on a numeric key, returns the new value; concurrent messages never lose a count
 ```
+
+What a state value can hold: strings, numbers, booleans, arrays, and objects (key order is kept). A `Date` is stored as
+its ISO-8601 text. A function is replaced by `null` with a warning, and an object that refers to itself fails with an
+error. A key stored as `null` counts as absent, so `getState(key, default)` returns the default. State expires when a
+mapping has neither written nor read it for the retention period (default 1440 minutes).
+
+Limits per mapping: 1,000 state keys, about 8 MB for state and open `collect` groups together, 10,000 items per group,
+500 warnings and 500 log messages per message. A write over a limit adds a warning and stores nothing. State lives in the
+memory of a single service instance: it is lost on a restart, and several instances would each hold their own.
+
+### De-duplication
+
+```ts
+context.isDuplicate(key, windowSeconds)  // true if the same key was seen for this mapping within the window (1 to 3600 s), else false and the key is recorded
+```
+
+Atomic, and it shares its store with the `$isDuplicate` filter function; see
+[message-deduplication.md](feature/message-deduplication.md). It always returns `false` in a test run.
 
 ### N:1 collection (many messages into one)
 

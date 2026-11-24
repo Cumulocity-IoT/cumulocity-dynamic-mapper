@@ -315,7 +315,8 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     @Override
     public Value getManagedObjectByExternalId(ExternalId externalId) {
         if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObjectByExternalId(externalId);
+            // a host ExternalId is understood by the Value overload
+            return dataPrepContext.getManagedObjectByExternalId(Value.asValue(externalId));
         }
         log.warn("{} - getManagedObjectByExternalId() called but DataPrepContext not available", tenant);
         return null;

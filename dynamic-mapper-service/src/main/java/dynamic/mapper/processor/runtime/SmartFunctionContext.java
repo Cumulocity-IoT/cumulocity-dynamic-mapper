@@ -51,8 +51,13 @@ public class SmartFunctionContext implements DataPrepContext {
 
     private static final int MAX_EXPECTED_COUNT = 10_000;
     private static final int MAX_AGE_SECONDS = 86_400;
+    // Warnings and logs one message may collect; a loop must not be able to fill the heap with them.
+    private static final int MAX_MESSAGES = 500;
 
     private final Map<String, Object> state;
+    // Kept apart from the state: a function sees only its own keys, and nothing here reaches the store.
+    private final List<String> warnings = new ArrayList<>();
+    private final List<String> logs = new ArrayList<>();
     private final Context graalContext;
     private final String tenant;
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
@@ -168,6 +173,13 @@ public class SmartFunctionContext implements DataPrepContext {
 
         // Convert Value to Java object for safe storage
         Object javaValue = convertValueToJavaObject(value);
+        if (javaValue != null && stateStore != null && mappingIdentifier != null) {
+            String reason = stateStore.stateLimitReason(tenant, mappingIdentifier, key, javaValue);
+            if (reason != null) {
+                addWarning("setState: " + reason + ", the value of '" + key + "' was not stored");
+                return;
+            }
+        }
         state.put(key, javaValue);
         changedKeys.add(key);
 
@@ -217,6 +229,11 @@ public class SmartFunctionContext implements DataPrepContext {
      */
     @Override
     public Value collect(String groupKey, String itemKey, Value value, Value expectedCountOrOptions) {
+        if (graalContext != null && (stateStore == null || mappingIdentifier == null)) {
+            // A test run keeps no groups: without a word the function looks broken in the test UI.
+            addWarning("collect: not evaluated in a test run, nothing is collected and the result is always null");
+            return null;
+        }
         if (stateStore == null || mappingIdentifier == null || graalContext == null) {
             return null;
         }
@@ -228,8 +245,14 @@ public class SmartFunctionContext implements DataPrepContext {
         if (options == null) {
             return null;
         }
-        Map<String, Object> group = stateStore.collect(tenant, mappingIdentifier, groupKey, itemKey,
-                convertValueToJavaObject(value), options);
+        Map<String, Object> group;
+        try {
+            group = stateStore.collect(tenant, mappingIdentifier, groupKey, itemKey,
+                    convertValueToJavaObject(value), options);
+        } catch (FlowStateStore.StateLimitExceededException e) {
+            addWarning("collect: " + e.getMessage() + ", the message was not collected");
+            return null;
+        }
         return group == null ? null : graalContext.asValue(JavaScriptInteropHelper.toJsInterop(group));
     }
 
@@ -352,19 +375,20 @@ public class SmartFunctionContext implements DataPrepContext {
      * GraalVM selects this method when JavaScript passes two arguments to {@code getState}.
      * Uses {@code Object} (not {@code Value}) so GraalVM reliably matches any JS primitive.
      *
-     * Checks key presence via {@code state.containsKey} rather than null-checking the result
-     * of {@code getState(key)} — the null-check approach would incorrectly return the default
-     * when the key is present but stored as null.
+     * A key stored as null counts as absent and returns the default: the store cannot hold null, so the key
+     * is removed when the message ends.
      */
     @Override
     public Value getState(String key, Object defaultValue) {
         if (key == null || graalContext == null) {
             return graalContext != null ? graalContext.asValue(defaultValue) : null;
         }
-        if (!state.containsKey(key)) {
+        Object javaValue = state.get(key);
+        if (javaValue == null) {
+            // A value stored as null is removed when the message ends, so it is "absent" from the next message
+            // on; treat it the same way now, or the answer would depend on which message asks.
             return graalContext.asValue(defaultValue);
         }
-        Object javaValue = state.get(key);
         return graalContext.asValue(JavaScriptInteropHelper.toJsInteropLazy(javaValue));
     }
 
@@ -374,21 +398,37 @@ public class SmartFunctionContext implements DataPrepContext {
             return null;
         }
 
+        // Not implemented: answer as for an asset that does not exist, as the API contract says (null).
         log.debug("{} - DTM asset lookup requested for: {}", tenant, assetId);
+        addWarning("getDTMAsset: DTM asset lookup is not available, the result is always null");
+        return graalContext.asValue(null);
+    }
 
-        // Simple placeholder implementation
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("assetId", assetId);
-        properties.put("found", false);
-        properties.put("message", "DTM lookup not implemented");
-
-        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(properties));
+    /** The text of a string or number (an external id is often a number in the payload); null for anything else. */
+    private static String scalarText(Value value) {
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (value.isString()) {
+            return value.asString();
+        }
+        if (value.isNumber()) {
+            return value.fitsInLong() ? String.valueOf(value.asLong()) : String.valueOf(value.asDouble());
+        }
+        return null;
     }
 
     /**
      * Convert GraalJS Value to Java object for safe storage
      */
     private Object convertValueToJavaObject(Value value) {
+        return convertValueToJavaObject(value, new java.util.HashSet<>());
+    }
+
+    /**
+     * @param path the arrays and objects being converted, to detect a reference to itself
+     */
+    private Object convertValueToJavaObject(Value value, java.util.Set<Object> path) {
         if (value == null || value.isNull()) {
             return null;
         } else if (value.isString()) {
@@ -403,24 +443,47 @@ public class SmartFunctionContext implements DataPrepContext {
             }
         } else if (value.isBoolean()) {
             return value.asBoolean();
+        } else if (value.isInstant()) {
+            // A JS Date: stored as its ISO-8601 text, which is what JSON.stringify makes of it. It used to
+            // match hasMembers() and silently become {}.
+            return value.asInstant().toString();
+        } else if (value.canExecute()) {
+            addWarning("A function cannot be stored in state or collected, it was replaced by null");
+            return null;
         } else if (value.hasArrayElements()) {
-            // Convert to simple list for basic support
-            java.util.List<Object> list = new java.util.ArrayList<>();
-            long size = value.getArraySize();
-            for (int i = 0; i < size; i++) {
-                list.add(convertValueToJavaObject(value.getArrayElement(i)));
+            enter(value, path);
+            try {
+                java.util.List<Object> list = new java.util.ArrayList<>();
+                long size = value.getArraySize();
+                for (int i = 0; i < size; i++) {
+                    list.add(convertValueToJavaObject(value.getArrayElement(i), path));
+                }
+                return list;
+            } finally {
+                path.remove(value);
             }
-            return list;
         } else if (value.hasMembers()) {
-            // Convert to simple map for basic support
-            Map<String, Object> map = new HashMap<>();
-            for (String key : value.getMemberKeys()) {
-                map.put(key, convertValueToJavaObject(value.getMember(key)));
+            enter(value, path);
+            try {
+                // Insertion order, as the script wrote it: a HashMap reordered the keys.
+                Map<String, Object> map = new java.util.LinkedHashMap<>();
+                for (String key : value.getMemberKeys()) {
+                    map.put(key, convertValueToJavaObject(value.getMember(key), path));
+                }
+                return map;
+            } finally {
+                path.remove(value);
             }
-            return map;
         } else {
             // Fallback to string representation
             return value.toString();
+        }
+    }
+
+    private static void enter(Value value, java.util.Set<Object> path) {
+        // Value.equals compares the underlying guest object, not the Java wrapper (each read makes a new one)
+        if (!path.add(value)) {
+            throw new IllegalArgumentException("The value refers to itself and cannot be stored or collected");
         }
     }
 
@@ -456,6 +519,14 @@ public class SmartFunctionContext implements DataPrepContext {
 
     @Override
     public Value getManagedObject(String c8ySourceId) {
+        if (graalContext == null) {
+            return null;
+        }
+        if (c8ySourceId == null || inventoryEnrichmentClient == null) {
+            addWarning(c8ySourceId == null ? "getManagedObject: the device id has no value"
+                    : "getManagedObject: inventory lookup is not available");
+            return graalContext.asValue(null);
+        }
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, c8ySourceId, testing);
         if (javaValue == null) {
             addWarning(String.format("Device not found in inventory cache: %s", c8ySourceId));
@@ -464,18 +535,15 @@ public class SmartFunctionContext implements DataPrepContext {
     }
 
     @Override
-    public Value getManagedObjectByExternalId(ExternalId externalId) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId,
-                testing);
-        if (javaValue == null) {
-            addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
-        }
-        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
-    }
-
-    @Override
     public Value getManagedObjectByExternalId(Value externalIdValue) {
-        if (externalIdValue == null) {
+        if (graalContext == null) {
+            return null;
+        }
+        if (inventoryEnrichmentClient == null) {
+            addWarning("getManagedObjectByExternalId: inventory lookup is not available");
+            return graalContext.asValue(null);
+        }
+        if (externalIdValue == null || externalIdValue.isNull()) {
             addWarning("ExternalId parameter is null");
             return graalContext.asValue(null);
         }
@@ -489,8 +557,13 @@ public class SmartFunctionContext implements DataPrepContext {
             }
             // Handle JavaScript object with externalId and type properties
             else if (externalIdValue.hasMembers()) {
-                String externalId = externalIdValue.getMember("externalId").asString();
-                String type = externalIdValue.getMember("type").asString();
+                String externalId = scalarText(externalIdValue.getMember("externalId"));
+                String type = scalarText(externalIdValue.getMember("type"));
+                if (externalId == null || type == null) {
+                    addWarning("getManagedObjectByExternalId: both externalId and type are required, for example "
+                            + "{externalId: 'abc', type: 'c8y_Serial'}");
+                    return graalContext.asValue(null);
+                }
                 extId = new ExternalId(externalId, type);
             } else {
                 addWarning("Invalid externalId parameter format");
@@ -512,31 +585,99 @@ public class SmartFunctionContext implements DataPrepContext {
 
     @Override
     public void addWarning(String warning) {
-        List<String> warnings = (List<String>) state.get(DataPrepContext.WARNINGS);
-        if (warnings == null) {
-            warnings = new ArrayList<String>();
-        }
-        warnings.add(warning);
-        state.put(DataPrepContext.WARNINGS, warnings);
+        append(warnings, warning, "warnings");
     }
 
     @Override
     public void addLogMessage(String message) {
-        List<String> logs = (List<String>) state.get(DataPrepContext.LOGS);
-        if (logs == null) {
-            logs = new ArrayList<String>();
+        append(logs, message, "log messages");
+    }
+
+    private static void append(List<String> target, String message, String what) {
+        if (target.size() < MAX_MESSAGES) {
+            target.add(message);
+        } else if (target.size() == MAX_MESSAGES) {
+            target.add("Further " + what + " of this message are not recorded (limit " + MAX_MESSAGES + ")");
         }
-        logs.add(message);
-        state.put(DataPrepContext.LOGS, logs);
+    }
+
+    /** The warnings this message collected; read by the processors, not reachable from a script. */
+    public List<String> collectedWarnings() {
+        return List.copyOf(warnings);
+    }
+
+    /** The log messages this message collected; read by the processors, not reachable from a script. */
+    public List<String> collectedLogs() {
+        return List.copyOf(logs);
+    }
+
+    /**
+     * Adds a number to a state key in one atomic step, so concurrent messages never lose an increment (see
+     * {@link FlowStateStore#increment}). Called by a Smart Function as {@code context.incrementState(key)} or
+     * {@code context.incrementState(key, by)}; returns the new value, or null with a warning if {@code by} is not a
+     * finite number, the key holds something else, or the mapping holds the maximum number of keys.
+     *
+     * <p>The new value is visible to this message at once and is not written again when the message ends. If the
+     * function changed the same key with {@code setState} before, the increment is applied to that pending value
+     * instead, and is then written like any {@code setState}. A test run has no store: it counts on its own
+     * throw-away state.</p>
+     */
+    @Override
+    public Value incrementState(String key, Value by) {
+        if (graalContext == null) {
+            return null;
+        }
+        if (key == null) {
+            addWarning("incrementState: the key has no value");
+            return null;
+        }
+        Number amount;
+        if (by == null || by.isNull()) {
+            amount = 1;
+        } else if (by.isNumber() && by.fitsInInt()) {
+            amount = by.asInt();
+        } else if (by.isNumber() && by.fitsInLong()) {
+            amount = by.asLong();
+        } else if (by.isNumber() && Double.isFinite(by.asDouble())) {
+            amount = by.asDouble();
+        } else {
+            addWarning("incrementState: the amount must be a finite number, the value of '" + key
+                    + "' was not changed");
+            return null;
+        }
+        try {
+            Number result;
+            if (stateStore != null && mappingIdentifier != null && !changedKeys.contains(key)) {
+                if (wipeRequested) {
+                    // clearState() came first, and the increment must start from nothing
+                    stateStore.commitChanges(tenant, mappingIdentifier, true, Map.of(), java.util.Set.of());
+                    wipeRequested = false;
+                }
+                result = stateStore.increment(tenant, mappingIdentifier, key, amount);
+                state.put(key, result);
+            } else {
+                Object current = state.get(key);
+                if (current != null && !(current instanceof Number)) {
+                    throw new IllegalArgumentException("the state key '" + key + "' does not hold a number");
+                }
+                result = FlowStateStore.add(current == null ? 0 : (Number) current, amount);
+                state.put(key, result);
+                changedKeys.add(key);
+            }
+            return graalContext.asValue(result);
+        } catch (IllegalArgumentException | FlowStateStore.StateLimitExceededException e) {
+            addWarning("incrementState: " + e.getMessage() + ", the value of '" + key + "' was not changed");
+            return null;
+        }
     }
 
     /**
      * Called by Smart Function code: removes every state entry held for this mapping, effective when
-     * the message ends. Collected logs and warnings are kept.
+     * the message ends. Collected logs and warnings, and the groups of {@code collect}, are kept.
      */
     @Override
     public void clearState() {
-        state.keySet().removeIf(key -> !isEphemeral(key));
+        state.clear();
         changedKeys.clear();
         wipeRequested = true;
     }
@@ -563,10 +704,6 @@ public class SmartFunctionContext implements DataPrepContext {
         changedKeys.clear();
         wipeRequested = false;
         state.clear();
-    }
-
-    private static boolean isEphemeral(String key) {
-        return DataPrepContext.WARNINGS.equals(key) || DataPrepContext.LOGS.equals(key);
     }
 
     @Override

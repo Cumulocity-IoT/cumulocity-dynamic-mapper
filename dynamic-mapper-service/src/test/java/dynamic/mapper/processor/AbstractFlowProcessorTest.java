@@ -350,8 +350,9 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractWarningsWithValidWarnings() {
         // Given - Add warnings to flow context as GraalVM array
-        Value warningsArray = graalContext.eval("js", "[\"Warning 1\", \"Warning 2\", \"Warning 3\"]");
-        flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
+        flowContext.addWarning("Warning 1");
+        flowContext.addWarning("Warning 2");
+        flowContext.addWarning("Warning 3");
 
         // Create OutputCollector
         OutputCollector output = new OutputCollector();
@@ -386,8 +387,9 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractLogsWithValidLogs() {
         // Given - Add logs to flow context as GraalVM array
-        Value logsArray = graalContext.eval("js", "[\"Log entry 1\", \"Log entry 2\", \"Log entry 3\"]");
-        flowContext.setState(DataPrepContext.LOGS, logsArray);
+        flowContext.addLogMessage("Log entry 1");
+        flowContext.addLogMessage("Log entry 2");
+        flowContext.addLogMessage("Log entry 3");
 
         // Create OutputCollector
         OutputCollector output = new OutputCollector();
@@ -567,10 +569,10 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractWarningsAndLogsSequentially() {
         // Given - Add both warnings and logs
-        Value warningsArray = graalContext.eval("js", "[\"Warning 1\", \"Warning 2\"]");
-        Value logsArray = graalContext.eval("js", "[\"Log 1\", \"Log 2\"]");
-        flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
-        flowContext.setState(DataPrepContext.LOGS, logsArray);
+        flowContext.addWarning("Warning 1");
+        flowContext.addWarning("Warning 2");
+        flowContext.addLogMessage("Log 1");
+        flowContext.addLogMessage("Log 2");
 
         // Create OutputCollector
         OutputCollector output = new OutputCollector();
@@ -608,14 +610,16 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractWarningsHandlesNonStringElements() {
         // Given - Add non-string element to warnings (though shouldn't happen in practice)
+        // A context other than SmartFunctionContext (a Java extension) still hands them over through getState
         Value warningsArray = graalContext.eval("js", "[\"Valid warning\", 123, null]");
-        flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
+        DataPrepContext other = org.mockito.Mockito.mock(DataPrepContext.class);
+        when(other.getState(DataPrepContext.WARNINGS)).thenReturn(warningsArray);
 
         // Create OutputCollector
         OutputCollector output = new OutputCollector();
 
         // When
-        processor.extractWarnings(flowContext, output, TEST_TENANT);
+        processor.extractWarnings(other, output, TEST_TENANT);
 
         // Then - Should only extract valid string warnings
         assertEquals(1, output.getWarnings().size(),
@@ -629,13 +633,14 @@ class AbstractFlowProcessorTest {
     void testExtractLogHandlesNonStringElements() {
         // Given - Add non-string element to logs
         Value logsArray = graalContext.eval("js", "[\"Valid log\", 456, undefined]");
-        flowContext.setState(DataPrepContext.LOGS, logsArray);
+        DataPrepContext other = org.mockito.Mockito.mock(DataPrepContext.class);
+        when(other.getState(DataPrepContext.LOGS)).thenReturn(logsArray);
 
         // Create OutputCollector
         OutputCollector output = new OutputCollector();
 
         // When
-        processor.extractLogs(flowContext, output, TEST_TENANT);
+        processor.extractLogs(other, output, TEST_TENANT);
 
         // Then - Should only extract valid string logs
         assertEquals(1, output.getLogs().size(),

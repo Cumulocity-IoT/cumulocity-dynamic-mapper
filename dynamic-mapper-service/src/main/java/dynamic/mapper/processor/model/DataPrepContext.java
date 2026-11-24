@@ -137,15 +137,12 @@ public interface DataPrepContext {
     /**
      * Lookup Inventory Device properties by external id.
      *
-     * @param externalId The externalId to lookup.
-     * @return A Value containing the device properties as a JS object.
-     */
-    Value getManagedObjectByExternalId(ExternalId externalId);
-
-    /**
-     * Lookup Inventory Device properties by external id.
+     * <p>This is the only overload of the name on purpose: with two, GraalVM cannot choose one for
+     * {@code null} or {@code undefined} and the script fails with "Multiple applicable overloads". Java code that
+     * holds an {@link ExternalId} uses {@link JavaExtensionContext#getManagedObjectByExternalId(ExternalId)}.</p>
      *
-     * @param externalIdValue A Value object containing externalId and type properties
+     * @param externalIdValue A Value object containing externalId and type properties (or a host
+     *                        {@link ExternalId}); null and undefined give a warning and a null result
      * @return A Value containing the device properties as a JS object.
      */
     Value getManagedObjectByExternalId(Value externalIdValue);
@@ -196,6 +193,24 @@ public interface DataPrepContext {
     String getClientId();
 
     void clearState();
+
+    /**
+     * Adds one to a state key atomically and returns the new value; see {@link #incrementState(String, Value)}.
+     */
+    default Value incrementState(String key) {
+        return incrementState(key, null);
+    }
+
+    /**
+     * Adds {@code by} (default 1) to the number held under {@code key}, or stores it if there is none, in one atomic
+     * step, and returns the new value. Unlike {@code getState}/{@code setState} concurrent messages never lose an
+     * increment. Declared here for the same reason as {@link #isDuplicate}.
+     *
+     * @return the new value, or null with a warning where the call is invalid, or where no store is available
+     */
+    default Value incrementState(String key, Value by) {
+        return null;
+    }
 
     /**
      * Reports whether the same key was already seen for this mapping within the window, and records it

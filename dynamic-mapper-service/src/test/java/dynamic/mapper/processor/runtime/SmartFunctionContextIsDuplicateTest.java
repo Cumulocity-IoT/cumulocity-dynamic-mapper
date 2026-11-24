@@ -83,7 +83,7 @@ class SmartFunctionContextIsDuplicateTest {
         assertFalse(ctx.isDuplicate(v("k"), v(7200)));
         assertFalse(ctx.isDuplicate(v("k"), v(7200)), "a window above 3600 is rejected, not clamped");
         assertFalse(ctx.isDuplicate(v("k"), v(60)), "nothing was recorded by the failed calls");
-        assertEquals(5, ((Value) ctx.getState(DataPrepContext.WARNINGS)).getArraySize());
+        assertEquals(5, ctx.collectedWarnings().size());
     }
 
     @Test

@@ -83,6 +83,8 @@ class SmartFunctionApiContractTest {
             "addWarning",
             "clearState",
             "collect",
+            "collectedLogs",
+            "collectedWarnings",
             "getClientId",
             "getConfig",
             "getDTMAsset",
@@ -93,6 +95,7 @@ class SmartFunctionApiContractTest {
             "getStateAll",
             "getStateKeySet",
             "getTesting",
+            "incrementState",
             "isDuplicate",
             "logMessage",
             "openGroups",
@@ -119,7 +122,7 @@ class SmartFunctionApiContractTest {
      * needs them, but they are not part of what a Smart Function author should be told about, so
      * the documentation-coverage check below does not require them.
      */
-    private static final Set<String> HOST_ONLY = Set.of("setClientId", "setConfig");
+    private static final Set<String> HOST_ONLY = Set.of("setClientId", "setConfig", "collectedWarnings", "collectedLogs");
 
     /** The microservice manifest — the only place roles are actually declared to the platform. */
     private static final Path MANIFEST = Path.of("src", "main", "configuration", "cumulocity.json");

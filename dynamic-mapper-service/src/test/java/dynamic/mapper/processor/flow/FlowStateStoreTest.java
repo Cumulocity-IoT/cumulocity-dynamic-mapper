@@ -197,17 +197,62 @@ class FlowStateStoreTest {
     }
 
     @Test
-    void aReadDoesNotRefreshTheRetention() {
+    void aReadOfStateRefreshesTheRetention() {
         MutableClock clock = new MutableClock();
         FlowStateStore s = new FlowStateStore(clock);
         s.commitChanges(TENANT, MAPPING, false, Map.of("k", 1), Set.of());
         clock.advance(Duration.ofHours(25));
-        s.loadState(TENANT, MAPPING);
-        s.commitChanges(TENANT, MAPPING, false, Map.of(), Set.of()); // read-only message, writes nothing
+        s.loadState(TENANT, MAPPING); // a message that only reads: the state is in use
+
+        s.clearExpiredEntries(TENANT, 1440);
+
+        assertEquals(1, s.loadState(TENANT, MAPPING).get("k"));
+    }
+
+    @Test
+    void stateNobodyReadsOrWritesStillExpires() {
+        MutableClock clock = new MutableClock();
+        FlowStateStore s = new FlowStateStore(clock);
+        s.commitChanges(TENANT, MAPPING, false, Map.of("k", 1), Set.of());
+        clock.advance(Duration.ofHours(25));
 
         s.clearExpiredEntries(TENANT, 1440);
 
         assertTrue(s.loadState(TENANT, MAPPING).isEmpty());
+    }
+
+    @Test
+    void aMaxAgeCallDoesNotDropAGroupCollectedWithoutOne() {
+        MutableClock clock = new MutableClock();
+        FlowStateStore s = new FlowStateStore(clock);
+        s.collect(TENANT, MAPPING, "A", "x", 1, FlowStateStore.CollectOptions.count(3)); // no age limit
+        clock.advance(Duration.ofSeconds(60));
+        s.collect(TENANT, MAPPING, "B", "y", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+
+        assertEquals(java.util.List.of("A", "B"), s.openGroups(TENANT, MAPPING, ""));
+    }
+
+    @Test
+    void aGroupIsStillDroppedByItsOwnMaxAge() {
+        MutableClock clock = new MutableClock();
+        FlowStateStore s = new FlowStateStore(clock);
+        s.collect(TENANT, MAPPING, "A", "x", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+        clock.advance(Duration.ofSeconds(60));
+        s.collect(TENANT, MAPPING, "B", "y", 1, new FlowStateStore.CollectOptions(3, null, false, 10));
+
+        assertEquals(java.util.List.of("B"), s.openGroups(TENANT, MAPPING, ""));
+    }
+
+    @Test
+    void clearingStateLeavesCollectedGroupsAlone() {
+        FlowStateStore s = new FlowStateStore();
+        s.commitChanges(TENANT, MAPPING, false, Map.of("k", 1), Set.of());
+        s.collect(TENANT, MAPPING, "G", "x", 1, FlowStateStore.CollectOptions.count(3));
+
+        s.commitChanges(TENANT, MAPPING, true, Map.of(), Set.of());
+
+        assertTrue(s.loadState(TENANT, MAPPING).isEmpty());
+        assertEquals(java.util.List.of("G"), s.openGroups(TENANT, MAPPING, ""));
     }
 
     @Test
@@ -219,7 +264,8 @@ class FlowStateStoreTest {
         clock.advance(Duration.ofHours(48));
 
         s.clearExpiredEntries("t1", 0); // 0 disables expiry
-        assertEquals(1, s.loadState("t1", MAPPING).get("k"));
+        assertEquals(1, s.loadState("t1", MAPPING).get("k")); // the read itself refreshes the retention
+        clock.advance(Duration.ofHours(48));
 
         s.clearExpiredEntries("t1", 1440);
         assertTrue(s.loadState("t1", MAPPING).isEmpty());

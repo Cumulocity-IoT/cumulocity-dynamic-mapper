@@ -373,16 +373,19 @@ object:
   - `last` - `true` when this message is the last one, for example `{last: payload.last === true}`. The group is handed
     out as it is, even if it holds fewer values than you expected.
   - `maxAgeSeconds` - not a condition. Incomplete groups older than this (1 to 86,400 seconds, counted from their first
-    value) are dropped when a call with this option arrives. Nothing runs on a timer.
+    value) are dropped when a call with this option arrives. Each group is judged by its own limit, so a call for one
+    group never drops a group collected without a limit. Nothing runs on a timer.
 
   Unlike `getState` and `setState`, the step is atomic. State is read when a message starts and written back when it
   ends, so of 100 messages that run at the same time none sees the other 99; `collect` adds the value and checks the
   condition in one step, and exactly one message receives the group. A repeated `itemKey` replaces the earlier value.
   The group is removed when it is handed out, so a function that fails afterwards loses it. Groups are kept in memory,
   are lost on a service restart, and are not shared between service instances. A mapping keeps at most 1,000
-  incomplete groups and drops the oldest when one more opens. `clearState()` and deleting the mapping remove them.
+  incomplete groups and drops the oldest when one more opens. Deleting the mapping or letting its state expire removes
+  them; `clearState()` leaves them alone.
   It returns `null` and adds a warning when an argument is missing or invalid, and the value is then not collected. In
-  Dry Run and Live Test it returns `null` and buffers nothing, so a test shows only the incomplete case. A complete
+  Dry Run and Live Test it returns `null`, adds a warning, and buffers nothing, so a test shows only the incomplete
+  case. A complete
   example is `resources/samples/uns/uns-group-by-timestamp.js`.
 - `context.take(groupKey)` - Removes a collected group and returns it as it is, complete or not, or `null` if there is
   none. Use it to flush a partial group, for example when a message with a newer timestamp shows that the previous one
@@ -391,10 +394,19 @@ object:
 - `context.openGroups(prefix)` - Returns the keys of the incomplete collected groups that start with `prefix`, oldest
   first, as a list of strings. Pair it with `take`. A group that completes while the list is built can still be in it,
   and `take` then returns `null`.
+- `context.incrementState(key, by)` - Adds `by` (default 1) to the number held under `key`, or stores it if there is none,
+  and returns the new value. Unlike `getState` followed by `setState`, the step is atomic, so concurrent messages never
+  lose an increment: `var n = context.incrementState("received");`. The new value is visible to the same message at
+  once. It returns `null` and adds a warning when `by` is not a finite number or the key holds something other than a
+  number. In Dry Run and Live Test it counts on a throw-away state.
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
-- `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not
-  rely on it.
+- **State limits.** A mapping keeps at most 1,000 state keys, and its state and open `collect` groups together use at
+  most about 8 MB (estimated). A `collect` group holds at most 10,000 items. `setState` and `collect` that would go over
+  add a warning and store nothing; existing state stays. One message records at most 500 warnings and 500 log messages.
+  State and groups live in memory of a single service instance: they are lost on a restart, and running several
+  instances would give each its own state.
+- `context.getDTMAsset(assetId)` - Not implemented yet. It always returns `null` and adds a warning. Do not rely on it.
 - `context.addWarning(message)` - Records a non-fatal warning against this message. Warnings surface in the test
   result and in the [microservice log](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#microservice-log),
   without failing the mapping.

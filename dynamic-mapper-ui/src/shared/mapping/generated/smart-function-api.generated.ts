@@ -281,7 +281,7 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "assetId"
         ],
         "returnType": "any",
-        "documentation": "Looks up DTM (Digital Twin Manager) Asset properties by asset ID. The optional type parameter `TAsset` lets callers declare the expected asset shape and get full type safety on custom properties without casting. Defaults to {@link C8yManagedObject} so existing code is unaffected. Returns `null` when the asset is not found."
+        "documentation": "Looks up DTM (Digital Twin Manager) Asset properties by asset ID. The optional type parameter `TAsset` lets callers declare the expected asset shape and get full type safety on custom properties without casting. Defaults to {@link C8yManagedObject} so existing code is unaffected. Returns `null` when the asset is not found. DTM lookup is not implemented yet: it always returns `null` and adds a warning."
       },
       {
         "name": "getConfig",
@@ -323,7 +323,16 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
         "name": "clearState",
         "parameters": [],
         "returnType": "void",
-        "documentation": "Removes every state entry held for this mapping. Exists on the runtime context (`SmartFunctionContext.clearState`) but was missing here."
+        "documentation": "Removes every state entry held for this mapping. Groups of `collect` are not state and are kept."
+      },
+      {
+        "name": "incrementState",
+        "parameters": [
+          "key",
+          "by"
+        ],
+        "returnType": "number",
+        "documentation": "Adds `by` (default 1) to the number held under `key`, or stores it if there is none, and returns the new value. Unlike `getState` followed by `setState`, the step is atomic: concurrent messages never lose an increment. The new value is visible to the same message at once. Returns `null`, and adds a warning, if `by` is not a finite number or the key holds something other than a number. In a test run it counts on a throw-away state."
       },
       {
         "name": "getTesting",
@@ -349,7 +358,7 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "completeWhen"
         ],
         "returnType": "Record<string, unknown>",
-        "documentation": "Adds one value to a named group and returns the whole group once it is complete; returns `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into one measurement. The group is complete when its number of distinct item keys reaches `count`, when all `keys` are present, or when this call has `last: true`. Pass a number as shorthand for `{ count }`. Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count made from state never reaches 100. `collect` adds the value and checks the condition in one step: exactly one message receives a given group, and the group is removed when it is handed out. A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not shared between service instances, and are dropped when the mapping is deleted or `clearState()` is called. A mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`, and adds a warning, if an argument is missing or invalid; the value is then not collected. In a test run it returns `null` and buffers nothing."
+        "documentation": "Adds one value to a named group and returns the whole group once it is complete; returns `null` until then. Use it to turn several messages into one, for example 100 single-value messages of the same timestamp into one measurement. The group is complete when its number of distinct item keys reaches `count`, when all `keys` are present, or when this call has `last: true`. Pass a number as shorthand for `{ count }`. Unlike `getState`/`setState`, the step is atomic. State is read as a snapshot when a message starts and written back when it ends, so of 100 messages that run at the same time none sees the other 99 and a count made from state never reaches 100. `collect` adds the value and checks the condition in one step: exactly one message receives a given group, and the group is removed when it is handed out. A repeated `itemKey` replaces the earlier value. Groups live in memory only: they are lost on restart, are not shared between service instances, and are dropped when the mapping is deleted or its state expires; `clearState()` leaves them alone. A mapping keeps at most 1,000 incomplete groups; the oldest is dropped when one more opens. It returns `null`, and adds a warning, if an argument is missing or invalid; the value is then not collected. In a test run it returns `null`, adds a warning, and buffers nothing."
       },
       {
         "name": "take",

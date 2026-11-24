@@ -481,6 +481,10 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
      * Extract warnings from the flow context into a List target.
      */
     protected void extractWarnings(DataPrepContext flowContext, List<String> target, String tenant) {
+        if (flowContext instanceof dynamic.mapper.processor.runtime.SmartFunctionContext smartFunctionContext) {
+            target.addAll(smartFunctionContext.collectedWarnings());
+            return;
+        }
         Value warnings = null;
         try {
             warnings = flowContext.getState(DataPrepContext.WARNINGS);
@@ -515,6 +519,10 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
      * Extract logs from the flow context into a List target.
      */
     protected void extractLogs(DataPrepContext flowContext, List<String> target, String tenant) {
+        if (flowContext instanceof dynamic.mapper.processor.runtime.SmartFunctionContext smartFunctionContext) {
+            target.addAll(smartFunctionContext.collectedLogs());
+            return;
+        }
         Value logs = null;
         try {
             logs = flowContext.getState(DataPrepContext.LOGS);

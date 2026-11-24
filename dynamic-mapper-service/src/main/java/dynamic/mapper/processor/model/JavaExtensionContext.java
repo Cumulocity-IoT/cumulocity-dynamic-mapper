@@ -100,6 +100,17 @@ public interface JavaExtensionContext extends DataPrepContext {
     Map<String, Object> getManagedObjectAsMap(ExternalId externalId);
 
     /**
+     * Lookup inventory device properties by external id, as a GraalVM {@link org.graalvm.polyglot.Value}.
+     * Not part of {@link DataPrepContext}: scripts call {@link #getManagedObjectByExternalId(org.graalvm.polyglot.Value)},
+     * and a second overload there makes {@code null} and {@code undefined} ambiguous. Java code prefers
+     * {@link #getManagedObjectAsMap(ExternalId)}.
+     *
+     * @param externalId The external id to lookup
+     * @return the device properties, or null
+     */
+    org.graalvm.polyglot.Value getManagedObjectByExternalId(ExternalId externalId);
+
+    /**
      * Get the mapping configuration for the current invocation (Java-native access).
      *
      * <p>Returns the same metadata as {@link DataPrepContext#getConfig()} but as a
