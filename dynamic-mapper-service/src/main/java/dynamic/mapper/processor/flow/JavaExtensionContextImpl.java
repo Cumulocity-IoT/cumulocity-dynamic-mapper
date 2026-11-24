@@ -60,6 +60,10 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     // Keys this invocation wrote, and whether it called clearState(): only these reach the store.
     private final java.util.Set<String> changedNativeKeys = new java.util.HashSet<>();
     private boolean wipeRequested;
+    // Atomic "seen this fingerprint within the window?" check; null in test runs, where nothing may be recorded.
+    private final java.util.function.BiPredicate<String, Integer> duplicateCheck;
+    // Warnings and log messages one message may record; a loop must not fill the heap with them.
+    private static final int MAX_MESSAGES = 500;
 
     // Resolved external ID for outbound mappings (set by EnrichmentOutboundProcessor)
     private String externalId;
@@ -85,6 +89,28 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             ProcessingContext<?> processingContext,
             FlowStateStore flowStateStore,
             Map<String, Object> initialState) {
+        this(dataPrepContext, c8yAgent, tenant, testing, mapping, processingContext, flowStateStore, initialState,
+                null);
+    }
+
+    /**
+     * Full constructor with the de-duplication check behind {@link #isDuplicate(String, int)}.
+     *
+     * @param duplicateCheck takes a fingerprint and a window in seconds, records the fingerprint, and returns true
+     *                       if it was already recorded inside the window; null makes {@code isDuplicate} always
+     *                       return false (test runs)
+     */
+    public JavaExtensionContextImpl(
+            DataPrepContext dataPrepContext,
+            C8YAgent c8yAgent,
+            String tenant,
+            Boolean testing,
+            Mapping mapping,
+            ProcessingContext<?> processingContext,
+            FlowStateStore flowStateStore,
+            Map<String, Object> initialState,
+            java.util.function.BiPredicate<String, Integer> duplicateCheck) {
+        this.duplicateCheck = duplicateCheck;
         this.dataPrepContext = dataPrepContext;
         this.c8yAgent = c8yAgent;
         this.tenant = tenant != null ? tenant : "unknown";
@@ -171,17 +197,27 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     @Override
     public void addWarning(String warning) {
         if (processingContext != null) {
-            processingContext.getWarnings().add(warning);
+            append(processingContext.getWarnings(), warning, "warnings");
         }
-        log.warn("{} - Extension warning: {}", tenant, warning);
+        // The warning reaches the user through the processing result; logging each one at WARN flooded the log
+        log.debug("{} - Extension warning: {}", tenant, warning);
     }
 
     @Override
     public void addLog(String logMessage) {
         if (processingContext != null) {
-            processingContext.getLogs().add(logMessage);
+            append(processingContext.getLogs(), logMessage, "log messages");
         }
         log.debug("{} - Extension log: {}", tenant, logMessage);
+    }
+
+    private static void append(java.util.List<String> target, String message, String what) {
+        int size = target.size();
+        if (size < MAX_MESSAGES) {
+            target.add(message);
+        } else if (size == MAX_MESSAGES) {
+            target.add("Further " + what + " of this message are not recorded (limit " + MAX_MESSAGES + ")");
+        }
     }
 
     @Override
@@ -234,101 +270,161 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             log.warn("{} - getManagedObjectAsMap() called but C8YAgent not available", tenant);
             return null;
         }
-        // Direct cache lookup without exposing C8YAgent to extensions
-        return c8yAgent.getMOFromInventoryCacheByExternalId(tenant, externalId, testing);
+        // Direct cache lookup without exposing C8YAgent to extensions. A copy: the cache hands out the map every
+        // message shares, and an extension that changed it would change it for all of them.
+        Object copy = deepCopy(c8yAgent.getMOFromInventoryCacheByExternalId(tenant, externalId, testing));
+        return copy instanceof Map<?, ?> ? castMap(copy) : null;
+    }
+
+    @Override
+    public java.util.Map<String, Object> getManagedObjectAsMap(String c8ySourceId) {
+        if (c8yAgent == null) {
+            log.warn("{} - getManagedObjectAsMap() called but C8YAgent not available", tenant);
+            return null;
+        }
+        if (c8ySourceId == null) {
+            return null;
+        }
+        Object copy = deepCopy(c8yAgent.getMOFromInventoryCache(tenant, c8ySourceId, testing));
+        return copy instanceof Map<?, ?> ? castMap(copy) : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(Object map) {
+        return (Map<String, Object>) map;
     }
 
     @Override
     public String getClientId() {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getClientId();
+        // An extension has no DataPrepContext; the processing context holds the client id of the connector message
+        if (processingContext != null) {
+            return processingContext.getClientId();
         }
-        log.warn("{} - getClientId() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext != null ? dataPrepContext.getClientId() : null;
     }
 
-    // ==================== DataPrepContext Delegation ====================
+    // ==================== DataPrepContext (script API) ====================
+    //
+    // A Java extension has no GraalVM context, so the Value-based methods of the script API cannot work. They
+    // used to log a warning and do nothing, which hid the mistake (a context.setState call that never stored).
+    // They now fail with the method to use instead. A DataPrepContext, when one is given (tests only), is used.
+
+    private static UnsupportedOperationException notForExtensions(String method, String instead) {
+        return new UnsupportedOperationException(method + " is a Smart Function method and is not available in Java "
+                + "extensions; " + instead);
+    }
 
     @Override
     public void setState(String key, Value value) {
-        if (dataPrepContext != null) {
-            dataPrepContext.setState(key, value);
-        } else {
-            log.warn("{} - setState() called but DataPrepContext not available", tenant);
+        if (dataPrepContext == null) {
+            throw notForExtensions("setState", "use setNativeState(key, value)");
         }
+        dataPrepContext.setState(key, value);
     }
 
     @Override
     public Value getState(String key) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getState(key);
+        if (dataPrepContext == null) {
+            throw notForExtensions("getState", "use getNativeState(key)");
         }
-        log.warn("{} - getState() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getState(key);
     }
 
     @Override
     public Value getState(String key, Object defaultValue) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getState(key, defaultValue);
+        if (dataPrepContext == null) {
+            throw notForExtensions("getState", "use getNativeState(key)");
         }
-        log.warn("{} - getState(key, default) called but DataPrepContext not available", tenant);
-        return Value.asValue(defaultValue);
+        return dataPrepContext.getState(key, defaultValue);
     }
 
     @Override
     public Value getStateAll() {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getStateAll();
+        if (dataPrepContext == null) {
+            throw notForExtensions("getStateAll", "use getNativeStateAll()");
         }
-        log.warn("{} - getStateAll() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getStateAll();
     }
 
     @Override
     public Value getStateKeySet() {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getStateKeySet();
+        if (dataPrepContext == null) {
+            throw notForExtensions("getStateKeySet", "use getNativeStateAll().keySet()");
         }
-        log.warn("{} - getStateKeySet() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getStateKeySet();
     }
 
     @Override
     public Value getDTMAsset(String assetId) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getDTMAsset(assetId);
+        if (dataPrepContext == null) {
+            throw notForExtensions("getDTMAsset", "DTM asset lookup is not implemented");
         }
-        log.warn("{} - getDTMAsset() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getDTMAsset(assetId);
     }
 
     @Override
     public Value getManagedObject(String c8ySourceId) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObject(c8ySourceId);
+        if (dataPrepContext == null) {
+            throw notForExtensions("getManagedObject", "use getManagedObjectAsMap(String)");
         }
-        log.warn("{} - getManagedObject() called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getManagedObject(c8ySourceId);
     }
 
     @Override
     public Value getManagedObjectByExternalId(ExternalId externalId) {
-        if (dataPrepContext != null) {
-            // a host ExternalId is understood by the Value overload
-            return dataPrepContext.getManagedObjectByExternalId(Value.asValue(externalId));
+        if (dataPrepContext == null) {
+            throw notForExtensions("getManagedObjectByExternalId", "use getManagedObjectAsMap(ExternalId)");
         }
-        log.warn("{} - getManagedObjectByExternalId() called but DataPrepContext not available", tenant);
-        return null;
+        // a host ExternalId is understood by the Value overload
+        return dataPrepContext.getManagedObjectByExternalId(Value.asValue(externalId));
     }
 
     @Override
     public Value getManagedObjectByExternalId(Value value) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObjectByExternalId(value);
+        if (dataPrepContext == null) {
+            throw notForExtensions("getManagedObjectByExternalId", "use getManagedObjectAsMap(ExternalId)");
         }
-        log.warn("{} - getManagedObjectByExternalId(Value) called but DataPrepContext not available", tenant);
-        return null;
+        return dataPrepContext.getManagedObjectByExternalId(value);
+    }
+
+    @Override
+    public boolean isDuplicate(Value key, Value windowSeconds) {
+        if (dataPrepContext == null) {
+            throw notForExtensions("isDuplicate(Value, Value)", "use isDuplicate(String, int)");
+        }
+        return dataPrepContext.isDuplicate(key, windowSeconds);
+    }
+
+    @Override
+    public Value incrementState(String key, Value by) {
+        if (dataPrepContext == null) {
+            throw notForExtensions("incrementState", "use incrementNativeState(key, by)");
+        }
+        return dataPrepContext.incrementState(key, by);
+    }
+
+    @Override
+    public Value collect(String groupKey, String itemKey, Value value, Value expectedCountOrOptions) {
+        if (dataPrepContext == null) {
+            throw notForExtensions("collect", "collecting items into groups is not available to extensions");
+        }
+        return dataPrepContext.collect(groupKey, itemKey, value, expectedCountOrOptions);
+    }
+
+    @Override
+    public Value take(String groupKey) {
+        if (dataPrepContext == null) {
+            throw notForExtensions("take", "collecting items into groups is not available to extensions");
+        }
+        return dataPrepContext.take(groupKey);
+    }
+
+    @Override
+    public Value openGroups(String prefix) {
+        if (dataPrepContext == null) {
+            throw notForExtensions("openGroups", "collecting items into groups is not available to extensions");
+        }
+        return dataPrepContext.openGroups(prefix);
     }
 
     @Override
@@ -399,6 +495,54 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         }
         changedNativeKeys.add(key);
         log.debug("{} - Native flow state set: {}={}", tenant, key, value);
+    }
+
+    @Override
+    public long incrementNativeState(String key, long by) {
+        if (key == null) {
+            throw new IllegalArgumentException("incrementNativeState: the key is required");
+        }
+        Number result;
+        if (flowStateStore != null && mappingIdentifier != null && !changedNativeKeys.contains(key)) {
+            if (wipeRequested) {
+                // clearState() came first, and the increment must start from nothing
+                flowStateStore.commitChanges(tenant, mappingIdentifier, true, Map.of(), java.util.Set.of());
+                wipeRequested = false;
+            }
+            result = flowStateStore.increment(tenant, mappingIdentifier, key, by);
+            nativeState.put(key, result); // visible to this message, already stored: not a pending change
+        } else {
+            // a test run, or the function changed this key before: apply to the pending value
+            Object current = nativeState.get(key);
+            if (current != null && !(current instanceof Number)) {
+                throw new IllegalArgumentException("the state key '" + key + "' does not hold a number");
+            }
+            result = FlowStateStore.add(current == null ? 0 : (Number) current, by);
+            nativeState.put(key, result);
+            changedNativeKeys.add(key);
+        }
+        return result.longValue();
+    }
+
+    @Override
+    public boolean isDuplicate(String key, int windowSeconds) {
+        if (duplicateCheck == null) {
+            return false;
+        }
+        if (key == null) {
+            addWarning("isDuplicate: the key has no value, the message is processed without a check");
+            return false;
+        }
+        if (!dynamic.mapper.processor.inbound.MessageDeduplicationService.isValidWindow(windowSeconds)) {
+            addWarning("isDuplicate: the window must be a number of seconds from "
+                    + dynamic.mapper.processor.inbound.MessageDeduplicationService.MIN_WINDOW_SECONDS + " to "
+                    + dynamic.mapper.processor.inbound.MessageDeduplicationService.MAX_WINDOW_SECONDS
+                    + ", the message is processed without a check");
+            return false;
+        }
+        String keyText = dynamic.mapper.processor.inbound.MessageDeduplicationService.keyText(key);
+        return duplicateCheck.test(
+                dynamic.mapper.processor.inbound.MessageDeduplicationService.fingerprint(keyText), windowSeconds);
     }
 
     @Override

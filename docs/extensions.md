@@ -768,6 +768,21 @@ The method receives:
 - **`message`** — immutable wrapper exposing `getPayload()`, `getTopic()`, `getClientId()`, `getTransportFields()`
 - **`context`** — access to the active mapping (`context.getMapping()`), C8Y inventory, logging, and cache
 
+What the context offers a Java extension (it has no GraalVM context, so the `Value`-based `setState`, `getState`,
+`getStateAll`, `getManagedObject`, and `collect` methods of Smart Functions throw `UnsupportedOperationException`
+with the method to use instead):
+
+| Need | Method |
+|---|---|
+| Client ID of the connector message | `context.getClientId()` |
+| Inventory by external ID or by internal ID (inbound and outbound); returns a copy | `context.getManagedObjectAsMap(externalId)` / `getManagedObjectAsMap(id)` |
+| State per mapping, kept in memory of the service instance | `setNativeState`, `getNativeState`, `getNativeStateAll`, `clearState` |
+| Atomic counter; written at once, not after the send | `context.incrementNativeState(key, by)` |
+| De-duplication, shared with `$isDuplicate` and Smart Functions | `context.isDuplicate(key, windowSeconds)` |
+| Warnings and logs (500 of each per message) | `context.addWarning(msg)`, `context.addLog(msg)` |
+
+State limits are the same as for Smart Functions: 1,000 keys and about 8 MB per mapping.
+
 Return an array of `CumulocityObject` instances built with the builder API:
 
 ```java

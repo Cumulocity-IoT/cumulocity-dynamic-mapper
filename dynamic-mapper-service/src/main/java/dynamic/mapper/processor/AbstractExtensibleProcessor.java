@@ -55,6 +55,29 @@ public abstract class AbstractExtensibleProcessor<T> extends CommonProcessor {
     }
 
     /**
+     * The check behind {@code isDuplicate} of the extension context: same store as the Smart Function
+     * {@code context.isDuplicate} and the {@code $isDuplicate} filter function. Null where nothing may be recorded
+     * (a test run) or no service is wired in.
+     */
+    protected java.util.function.BiPredicate<String, Integer> duplicateCheck(
+            dynamic.mapper.processor.inbound.MessageDeduplicationService deduplication, ProcessingContext<?> context,
+            String tenant, boolean isolateState) {
+        if (isolateState || deduplication == null) {
+            return null;
+        }
+        String mappingIdentifier = context.getMapping().getIdentifier();
+        return (fingerprint, window) -> {
+            var checked = deduplication.check(tenant, mappingIdentifier, fingerprint, window);
+            boolean duplicate = checked.duplicate();
+            context.addDeduplicationClaim(checked.claim());
+            if (duplicate) {
+                context.setDroppedAsDuplicate(true);
+            }
+            return duplicate;
+        };
+    }
+
+    /**
      * Template method that defines the overall processing flow.
      * Handles exception management and error reporting.
      */

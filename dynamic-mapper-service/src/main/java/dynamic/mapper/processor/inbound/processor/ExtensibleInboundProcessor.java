@@ -59,14 +59,28 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
 
     private final FlowStateStore flowStateStore;
 
+    private final dynamic.mapper.processor.inbound.MessageDeduplicationService deduplication;
+
     public ExtensibleInboundProcessor(
             MappingService mappingService,
             ExtensionInboundRegistry extensionInboundRegistry,
             C8YAgent c8yAgent,
             FlowStateStore flowStateStore) {
+        this(mappingService, extensionInboundRegistry, c8yAgent, flowStateStore, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ExtensibleInboundProcessor(
+            MappingService mappingService,
+            ExtensionInboundRegistry extensionInboundRegistry,
+            C8YAgent c8yAgent,
+            FlowStateStore flowStateStore,
+            @org.springframework.context.annotation.Lazy
+            dynamic.mapper.processor.inbound.MessageDeduplicationService deduplication) {
         super(mappingService, extensionInboundRegistry);
         this.c8yAgent = c8yAgent;
         this.flowStateStore = flowStateStore;
+        this.deduplication = deduplication;
     }
 
     @Override
@@ -127,7 +141,8 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             mapping,
             context,
             isolateState ? null : flowStateStore,
-            initialState
+            initialState,
+            duplicateCheck(deduplication, context, tenant, isolateState)
         );
 
         // 3. Call new pattern method

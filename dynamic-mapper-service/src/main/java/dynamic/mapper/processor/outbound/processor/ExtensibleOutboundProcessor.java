@@ -57,12 +57,29 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
 
     private final FlowStateStore flowStateStore;
 
+    private final dynamic.mapper.core.C8YAgent c8yAgent;
+
+    private final dynamic.mapper.processor.inbound.MessageDeduplicationService deduplication;
+
     public ExtensibleOutboundProcessor(
             MappingService mappingService,
             ExtensionInboundRegistry extensionInboundRegistry,
             FlowStateStore flowStateStore) {
+        this(mappingService, extensionInboundRegistry, flowStateStore, null, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ExtensibleOutboundProcessor(
+            MappingService mappingService,
+            ExtensionInboundRegistry extensionInboundRegistry,
+            FlowStateStore flowStateStore,
+            dynamic.mapper.core.C8YAgent c8yAgent,
+            @org.springframework.context.annotation.Lazy
+            dynamic.mapper.processor.inbound.MessageDeduplicationService deduplication) {
         super(mappingService, extensionInboundRegistry);
         this.flowStateStore = flowStateStore;
+        this.c8yAgent = c8yAgent;
+        this.deduplication = deduplication;
     }
 
     @Override
@@ -120,13 +137,14 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
                     : flowStateStore.loadState(tenant, context.getMapping().getIdentifier());
             JavaExtensionContextImpl prepContext = new JavaExtensionContextImpl(
                 context.getFlowContext(),
-                null, // c8yAgent not typically needed for outbound
+                c8yAgent, // for getManagedObjectAsMap: an outbound message carries the internal id of its device
                 tenant,
                 context.isTesting(),
                 context.getMapping(),
                 context,
                 isolateState ? null : flowStateStore,
-                initialState
+                initialState,
+                duplicateCheck(deduplication, context, tenant, isolateState)
             );
 
             // 3. Call new pattern method

@@ -87,7 +87,7 @@ public class ProcessorExtensionSmartOutbound03 implements ProcessorExtensionOutb
             Map<String, Object> payload = (Map<String, Object>) message.getPayload();
 
             // Log context and payload
-            log.info("{} - Context state: {}", context.getTenant(), context.getStateAll());
+            log.info("{} - Context state: {}", context.getTenant(), context.getNativeStateAll());
             log.info("{} - Payload raw: {}", context.getTenant(), payload);
             log.info("{} - Payload messageId: {}", context.getTenant(), payload.get("messageId"));
 

@@ -53,8 +53,8 @@ import dynamic.mapper.model.Mapping;
  *     // Access client ID
  *     String clientId = context.getClientId();
  *
- *     // Use state for tracking
- *     context.setState("lastProcessed", ...);
+ *     // Use native state for tracking (the Value-based setState/getState of DataPrepContext throw here)
+ *     context.setNativeState("lastProcessed", System.currentTimeMillis());
  *
  *     // Add warnings if needed
  *     context.addWarning("Device not found, using implicit creation");
@@ -98,6 +98,42 @@ public interface JavaExtensionContext extends DataPrepContext {
      * @since 6.2
      */
     Map<String, Object> getManagedObjectAsMap(ExternalId externalId);
+
+    /**
+     * Lookup managed object from the inventory cache by internal Cumulocity id, for example the {@code sourceId}
+     * an outbound message carries. Cache-first like {@link #getManagedObjectAsMap(ExternalId)}.
+     *
+     * <p>The result is a copy: changing it does not change what other messages see.</p>
+     *
+     * @param c8ySourceId the internal id of the managed object
+     * @return Map containing the device properties, or null if not found
+     */
+    Map<String, Object> getManagedObjectAsMap(String c8ySourceId);
+
+    /**
+     * Adds {@code by} to the number held under {@code key} (or stores it if there is none) in one atomic step and
+     * returns the new value, so concurrent messages never lose a count. Unlike {@link #setNativeState} it is written
+     * at once, not after the send succeeded: a redelivered message counts again. In a test run it counts on
+     * throw-away state.
+     *
+     * @throws IllegalArgumentException   if the key holds something that is not a number
+     * @throws dynamic.mapper.processor.flow.FlowStateStore.StateLimitExceededException if the mapping already holds
+     *                                    the maximum number of state keys
+     */
+    long incrementNativeState(String key, long by);
+
+    /**
+     * Reports whether the same key was already seen for this mapping within the window, and records it otherwise.
+     * Atomic: of two copies of a message processed at the same time, exactly one gets {@code false}. Shares its
+     * store with the {@code $isDuplicate} filter function and {@code context.isDuplicate} of Smart Functions. A
+     * fingerprint recorded for a message that then fails is given back, so a retry is not dropped as a repeat.
+     * Fails open (returns false, adds a warning) for a null key or a window outside 1 to 3600 seconds, and always
+     * returns false in a test run.
+     *
+     * @param key           anything that identifies the message, for example {@code externalId + "|" + time}
+     * @param windowSeconds 1 to 3600
+     */
+    boolean isDuplicate(String key, int windowSeconds);
 
     /**
      * Lookup inventory device properties by external id, as a GraalVM {@link org.graalvm.polyglot.Value}.

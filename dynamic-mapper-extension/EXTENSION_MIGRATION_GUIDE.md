@@ -73,9 +73,13 @@ All methods that existed on `DataPreparationContext` are available on `JavaExten
 | `context.addLog(msg)` | ✅ yes (was `addLogMessage`) |
 | `context.getTesting()` | ✅ yes |
 | `context.getClientId()` | ✅ yes |
-| `context.setState(key, value)` | ✅ yes (GraalVM Value) |
-| `context.getState(key)` | ✅ yes (GraalVM Value) |
+| `context.setState(key, value)` | ❌ throws `UnsupportedOperationException`: use `setNativeState(key, value)` |
+| `context.getState(key)` | ❌ throws: use `getNativeState(key)` |
+| `context.getStateAll()` | ❌ throws: use `getNativeStateAll()` |
+| `context.getManagedObject(id)` | ❌ throws: use `getManagedObjectAsMap(id)` |
 
+The state and lookup methods that take or return a GraalVM `Value` belong to Smart Functions. A Java extension has no
+GraalVM context, so they used to log a warning and do nothing; they now fail with the method to use instead.
 ### 4. New helpers available in `JavaExtensionContext`
 
 These are added in the new API and are especially useful in pure Java extensions:
@@ -84,6 +88,15 @@ These are added in the new API and are especially useful in pure Java extensions
 // Look up a managed object from inventory cache — returns a plain Java Map
 ExternalId extId = new ExternalId("device-001", "c8y_Serial");
 Map<String, Object> device = context.getManagedObjectAsMap(extId);
+
+// Look up by internal id, for example the sourceId of an outbound message
+Map<String, Object> byId = context.getManagedObjectAsMap("12345");
+
+// Atomic counter and de-duplication, safe when messages run at the same time
+long received = context.incrementNativeState("received", 1);
+if (context.isDuplicate(extId.getExternalId() + "|" + time, 60)) {
+    return new CumulocityObject[0];
+}
 
 // Get the mapping config as a plain Java Map (instead of GraalVM Value)
 Map<String, Object> config = context.getConfigAsMap();

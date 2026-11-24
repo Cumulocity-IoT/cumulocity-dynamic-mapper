@@ -166,8 +166,8 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
     private CumulocityObject exampleWithWarnings(Map<?, ?> jsonObject, JavaExtensionContext context) {
         String externalIdAsString = jsonObject.get("externalId").toString();
         ExternalId externalId = new ExternalId(externalIdAsString, context.getMapping().getExternalIdType());
-        // Check if device exists (if inventory lookup is available)
-        if (context.getManagedObjectByExternalId(externalId) == null) {
+        // Check if the device exists (a copy of the inventory cache entry, or null)
+        if (context.getManagedObjectAsMap(externalId) == null) {
             context.addWarning("Device " + externalIdAsString + " not found, will be created implicitly");
         }
 
