@@ -406,7 +406,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     @Override
     public Value collect(String groupKey, String itemKey, Value value, Value expectedCountOrOptions) {
         if (dataPrepContext == null) {
-            throw notForExtensions("collect", "collecting items into groups is not available to extensions");
+            throw notForExtensions("collect", "use collectNative(groupKey, itemKey, value, expectedCount)");
         }
         return dataPrepContext.collect(groupKey, itemKey, value, expectedCountOrOptions);
     }
@@ -414,7 +414,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     @Override
     public Value take(String groupKey) {
         if (dataPrepContext == null) {
-            throw notForExtensions("take", "collecting items into groups is not available to extensions");
+            throw notForExtensions("take", "use takeNative(groupKey)");
         }
         return dataPrepContext.take(groupKey);
     }
@@ -422,7 +422,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     @Override
     public Value openGroups(String prefix) {
         if (dataPrepContext == null) {
-            throw notForExtensions("openGroups", "collecting items into groups is not available to extensions");
+            throw notForExtensions("openGroups", "use openGroupsNative(prefix)");
         }
         return dataPrepContext.openGroups(prefix);
     }
@@ -543,6 +543,59 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         String keyText = dynamic.mapper.processor.inbound.MessageDeduplicationService.keyText(key);
         return duplicateCheck.test(
                 dynamic.mapper.processor.inbound.MessageDeduplicationService.fingerprint(keyText), windowSeconds);
+    }
+
+    @Override
+    public Map<String, Object> collectNative(String groupKey, String itemKey, Object value, int expectedCount) {
+        if (expectedCount < 1 || expectedCount > FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT) {
+            addWarning("collectNative: count must be a whole number from 1 to "
+                    + FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT + ", the message was not collected");
+            return null;
+        }
+        return collectNative(groupKey, itemKey, value, FlowStateStore.CollectOptions.count(expectedCount));
+    }
+
+    @Override
+    public Map<String, Object> collectNative(String groupKey, String itemKey, Object value,
+            FlowStateStore.CollectOptions options) {
+        if (flowStateStore == null || mappingIdentifier == null) {
+            // A test run keeps no groups: without a word the extension looks broken in the test UI.
+            addWarning("collectNative: not evaluated in a test run, nothing is collected and the result is always null");
+            return null;
+        }
+        if (groupKey == null || itemKey == null || value == null) {
+            addWarning("collectNative: groupKey, itemKey and value are required, the message was not collected");
+            return null;
+        }
+        String problem = options == null
+                ? "the options are required"
+                : options.problem();
+        if (problem != null) {
+            addWarning("collectNative: " + problem + ", the message was not collected");
+            return null;
+        }
+        try {
+            return flowStateStore.collect(tenant, mappingIdentifier, groupKey, itemKey, deepCopy(value), options);
+        } catch (FlowStateStore.StateLimitExceededException e) {
+            addWarning("collectNative: " + e.getMessage() + ", the message was not collected");
+            return null;
+        }
+    }
+
+    @Override
+    public Map<String, Object> takeNative(String groupKey) {
+        if (flowStateStore == null || mappingIdentifier == null || groupKey == null) {
+            return null;
+        }
+        return flowStateStore.take(tenant, mappingIdentifier, groupKey);
+    }
+
+    @Override
+    public java.util.List<String> openGroupsNative(String prefix) {
+        if (flowStateStore == null || mappingIdentifier == null) {
+            return java.util.List.of();
+        }
+        return flowStateStore.openGroups(tenant, mappingIdentifier, prefix);
     }
 
     @Override

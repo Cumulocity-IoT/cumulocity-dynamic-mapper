@@ -92,6 +92,11 @@ extensions:
     description: Sends all readings of one message as a single bulk measurement collection (since 6.3)
     version: "2.0"
 
+  - eventName: CollectMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCollectMeasurement
+    description: Merges separate temperature and humidity messages of one timestamp into one measurement with collectNative (since 6.3)
+    version: "2.0"
+
   # Outbound Extensions (Cumulocity → Device)
   - eventName: AlarmToCustomJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson
@@ -112,6 +117,11 @@ extensions:
   - eventName: OperationToTextCommand
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound07
     description: Operation to a raw text command (for example an AT command), for an Any Payload mapping
+    version: "2.0"
+
+  - eventName: BatchMeasurements
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionBatchMeasurements
+    description: Sends the measurements of a device in batches of three as one JSON array with collectNative (since 6.3)
     version: "2.0"
 
   - eventName: AlarmToSparkplugB

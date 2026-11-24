@@ -269,8 +269,39 @@ public class FlowStateStore {
      *                      a call with this option arrives, or {@code null}
      */
     public record CollectOptions(Integer count, java.util.Set<String> keys, boolean last, Integer maxAgeSeconds) {
+        /** The most items a group may be told to wait for. */
+        public static final int MAX_EXPECTED_COUNT = 10_000;
+        /** The longest {@code maxAgeSeconds} accepted: one day. */
+        public static final int MAX_AGE_SECONDS = 86_400;
+
         public static CollectOptions count(int count) {
             return new CollectOptions(count, null, false, null);
+        }
+
+        /**
+         * Checks the options the way {@code context.collect} of a Smart Function does.
+         *
+         * @return what is wrong with them, or {@code null} if they are valid
+         */
+        public String problem() {
+            if (count != null && (count < 1 || count > MAX_EXPECTED_COUNT)) {
+                return "count must be a whole number from 1 to " + MAX_EXPECTED_COUNT;
+            }
+            if (keys != null) {
+                if (keys.isEmpty() || keys.size() > MAX_EXPECTED_COUNT) {
+                    return "keys must be a list of 1 to " + MAX_EXPECTED_COUNT + " item keys";
+                }
+                if (keys.stream().anyMatch(java.util.Objects::isNull)) {
+                    return "keys must be strings";
+                }
+            }
+            if (maxAgeSeconds != null && (maxAgeSeconds < 1 || maxAgeSeconds > MAX_AGE_SECONDS)) {
+                return "maxAgeSeconds must be a whole number from 1 to " + MAX_AGE_SECONDS;
+            }
+            if (count == null && keys == null && !last) {
+                return "give count, keys or last, otherwise the group never completes";
+            }
+            return null;
         }
     }
 

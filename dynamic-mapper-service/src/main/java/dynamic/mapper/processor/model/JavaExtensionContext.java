@@ -136,6 +136,43 @@ public interface JavaExtensionContext extends DataPrepContext {
     boolean isDuplicate(String key, int windowSeconds);
 
     /**
+     * Adds one item to a named group and returns the whole group, as a map of item key to value, once it is
+     * complete; returns null until then. Turns several messages into one. The group is complete when its item
+     * count reaches {@code expectedCount}. Atomic: of several messages processed at the same time, exactly one
+     * receives a given group. A repeated {@code itemKey} replaces the earlier value. The value is copied, so
+     * changing it afterwards does not change the group.
+     *
+     * <p>Groups are kept per mapping and in memory only, so they are lost on a restart. Unlike
+     * {@link #setNativeState} the item is stored at once, not after the send succeeded: a redelivered message
+     * adds its item again. Fails open (returns null, adds a warning) for a missing argument, a count outside 1 to
+     * 10000, or when the mapping's state limits are reached. In a test run nothing is collected: it returns null
+     * with a warning.</p>
+     *
+     * @return the group (item key to value), or null while it is incomplete
+     */
+    Map<String, Object> collectNative(String groupKey, String itemKey, Object value, int expectedCount);
+
+    /**
+     * Like {@link #collectNative(String, String, Object, int)}, with the full set of completion conditions: a
+     * count, a set of item keys that must all be present, or {@code last} for the final item, plus an optional
+     * {@code maxAgeSeconds} after which an incomplete group is dropped.
+     */
+    Map<String, Object> collectNative(String groupKey, String itemKey, Object value,
+            dynamic.mapper.processor.flow.FlowStateStore.CollectOptions options);
+
+    /**
+     * Removes a collected group and returns it as it is, complete or not; null if there is none or in a test run.
+     * For example, to flush the group of the previous timestamp when a newer one arrives.
+     */
+    Map<String, Object> takeNative(String groupKey);
+
+    /**
+     * Lists the keys of the incomplete collected groups that start with the prefix, oldest first. Pair it with
+     * {@link #takeNative}. Empty in a test run.
+     */
+    java.util.List<String> openGroupsNative(String prefix);
+
+    /**
      * Lookup inventory device properties by external id, as a GraalVM {@link org.graalvm.polyglot.Value}.
      * Not part of {@link DataPrepContext}: scripts call {@link #getManagedObjectByExternalId(org.graalvm.polyglot.Value)},
      * and a second overload there makes {@code null} and {@code undefined} ambiguous. Java code prefers

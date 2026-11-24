@@ -84,7 +84,8 @@ class JavaExtensionContextApiTest {
                 .contains("getManagedObjectAsMap"));
         assertThrows(UnsupportedOperationException.class, () -> ctx.isDuplicate(null, null));
         assertThrows(UnsupportedOperationException.class, () -> ctx.incrementState("k", null));
-        assertThrows(UnsupportedOperationException.class, () -> ctx.collect("g", "i", null, null));
+        assertTrue(assertThrows(UnsupportedOperationException.class, () -> ctx.collect("g", "i", null, null))
+                .getMessage().contains("collectNative"));
     }
 
     @Test

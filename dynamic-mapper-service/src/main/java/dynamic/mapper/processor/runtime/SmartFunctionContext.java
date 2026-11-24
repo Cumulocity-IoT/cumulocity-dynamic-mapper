@@ -49,8 +49,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartFunctionContext implements DataPrepContext {
 
-    private static final int MAX_EXPECTED_COUNT = 10_000;
-    private static final int MAX_AGE_SECONDS = 86_400;
+    private static final int MAX_EXPECTED_COUNT = FlowStateStore.CollectOptions.MAX_EXPECTED_COUNT;
+    private static final int MAX_AGE_SECONDS = FlowStateStore.CollectOptions.MAX_AGE_SECONDS;
     // Warnings and logs one message may collect; a loop must not be able to fill the heap with them.
     private static final int MAX_MESSAGES = 500;
 

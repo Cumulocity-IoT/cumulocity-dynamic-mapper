@@ -98,6 +98,12 @@ if (context.isDuplicate(extId.getExternalId() + "|" + time, 60)) {
     return new CumulocityObject[0];
 }
 
+// Collect several messages into one: returns the whole group once it has 3 items, null until then
+Map<String, Object> group = context.collectNative(extId.getExternalId() + "|" + time, sensorName, value, 3);
+if (group == null) {
+    return new CumulocityObject[0];
+}
+
 // Get the mapping config as a plain Java Map (instead of GraalVM Value)
 Map<String, Object> config = context.getConfigAsMap();
 ```

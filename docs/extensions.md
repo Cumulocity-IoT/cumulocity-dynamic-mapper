@@ -769,7 +769,7 @@ The method receives:
 - **`context`** — access to the active mapping (`context.getMapping()`), C8Y inventory, logging, and cache
 
 What the context offers a Java extension (it has no GraalVM context, so the `Value`-based `setState`, `getState`,
-`getStateAll`, `getManagedObject`, and `collect` methods of Smart Functions throw `UnsupportedOperationException`
+`getStateAll`, `getManagedObject`, `collect`, `take`, and `openGroups` methods of Smart Functions throw `UnsupportedOperationException`
 with the method to use instead):
 
 | Need | Method |
@@ -779,6 +779,7 @@ with the method to use instead):
 | State per mapping, kept in memory of the service instance | `setNativeState`, `getNativeState`, `getNativeStateAll`, `clearState` |
 | Atomic counter; written at once, not after the send | `context.incrementNativeState(key, by)` |
 | De-duplication, shared with `$isDuplicate` and Smart Functions | `context.isDuplicate(key, windowSeconds)` |
+| Collect several messages into one (N:1), atomic; groups live in memory only | `context.collectNative(groupKey, itemKey, value, count)` or with `FlowStateStore.CollectOptions` (count, keys, last, maxAgeSeconds); `takeNative(groupKey)`, `openGroupsNative(prefix)` |
 | Warnings and logs (500 of each per message) | `context.addWarning(msg)`, `context.addLog(msg)` |
 
 State limits are the same as for Smart Functions: 1,000 keys and about 8 MB per mapping.
@@ -940,6 +941,8 @@ See `dynamic-mapper-extension/src/main/java/dynamic/mapper/processor/extension/e
 | `outbound/ProcessorExtensionAlarmToCustomJson.java` | Outbound | C8Y alarm → custom JSON |
 | `outbound/ProcessorExtensionAlarmToSparkplugB.java` | Outbound | C8Y alarm → Sparkplug B binary |
 | `outbound/ProcessorExtensionSmartOutbound07.java` | Outbound | C8Y operation → raw text command (Any Payload) |
+| `inbound/ProcessorExtensionCollectMeasurement.java` | Inbound | Separate temperature and humidity messages → one measurement (`collectNative` with keys) |
+| `outbound/ProcessorExtensionBatchMeasurements.java` | Outbound | Three measurements per device → one JSON array message (`collectNative` with count) |
 
 ---
 
