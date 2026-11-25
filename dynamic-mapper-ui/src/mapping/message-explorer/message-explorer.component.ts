@@ -218,7 +218,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     const state = readStoredExplorerSession();
     if (!state) return;
     try {
-      const msgs = await this.explorerService.getMessages(state.sessionId);
+      const polled = await this.explorerService.poll(state.sessionId);
+      const msgs = polled.messages;
+      this.sessionSubscriptionWarning = polled.subscriptionWarning;
       this.sessionId = state.sessionId;
       this.connectorName = state.connectorName;
       this.sessionConnectorIdentifier = state.sessionConnectorIdentifier;
@@ -298,7 +300,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.resetCountdown();
     if (!this.sessionId) return;
     try {
-      const msgs = await this.explorerService.getMessages(this.sessionId);
+      const polled = await this.explorerService.poll(this.sessionId);
+      const msgs = polled.messages;
+      this.sessionSubscriptionWarning = polled.subscriptionWarning;
       // Identify which messages are new (not yet indexed) and assign consecutive seqNos.
       // Existing messages keep their seqNo even when the backend drops old ones from the buffer.
       const indexed: IndexedMessage[] = msgs.map(m => {

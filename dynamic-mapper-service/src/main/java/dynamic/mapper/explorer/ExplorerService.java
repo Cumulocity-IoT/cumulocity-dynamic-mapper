@@ -247,7 +247,8 @@ public class ExplorerService {
                         }
                     }
                     // Also open a subscriber WebSocket for this session so events actually arrive
-                    notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
+                    recordWebSocketOutcome(tenant, session, notificationSubscriber
+                            .initializeExplorerDeviceClient(tenant, sessionId, session::setSubscriptionWarning));
                     log.info("{} - Explorer subscription created for source {} ({} device(s))",
                             tenant, resolvedSourceId, session.getSubscribedDeviceCount());
                 } else {
@@ -267,7 +268,8 @@ public class ExplorerService {
                     session.addSubscribedDeviceId(devId);
                 }
                 if (session.hasSubscribedDevices()) {
-                    notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
+                    recordWebSocketOutcome(tenant, session, notificationSubscriber
+                            .initializeExplorerDeviceClient(tenant, sessionId, session::setSubscriptionWarning));
                     log.info("{} - Explorer subscribed {} devices of type {} for session {}",
                             tenant, session.getSubscribedDeviceCount(), resolvedDeviceType, sessionId);
                 } else {
@@ -340,10 +342,20 @@ public class ExplorerService {
         return sessionId;
     }
 
+    /** Keeps why an outbound session's WebSocket did not open, so the UI shows it instead of an idle session. */
+    private void recordWebSocketOutcome(String tenant, ExplorerSession session, String failure) {
+        session.setSubscriptionWarning(failure);
+        if (failure != null) {
+            log.warn("{} - Outbound explorer session {} has no Notification 2.0 WebSocket: {}", tenant,
+                    session.getSessionId(), failure);
+        }
+    }
+
     /**
-     * @return the subscription warning recorded for an inbound session's broker subscribe
-     *         attempt (see {@link ExplorerSession#getSubscriptionWarning()}), or {@code null} if
-     *         the session doesn't exist or the subscribe succeeded.
+     * @return the subscription warning recorded for a session (inbound: the broker subscribe attempt failed;
+     *         outbound: the Notification 2.0 WebSocket could not be opened or was lost
+ session's broker subscribe
+     *         ), or {@code null} if the session doesn't exist or nothing is wrong.
      */
     public String getSubscriptionWarning(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);

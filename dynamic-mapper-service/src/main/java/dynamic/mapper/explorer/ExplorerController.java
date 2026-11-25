@@ -58,6 +58,9 @@ import java.util.Map;
 @Tag(name = "Message Explorer Controller", description = "API for live exploration of raw inbound messages from broker connectors")
 public class ExplorerController {
 
+    /** Carries the URL-encoded subscription warning of a session on the poll response. */
+    static final String SUBSCRIPTION_WARNING_HEADER = "X-Subscription-Warning";
+
     /**
      * An explorer session reads raw device payloads for any topic on the tenant (wildcards
      * included) and, for OUTBOUND, creates real Notification 2.0 subscriptions as a side effect —
@@ -166,7 +169,15 @@ public class ExplorerController {
             return ResponseEntity.notFound().build();
         }
         List<ExplorerMessage> messages = explorerService.getMessages(tenant, sessionId);
-        return ResponseEntity.ok(messages);
+        // A problem that arises while the session runs (for example a lost WebSocket) reaches the UI on its next poll
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok();
+        String warning = explorerService.getSubscriptionWarning(tenant, sessionId);
+        if (warning != null) {
+            // Header values are single-line ASCII
+            response.header(SUBSCRIPTION_WARNING_HEADER,
+                    java.net.URLEncoder.encode(warning, java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return response.body(messages);
     }
 
     @Operation(summary = "Clear buffered messages",

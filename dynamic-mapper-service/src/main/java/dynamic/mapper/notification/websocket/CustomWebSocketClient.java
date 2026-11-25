@@ -59,6 +59,10 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Getter
     private volatile String lastCloseReason;
 
+    /** Message of the last WebSocket error; a rejected handshake (for example HTTP 409) reports its status here. */
+    @Getter
+    private volatile String lastErrorMessage;
+
     private ExecutorService virtualThreadPool;
     ServiceConfiguration serviceConfiguration;
 
@@ -184,7 +188,8 @@ public class CustomWebSocketClient extends WebSocketClient {
     }
 
     public boolean isConflict() {
-        return lastCloseReason != null && lastCloseReason.contains("409");
+        return (lastCloseReason != null && lastCloseReason.contains("409"))
+                || (lastErrorMessage != null && lastErrorMessage.contains("409"));
     }
 
     /** Acknowledges the notification on this WebSocket. A notification without an ack header cannot be settled. */
@@ -279,6 +284,7 @@ public class CustomWebSocketClient extends WebSocketClient {
     public void onError(Exception e) {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
             log.error("{} - WebSocket error: ", tenant, e);
+            this.lastErrorMessage = e.getMessage();
             this.callback.onError(e);
         }
     }

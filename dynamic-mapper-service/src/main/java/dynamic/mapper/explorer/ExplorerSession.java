@@ -84,7 +84,7 @@ public class ExplorerSession {
     /** Set when the broker subscribe attempt for this session's topic failed (INBOUND only);
      *  {@code null} on success. Surfaced to the UI so a failed subscribe isn't silently reported
      *  as an "active" session that will never receive messages. */
-    private String subscriptionWarning;
+    private volatile String subscriptionWarning;
 
     /** Snapshot copy, safe to iterate while the session is running. Not for per-message use —
      *  see {@link #isDeviceSubscribed(String)}. */

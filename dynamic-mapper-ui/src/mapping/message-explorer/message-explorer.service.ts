@@ -78,6 +78,11 @@ export interface StartSessionResult {
   subscriptionWarning?: string;
 }
 
+export interface ExplorerPollResult {
+  messages: ExplorerMessage[];
+  subscriptionWarning: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MessageExplorerService {
 
@@ -112,13 +117,23 @@ export class MessageExplorerService {
   }
 
   async getMessages(sessionId: string): Promise<ExplorerMessage[]> {
+    return (await this.poll(sessionId)).messages;
+  }
+
+  /** Polls the session; also returns the problem the backend reports for it (for example a lost WebSocket). */
+  async poll(sessionId: string): Promise<ExplorerPollResult> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_EXPLORER_ENDPOINT}/session/${sessionId}/messages`,
       { method: 'GET' }
     );
     if (response.status === 404) throw new SessionExpiredError(sessionId);
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    return (await response.json()) as ExplorerMessage[];
+    const header = response.headers.get('X-Subscription-Warning');
+    let subscriptionWarning: string | null = null;
+    if (header) {
+      try { subscriptionWarning = decodeURIComponent(header); } catch { subscriptionWarning = header; }
+    }
+    return { messages: (await response.json()) as ExplorerMessage[], subscriptionWarning };
   }
 
   async clearMessages(sessionId: string): Promise<void> {

@@ -35,6 +35,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,7 @@ import dynamic.mapper.notification.NotificationClientOperations;
 import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
+import dynamic.mapper.notification.websocket.ExplorerWebSocketCallback;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import jakarta.annotation.PreDestroy;
@@ -174,11 +176,23 @@ public class NotificationConnectionManager {
      * normally — TEST connector dispatchers skip live notifications (early-return guard in
      * OutboundMessageDispatcher.onNotification) and would silently drop all events.
      */
-    public void initializeExplorerDeviceClient(String tenant, String sessionId) {
+    /**
+     * Explorer sessions are interactive: a session start must answer within a few seconds, so the connect is
+     * bounded much tighter than for connectors (a 409 is retried at most three times, roughly 20 seconds in total).
+     */
+    private static final ConnectOptions EXPLORER_CONNECT_OPTIONS = new ConnectOptions(new int[] { 1, 2, 5 }, 5, false);
+
+    /**
+     * @param connectionIssue receives a description when the session's WebSocket is lost later on, and
+     *                        {@code null} once the periodic reconnect has opened it again
+     * @return {@code null} when the WebSocket is open, otherwise why it could not be opened. The session
+     *         then receives no events, so the caller must report this to the user.
+     */
+    public String initializeExplorerDeviceClient(String tenant, String sessionId, Consumer<String> connectionIssue) {
         Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers available for explorer session {}", tenant, sessionId);
-            return;
+            return "No outbound connector is available, so notifications cannot be received.";
         }
         // Prefer a non-TEST dispatcher: OutboundMessageDispatcher.onNotification returns early
         // for TEST connectors without calling processNotification, so notifyOutboundExplorerListeners
@@ -193,7 +207,7 @@ public class NotificationConnectionManager {
                         .orElse(null));
         if (dispatcher == null) {
             log.warn("{} - No valid dispatcher for explorer session {}", tenant, sessionId);
-            return;
+            return "No valid outbound connector is available, so notifications cannot be received.";
         }
         String tokenSeed = Utils.EXPLORER_DEVICE_SUBSCRIBER + sessionId.replace("-", "") + additionalSubscriptionIdTest;
         // Recorded before the token is created: the subscriber exists on the platform from then on, even
@@ -206,15 +220,49 @@ public class NotificationConnectionManager {
             ConnectorId connectorInfo = new ConnectorId(
                     dispatcher.getConnectorClient().getConnectorName(),
                     dispatcher.getConnectorClient().getConnectorIdentifier());
-            CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
+            // Its own callback: the dispatcher's lifecycle handlers would change the status of the real connector
+            NotificationCallback callback = new ExplorerWebSocketCallback(tenant, sessionId, dispatcher,
+                    connectionIssue);
+            String[] failure = new String[1];
+            CustomWebSocketClient client = connect(tenant, token, callback, connectorInfo,
+                    EXPLORER_CONNECT_OPTIONS, reason -> failure[0] = reason);
             if (client != null) {
                 CustomWebSocketClient old = explorerDeviceClients.put(sessionId, client);
                 if (old != null) { closeQuietly(old, sessionId); }
                 log.info("{} - Explorer device WebSocket opened for session {}", tenant, sessionId);
+                return null;
             }
+            String reason = failure[0] != null ? failure[0] : "the connection could not be established";
+            log.error("{} - Explorer device WebSocket for session {} could not be opened: {}", tenant, sessionId,
+                    reason);
+            return "The Notification 2.0 WebSocket could not be opened: " + reason;
         } catch (Exception e) {
             log.error("{} - Failed to open explorer device WebSocket for session {}: {}",
                     tenant, sessionId, e.getMessage(), e);
+            return "The Notification 2.0 WebSocket could not be opened: "
+                    + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Reopens the explorer WebSockets that were lost after they had opened. The device clients are covered by
+     * their own cycle, and a lost explorer socket would leave its session open but silent.
+     */
+    private void reconnectExplorerClients(String tenant) {
+        for (Map.Entry<String, CustomWebSocketClient> entry : explorerDeviceClients.entrySet()) {
+            String[] meta = explorerDeviceSessionMeta.get(entry.getKey());
+            CustomWebSocketClient client = entry.getValue();
+            if (meta == null || !tenant.equals(meta[0]) || client == null || client.isOpen()
+                    || client.getReadyState() == ReadyState.NOT_YET_CONNECTED) {
+                continue;
+            }
+            try {
+                client.reconnect();
+                log.info("{} - Reconnected explorer WebSocket for session {}", tenant, entry.getKey());
+            } catch (Exception e) {
+                log.warn("{} - Error reconnecting explorer WebSocket for session {}: {}", tenant, entry.getKey(),
+                        e.getMessage());
+            }
         }
     }
 
@@ -889,17 +937,50 @@ public class NotificationConnectionManager {
         }
     }
 
+    /**
+     * How a connect behaves. {@code conflictRetryDelaysSeconds} are the waits between retries of an HTTP 409,
+     * {@code connectTimeoutSeconds} bounds each attempt, and {@code reportLifecycle} says whether the tenant's
+     * notification status is updated (a connector WebSocket does, an explorer session must not).
+     */
+    private record ConnectOptions(int[] conflictRetryDelaysSeconds, int connectTimeoutSeconds,
+            boolean reportLifecycle) {
+        static final ConnectOptions DEFAULT = new ConnectOptions(Utils.CONFLICT_RETRY_DELAYS_SECONDS,
+                Utils.CONNECTION_TIMEOUT_SECONDS, true);
+    }
+
     private CustomWebSocketClient connect(String tenant, String token, NotificationCallback callback,
             ConnectorId connectorId) throws URISyntaxException {
+        return connect(tenant, token, callback, connectorId, ConnectOptions.DEFAULT, null);
+    }
+
+    /** Why a connect attempt failed, for the caller to show; the cause is also in the log. */
+    private static String describeFailure(CustomWebSocketClient client) {
+        if (client.isConflict()) {
+            return "HTTP 409 Conflict";
+        }
+        String reason = client.getLastCloseReason() != null && !client.getLastCloseReason().isBlank()
+                ? client.getLastCloseReason()
+                : client.getLastErrorMessage();
+        return reason != null && !reason.isBlank() ? reason : "no response within the timeout";
+    }
+
+    private CustomWebSocketClient connect(String tenant, String token, NotificationCallback callback,
+            ConnectorId connectorId, ConnectOptions options, Consumer<String> failureSink)
+            throws URISyntaxException {
 
         if (token == null || callback == null || connectorId == null) {
             log.warn("{} - Cannot connect: invalid parameters", tenant);
+            if (failureSink != null) {
+                failureSink.accept("invalid connection parameters");
+            }
             return null;
         }
 
         try {
-            connectorStatusEventService.sendNotificationLifecycle(
-                    tenant, ConnectorStatus.CONNECTING, null);
+            if (options.reportLifecycle()) {
+                connectorStatusEventService.sendNotificationLifecycle(
+                        tenant, ConnectorStatus.CONNECTING, null);
+            }
 
             // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
             // only the scheme prefix must be replaced
@@ -912,45 +993,58 @@ public class NotificationConnectionManager {
                     tenant, serviceRegistry, webSocketUrl, callback, connectorId);
             client.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
 
-            boolean connected = client.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            boolean connected = client.connectBlocking(options.connectTimeoutSeconds(), TimeUnit.SECONDS);
             if (!connected) {
                 // After an ungraceful microservice restart, Cumulocity still considers the
                 // previous consumer active and rejects the new connection with HTTP 409.
                 // Wait and retry — do NOT unsubscribe, as that would drop any backlogged messages.
                 if (client.isConflict()) {
-                    for (int attempt = 1; attempt <= Utils.CONFLICT_RETRY_COUNT; attempt++) {
-                        int delaySeconds = Utils.CONFLICT_RETRY_DELAYS_SECONDS[attempt - 1];
+                    int retries = options.conflictRetryDelaysSeconds().length;
+                    for (int attempt = 1; attempt <= retries; attempt++) {
+                        int delaySeconds = options.conflictRetryDelaysSeconds()[attempt - 1];
                         log.warn("{} - WebSocket 409 Conflict for connector {} — waiting {}s before retry {}/{}",
-                                tenant, connectorId.getName(), delaySeconds,
-                                attempt, Utils.CONFLICT_RETRY_COUNT);
+                                tenant, connectorId.getName(), delaySeconds, attempt, retries);
                         try {
                             TimeUnit.SECONDS.sleep(delaySeconds);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
+                            if (failureSink != null) {
+                                failureSink.accept("interrupted while retrying after HTTP 409 Conflict");
+                            }
                             return null;
                         }
                         CustomWebSocketClient retryClient = new CustomWebSocketClient(
                                 tenant, serviceRegistry, webSocketUrl, callback, connectorId);
                         retryClient.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
-                        boolean retryConnected = retryClient.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS,
+                        boolean retryConnected = retryClient.connectBlocking(options.connectTimeoutSeconds(),
                                 TimeUnit.SECONDS);
                         if (retryConnected) {
                             log.info("{} - Successfully connected WebSocket for connector {} on retry {}/{}",
-                                    tenant, connectorId.getName(), attempt, Utils.CONFLICT_RETRY_COUNT);
+                                    tenant, connectorId.getName(), attempt, retries);
                             startReconnectScheduler();
                             return retryClient;
                         }
                         if (!retryClient.isConflict()) {
                             // L4: tenant must be first arg to match the "{}" prefix slot
                             log.error("{} - WebSocket retry {}/{} failed for connector {} (not a conflict)",
-                                    tenant, attempt, Utils.CONFLICT_RETRY_COUNT, connectorId.getName());
+                                    tenant, attempt, retries, connectorId.getName());
+                            if (failureSink != null) {
+                                failureSink.accept(describeFailure(retryClient));
+                            }
                             return null;
                         }
                     }
                     log.error("{} - WebSocket still getting 409 for connector {} after {} retries",
-                            tenant, connectorId.getName(), Utils.CONFLICT_RETRY_COUNT);
+                            tenant, connectorId.getName(), retries);
+                    if (failureSink != null) {
+                        failureSink.accept("HTTP 409 Conflict, still rejected after " + retries + " retries");
+                    }
                 } else {
-                    log.error("{} - WebSocket connection failed for connector {}", tenant, connectorId.getName());
+                    log.error("{} - WebSocket connection failed for connector {}: {}", tenant,
+                            connectorId.getName(), describeFailure(client));
+                    if (failureSink != null) {
+                        failureSink.accept(describeFailure(client));
+                    }
                 }
                 return null;
             }
@@ -963,8 +1057,13 @@ public class NotificationConnectionManager {
         } catch (Exception e) {
             log.error("{} - Error connecting WebSocket for connector {}: {}",
                     tenant, connectorId.getName(), e.getMessage(), e);
-            connectorStatusEventService.sendNotificationLifecycle(
-                    tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
+            if (options.reportLifecycle()) {
+                connectorStatusEventService.sendNotificationLifecycle(
+                        tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
+            }
+            if (failureSink != null) {
+                failureSink.accept(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            }
             return null;
         }
     }
@@ -1123,6 +1222,7 @@ public class NotificationConnectionManager {
 
             try {
                 reconnectDeviceClients(tenant);
+                reconnectExplorerClients(tenant);
                 retryFailedDeviceConnects(tenant);
                 reconnectManagementClients(tenant);
 

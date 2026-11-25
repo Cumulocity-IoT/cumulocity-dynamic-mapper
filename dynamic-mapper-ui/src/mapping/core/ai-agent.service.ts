@@ -61,16 +61,16 @@ import {
 
 /**
  * Tools through which the agents hand over their final result. They change nothing: the UI reads the
- * result from the tool input and the user confirms it with Save. Without a mode the AI agent service
- * treats a tool that declares no hints as 'ALWAYS' and asks for approval on every call, so set
- * 'NEVER' here, whatever the stored agent definition says.
+ * result from the tool input and the user confirms it with Save. Without a hint the AI agent service
+ * treats a tool that declares no annotations as requiring approval on every call, so force
+ * `needsApproval: false` here, whatever the stored agent definition says.
  */
 const RESULT_SUBMIT_TOOLS = ['submit-smart-function', 'submit-substitutions'];
 
 function withoutApproval(tool: McpToolConfig): McpToolConfig {
   const name = typeof tool === 'string' ? tool : tool.name;
   if (!RESULT_SUBMIT_TOOLS.includes(name)) return tool;
-  return typeof tool === 'string' ? { name, approval: 'NEVER' } : { ...tool, approval: 'NEVER' };
+  return typeof tool === 'string' ? { name, needsApproval: false } : { ...tool, needsApproval: false };
 }
 
 /** Builds the SDK's thinner `ClientAgentDefinition` from this app's richer local agent model. */

@@ -198,8 +198,13 @@ public class NotificationSubscriber implements TenantScoped, NotificationClientO
         subscriptionManager.unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
     }
 
-    public void initializeExplorerDeviceClient(String tenant, String sessionId) {
-        connectionManager.initializeExplorerDeviceClient(tenant, sessionId);
+    /**
+     * @return {@code null} when the session's WebSocket is open, otherwise why it is not (the session then
+     *         receives no events)
+     */
+    public String initializeExplorerDeviceClient(String tenant, String sessionId,
+            java.util.function.Consumer<String> connectionIssue) {
+        return connectionManager.initializeExplorerDeviceClient(tenant, sessionId, connectionIssue);
     }
 
     /**

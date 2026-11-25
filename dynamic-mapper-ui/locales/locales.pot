@@ -2811,7 +2811,7 @@ msgstr ""
 msgid "Subscription dynamic"
 msgstr ""
 
-msgid "Subscription failed"
+msgid "Subscription problem"
 msgstr ""
 
 msgid "Subscription for this device deleted successfully"
@@ -3517,7 +3517,7 @@ msgstr ""
 msgid "the configuration that is currently running"
 msgstr ""
 
-msgid "the session is active, but the broker rejected the subscribe request, so no messages will arrive:"
+msgid "the session is active, but messages may not arrive:"
 msgstr ""
 
 msgid "topic:"
