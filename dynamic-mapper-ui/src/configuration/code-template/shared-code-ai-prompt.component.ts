@@ -83,9 +83,11 @@ export class SharedCodeAiPromptComponent implements OnInit {
     sendButtonText: this.translateService.instant(gettext('Send')),
     cancelButtonText: this.translateService.instant(gettext('Cancel')),
     disclaimerText: this.translateService.instant(
-      gettext('AI-generated responses can contain errors. Verify the details before use.')
+      gettext('AI-generated responses can contain errors. Verify the details before use. Do not enter personal data.')
     ),
-    showCumulativeUsage: true
+    showCumulativeUsage: true,
+    // Our submit tools are client-side and never need approval, so hide the Manual/Auto selector.
+    showGlobalToolApprovalToggle: false
   };
 
   async ngOnInit(): Promise<void> {

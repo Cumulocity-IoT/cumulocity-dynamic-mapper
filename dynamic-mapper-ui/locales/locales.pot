@@ -113,7 +113,7 @@ msgstr ""
 msgid "AI-assisted mapping"
 msgstr ""
 
-msgid "AI-generated responses can contain errors. Verify the details before use."
+msgid "AI-generated responses can contain errors. Verify the details before use. Do not enter personal data."
 msgstr ""
 
 msgid "AMQP 0-9-1 connector"
