@@ -395,6 +395,72 @@ In addition to `parameter`, the map returned by `getConfigAsMap()` also contains
 `context.addWarning(text)` records a warning that appears in the test result and the microservice log. Extension state
 (`setNativeState`) is kept between messages of the same mapping, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state).
 
+##### Collecting several messages into one {#collect}
+
+Some devices send one message per value, with the same timestamp. To create one measurement from them, the extension
+has to hold the first messages back until the group is complete. Do not build this with `setNativeState` and
+`getNativeState`: of messages that run at the same time, none sees the others. Use `context.collectNative`, which adds an
+item to a named group and checks whether the group is complete in one atomic step. It is the Java counterpart of
+[`context.collect`](/c8y-pkg-dynamic-mapper/introduction/flow-state#collect) in Smart Functions.
+
+The example below merges a temperature message and a humidity message of the same timestamp into one measurement:
+
+```java
+@Override
+public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
+    Map<String, Object> payload = parse(message);   // { "clientId", "time", "sensor", "value" }
+    String clientId = payload.get("clientId").toString();
+    String sensor = payload.get("sensor").toString();   // "temperature" or "humidity"
+
+    // One group per device and timestamp. Complete when both sensors are present.
+    // A group whose partner never arrives is dropped after 60 seconds.
+    CollectOptions options = CollectOptions.keys("temperature", "humidity").withMaxAgeSeconds(60);
+    Map<String, Object> group = context.collectNative(
+            clientId + "|" + payload.get("time"), sensor, payload.get("value"), options);
+    if (group == null) {
+        return new CumulocityObject[0];   // the other message has not arrived yet
+    }
+
+    return new CumulocityObject[] {
+        CumulocityObject.measurement()
+            .type("c8y_TemperatureMeasurement")
+            .time(payload.get("time"))
+            .fragment("c8y_Temperature", "T", ((Number) group.get("temperature")).doubleValue(), "C")
+            .fragment("c8y_Humidity", "H", ((Number) group.get("humidity")).doubleValue(), "%")
+            .externalId(clientId, "c8y_Serial")
+            .build()
+    };
+}
+```
+
+`collectNative(groupKey, itemKey, value, options)` returns `null` until the group is complete. The call that completes
+it receives the group as a map of item key to value, and the group is removed. A repeated item key replaces the earlier
+value and does not count twice. Build the options with:
+
+| Options | The group is complete when |
+|---|---|
+| `CollectOptions.count(n)` | it holds `n` different item keys. `collectNative(groupKey, itemKey, value, n)` is a shorthand. |
+| `CollectOptions.keys("a", "b")` | all of these item keys are present |
+| `CollectOptions.onLast()` | this message is the last one |
+| `.withMaxAgeSeconds(s)` | not a condition: incomplete groups older than `s` seconds, counted from their first item, are dropped. Without it, an incomplete group stays until it is complete. |
+
+To send a partial group, for example when a newer timestamp arrives, list the open groups with
+`context.openGroupsNative(prefix)` and remove one with `context.takeNative(groupKey)`. `takeNative` returns the group as
+it is, complete or not.
+
+Things to know:
+
+- Groups are kept per mapping, in memory only. A restart of the microservice drops them.
+- Unlike `setNativeState`, an item is stored at once, not after the message was delivered. If the message that
+  receives a group fails (the extension throws or the result is not delivered), the group is put back, so a redelivery
+  completes it again.
+- The same limits apply as for Smart Functions: about 8 MB per mapping for state and groups together, and 1,000 open groups.
+- In a test run nothing is collected. The methods return `null` or an empty list and add a warning.
+- The `Value`-based `context.collect`, `take` and `openGroups` of Smart Functions throw `UnsupportedOperationException` in Java extensions.
+
+The extension examples `CollectMeasurement` (inbound) and `BatchMeasurements` (outbound, three measurements per device
+as one JSON array) show both directions.
+
 ##### Accessing the broker message key {#broker-message-key}
 
 `message.getTransportFields()` returns the transport-specific fields of the received broker message. For Kafka,

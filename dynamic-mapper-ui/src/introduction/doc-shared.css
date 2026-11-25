@@ -48,25 +48,42 @@
   max-width: 1200px;
   padding-right: 24px;
 }
+/* Heading hierarchy, each level visibly different from body text and from the next:
+   h2/h3 large uppercase with a rule, h4 uppercase with a hairline, h5 bold with a yellow bar,
+   h6 bold small. Spacing above is larger than below so a heading belongs to what follows. */
 .d11r-doc .doc-content h2,
 .d11r-doc .doc-content h3 {
-  margin-top: 24px;
+  margin-top: 40px;
   margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
   scroll-margin-top: 120px;
 }
-.d11r-doc .doc-content h4,
+.d11r-doc .doc-content h4 {
+  margin-top: 32px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e0e0e0;
+  scroll-margin-top: 120px;
+}
 .d11r-doc .doc-content h5,
 .d11r-doc .doc-content h6 {
+  margin-top: 28px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  font-family: "Euclid Square", "Libre Franklin", "Helvetica", Arial, sans-serif;
   scroll-margin-top: 120px;
-  margin-top: 16px;
 }
 .d11r-doc .doc-content h5 {
-  font-size: 16px;
-  color: #444;
+  font-size: 18px;
+  color: #212121;
+  padding-left: 10px;
+  border-left: 4px solid #ffbe00;
 }
 .d11r-doc .doc-content h6 {
-  font-size: 14px;
-  color: #555;
+  font-size: 15px;
+  color: #444;
 }
 .d11r-doc .doc-content p,
 .d11r-doc .doc-content ul,
