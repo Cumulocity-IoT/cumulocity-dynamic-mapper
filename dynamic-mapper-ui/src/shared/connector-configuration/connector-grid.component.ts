@@ -79,6 +79,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   selected$ = new BehaviorSubject<string[]>([]);
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[] = [];
+  /** True until the first load of the connectors has finished; the grid shows its loading indicator meanwhile. */
+  loading = true;
   configurations$: Observable<(ConnectorConfiguration & { id: string })[]>;
   customClasses: string;
   nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
@@ -306,14 +308,22 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private setupConfigurationsSubscription(): void {
-    combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe(([selected, configurations]) => {
-      this.configurations = configurations;
-      if (this.selectable()) {
-        this.updateDeploymentMapEntry(selected);
+    combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ([selected, configurations]) => {
+        this.loading = false;
+        this.configurations = configurations;
+        if (this.selectable()) {
+          this.updateDeploymentMapEntry(selected);
+        }
+        // OnPush: the selected connectors' names are looked up in `configurations`, which changes here, from
+        // a subscription rather than from an event of this view.
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Do not leave the loading indicator spinning when the connectors cannot be loaded.
+        this.loading = false;
+        this.cdr.markForCheck();
       }
-      // OnPush: the selected connectors' names are looked up in `configurations`, which changes here, from
-      // a subscription rather than from an event of this view.
-      this.cdr.markForCheck();
     });
   }
 

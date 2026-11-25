@@ -55,8 +55,23 @@ export function resolveRequiredAgentName(
 }
 
 import {
-  ClientAgentDefinition
+  ClientAgentDefinition,
+  McpToolConfig
 } from '@c8y/ngx-components/ai';
+
+/**
+ * Tools through which the agents hand over their final result. They change nothing: the UI reads the
+ * result from the tool input and the user confirms it with Save. Without a mode the AI agent service
+ * treats a tool that declares no hints as 'ALWAYS' and asks for approval on every call, so set
+ * 'NEVER' here, whatever the stored agent definition says.
+ */
+const RESULT_SUBMIT_TOOLS = ['submit-smart-function', 'submit-substitutions'];
+
+function withoutApproval(tool: McpToolConfig): McpToolConfig {
+  const name = typeof tool === 'string' ? tool : tool.name;
+  if (!RESULT_SUBMIT_TOOLS.includes(name)) return tool;
+  return typeof tool === 'string' ? { name, approval: 'NEVER' } : { ...tool, approval: 'NEVER' };
+}
 
 /** Builds the SDK's thinner `ClientAgentDefinition` from this app's richer local agent model. */
 export function toClientAgentDefinition(
@@ -69,7 +84,7 @@ export function toClientAgentDefinition(
       name: definition.name,
       type: definition.type,
       agent: { system: definition.agent?.system ?? '' },
-      mcp: definition.mcp?.map(m => ({ serverName: m.serverName, tools: m.tools ?? [] }))
+      mcp: definition.mcp?.map(m => ({ serverName: m.serverName, tools: (m.tools ?? []).map(withoutApproval) }))
     }
   };
 }

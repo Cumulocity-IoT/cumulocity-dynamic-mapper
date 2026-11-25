@@ -21,7 +21,7 @@
 
 import { TestBed } from '@angular/core/testing';
 import { FetchClient, IFetchResponse } from '@c8y/client';
-import { AiAgentService } from './ai-agent.service';
+import { AiAgentService, toClientAgentDefinition } from './ai-agent.service';
 
 describe('AiAgentService', () => {
   let service: AiAgentService;
@@ -114,5 +114,26 @@ describe('AiAgentService', () => {
 
     expect(fetchClient.fetch).toHaveBeenCalledTimes(1);
     expect(fetchClient.fetch).toHaveBeenCalledWith('service/ai/settings', jasmine.anything());
+  });
+});
+
+describe('toClientAgentDefinition', () => {
+  const build = (tools: unknown[]) =>
+    toClientAgentDefinition({
+      name: 'agent',
+      type: 'text',
+      agent: { system: 's' },
+      mcp: [{ serverName: 'srv', tools }]
+    } as never).definition.mcp?.[0].tools;
+
+  it('sets approval NEVER on the result-submitting tools, whatever form the stored agent uses', () => {
+    expect(build(['submit-smart-function', { name: 'submit-substitutions', approval: 'ALWAYS' }])).toEqual([
+      { name: 'submit-smart-function', approval: 'NEVER' },
+      { name: 'submit-substitutions', approval: 'NEVER' }
+    ]);
+  });
+
+  it('leaves other tools unchanged', () => {
+    expect(build(['evaluate-jsonata-expression'])).toEqual(['evaluate-jsonata-expression']);
   });
 });

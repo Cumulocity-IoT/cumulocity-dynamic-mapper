@@ -5,7 +5,7 @@
   "mcp": [
     {
       "serverName": "dynamic-mapper-mcp-server",
-      "tools": ["evaluate-jsonata-expression", "submit-substitutions"]
+      "tools": ["evaluate-jsonata-expression", { "name": "submit-substitutions", "approval": "NEVER" }]
     }
   ],
   "agent": {
