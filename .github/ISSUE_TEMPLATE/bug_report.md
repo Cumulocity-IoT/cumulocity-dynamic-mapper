@@ -27,5 +27,9 @@ If applicable, add screenshots to help explain your problem.
 **Version**
 The version of Dynamic Mapper you discovered the bug
 
+**Active OSS Support subscription**
+Please state if you have an active support contract for Open-Source components like Dynamic Mapper by stating your customer name.
+The default is community support without any SLAs.
+
 **Additional context**
 Add any other context about the problem here.
