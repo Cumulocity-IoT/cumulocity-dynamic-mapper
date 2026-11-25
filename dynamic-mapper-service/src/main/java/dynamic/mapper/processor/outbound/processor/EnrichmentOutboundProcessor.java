@@ -197,9 +197,11 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     context.setIgnoreFurtherProcessing(true);
                     return;
                 }
-                // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
-                String fallbackExternalId = context.liveTestId(sourceId.toString());
-                log.warn("{} - External id for device '{}' with type '{}' not found — using fallback '{}' in JS context",
+                // Test mode: the device has no external ID of this type. Generate a surrogate (never the internal
+                // id, which would hide a missing external ID) to keep topic templates resolvable.
+                // Derived from the source id so repeated dry runs yield the same value.
+                String fallbackExternalId = context.liveTestId("test-" + mapping.getExternalIdType() + "-" + sourceId);
+                log.warn("{} - External id for device '{}' with type '{}' not found — using surrogate '{}' in JS context",
                         tenant, sourceId, mapping.getExternalIdType(), fallbackExternalId);
                 identityFragment.put("externalId", fallbackExternalId);
                 if (config != null) {

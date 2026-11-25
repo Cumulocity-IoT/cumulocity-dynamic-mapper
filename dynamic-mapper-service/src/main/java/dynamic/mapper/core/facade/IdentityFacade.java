@@ -80,30 +80,41 @@ public class IdentityFacade {
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
             Boolean testing, Semaphore c8ySemaphore) {
-        if (!Boolean.TRUE.equals(testing)) {
-            MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
-            try {
-                c8ySemaphore.acquire();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Failed to acquire semaphore for resolving global ID to external ID", e);
-                return null;
+        if (Boolean.TRUE.equals(testing)) {
+            // Entities created during the test live in the mock; check them first.
+            ExternalIDRepresentation mocked = identityMock.getExternalIdsOfGlobalId(gid);
+            if (mocked != null && externalIdType.equals(mocked.getType())) {
+                return mocked;
             }
-            try {
-                ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
-                for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
-                    if (externalId.getType().equals(externalIdType)) {
-                        result.setValue(externalId);
-                        break;
-                    }
-                }
-            } finally {
-                c8ySemaphore.release();
-            }
-            return result.get();
-        } else {
-            return identityMock.getExternalIdsOfGlobalId(gid);
+            // Otherwise the source is usually a real device (e.g. a sample taken from the tenant).
+            // Reading its external ID changes nothing, so a dry run shows what a real message gets.
         }
+        MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
+        try {
+            c8ySemaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Failed to acquire semaphore for resolving global ID to external ID", e);
+            return null;
+        }
+        try {
+            ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
+            for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
+                if (externalId.getType().equals(externalIdType)) {
+                    result.setValue(externalId);
+                    break;
+                }
+            }
+        } catch (RuntimeException e) {
+            // Synthetic test sources have no inventory object; the caller falls back to the source id.
+            if (!Boolean.TRUE.equals(testing)) {
+                throw e;
+            }
+            log.debug("Read-only external ID lookup failed in test mode for {}: {}", gid.getValue(), e.getMessage());
+        } finally {
+            c8ySemaphore.release();
+        }
+        return result.get();
     }
 
     public void clearMockIdentityCache() {
