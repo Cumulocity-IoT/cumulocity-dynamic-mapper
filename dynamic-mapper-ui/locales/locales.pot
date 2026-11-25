@@ -17,6 +17,9 @@ msgstr ""
 msgid "-- Select connector --"
 msgstr ""
 
+msgid "1 mapping still uses this extension:"
+msgstr ""
+
 msgid "1 more request sent; see \"Show Next Test Result\"."
 msgstr ""
 
@@ -1427,7 +1430,7 @@ msgstr ""
 msgid "If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type."
 msgstr ""
 
-msgid "If you delete it anyway, these mappings fail until they use another extension. Delete anyway?"
+msgid "If you delete the extension anyway, these mappings fail until they use another extension. Delete anyway?"
 msgstr ""
 
 msgid "Import"
@@ -3455,6 +3458,9 @@ msgid "line(s) were left out because of the collection limit."
 msgstr ""
 
 msgid "mappings are currently defined."
+msgstr ""
+
+msgid "mappings still use this extension:"
 msgstr ""
 
 msgid "measurement"

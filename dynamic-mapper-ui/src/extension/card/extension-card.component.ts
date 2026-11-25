@@ -90,7 +90,15 @@ export class ExtensionCardComponent implements OnInit {
   private async deleteAnyway(inUse: ExtensionInUseError): Promise<void> {
     const confirmed = await this.showConfirmationModal({
       title: gettext('Extension is still in use'),
-      message: `${inUse.message}\n\n${gettext('If you delete it anyway, these mappings fail until they use another extension. Delete anyway?')}`,
+      message: inUse.mappings.length === 0
+        ? inUse.message // a backend that sends no list
+        : inUse.mappings.length === 1
+        ? gettext('1 mapping still uses this extension:')
+        : `${inUse.mappings.length} ${gettext('mappings still use this extension:')}`,
+      items: inUse.mappings.map(
+        (m) => `${m.name} (${String(m.direction).toLowerCase()}, ${m.identifier}${m.active === false ? ', inactive' : ''})`
+      ),
+      footer: gettext('If you delete the extension anyway, these mappings fail until they use another extension. Delete anyway?'),
       labels: { ok: 'Delete anyway', cancel: 'Cancel' }
     });
     if (!confirmed) return;
@@ -105,6 +113,8 @@ export class ExtensionCardComponent implements OnInit {
   private async showConfirmationModal(config: {
     title: string;
     message: string;
+    items?: string[];
+    footer?: string;
     labels: { ok: string; cancel: string };
   }): Promise<boolean> {
     return new Promise((resolve) => {

@@ -41,8 +41,13 @@ export class ConfirmationModalComponent
 {
   @Input() title: string;
   @Input() message: string;
+  /** Optional list shown under the message, one bullet per entry. */
+  @Input() items: string[] = [];
+  /** Optional closing paragraph under the list. */
+  @Input() footer: string;
   readonly modalRef = viewChild<ConfirmModalComponent>('modalRef');
   messageTranslated: string;
+  footerTranslated: string;
   closeSubject: Subject<boolean> = new Subject();
   @Input() labels: ModalLabels = {
     ok: gettext('Disconnect'),
@@ -56,6 +61,7 @@ export class ConfirmationModalComponent
     this.messageTranslated = this.translateService.instant(
       gettext(this.message)
     );
+    this.footerTranslated = this.footer ? this.translateService.instant(gettext(this.footer)) : undefined;
   }
 
   async ngAfterViewInit() {

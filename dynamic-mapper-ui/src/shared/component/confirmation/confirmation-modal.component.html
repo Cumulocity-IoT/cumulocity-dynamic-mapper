@@ -25,5 +25,15 @@
   [labels]="labels"
   #modalRef
 >
-  <span>{{ messageTranslated }}</span>
+  <p>{{ messageTranslated }}</p>
+  @if (items?.length) {
+    <ul class="m-b-16">
+      @for (item of items; track item) {
+        <li>{{ item }}</li>
+      }
+    </ul>
+  }
+  @if (footerTranslated) {
+    <p class="m-b-0">{{ footerTranslated }}</p>
+  }
 </c8y-confirm-modal>

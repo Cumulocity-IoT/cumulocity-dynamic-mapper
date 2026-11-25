@@ -43,7 +43,7 @@ interface ExtensionFilter {
 
 /** The backend refuses to delete an extension that mappings still use; `message` names them. */
 export class ExtensionInUseError extends Error {
-  constructor(message: string, readonly mappings: { name: string; identifier: string; direction: string }[]) {
+  constructor(message: string, readonly mappings: { name: string; identifier: string; direction: string; active?: boolean }[]) {
     super(message);
     this.name = 'ExtensionInUseError';
   }
