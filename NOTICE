@@ -1,0 +1,36 @@
+Cumulocity Dynamic Mapper
+Copyright (c) 2022-2026 Cumulocity GmbH
+
+This product includes software developed at Cumulocity GmbH
+(https://www.cumulocity.com/).
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+"Cumulocity" and the Cumulocity logo are trademarks of Cumulocity GmbH.
+The Apache License 2.0 does not grant any right to use these trademarks.
+
+This product bundles or depends on third-party software. The full list with
+the license of each component is in THIRD-PARTY-LICENSES.md. Components
+that carry attribution requirements include:
+
+  - Apache Kafka, Apache Pulsar and other Apache Software Foundation
+    projects (Apache License 2.0). Copyright The Apache Software Foundation.
+    https://www.apache.org/
+  - Spring Framework and Spring Boot (Apache License 2.0).
+    Copyright VMware, Inc. / Broadcom Inc. and the original authors.
+  - HiveMQ MQTT Client (Apache License 2.0). Copyright HiveMQ GmbH.
+  - RabbitMQ Java client (used under the Apache License 2.0 option of its
+    triple license). Copyright Broadcom Inc.
+  - dashjoin JSONata for Java (Apache License 2.0).
+  - GraalVM Polyglot / GraalJS (Universal Permissive License 1.0 and MIT).
+    Copyright Oracle and/or its affiliates.
+  - Angular (MIT), Apache ECharts (Apache License 2.0), Monaco Editor (MIT).
+  - Font Awesome Free: icons under CC BY 4.0, code under MIT.
+    Copyright Fonticons, Inc. https://fontawesome.com/license/free
+  - Eclipse Jersey and Eclipse Foundation components (EPL 2.0, used under
+    EPL 2.0). Source: https://projects.eclipse.org/
+  - Logback (used under the EPL 2.0 option of its dual license).
+    Copyright QOS.ch.
+
+Each third-party component remains under its own license. Where a component
+offers a choice of licenses, the license named above is the one selected.

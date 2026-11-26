@@ -319,6 +319,12 @@
 					<version>3.5.1</version>
 				</plugin>
 				<plugin>
+					<!-- Used by .github/scripts/generate-third-party-licenses.sh; not bound to the build -->
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>license-maven-plugin</artifactId>
+					<version>2.4.0</version>
+				</plugin>
+				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>flatten-maven-plugin</artifactId>
 					<version>1.9.0</version>
