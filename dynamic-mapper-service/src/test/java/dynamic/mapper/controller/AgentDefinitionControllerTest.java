@@ -81,7 +81,8 @@ class AgentDefinitionControllerTest {
                 mcp.path("serverName").asText());
 
         Set<String> tools = new HashSet<>();
-        mcp.path("tools").forEach(t -> tools.add(t.asText()));
+        // A tool entry is either just the tool name or an object carrying the name and its approval setting.
+        mcp.path("tools").forEach(t -> tools.add(t.isTextual() ? t.asText() : t.path("name").asText()));
         assertEquals(expectedTools, tools);
         // An agent naming a tool the MCP server does not serve would fail at the first call.
         assertTrue(registeredToolNames().containsAll(tools), "unregistered tool in " + agentFile);
