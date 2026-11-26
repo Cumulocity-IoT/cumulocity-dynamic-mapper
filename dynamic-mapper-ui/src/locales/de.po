@@ -2681,9 +2681,6 @@ msgstr ""
 msgid "Subscription dynamic"
 msgstr ""
 
-msgid "Subscription problem"
-msgstr ""
-
 msgid "Subscription for this device deleted successfully"
 msgstr ""
 
@@ -2691,6 +2688,9 @@ msgid "Subscription lifecycle events for connectors"
 msgstr ""
 
 msgid "Subscription outbound"
+msgstr ""
+
+msgid "Subscription problem"
 msgstr ""
 
 msgid "Subscription request is still being processed – verify the result in the list below and check Service Events for details."
