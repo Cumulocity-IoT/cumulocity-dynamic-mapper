@@ -20,7 +20,7 @@
 
 import { Component, ElementRef, OnDestroy, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { ECharts, EChartsOption } from 'echarts';
+import { BarSeriesOption, ECharts, EChartsOption } from 'echarts';
 import { NgxEchartsModule, provideEchartsCore } from 'ngx-echarts';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -181,15 +181,20 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   private createOutcomeOptions(): EChartsOption {
     const textStyle = this.textStyle;
     // Zero-length segments would print a stray "0" on top of the neighbouring bar.
-    const label = {
+    const label: BarSeriesOption['label'] = {
       show: true,
       color: '#fff',
       formatter: (p: { value?: unknown }) => (Number(p.value) > 0 ? String(p.value) : '')
     };
+    const series: BarSeriesOption[] = [
+      { name: 'Processed', type: 'bar', stack: 'outcome', color: this.colors.success, label, data: undefined },
+      { name: 'Filtered', type: 'bar', stack: 'outcome', color: this.colors.neutral, label, data: undefined },
+      { name: 'Errors', type: 'bar', stack: 'outcome', color: this.colors.danger, label, data: undefined }
+    ];
     return {
       legend: { data: ['Processed', 'Filtered', 'Errors'], textStyle },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      grid: { left: '25%', right: '5%', containLabel: false },
+      grid: { left: '25%', right: '5%' },
       xAxis: {
         type: 'value',
         minInterval: 1,
@@ -202,11 +207,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
         axisTick: { show: false },
         axisLabel: textStyle
       },
-      series: [
-        { name: 'Processed', type: 'bar', stack: 'outcome', color: this.colors.success, label, data: undefined },
-        { name: 'Filtered', type: 'bar', stack: 'outcome', color: this.colors.neutral, label, data: undefined },
-        { name: 'Errors', type: 'bar', stack: 'outcome', color: this.colors.danger, label, data: undefined }
-      ]
+      series
     };
   }
 
