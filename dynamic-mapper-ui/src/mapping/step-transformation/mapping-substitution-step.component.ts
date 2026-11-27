@@ -657,6 +657,23 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.syncSplitSelection();
   }
 
+  /** Moves a substitution and keeps the selection on the same substitution, whose index changed. */
+  onReorderSubstitution({ from, to }: { from: number; to: number }): void {
+    const reordered = this.substitutionService.moveSubstitution(from, to, this.mapping().substitutions);
+    if (!reordered) return;
+    this.applySubstitutions(reordered);
+    const sel = this.selectedSubstitution;
+    if (sel === from) {
+      this.selectedSubstitution = to;
+    } else if (from < sel && sel <= to) {
+      this.selectedSubstitution = sel - 1;
+    } else if (to <= sel && sel < from) {
+      this.selectedSubstitution = sel + 1;
+    }
+    this.syncSplitSelection();
+    this.cdr.markForCheck();
+  }
+
   private readonly refreshSubstitutionValidity = (mapping: Mapping = this.mapping()): void => {
     this.stepperService.refreshSubstitutionValidity(
       mapping,

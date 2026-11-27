@@ -121,3 +121,22 @@
 .d11r-sub-row button i {
   position: unset !important;
 }
+
+.d11r-sub-drag-handle {
+  display: block;
+  cursor: grab;
+  color: var(--c8y-text-muted, #6f7a82);
+}
+
+.d11r-sub-row.cdk-drag-preview {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.d11r-sub-row.cdk-drag-placeholder {
+  opacity: 0.4;
+}
+
+.d11r-sub-row.cdk-drag-animating,
+.d11r-sub-list.cdk-drop-list-dragging .d11r-sub-row:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}

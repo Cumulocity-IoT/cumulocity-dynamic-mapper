@@ -226,6 +226,23 @@ describe('SubstitutionManagementService', () => {
     });
   });
 
+  describe('moveSubstitution', () => {
+    const list = () => [makeSubstitution('$.a', '$.tgtA'), makeSubstitution('$.b', '$.tgtB'), makeSubstitution('$.c', '$.tgtC')];
+
+    it('moves a substitution down and up without mutating the input', () => {
+      const input = list();
+      expect(service.moveSubstitution(0, 2, input).map(s => s.pathSource)).toEqual(['$.b', '$.c', '$.a']);
+      expect(service.moveSubstitution(2, 0, input).map(s => s.pathSource)).toEqual(['$.c', '$.a', '$.b']);
+      expect(input.map(s => s.pathSource)).toEqual(['$.a', '$.b', '$.c']);
+    });
+
+    it('returns undefined for a no-op or an index outside the list', () => {
+      expect(service.moveSubstitution(1, 1, list())).toBeUndefined();
+      expect(service.moveSubstitution(-1, 1, list())).toBeUndefined();
+      expect(service.moveSubstitution(0, 3, list())).toBeUndefined();
+    });
+  });
+
   describe('replaceAllSubstitutions', () => {
     it('maps every model to a plain substitution, without per-item duplicate handling', () => {
       const result = service.replaceAllSubstitutions([

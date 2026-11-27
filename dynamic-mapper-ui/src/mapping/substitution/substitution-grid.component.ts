@@ -24,6 +24,7 @@ import {
   OnDestroy,
   Output,
   ViewEncapsulation, input } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import {
@@ -54,7 +55,7 @@ export interface SubstitutionGridSettings {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CoreModule, PopoverModule, SharedModule]
+  imports: [CoreModule, PopoverModule, SharedModule, DragDropModule]
 })
 export class SubstitutionGridComponent implements OnDestroy {
   readonly mapping = input<Mapping>();
@@ -62,6 +63,8 @@ export class SubstitutionGridComponent implements OnDestroy {
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
+  /** A row was dragged from index `from` to index `to`; the host owns the list and applies the move. */
+  @Output() reorderSub = new EventEmitter<{ from: number; to: number }>();
 
   constructor(
     private translateService: TranslateService
@@ -83,6 +86,11 @@ export class SubstitutionGridComponent implements OnDestroy {
   onSubstitutionSelect(index: number): void {
     // The host owns the selected index and hands it back through `settings`.
     this.selectSub.emit(index);
+  }
+
+  onDrop(event: CdkDragDrop<unknown>): void {
+    if (this.settings().readOnly || event.previousIndex === event.currentIndex) return;
+    this.reorderSub.emit({ from: event.previousIndex, to: event.currentIndex });
   }
 
   /** Enter selects the row, but not when it was pressed on a control inside the row (e.g. Remove). */

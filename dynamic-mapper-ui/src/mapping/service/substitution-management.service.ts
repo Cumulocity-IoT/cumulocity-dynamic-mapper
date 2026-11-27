@@ -136,4 +136,14 @@ export class SubstitutionManagementService {
     if (selected < 0 || selected >= current.length) return undefined;
     return current.filter((_, index) => index !== selected);
   }
+
+  /** @returns a copy of the list with the substitution moved from `from` to `to`, or `undefined` when out of range or a no-op */
+  moveSubstitution(from: number, to: number, current: readonly Substitution[]): Substitution[] | undefined {
+    const inRange = (i: number) => i >= 0 && i < current.length;
+    if (from === to || !inRange(from) || !inRange(to)) return undefined;
+    const result = [...current];
+    const [moved] = result.splice(from, 1);
+    result.splice(to, 0, moved);
+    return result;
+  }
 }

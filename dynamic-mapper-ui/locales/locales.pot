@@ -826,6 +826,9 @@ msgstr ""
 msgid "Draft version"
 msgstr ""
 
+msgid "Drag to reorder"
+msgstr ""
+
 msgid "Drag to resize (double-click to reset)"
 msgstr ""
 

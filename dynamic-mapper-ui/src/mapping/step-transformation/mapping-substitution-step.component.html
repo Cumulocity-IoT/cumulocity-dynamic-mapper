@@ -110,7 +110,7 @@
                   color: COLOR_HIGHLIGHTED,
                   selectedSubstitutionIndex: selectedSubstitution,
                   readOnly: !!stepperConfiguration().readOnly
-                }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
+                }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)" (reorderSub)="onReorderSubstitution($event)">
             </d11r-mapping-substitution-grid>
             @if (!(isSubstitutionValid$ | async)) {
             <span class="text-warning text-12 d-block d11r-sub-hint" [class.d11r-sub-hint--empty]="!mapping().substitutions?.length"

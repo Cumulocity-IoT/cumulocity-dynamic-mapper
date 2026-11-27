@@ -19,7 +19,9 @@
 ~
 -->
 
-<div class="d11r-sub-list p-t-4" role="listbox" [attr.aria-label]="'Substitutions' | translate">
+<div class="d11r-sub-list p-t-4" role="listbox" [attr.aria-label]="'Substitutions' | translate"
+  cdkDropList [cdkDropListDisabled]="settings().readOnly || (mapping().substitutions?.length ?? 0) < 2"
+  (cdkDropListDropped)="onDrop($event)">
   @if (!mapping().substitutions?.length) {
   <div class="d11r-sub-empty text-muted" data-cy="dm-substitution-empty">
     <strong class="d-block" translate>No substitutions yet</strong>
@@ -29,13 +31,21 @@
   <!-- Track by index: a substitution has no id, and an edit replaces the row's object, so
        tracking by object would rebuild the row (and drop focus) on every change. -->
   @for (sub of mapping().substitutions; track $index; let i = $index) {
-  <div class="d11r-sub-row" role="option" tabindex="0" id="{{ 'sub-' + id + '-' + i }}"
+  <div class="d11r-sub-row" role="option" tabindex="0" cdkDrag [cdkDragDisabled]="settings().readOnly" id="{{ 'sub-' + id + '-' + i }}"
     [attr.aria-label]="rowLabel(sub, i, definesDeviceIdentifier(mapping(), sub))"
     [attr.data-cy]="'dm-substitution-row-' + i" [attr.aria-selected]="settings().selectedSubstitutionIndex === i"
     [class.active]="settings().selectedSubstitutionIndex === i" (click)="onSubstitutionSelect(i)"
     (keydown.enter)="onRowEnter($event, i)" (keydown.arrowdown)="focusSibling($event, 1)"
     (keydown.arrowup)="focusSibling($event, -1)">
-    <span class="d11r-sub-index text-muted text-12">{{ i + 1 }}</span>
+    <span class="d11r-sub-index text-muted text-12">
+      @if (!settings().readOnly && mapping().substitutions.length > 1) {
+      <span class="d11r-sub-drag-handle" cdkDragHandle [title]="'Drag to reorder' | translate"
+        [attr.data-cy]="'dm-substitution-drag-' + i" (click)="$event.stopPropagation()">
+        <i c8yIcon="drag-reorder"></i>
+      </span>
+      }
+      {{ i + 1 }}
+    </span>
     <div class="d11r-sub-body">
       @if (!sub['registeredType']) {
       <div class="d11r-sub-source text-12" [title]="sub.pathSource">{{ sub.pathSource }}</div>
