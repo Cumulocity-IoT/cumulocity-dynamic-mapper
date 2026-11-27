@@ -25,8 +25,10 @@ UNKNOWN = re.compile(r"^(NOT DECLARED|UNLICENSED|UNKNOWN|None)$", re.I)
 # Components whose license metadata is missing but whose license has been confirmed manually.
 # Add an entry only after verifying the license at the source, and say how.
 CONFIRMED = {
-    # Cumulocity SDK: POMs declare no license. Confirm and drop this entry once they do.
-    "com.nsn.cumulocity.clients-java:": "Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually)",
+    # Cumulocity Microservice SDK: module POMs declare no license; the parent POM declares MIT.
+    # https://github.com/Cumulocity-IoT/cumulocity-clients-java/blob/develop/pom.xml#L73
+    # Drop this entry once the module POMs declare it.
+    "com.nsn.cumulocity.clients-java:": "MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually)",
 }
 
 

@@ -59,15 +59,15 @@ Dynamic Mapper itself is licensed under the Apache License 2.0 (see [LICENSE](LI
 | com.nimbusds:nimbus-jose-jwt | 10.9 | The Apache Software License, Version 2.0 |
 | com.nsn.cumulocity.clients-java:java-client | 2026.62.0 | MIT License |
 | com.nsn.cumulocity.clients-java:java-client-model | 2026.62.0 | MIT License |
-| com.nsn.cumulocity.clients-java:microservice-autoconfigure | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-context | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-logging | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-monitoring | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-platform-api | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-properties | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-security | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-settings | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
-| com.nsn.cumulocity.clients-java:microservice-subscription | 2026.62.0 | Apache-2.0 (Cumulocity SDK, POM declares none; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-autoconfigure | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-context | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-logging | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-monitoring | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-platform-api | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-properties | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-security | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-settings | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
+| com.nsn.cumulocity.clients-java:microservice-subscription | 2026.62.0 | MIT License (Cumulocity Microservice SDK, declared in the parent POM; confirmed manually) |
 | com.nsn.cumulocity.dependencies:svenson | 1.5.8-2026.62.0 | BSD-3-Clause |
 | com.nsn.cumulocity.model:device-capability-model | 2026.62.0 | MIT License |
 | com.rabbitmq:amqp-client | 5.37.0 | AL 2.0 / GPL v2 / MPL 2.0 |
